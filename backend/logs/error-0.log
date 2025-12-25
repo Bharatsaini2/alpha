@@ -1,0 +1,4 @@
+2025-08-18 14:03:16 +05:30: (node:128559) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2025-08-18 14:03:16 +05:30: (Use `node --trace-deprecation ...` to show where the warning was created)
+2025-08-18 14:03:16 +05:30: (node:128559) [MONGODB DRIVER] Warning: useNewUrlParser is a deprecated option: useNewUrlParser has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version
+2025-08-18 14:03:16 +05:30: (node:128559) [MONGODB DRIVER] Warning: useUnifiedTopology is a deprecated option: useUnifiedTopology has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version

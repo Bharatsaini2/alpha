@@ -1,0 +1,55 @@
+
+> server@1.0.0 start
+> node --max-old-space-size=4096 --expose-gc dist/app.js
+
+✅ Mailgun client initialized (primary email service)
+Trending tokens cron job started - running every 1 hour
+📝 Registered process: trending-tokens-cron (cron) - Trending tokens cron job (daily)
+✅ Trending tokens cron job registered with process manager
+Live market cap update cron job started - running every 5 minutes
+📝 Registered process: live-marketcap-update-cron (cron) - Live market cap update cron job (every 5 minutes)
+✅ Live market cap update cron job registered with process manager
+✅ Garbage collection enabled
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"email":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"walletAddress":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.platform":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenIn.symbol":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenOut.symbol":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenOut.address":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenIn.address":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.platform":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenIn.symbol":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenOut.symbol":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenOut.address":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"transaction.tokenIn.address":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"refreshTokenHash":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:109070) [MONGOOSE] Warning: Duplicate schema index on {"expiresAt":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+✅ Redis is ready, starting server...
+🔵 Redis connected
+🚨 Uncaught Exception: Error: listen EADDRINUSE: address already in use :::9090
+    at Server.setupListenHandle [as _listen2] (node:net:1907:16)
+    at listenInCluster (node:net:1964:12)
+    at Server.listen (node:net:2066:7)
+    at /home/hp/Documents/utsav-bhikadiya/whale-tracker-V2/server/dist/app.js:214:18
+    at Generator.next (<anonymous>)
+    at /home/hp/Documents/utsav-bhikadiya/whale-tracker-V2/server/dist/app.js:8:71
+    at new Promise (<anonymous>)
+    at __awaiter (/home/hp/Documents/utsav-bhikadiya/whale-tracker-V2/server/dist/app.js:4:12)
+    at Commander.<anonymous> (/home/hp/Documents/utsav-bhikadiya/whale-tracker-V2/server/dist/app.js:211:31)
+    at Commander.emit (node:events:518:28) {
+  code: 'EADDRINUSE',
+  errno: -98,
+  syscall: 'listen',
+  address: '::',
+  port: 9090
+}
+🔄 Starting shutdown process for uncaughtException...
+🔄 Cleaning up 2 background processes...
+🧹 Cleaning up process: trending-tokens-cron (cron)
+🧹 Cleaning up process: live-marketcap-update-cron (cron)
+✅ All background processes cleaned up successfully
+🧹 Garbage collection completed
+✅ Server closed successfully
+✅ Shutdown completed successfully

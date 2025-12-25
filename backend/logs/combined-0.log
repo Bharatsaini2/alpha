@@ -1,0 +1,31 @@
+2025-08-18 13:59:18 +05:30: 
+> server@1.0.0 dev
+> NODE_OPTIONS="--max-old-space-size=3072 --expose-gc" ts-node-dev --respawn --transpile-only src/app.ts
+
+2025-08-18 14:00:16 +05:30: 
+> server@1.0.0 dev
+> NODE_OPTIONS="--max-old-space-size=3072 --expose-gc" ts-node-dev --respawn --transpile-only src/app.ts
+
+2025-08-18 14:01:34 +05:30: 
+> server@1.0.0 dev
+> ts-node-dev --respawn --transpile-only src/app.ts
+
+2025-08-18 14:03:13 +05:30: 
+2025-08-18 14:03:13 +05:30: > server@1.0.0 dev
+2025-08-18 14:03:13 +05:30: > ts-node-dev --respawn --transpile-only src/app.ts
+2025-08-18 14:03:13 +05:30: 
+2025-08-18 14:03:13 +05:30: [INFO] 14:03:13 ts-node-dev ver. 2.0.0 (using ts-node ver. 10.9.2, typescript ver. 5.8.3)
+2025-08-18 14:03:16 +05:30: 🚀 Transaction workers started
+2025-08-18 14:03:16 +05:30: (node:128559) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2025-08-18 14:03:16 +05:30: (Use `node --trace-deprecation ...` to show where the warning was created)
+2025-08-18 14:03:16 +05:30: ✅ Redis is ready, starting server...
+2025-08-18 14:03:16 +05:30: 🔵 Redis connected
+2025-08-18 14:03:16 +05:30: 🚀 Server is running on port 9090
+2025-08-18 14:03:16 +05:30: (node:128559) [MONGODB DRIVER] Warning: useNewUrlParser is a deprecated option: useNewUrlParser has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version
+2025-08-18 14:03:16 +05:30: (node:128559) [MONGODB DRIVER] Warning: useUnifiedTopology is a deprecated option: useUnifiedTopology has no effect since Node.js Driver version 4.0.0 and will be removed in the next major version
+2025-08-18 14:03:17 +05:30: Database connected with ac-6xyj672-shard-00-00.mnwqbs6.mongodb.net
+2025-08-18 14:03:21 +05:30: 🧹 Starting Redis cleanup...
+2025-08-18 14:03:21 +05:30: 📊 Queue sizes - Whale: 0, Influencer: 0
+2025-08-18 14:03:21 +05:30: ❌ Failed jobs - Whale: 0, Influencer: 0
+2025-08-18 14:03:21 +05:30: 📝 Signatures - Whale: 0, Influencer: 0
+2025-08-18 14:03:21 +05:30: ✅ Redis cleanup completed

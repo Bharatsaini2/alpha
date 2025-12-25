@@ -1,0 +1,8 @@
+VITE_SERVER_URL=http://localhost:9090/api/v1
+VITE_BASE_URL=http://localhost:9090
+# VITE_SERVER_URL=https://api.alpha-block.ai/api/v1
+# VITE_BASE_URL=https://api.alpha-block.ai
+VITE_BIRDEYE_API_KEY=1209ac01dce54f0a97fd6b58c7b9ecb4
+VITE_API_REOWNKIT_PROJECTID=56ac91b8fcdfa488c51f6b87a374ce59
+# Make sure you have a valid RPC URL
+VITE_SOLANA_RPC_URL=https://api.mainnet-beta.solana.com

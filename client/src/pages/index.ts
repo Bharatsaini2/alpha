@@ -1,0 +1,6 @@
+export { default as HomePage } from "./home/HomePageNew"
+export { default as TopCoinsPage } from "./top-coins/TopCoinsPage"
+export { default as KOLFeedPage } from "./kol-feed/KOLFeedPage"
+export { default as TopKOLCoinsPage } from "./top-kol-coins/TopKOLCoinsPage"
+export { default as WhalesLeaderboardPage } from "./whales-leaderboard/WhalesLeaderboardPage"
+export { default as SignalEnginePage } from "./signal-engine/SignalEnginePage"

@@ -1,0 +1,379 @@
+/* Global mobile overflow fix */
+html,
+body {
+  max-width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+@media (max-width: 991px) {
+  /* Force everything to fit viewport */
+  html,
+  body,
+  #root {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+
+  .nw-user-info-bx {
+    flex-direction: column;
+    gap: 10px;
+    align-items: start;
+    padding-top: 15px;
+  }
+
+  .alpha-user-details img {
+    width: 64px;
+    height: 64px;
+  }
+
+  /* === MOBILE SCROLLING FIX FOR ALPHA STREAM === */
+  .app {
+    height: auto !important;
+    min-height: 100vh;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+  }
+
+  .main {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+  }
+
+  .content {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0;
+    padding: 10px 6px !important;
+    grid-template-columns: 1fr;
+    max-width: 100vw !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .custom-tab-content {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  /* Fix container widths - force 100% */
+  .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .col-lg-4,
+  .col-lg-8 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  section {
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Market box responsiveness */
+  .market-bx {
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .ultra-pro-bx {
+    padding: 8px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .market-title-bx h6 {
+    font-size: 12px;
+    padding: 10px 0;
+  }
+
+  /* Trade box responsiveness */
+  .trade-box {
+    padding: 6px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .trade-row {
+    flex-wrap: nowrap;
+    gap: 6px;
+    justify-content: space-between;
+  }
+
+  .amount-box {
+    text-align: right;
+  }
+
+  .amount-box h2 {
+    font-size: 14px !important;
+  }
+
+  .amount-box span {
+    font-size: 9px !important;
+  }
+
+  /* === HOT COINS CARD FIX === */
+  .hot-coins-card {
+    overflow: hidden !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .coin-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    padding: 6px 0 !important;
+    align-items: center !important;
+    max-width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  .coin-row .quick-buy-btn {
+    display: none !important;
+  }
+
+  .coin-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .coin-info {
+    min-width: 0 !important;
+    flex: 1 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .coin-title {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 3px !important;
+    align-items: center !important;
+  }
+
+  .coin-name {
+    font-size: 11px !important;
+  }
+
+  .coin-sub {
+    font-size: 9px !important;
+    display: none !important;
+  }
+
+  .coin-badge {
+    font-size: 8px !important;
+    padding: 1px 3px !important;
+  }
+
+  .coin-meta {
+    font-size: 9px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+  }
+
+  .coin-circle {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+    font-size: 11px !important;
+  }
+
+  .coin-img {
+    width: 28px !important;
+    height: 28px !important;
+    min-width: 28px !important;
+  }
+
+  .rank {
+    font-size: 9px !important;
+    min-width: 16px !important;
+  }
+
+  /* Plan buttons list - wrap on mobile */
+  .plan-btn-list {
+    flex-wrap: wrap !important;
+    gap: 3px !important;
+  }
+
+  .plan-btn {
+    font-size: 9px !important;
+    padding: 3px 5px !important;
+  }
+
+  /* Custom tabs */
+  .custom-tabs {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+  }
+
+  .custom-tabs .nav-link {
+    font-size: 9px !important;
+    padding: 4px 10px !important;
+  }
+
+  /* Rate box */
+  .rate-box {
+    padding: 6px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .rate-box h5 {
+    font-size: 10px !important;
+  }
+
+  .rate-box span {
+    font-size: 9px !important;
+  }
+
+  /* Connect wallet button */
+  .connect-wallet-btn {
+    font-size: 10px !important;
+    padding: 8px 10px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Quick buy box hide on mobile */
+  .nw-quick-bx {
+    display: none !important;
+  }
+
+  /* Search form full width */
+  .custom-frm-bx {
+    margin-bottom: 12px !important;
+    max-width: 100% !important;
+  }
+
+  .custom-frm-bx.flex-grow-1 {
+    flex: 1 !important;
+  }
+
+  .custom-frm-bx .form-control {
+    font-size: 10px !important;
+  }
+
+  /* Header adjustments */
+  .header {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 6px 8px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .tp-header-bx {
+    flex-wrap: wrap !important;
+  }
+
+  /* Trading header */
+  .trading-icon-title {
+    font-size: 9px !important;
+  }
+
+  .visualize-icon-title {
+    font-size: 9px !important;
+  }
+
+  /* Trending coins bar */
+  .nw-coins-sticky {
+    overflow-x: auto !important;
+    padding: 6px !important;
+    max-width: 100% !important;
+  }
+
+  /* d-flex containers */
+  .d-flex {
+    max-width: 100% !important;
+  }
+
+  .d-flex.align-items-center.justify-content-between {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Market card fixes */
+  .market-card {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Labels positioning */
+  .trade-label {
+    font-size: 8px !important;
+  }
+
+  /* Slippage button */
+  .plan-btn span {
+    font-size: 9px !important;
+  }
+
+  /* Swap icon */
+  .swap-icon {
+    font-size: 14px !important;
+  }
+
+  .nw-market-bx::after {
+    content: "";
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 1px;
+    background: #141414;
+  }
+}
+
+@media (max-width: 768px) {
+  .custom-card {
+    gap: 10px !important;
+    flex-direction: column !important;
+    align-items: normal !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .sell-trade-bx {
+    justify-content: center !important;
+  }
+
+  .right-info {
+    text-align: left !important;
+    justify-content: end !important;
+  }
+
+  .nw-portfolio-card {
+    height: 210px !important;
+  }
+
+  .sidebar {
+    display: none !important;
+  }
+}
