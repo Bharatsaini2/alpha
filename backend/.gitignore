@@ -2,3 +2,8 @@
 node_modules
 dist
 *.md
+
+# Package files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
