@@ -84,11 +84,15 @@ const Toast: React.FC<ToastProps> = ({
     </div> */}
 
 
-      {/* New Coppied Address */}
+      {/* Toast Notification */}
       <div className="coppied-address">
         <div className="coppied-content">
-          <span className="coppied-icon"><FaRegCheckSquare /></span>
-          <p>Address copied to clipboard!</p>
+          <span className="coppied-icon">
+            {type === "success" && <FaRegCheckSquare />}
+            {type === "error" && <XIcon className="w-4 h-4" />}
+            {type === "info" && <ImSpinner4 className="animate-spin" />}
+          </span>
+          <p>{message}</p>
           <button
             onClick={() => onClose(id)}
             className="coppied-btn"
@@ -139,7 +143,6 @@ const animatedOnce = new Set<string>()
 
 export const useToast = () => {
   const [toasts, setToasts] = useState<ToastProps[]>([])
-  const [isDebouncing, setIsDebouncing] = useState(false)
 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
@@ -150,9 +153,7 @@ export const useToast = () => {
     type: ToastProps["type"] = "success",
     duration?: number
   ) => {
-    if (isDebouncing) return null
-    setIsDebouncing(true)
-
+    // Allow multiple toasts without debouncing for better UX during swap flows
     const id =
       globalThis.crypto?.randomUUID?.() ??
       Math.random().toString(36).slice(2, 11)
@@ -161,7 +162,6 @@ export const useToast = () => {
       { id, message, type, duration, onClose: removeToast },
     ])
 
-    setTimeout(() => setIsDebouncing(false), 1000)
     return id
   }
 

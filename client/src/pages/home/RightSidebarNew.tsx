@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import { IoSparklesOutline } from "react-icons/io5"
 import { HiChevronUpDown } from "react-icons/hi2"
 import { RiLoader2Fill } from "react-icons/ri"
+import { Settings } from "lucide-react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faArrowTrendDown, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons"
 import { Transaction, VersionedTransaction } from "@solana/web3.js"
@@ -41,7 +42,7 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
     const { wallet, connect, sendTransaction, getBalance, isLoading: isWalletLoading, error: walletError } = useWalletConnection()
 
     // Swap API hook
-    const { getQuote, getSwapTransaction, trackTrade, isLoadingQuote, isLoadingSwap, error: swapError, clearErrors } = useSwapApi()
+    const { getQuote, getSwapTransaction, isLoadingQuote, isLoadingSwap, error: swapError, clearErrors } = useSwapApi()
 
     // Toast notifications
     const { showToast, ToastContainer } = useToast()
@@ -52,12 +53,13 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
     const [inputAmount, setInputAmount] = useState<string>("") // Empty by default - user must enter amount
     const [outputAmount, setOutputAmount] = useState<string>("")
     const [quote, setQuote] = useState<QuoteResponse | null>(null)
-    const [slippage] = useState<number>(500) // Fixed 5% slippage (500 BPS) - NOT dynamic
+    const [slippage, setSlippage] = useState<number>(500) // Default 5% slippage (500 BPS) - user can manually change
+    const [customSlippage, setCustomSlippage] = useState<string>("")
+    const [showSlippageSettings, setShowSlippageSettings] = useState(false)
     const [isInputModalOpen, setIsInputModalOpen] = useState(false)
     const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
     const [inputBalance, setInputBalance] = useState<number>(0)
     const [isSwapping, setIsSwapping] = useState(false)
-    const [swapStatus, setSwapStatus] = useState<string>("")
     const [lastTxSignature, setLastTxSignature] = useState<string>("")
     const [retryCount, setRetryCount] = useState<number>(0)
 
@@ -100,6 +102,22 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
             setOutputAmount("")
         }
     }, [inputAmount, inputToken.address, outputToken.address, slippage])
+
+    // Close slippage dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showSlippageSettings) {
+                const target = event.target as HTMLElement
+                // Check if click is outside the dropdown and gear icon
+                if (!target.closest('[title="Slippage Settings"]') && !target.closest('.slippage-dropdown')) {
+                    setShowSlippageSettings(false)
+                }
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [showSlippageSettings])
 
     // Fetch input token balance
     const fetchInputBalance = useCallback(async () => {
@@ -221,6 +239,30 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
         setQuote(null)
     }, [inputToken.address, showToast])
 
+    // Handle slippage change
+    const handleSlippageChange = useCallback((newSlippage: number) => {
+        setSlippage(newSlippage)
+        setCustomSlippage("") // Clear custom input when preset is selected
+    }, [])
+
+    const handleCustomSlippageChange = useCallback((value: string) => {
+        setCustomSlippage(value)
+        
+        // Validate and set slippage
+        const numValue = parseFloat(value)
+        if (!isNaN(numValue) && numValue >= 0 && numValue <= 50) {
+            // Convert percentage to BPS (basis points)
+            setSlippage(Math.floor(numValue * 100))
+        }
+    }, [])
+
+    const presetSlippages = [
+        { label: "0.5%", value: 50 },
+        { label: "1%", value: 100 },
+        { label: "3%", value: 300 },
+        { label: "5%", value: 500 },
+    ]
+
     // Handle input amount change with validation
     const handleInputAmountChange = useCallback((value: string) => {
         // Allow empty string
@@ -316,7 +358,7 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
             clearErrors()
 
             // Get a FRESH quote right before swap to avoid stale route errors
-            setSwapStatus("Getting fresh quote...")
+            showToast("Getting fresh quote...", "info")
             const amountInSmallestUnit = Math.floor(amount * Math.pow(10, inputToken.decimals))
             const freshQuote = await getQuote({
                 inputMint: inputToken.address,
@@ -330,7 +372,7 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
             const outAmount = parseFloat(freshQuote.outAmount) / Math.pow(10, outputToken.decimals)
             setOutputAmount(outAmount.toFixed(6))
 
-            setSwapStatus("Generating transaction...")
+            showToast("Generating transaction...", "info")
 
             // Get swap transaction with Jupiter Ultra (priority level handled automatically)
             const swapResponse = await getSwapTransaction({
@@ -339,7 +381,7 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                 dynamicSlippage: false, // Fixed slippage at 5%
             })
 
-            setSwapStatus("Please sign the transaction in your wallet...")
+            showToast("Please sign the transaction in your wallet...", "info")
 
             // Deserialize transaction (handle both legacy and versioned transactions)
             const transactionBuffer = Buffer.from(swapResponse.swapTransaction, "base64")
@@ -353,46 +395,15 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                 transaction = Transaction.from(transactionBuffer)
             }
 
-            setSwapStatus("Submitting transaction to Solana network...")
+            showToast("Submitting transaction to Solana network...", "info")
 
             // Send transaction
             const signature = await sendTransaction(transaction)
 
-            setSwapStatus("Transaction confirmed!")
             setLastTxSignature(signature)
 
+            // Show success message
             showToast("Swap completed successfully!", "success")
-
-            // Calculate amounts for tracking
-            const inputAmountNum = parseFloat(inputAmount) * Math.pow(10, inputToken.decimals)
-            const outputAmountNum = parseFloat(freshQuote.outAmount)
-
-            // Calculate platform fee with fallback
-            // Jupiter Ultra v1 doesn't return platformFee.amount, so calculate it manually
-            let platformFee = 0
-            if (freshQuote.platformFee?.amount && !isNaN(Number(freshQuote.platformFee.amount))) {
-                platformFee = parseFloat(freshQuote.platformFee.amount)
-            } else {
-                // Fallback: Calculate 0.75% of output amount
-                platformFee = outputAmountNum * 0.0075
-            }
-
-            // Track trade (priority level will be automatically determined by Jupiter Ultra)
-            try {
-                await trackTrade({
-                    signature,
-                    walletAddress: wallet.publicKey.toBase58(),
-                    inputMint: inputToken.address,
-                    outputMint: outputToken.address,
-                    inputAmount: inputAmountNum,
-                    outputAmount: outputAmountNum,
-                    platformFee,
-                    // ✅ Priority level is handled automatically by Jupiter Ultra
-                })
-            } catch (trackError) {
-                // Don't fail the swap if tracking fails
-                console.error("Failed to track trade:", trackError)
-            }
 
             // Reset form
             setInputAmount("")
@@ -404,7 +415,6 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
             await fetchInputBalance()
 
             setTimeout(() => {
-                setSwapStatus("")
                 setLastTxSignature("")
             }, 5000)
         } catch (error: any) {
@@ -432,6 +442,14 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
             } else if (errorCode === "RATE_LIMIT_EXCEEDED") {
                 errorMessage = "Too many requests. Please wait a moment."
                 showToast(errorMessage, "error")
+            } else if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("simulation failed")) {
+                // Handle Jupiter simulation errors (error 0x9, etc.)
+                if (errorMsg.includes("0x9") || errorMsg.includes("custom program error")) {
+                    errorMessage = "Swap route expired. Price may have changed. Please try again."
+                } else {
+                    errorMessage = "Transaction simulation failed. Please try again with different amount or higher slippage."
+                }
+                showToast(errorMessage, "error")
             } else if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("slippage")) {
                 errorMessage = "Price changed too much. Please try again."
                 showToast(errorMessage, "error")
@@ -441,16 +459,10 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
             } else {
                 showToast(errorMessage, "error")
             }
-
-            setSwapStatus(errorMessage)
-
-            setTimeout(() => {
-                setSwapStatus("")
-            }, 5000)
         } finally {
             setIsSwapping(false)
         }
-    }, [wallet, quote, inputAmount, inputToken, outputToken, getSwapTransaction, sendTransaction, trackTrade, fetchInputBalance, clearErrors, inputBalance, showToast, slippage])
+    }, [wallet, quote, inputAmount, inputToken, outputToken, getSwapTransaction, sendTransaction, fetchInputBalance, clearErrors, inputBalance, showToast, slippage])
 
     // Handle Quick Buy - simply pre-fills the swap form with the token
     const handleQuickBuy = useCallback(async (token: any) => {
@@ -504,11 +516,15 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
             }
         }
 
-        // Fallback: Calculate platform fee manually (0.75% of output amount)
-        // Jupiter Ultra v1 doesn't return platformFee.amount, but fee is still collected
+        // Fallback: Calculate platform fee manually
+        // Note: outAmount is AFTER fee deduction, so we need to calculate the actual fee
+        // If outAmount = gross - fee, and fee = gross * 0.0075, then:
+        // outAmount = gross * (1 - 0.0075) = gross * 0.9925
+        // Therefore: fee = outAmount / 0.9925 * 0.0075
         if (outputAmount && !isNaN(parseFloat(outputAmount)) && parseFloat(outputAmount) > 0) {
             const outAmount = parseFloat(outputAmount)
-            const feeAmount = outAmount * 0.0075 // 0.75% = 0.0075
+            const grossAmount = outAmount / 0.9925 // Reverse the fee deduction
+            const feeAmount = grossAmount * 0.0075 // Calculate actual fee (0.75%)
 
             if (!isNaN(feeAmount) && isFinite(feeAmount) && feeAmount > 0) {
                 return `~${feeAmount.toFixed(6)} ${outputToken.symbol} (0.75%)`
@@ -605,20 +621,100 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                     <h6>market order</h6>
                 </div>
                 <div className="ultra-pro-bx relative">
-                    <div className="d-flex align-items-center justify-content-between mb-2">
+                    <div className="d-flex align-items-center justify-content-between mb-2" style={{ position: 'relative' }}>
                         <div>
-                            <a href="javascript:void(0)" className="plan-btn">
+                            <button type="button" className="plan-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
                                 <IoSparklesOutline style={{ color: "#2B6AD1", marginRight: "5px" }} />
                                 ultra v3  <HiChevronUpDown />
-                            </a>
+                            </button>
                         </div>
-                        <div className="d-flex align-items-center gap-2">
+                        <div className="d-flex align-items-center gap-2" style={{ position: 'relative' }}>
                             <span className="plan-btn flex items-center gap-1">
-                                Slippage: <span style={{ color: "#EBEBEB" }}>5.00%</span>
+                                Slippage: <span style={{ color: "#EBEBEB" }}>{(slippage / 100).toFixed(2)}%</span>
                             </span>
-                            <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    setShowSlippageSettings(!showSlippageSettings)
+                                }}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: '#8f8f8f',
+                                    transition: 'color 0.2s ease',
+                                    zIndex: 10
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = '#8f8f8f'}
+                                title="Slippage Settings"
+                            >
+                                <Settings size={16} />
+                            </button>
+                            <button type="button" style={{ color: "#EBEBEB", background: 'transparent', border: 'none', cursor: 'pointer' }}>
                                 <span><RiLoader2Fill className={isLoadingQuote ? "animate-spin" : ""} /></span>
-                            </a>
+                            </button>
+
+                    {/* Slippage Settings Dropdown */}
+                    {showSlippageSettings && (
+                        <div className="slippage-dropdown" style={{
+                            position: 'absolute',
+                            top: '100%',
+                            right: '0',
+                            marginTop: '4px',
+                            background: '#0a0a0a',
+                            border: '1px solid #292929',
+                            borderRadius: '8px',
+                            padding: '8px',
+                            minWidth: '120px',
+                            zIndex: 1000,
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+                        }}>
+                            <div style={{ marginBottom: '6px', fontSize: '11px', color: '#8f8f8f', fontWeight: '500' }}>
+                                Slippage
+                            </div>
+                            {presetSlippages.map((preset) => (
+                                <button
+                                    key={preset.value}
+                                    onClick={() => {
+                                        handleSlippageChange(preset.value)
+                                        setShowSlippageSettings(false)
+                                    }}
+                                    style={{
+                                        width: '100%',
+                                        padding: '8px 12px',
+                                        background: slippage === preset.value ? '#2b6ad1' : 'transparent',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        color: slippage === preset.value ? '#ffffff' : '#ebebeb',
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        textAlign: 'left',
+                                        marginBottom: '2px',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (slippage !== preset.value) {
+                                            e.currentTarget.style.background = '#1a1a1a'
+                                        }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (slippage !== preset.value) {
+                                            e.currentTarget.style.background = 'transparent'
+                                        }
+                                    }}
+                                >
+                                    {preset.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                         </div>
                     </div>
                     <div className="market-card">
@@ -629,28 +725,10 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                             </div>
                         )}
 
-                        {/* Error Display */}
-                        {(walletError || swapError) && (
-                            <div className="mb-2 p-2 bg-red-900/20 border border-red-500/50 rounded text-xs">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-red-400">{getUserFriendlyError(walletError || swapError)}</span>
-                                    {swapError && retryCount < 3 && (
-                                        <button
-                                            onClick={handleRetryQuote}
-                                            className="text-blue-400 hover:text-blue-300 underline ml-2"
-                                            type="button"
-                                        >
-                                            Retry
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
                         {/* Insufficient Balance Warning */}
                         {wallet.connected && inputAmount && parseFloat(inputAmount) > inputBalance && (
                             <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-500/50 rounded text-xs text-yellow-400">
-                                Insufficient {inputToken.symbol} balance. You have {inputBalance.toFixed(4)} {inputToken.symbol}
+                                Insufficient {inputToken.symbol} balance. You have {inputBalance.toFixed(Math.min(inputToken.decimals, 6))} {inputToken.symbol}
                             </div>
                         )}
 
@@ -658,33 +736,6 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                         {wallet.connected && inputToken.address === outputToken.address && (
                             <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-500/50 rounded text-xs text-yellow-400">
                                 Input and output tokens must be different
-                            </div>
-                        )}
-
-                        {/* Swap Status */}
-                        {swapStatus && (
-                            <div className={`mb-2 p-2 rounded text-xs ${swapStatus.includes("confirmed") || swapStatus.includes("success")
-                                    ? "bg-green-900/20 border border-green-500/50 text-green-400"
-                                    : swapStatus.includes("failed") || swapStatus.includes("error") || swapStatus.includes("cancelled")
-                                        ? "bg-red-900/20 border border-red-500/50 text-red-400"
-                                        : "bg-blue-900/20 border border-blue-500/50 text-blue-400"
-                                }`}>
-                                <div className="flex items-center justify-between">
-                                    <span>{swapStatus}</span>
-                                    {isSwapping && (
-                                        <RiLoader2Fill className="animate-spin ml-2" />
-                                    )}
-                                </div>
-                                {lastTxSignature && (
-                                    <a
-                                        href={`https://solscan.io/tx/${lastTxSignature}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="mt-1 inline-block underline hover:text-white"
-                                    >
-                                        View on Solscan →
-                                    </a>
-                                )}
                             </div>
                         )}
 
@@ -696,7 +747,7 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                                 <span className="trade-label">SELLING</span>
                                 {wallet.connected && (
                                     <span className="text-xs text-gray-400">
-                                        Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
+                                        Balance: {inputBalance.toFixed(Math.min(inputToken.decimals, 6))} {inputToken.symbol}
                                     </span>
                                 )}
                             </div>
@@ -868,9 +919,10 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                             )} */}
 
                         {exchangeRate && (
-                            <a
-                                href="javascript:void(0)"
+                            <button
+                                type="button"
                                 onClick={() => setShowRateDetails(!showRateDetails)}
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', padding: 0 }}
                             >
                                 <div className="rate-box mt-3 ">
 
@@ -907,7 +959,7 @@ const RightSidebarNew = ({ selectedToken, quickBuyAmount }: RightSidebarNewProps
                                     )}
 
                                 </div>
-                            </a>
+                            </button>
                         )}
 
                     </div>
