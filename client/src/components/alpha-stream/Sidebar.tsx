@@ -40,11 +40,11 @@ function Sidebar() {
                         </li>
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive('/top-kol-coins') ? 'nav-active' : ''}`}
-                                onClick={() => navigate('/top-kol-coins')}
+                                className={`nav-link-item ${isActive('/top-coins') ? 'nav-active' : ''}`}
+                                onClick={() => navigate('/top-coins')}
                                 style={{ cursor: 'pointer' }}
                             >
-                             <FontAwesomeIcon icon={faCoins}/>   Top KOL Coins
+                             <FontAwesomeIcon icon={faCoins}/>   Top Coins
                             </a>
                         </li>
                     </ul>
@@ -54,8 +54,8 @@ function Sidebar() {
                     <ul className="nav-list">
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive('/kol') ? 'nav-active' : ''}`}
-                                onClick={() => navigate('/kol')}
+                                className={`nav-link-item ${isActive('/kol-feed') ? 'nav-active' : ''}`}
+                                onClick={() => navigate('/kol-feed')}
                                 style={{ cursor: 'pointer' }}
                             >
                              <FontAwesomeIcon icon={faRss}/>    KOL FEED
@@ -63,8 +63,8 @@ function Sidebar() {
                         </li>
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive('/all-kol-coins') ? 'nav-active' : ''}`}
-                                onClick={() => navigate('/all-kol-coins')}
+                                className={`nav-link-item ${isActive('/top-kol-coins') ? 'nav-active' : ''}`}
+                                onClick={() => navigate('/top-kol-coins')}
                                 style={{ cursor: 'pointer' }}
                             >
                               <FontAwesomeIcon icon={faRankingStar}/>   top KOL COINS
@@ -77,8 +77,8 @@ function Sidebar() {
                     <ul className="nav-list">
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive('/whale-leaderboard') ? 'nav-active' : ''}`}
-                                onClick={() => navigate('/whale-leaderboard')}
+                                className={`nav-link-item ${isActive('/whales-leaderboard') ? 'nav-active' : ''}`}
+                                onClick={() => navigate('/whales-leaderboard')}
                                 style={{ cursor: 'pointer' }}
                             >
                               <FontAwesomeIcon icon={faCrown}/>  whales leaderboard
