@@ -4,6 +4,8 @@ import { HiChevronUpDown } from "react-icons/hi2"
 import { User, LogOut } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
+import { faChevronDown, faChevronUp, faClose } from "@fortawesome/free-solid-svg-icons"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 
 const BASE_URL =
   import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"
@@ -137,6 +139,10 @@ function Header() {
     </div>
   )
 
+  const [showMore, setShowMore] = useState(false);
+   const [showModal, setShowModal] = useState(false);
+
+
   return (
     <>
       <style>{`
@@ -229,7 +235,7 @@ function Header() {
           )}
         </div>
         <div className="tp-header-bx" style={{ flexShrink: 0 }}>
-          <button className="connect-btn ">Connect</button>
+          <button className="connect-btn " onClick={() => setShowModal(true)}>Connect</button>
 
           {isAuthenticated && user ? (
             <div ref={dropdownRef} style={{ position: "relative" }}>
@@ -303,7 +309,113 @@ function Header() {
           )}
         </div>
       </header>
+
+      {showModal && (
+        <div className="modal fade show d-block" tabIndex={-1}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content nw-sign-frm p-0">
+
+             
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowModal(false)}
+              >
+                <FontAwesomeIcon icon={faClose} />
+              </button>
+
+              <div className="modal-body">
+                <div className="row">
+                  <div className="col-lg-12">
+                    <div className="login-frm-bx">
+
+                      <div className="text-center d-flex flex-column justify-content-center align-items-center">
+                        <img src="/logos.png" alt="" />
+                        <h6>Connect your wallet</h6>
+                      </div>
+                      <div className="mb-2">
+                        <button className="nw-connect-wallet-btn">
+                          <img src="/phantom.svg" alt="" /> Phantom
+                          <span className="nw-corner nw-top-right"></span>
+                          <span className="nw-corner nw-bottom-left"></span>
+                        </button>
+                      </div>
+
+         
+                      <div className="mt-3">
+                        <div className="mb-3 text-center">
+                          <a
+                            className="see-more-btn"
+                            onClick={() => setShowMore(!showMore)}
+                          >
+                            {showMore ? (
+                              <>
+                                See less wallets{" "}
+                                <FontAwesomeIcon icon={faChevronUp} />
+                              </>
+                            ) : (
+                              <>
+                                See more wallets{" "}
+                                <FontAwesomeIcon icon={faChevronDown} />
+                              </>
+                            )}
+                          </a>
+                        </div>
+
+                        {showMore && (
+                          <>
+                            <div className="mb-2">
+                              <button className="nw-connect-wallet-btn">
+                                <img src="/phantom.svg" alt="" /> Phantom
+                                <span className="nw-corner nw-top-right"></span>
+                                <span className="nw-corner nw-bottom-left"></span>
+                              </button>
+                            </div>
+
+                            <div className="mb-2">
+                              <button className="nw-connect-wallet-btn">
+                                <img src="/Solflare.svg" alt="" /> Solflare
+                                <span className="nw-corner nw-top-right"></span>
+                                <span className="nw-corner nw-bottom-left"></span>
+                              </button>
+                            </div>
+
+                            <div className="mb-2">
+                              <button className="nw-connect-wallet-btn">
+                                <img src="/coinbase.svg" alt="" /> Coinbase Wallet
+                                <span className="nw-corner nw-top-right"></span>
+                                <span className="nw-corner nw-bottom-left"></span>
+                              </button>
+                            </div>
+
+                            <div className="mb-2">
+                              <button className="nw-connect-wallet-btn">
+                                <img src="/magic.svg" alt="" /> Magic Eden Wallet
+                                <span className="nw-corner nw-top-right"></span>
+                                <span className="nw-corner nw-bottom-left"></span>
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {showModal && <div className="modal-backdrop fade show"></div>}
+      
+      
     </>
+
+
+  
   )
 }
 
