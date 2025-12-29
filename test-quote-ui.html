@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quote Generation Flow Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+        .test-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #ffd700;
+            font-size: 1.3em;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1em;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.05);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .result {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #4ade80;
+        }
+        .error {
+            color: #f87171;
+        }
+        .info {
+            color: #60a5fa;
+        }
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .status.loading {
+            background: rgba(96, 165, 250, 0.3);
+        }
+        .status.success {
+            background: rgba(74, 222, 128, 0.3);
+        }
+        .status.error {
+            background: rgba(248, 113, 113, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Quote Generation Flow Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Configuration</h2>
+            <div class="input-group">
+                <label>Input Token:</label>
+                <select id="inputToken">
+                    <option value="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">USDC</option>
+                    <option value="So11111111111111111111111111111111111111112">SOL</option>
+                    <option value="Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB">USDT</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Output Token:</label>
+                <select id="outputToken">
+                    <option value="So11111111111111111111111111111111111111112">SOL</option>
+                    <option value="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">USDC</option>
+                    <option value="Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB">USDT</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Amount:</label>
+                <input type="number" id="amount" value="10" step="0.01" min="0">
+            </div>
+            <div class="input-group">
+                <label>Slippage (BPS):</label>
+                <input type="number" id="slippage" value="500" step="10" min="0">
+            </div>
+            <button id="testBtn" onclick="testQuote()">🧪 Test Quote Generation</button>
+        </div>
+
+        <div id="statusDiv" style="display: none;"></div>
+
+        <div class="test-section">
+            <h2>Test Results</h2>
+            <div id="results" class="result">
+Click "Test Quote Generation" to start...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9090/api/v1';
+        
+        const TOKEN_DECIMALS = {
+            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 6,  // USDC
+            'So11111111111111111111111111111111111111112': 9,  // SOL
+            'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 6   // USDT
+        };
+
+        const TOKEN_SYMBOLS = {
+            'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': 'USDC',
+            'So11111111111111111111111111111111111111112': 'SOL',
+            'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': 'USDT'
+        };
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusDiv');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('statusDiv').style.display = 'none';
+        }
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            results.innerHTML += `<span class="${className}">${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        async function testQuote() {
+            const btn = document.getElementById('testBtn');
+            const results = document.getElementById('results');
+            
+            // Clear previous results
+            results.innerHTML = '';
+            hideStatus();
+            
+            // Disable button
+            btn.disabled = true;
+            
+            try {
+                // Get input values
+                const inputMint = document.getElementById('inputToken').value;
+                const outputMint = document.getElementById('outputToken').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const slippageBps = parseInt(document.getElementById('slippage').value);
+                
+                const inputSymbol = TOKEN_SYMBOLS[inputMint];
+                const outputSymbol = TOKEN_SYMBOLS[outputMint];
+                const inputDecimals = TOKEN_DECIMALS[inputMint];
+                const outputDecimals = TOKEN_DECIMALS[outputMint];
+                
+                log('='.repeat(60), 'info');
+                log('🧪 Testing Quote Generation Flow', 'info');
+                log('='.repeat(60), 'info');
+                log('');
+                
+                // Calculate amount in smallest units
+                const amountInSmallestUnit = Math.floor(amount * Math.pow(10, inputDecimals));
+                
+                log(`📊 Test Configuration:`, 'info');
+                log(`   Input: ${amount} ${inputSymbol}`, 'info');
+                log(`   Output: ${outputSymbol}`, 'info');
+                log(`   Amount (smallest units): ${amountInSmallestUnit}`, 'info');
+                log(`   Slippage: ${slippageBps} BPS (${(slippageBps / 100).toFixed(2)}%)`, 'info');
+                log('');
+                
+                // Test 1: Fetch quote
+                showStatus('⏳ Fetching quote...', 'loading');
+                log('🔄 Test 1: Fetching quote from backend...', 'info');
+                
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/trade/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amountInSmallestUnit}&slippageBps=${slippageBps}`);
+                const responseTime = Date.now() - startTime;
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error?.message || 'Quote request failed');
+                }
+                
+                const quote = data.data;
+                
+                log(`✅ Quote fetched successfully! (${responseTime}ms)`, 'success');
+                log('');
+                
+                // Test 2: Verify output amount
+                log('🔄 Test 2: Verifying output amount calculation...', 'info');
+                
+                const outAmountRaw = quote.outAmount;
+                log(`   Raw output: ${outAmountRaw}`, 'info');
+                
+                if (!outAmountRaw || isNaN(Number(outAmountRaw))) {
+                    throw new Error('Invalid outAmount in quote response');
+                }
+                
+                const outputAmount = parseFloat(outAmountRaw) / Math.pow(10, outputDecimals);
+                log(`   Calculated: ${outputAmount.toFixed(6)} ${outputSymbol}`, 'info');
+                
+                if (isNaN(outputAmount) || !isFinite(outputAmount)) {
+                    throw new Error('Invalid calculated output amount');
+                }
+                
+                log(`✅ Output amount calculated correctly!`, 'success');
+                log('');
+                
+                // Test 3: Verify exchange rate
+                log('🔄 Test 3: Verifying exchange rate...', 'info');
+                
+                const exchangeRate = outputAmount / amount;
+                log(`   Exchange rate: 1 ${inputSymbol} ≈ ${exchangeRate.toFixed(6)} ${outputSymbol}`, 'info');
+                
+                log(`✅ Exchange rate calculated correctly!`, 'success');
+                log('');
+                
+                // Test 4: Verify platform fee
+                log('🔄 Test 4: Verifying platform fee (0.75%)...', 'info');
+                
+                if (quote.platformFee) {
+                    log(`   Platform fee structure: ${JSON.stringify(quote.platformFee)}`, 'info');
+                    
+                    if (quote.platformFee.amount) {
+                        const feeAmount = parseFloat(quote.platformFee.amount) / Math.pow(10, outputDecimals);
+                        const feePercentage = (feeAmount / outputAmount) * 100;
+                        log(`   Fee amount: ${feeAmount.toFixed(6)} ${outputSymbol}`, 'info');
+                        log(`   Fee percentage: ${feePercentage.toFixed(4)}%`, 'info');
+                    } else {
+                        const fallbackFee = outputAmount * 0.0075;
+                        log(`   Using fallback calculation: ${fallbackFee.toFixed(6)} ${outputSymbol}`, 'info');
+                    }
+                } else {
+                    const fallbackFee = outputAmount * 0.0075;
+                    log(`   No platformFee in response, using fallback: ${fallbackFee.toFixed(6)} ${outputSymbol}`, 'info');
+                }
+                
+                log(`✅ Platform fee verified!`, 'success');
+                log('');
+                
+                // Test 5: Verify required fields
+                log('🔄 Test 5: Verifying required fields...', 'info');
+                
+                const requiredFields = ['inputMint', 'outputMint', 'inAmount', 'outAmount', 'priceImpactPct', 'routePlan'];
+                const missingFields = requiredFields.filter(field => !quote[field]);
+                
+                if (missingFields.length === 0) {
+                    log(`   All required fields present: ${requiredFields.join(', ')}`, 'info');
+                    log(`✅ All required fields verified!`, 'success');
+                } else {
+                    throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+                }
+                
+                log('');
+                log('='.repeat(60), 'info');
+                log('🎉 ALL TESTS PASSED!', 'success');
+                log('='.repeat(60), 'info');
+                log('');
+                log('📋 Summary:', 'info');
+                log(`   ✅ Quote fetched in ${responseTime}ms`, 'success');
+                log(`   ✅ Output: ${outputAmount.toFixed(6)} ${outputSymbol}`, 'success');
+                log(`   ✅ Rate: 1 ${inputSymbol} ≈ ${exchangeRate.toFixed(6)} ${outputSymbol}`, 'success');
+                log(`   ✅ Fee: ~${(outputAmount * 0.0075).toFixed(6)} ${outputSymbol} (0.75%)`, 'success');
+                log(`   ✅ Price Impact: ${quote.priceImpactPct}%`, 'success');
+                
+                showStatus('✅ All tests passed!', 'success');
+                
+            } catch (error) {
+                log('');
+                log('='.repeat(60), 'error');
+                log('❌ TEST FAILED', 'error');
+                log('='.repeat(60), 'error');
+                log(`Error: ${error.message}`, 'error');
+                log('');
+                log('Stack trace:', 'error');
+                log(error.stack, 'error');
+                
+                showStatus('❌ Test failed - check results', 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

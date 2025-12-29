@@ -1,10 +1,9 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors';
 import axios from 'axios';
 import {
   validateSwapQuoteParams,
   validateSwapTransactionParams,
-  validateTrackTradeParams,
   ValidationError,
 } from '../utils/validation';
 import {
@@ -12,8 +11,6 @@ import {
   JupiterSwapRequest,
   JupiterSwapResponse,
   JupiterErrorResponse,
-  TrackTradeRequest,
-  TrackTradeResponse,
   PriorityLevel,
   UltraSwapRequest,
 } from '../types/jupiter.types';
@@ -25,9 +22,6 @@ import {
   isValidPriorityLevel,
 } from '../utils/priorityLevelUtils';
 import { handleUltraError, UltraErrorType, detectUltraErrorType } from '../utils/ultraErrorHandler';
-// Jupiter Ultra only - no fallback needed
-import PlatformTradeModel from '../models/platformTrade.model';
-import WalletTradeModel from '../models/WalletTrade.model';
 import { logger } from '../config/logger';
 import { randomUUID } from 'crypto';
 
@@ -144,7 +138,7 @@ function normalizeSwapRequest(req: JupiterSwapRequest, tradeAmountUsd?: number):
     userPublicKey: req.userPublicKey,
     wrapAndUnwrapSol: req.wrapAndUnwrapSol !== undefined ? req.wrapAndUnwrapSol : true,
     feeAccount: req.feeAccount,
-    // ✅ Jupiter Ultra automatically determines optimal priority - no manual priorityLevel needed
+    // âœ… Jupiter Ultra automatically determines optimal priority - no manual priorityLevel needed
     dynamicSlippage: req.dynamicSlippage !== undefined ? req.dynamicSlippage : envConfig.JUPITER_ENABLE_DYNAMIC_SLIPPAGE,
     asLegacyTransaction: req.asLegacyTransaction !== undefined ? req.asLegacyTransaction : false,
     dynamicComputeUnitLimit: req.dynamicComputeUnitLimit !== undefined ? req.dynamicComputeUnitLimit : true,
@@ -222,7 +216,7 @@ export const getSwapQuote = catchAsyncErrors(
       if (feeAccount) {
         queryParams.referralAccount = feeAccount;
         queryParams.referralFee = 75; // 0.75% = 75 basis points
-        queryParams.platformFeeRetry = true; // ✅ Enable automatic retry on fee collection failures
+        queryParams.platformFeeRetry = true; // âœ… Enable automatic retry on fee collection failures
       }
 
       // Call Jupiter Ultra v1 API for quote using /order endpoint
@@ -383,7 +377,7 @@ export const getSwapTransaction = catchAsyncErrors(
       if (feeAccount) {
         orderParams.referralAccount = feeAccount;
         orderParams.referralFee = 75; // 0.75% = 75 basis points
-        orderParams.platformFeeRetry = true; // ✅ Enable automatic retry on fee collection failures
+        orderParams.platformFeeRetry = true; // âœ… Enable automatic retry on fee collection failures
       }
 
       // Add slippage if specified in quote
@@ -474,461 +468,10 @@ export const getSwapTransaction = catchAsyncErrors(
 // Wrapped SOL token mint address (native SOL)
 const WRAPPED_SOL_MINT = 'So11111111111111111111111111111111111111112';
 
-/**
- * Get transaction history for a wallet
- * 
- * @route GET /api/v1/trade/history
- * @param walletAddress - User's wallet address (optional, uses authenticated user if not provided)
- * @param limit - Number of transactions to return (default: 10)
- * @param offset - Number of transactions to skip (default: 0)
- * 
- * Requirements: 16.5 - Display priority level used in transaction history
- */
-export const getTransactionHistory = catchAsyncErrors(
-  async (req: Request, res: Response) => {
-    const requestId = randomUUID();
-    
-    try {
-      // Extract query parameters
-      const { walletAddress, limit = 10, offset = 0 } = req.query;
+// Removed unused function: getTransactionHistory
+// This function referenced undefined models (PlatformTradeModel) and was not being used
 
-      // Build query filter
-      const filter: any = {};
-      
-      if (walletAddress) {
-        filter.walletAddress = walletAddress;
-      }
+// Removed unused functions: getPriorityLevelAnalytics and trackTrade
+// These functions referenced undefined models (PlatformTradeModel, WalletTradeModel) and types (TrackTradeRequest, TrackTradeResponse)
+// and were not being used (routes were already removed)
 
-      // Parse pagination parameters
-      const limitNum = Math.min(parseInt(limit as string) || 10, 100); // Max 100 transactions
-      const offsetNum = parseInt(offset as string) || 0;
-
-      // Fetch transactions from PlatformTrade model
-      const transactions = await PlatformTradeModel
-        .find(filter)
-        .sort({ timestamp: -1 }) // Most recent first
-        .limit(limitNum)
-        .skip(offsetNum)
-        .lean();
-
-      // Get total count for pagination
-      const totalCount = await PlatformTradeModel.countDocuments(filter);
-
-      logger.info('Transaction history fetched successfully', {
-        requestId,
-        walletAddress: walletAddress || 'authenticated_user',
-        transactionCount: transactions.length,
-        totalCount,
-        limit: limitNum,
-        offset: offsetNum,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Return transaction history
-      return res.status(200).json({
-        success: true,
-        data: transactions,
-        pagination: {
-          total: totalCount,
-          limit: limitNum,
-          offset: offsetNum,
-          hasMore: offsetNum + limitNum < totalCount,
-        },
-      });
-    } catch (error: any) {
-      logger.error('Error fetching transaction history', {
-        requestId,
-        endpoint: '/history',
-        method: 'GET',
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch transaction history',
-          details: error.message,
-          timestamp: new Date().toISOString(),
-        },
-      } as JupiterErrorResponse);
-    }
-  }
-);
-
-/**
- * Get priority level analytics for a wallet
- * 
- * @route GET /api/v1/trade/analytics/priority-levels
- * @param walletAddress - User's wallet address (optional, uses authenticated user if not provided)
- * @param timeRange - Time range for analytics ('24h', '7d', '30d', 'all')
- * 
- * Requirements: 16.5 - Add analytics for priority level usage
- */
-export const getPriorityLevelAnalytics = catchAsyncErrors(
-  async (req: Request, res: Response) => {
-    const requestId = randomUUID();
-    
-    try {
-      // Extract query parameters
-      const { walletAddress, timeRange = '7d' } = req.query;
-
-      // Build query filter
-      const filter: any = {};
-      
-      if (walletAddress) {
-        filter.walletAddress = walletAddress;
-      }
-
-      // Add time range filter
-      if (timeRange !== 'all') {
-        const now = new Date();
-        let startDate: Date;
-
-        switch (timeRange) {
-          case '24h':
-            startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-            break;
-          case '7d':
-            startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            break;
-          case '30d':
-            startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            break;
-          default:
-            startDate = new Date(0); // All time
-        }
-
-        filter.timestamp = { $gte: startDate };
-      }
-
-      // Aggregate priority level statistics
-      const analytics = await PlatformTradeModel.aggregate([
-        { $match: filter },
-        {
-          $group: {
-            _id: null,
-            totalTransactions: { $sum: 1 },
-            totalVolume: { $sum: '$inputAmount' },
-            totalFees: { $sum: '$platformFee' },
-            levelStats: {
-              $push: {
-                level: '$priorityLevel',
-                inputAmount: '$inputAmount',
-                outputAmount: '$outputAmount',
-                platformFee: '$platformFee',
-                timestamp: '$timestamp',
-              }
-            }
-          }
-        },
-        {
-          $project: {
-            _id: 0,
-            totalTransactions: 1,
-            totalVolume: 1,
-            totalFees: 1,
-            averageConfirmationTime: 5.2, // Placeholder - would calculate from actual data
-            levelStats: {
-              $map: {
-                input: ['Low', 'Medium', 'High', 'VeryHigh'],
-                as: 'level',
-                in: {
-                  level: '$$level',
-                  count: {
-                    $size: {
-                      $filter: {
-                        input: '$levelStats',
-                        cond: { $eq: ['$$this.level', '$$level'] }
-                      }
-                    }
-                  },
-                  totalVolume: {
-                    $sum: {
-                      $map: {
-                        input: {
-                          $filter: {
-                            input: '$levelStats',
-                            cond: { $eq: ['$$this.level', '$$level'] }
-                          }
-                        },
-                        in: '$$this.inputAmount'
-                      }
-                    }
-                  },
-                  averageFee: {
-                    $avg: {
-                      $map: {
-                        input: {
-                          $filter: {
-                            input: '$levelStats',
-                            cond: { $eq: ['$$this.level', '$$level'] }
-                          }
-                        },
-                        in: '$$this.platformFee'
-                      }
-                    }
-                  },
-                  successRate: 95.5, // Placeholder - would calculate from actual success/failure data
-                  averageConfirmationTime: {
-                    $switch: {
-                      branches: [
-                        { case: { $eq: ['$$level', 'Low'] }, then: 8.2 },
-                        { case: { $eq: ['$$level', 'Medium'] }, then: 6.1 },
-                        { case: { $eq: ['$$level', 'High'] }, then: 4.3 },
-                        { case: { $eq: ['$$level', 'VeryHigh'] }, then: 2.8 }
-                      ],
-                      default: 5.2
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      ]);
-
-      const result = analytics[0] || {
-        totalTransactions: 0,
-        totalVolume: 0,
-        totalFees: 0,
-        averageConfirmationTime: 0,
-        levelStats: [],
-      };
-
-      // Filter out levels with zero transactions
-      result.levelStats = result.levelStats.filter((stat: any) => stat.count > 0);
-
-      logger.info('Priority level analytics fetched successfully', {
-        requestId,
-        walletAddress: walletAddress || 'authenticated_user',
-        timeRange,
-        totalTransactions: result.totalTransactions,
-        levelsWithData: result.levelStats.length,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Return analytics
-      return res.status(200).json({
-        success: true,
-        data: {
-          ...result,
-          timeRange: timeRange as string,
-        },
-      });
-    } catch (error: any) {
-      logger.error('Error fetching priority level analytics', {
-        requestId,
-        endpoint: '/analytics/priority-levels',
-        method: 'GET',
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Failed to fetch priority level analytics',
-          details: error.message,
-          timestamp: new Date().toISOString(),
-        },
-      } as JupiterErrorResponse);
-    }
-  }
-);
-export const trackTrade = catchAsyncErrors(
-  async (req: Request, res: Response) => {
-    const requestId = randomUUID();
-    
-    try {
-      // Extract request body
-      const {
-        signature,
-        walletAddress,
-        inputMint,
-        outputMint,
-        inputAmount,
-        outputAmount,
-        platformFee,
-        timestamp,
-        priorityLevel, // New field for Ultra tracking
-      } = req.body as TrackTradeRequest;
-
-      // Validate required parameters
-      validateTrackTradeParams(
-        signature,
-        walletAddress,
-        inputMint,
-        outputMint,
-        inputAmount,
-        outputAmount,
-        platformFee
-      );
-
-      // Use provided timestamp or current time
-      const tradeTimestamp = timestamp ? new Date(timestamp) : new Date();
-
-      // Save to PlatformTrade model for revenue tracking
-      const platformTrade = await PlatformTradeModel.create({
-        signature,
-        walletAddress,
-        inputMint,
-        outputMint,
-        inputAmount,
-        outputAmount,
-        platformFee,
-        timestamp: tradeTimestamp,
-        priorityLevel, // Track priority level used (optional)
-      });
-
-      // Determine trade type (BUY or SELL) based on token types
-      // If input is SOL/WSOL and output is another token -> BUY
-      // If input is another token and output is SOL/WSOL -> SELL
-      const isBuy = inputMint === WRAPPED_SOL_MINT;
-      const tradeEvent = isBuy ? 'BUY' : 'SELL';
-
-      // Determine which token is being traded (non-SOL token)
-      const tokenAddress = isBuy ? outputMint : inputMint;
-      const tokenAmount = isBuy ? outputAmount : inputAmount;
-      
-      // SOL amount is the input for BUY, output for SELL
-      const solAmount = isBuy ? inputAmount : outputAmount;
-
-      // Convert to WalletTrade format
-      // Note: We don't have token symbol, USD values, or wallet balance here
-      // These would typically be fetched from additional APIs or provided by client
-      const walletTrade = await WalletTradeModel.create({
-        signature,
-        walletAddress,
-        tradeEvent,
-        tokenAddress,
-        tokenSymbol: 'UNKNOWN', // Would need to fetch from token metadata
-        quantity: solAmount, // Amount in SOL
-        quantityUsd: 0, // Would need to calculate from SOL price
-        tokenAmount,
-        contract: tokenAddress,
-        walletBalance: 0, // Would need to fetch from RPC
-        status: 'confirmed',
-        timestamp: tradeTimestamp,
-      });
-
-      // Return success response with saved trade data
-      return res.status(200).json({
-        success: true,
-        message: 'Trade tracked successfully',
-        trade: {
-          signature: platformTrade.signature,
-          walletAddress: platformTrade.walletAddress,
-          inputMint: platformTrade.inputMint,
-          outputMint: platformTrade.outputMint,
-          inputAmount: platformTrade.inputAmount,
-          outputAmount: platformTrade.outputAmount,
-          platformFee: platformTrade.platformFee,
-          timestamp: platformTrade.timestamp,
-        },
-      } as TrackTradeResponse);
-    } catch (error: any) {
-      // Handle validation errors
-      if (error instanceof ValidationError) {
-        logger.warn('Validation error in trackTrade', {
-          requestId,
-          endpoint: '/track',
-          method: 'POST',
-          error: error.message,
-          body: {
-            signature: req.body.signature,
-            walletAddress: req.body.walletAddress,
-          },
-          timestamp: new Date().toISOString(),
-        });
-
-        return res.status(400).json({
-          success: false,
-          error: {
-            code: 'VALIDATION_ERROR',
-            message: error.message,
-            timestamp: new Date().toISOString(),
-          },
-        } as JupiterErrorResponse);
-      }
-
-      // Handle duplicate signature errors (MongoDB unique constraint)
-      if (error.code === 11000 && error.keyPattern?.signature) {
-        logger.error('Duplicate signature error in trackTrade', {
-          requestId,
-          endpoint: '/track',
-          method: 'POST',
-          signature: req.body.signature,
-          error: error.message,
-          stack: error.stack,
-          timestamp: new Date().toISOString(),
-        });
-
-        return res.status(409).json({
-          success: false,
-          error: {
-            code: 'DUPLICATE_SIGNATURE',
-            message: 'Transaction with this signature has already been tracked',
-            details: { signature: req.body.signature },
-            timestamp: new Date().toISOString(),
-          },
-        } as JupiterErrorResponse);
-      }
-
-      // Handle database errors
-      if (error.name === 'MongoError' || error.name === 'MongoServerError') {
-        logger.error('Database error in trackTrade', {
-          requestId,
-          endpoint: '/track',
-          method: 'POST',
-          message: error.message,
-          code: error.code,
-          body: {
-            signature: req.body.signature,
-            walletAddress: req.body.walletAddress,
-          },
-          stack: error.stack,
-          timestamp: new Date().toISOString(),
-        });
-
-        return res.status(500).json({
-          success: false,
-          error: {
-            code: 'DATABASE_ERROR',
-            message: 'Failed to save trade to database',
-            details: error.message,
-            timestamp: new Date().toISOString(),
-          },
-        } as JupiterErrorResponse);
-      }
-
-      // Handle unexpected errors
-      logger.error('Unexpected error in trackTrade', {
-        requestId,
-        endpoint: '/track',
-        method: 'POST',
-        message: error.message,
-        body: {
-          signature: req.body.signature,
-          walletAddress: req.body.walletAddress,
-        },
-        stack: error.stack,
-        timestamp: new Date().toISOString(),
-      });
-
-      return res.status(500).json({
-        success: false,
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: 'An unexpected error occurred while tracking trade',
-          details: error.message,
-          timestamp: new Date().toISOString(),
-        },
-      } as JupiterErrorResponse);
-    }
-  }
-);

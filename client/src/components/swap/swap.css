@@ -466,6 +466,74 @@
   font-weight: 600;
 }
 
+.slippage-settings-panel {
+  background: #0a0a0a;
+  border: 1px solid #292929;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+  animation: slide-in-up 0.3s ease-out;
+}
+
+.slippage-preset-btn {
+  flex: 1;
+  background: #0b0b0b;
+  border: 1px solid #2a2a2a;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #ebebeb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.slippage-preset-btn:hover {
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+  transform: translateY(-1px);
+}
+
+.slippage-preset-btn.active {
+  background: linear-gradient(135deg, #2b6ad1 0%, #1e4fa0 100%);
+  border-color: #2b6ad1;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(43, 106, 209, 0.3);
+}
+
+.custom-slippage-input {
+  width: 100%;
+  background: #0b0b0b;
+  border: 1px solid #2a2a2a;
+  padding: 10px 40px 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #ebebeb;
+  outline: none;
+  transition: all 0.2s ease;
+  font-family: 'IBM Plex Mono', 'Courier New', monospace;
+}
+
+.custom-slippage-input:focus {
+  border-color: #2b6ad1;
+  box-shadow: 0 0 0 2px rgba(43, 106, 209, 0.2);
+}
+
+.custom-slippage-input::placeholder {
+  color: #525252;
+}
+
+/* Remove number input arrows */
+.custom-slippage-input::-webkit-outer-spin-button,
+.custom-slippage-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.custom-slippage-input[type=number] {
+  -moz-appearance: textfield;
+}
+
 /* ============================================
    Responsive Design
    ============================================ */
