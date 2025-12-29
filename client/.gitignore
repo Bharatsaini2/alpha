@@ -27,8 +27,3 @@ dist-ssr
 *.pdf
 *.docx
 *.doc
-
-# Package files
-package-lock.json
-yarn.lock
-pnpm-lock.yaml

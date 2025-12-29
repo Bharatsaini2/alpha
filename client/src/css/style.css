@@ -457,6 +457,7 @@ input[type="number"] {
     rgba(43, 106, 209, 0) 100%
   ) !important;
   border-left: 1px solid #2b6ad1;
+  color: #fff !important;
 }
 
 .nav-btm-list {
@@ -501,6 +502,30 @@ input[type="number"] {
 .nav-btm-item {
   margin-top: auto;
 }
+
+.sidebar-collapsed {
+  width: 70px !important;
+}
+
+.nav-active {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.sidebar-collapsed .nav-link-item {
+  justify-content: center;
+}
+
+.sidebar-collapsed .nav-link-item span,
+.sidebar-collapsed h6,
+.sidebar-collapsed .nav-btm-item {
+  display: none;
+}
+
+.nav-link-item svg {
+  font-size: 16px;
+}
+
+/* sidebar end */
 
 .text-grad {
   /* background: linear-gradient(270deg, rgba(0, 0, 0, 0) 0%, #000000 34.42%);
@@ -699,6 +724,48 @@ input[type="number"] {
   color: #ebebeb;
 }
 
+/* Close Btn with filtering bx start */
+
+.search-container {
+  position: relative;
+}
+
+.search-input {
+  padding-right: 40px;
+  border-radius: 0px;
+  border: 1px solid #ccc;
+}
+
+.dropdown-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #292929;
+  border: 1px solid #292929;
+  border-top: none;
+  z-index: 10;
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+.dropdown-item {
+  padding: 5px 10px;
+  cursor: pointer;
+  text-align: start;
+  font-size: 12px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.dropdown-item:hover {
+  color: #f0f0f0;
+}
+
 .searching-bx {
   position: absolute;
   bottom: 5px;
@@ -709,6 +776,118 @@ input[type="number"] {
   color: #ebebeb;
   font-size: 12px;
 }
+
+.clear-input-btn {
+  position: absolute;
+  right: 25px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #888;
+  z-index: 15;
+}
+
+.clear-input-btn:hover {
+  color: #555;
+}
+
+/* Close Btn with filtering bx end*/
+
+.skeleton-card {
+  background: #0b0b0b;
+  border-radius: 0px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 37%, #1a1a1a 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: 0px;
+}
+
+/* Sizes */
+.skeleton-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 0;
+}
+
+.skeleton-text.nw-sm {
+  width: 120px;
+  height: 12px;
+}
+
+.skeleton-text.nw-md {
+  width: 160px;
+  height: 14px;
+}
+
+.skeleton-text.nw-xs {
+  width: 90px;
+  height: 10px;
+  margin-top: 6px;
+}
+
+.skeleton-badge {
+  width: 60px;
+  height: 18px;
+  border-radius: 0px;
+  margin-right: 6px;
+}
+
+.skeleton-btn {
+  width: 70px;
+  height: 28px;
+}
+
+.skeleton-token {
+  width: 64px;
+  height: 64px;
+  border-radius: 0;
+}
+
+.left-item-bx {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 1;
+}
+
+.tags {
+  display: flex;
+  margin: 6px 0;
+}
+
+.sell-trade-bx {
+  min-width: 90px;
+  display: flex;
+  justify-content: center;
+}
+
+.right-info {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Animation */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/* Close Btn with filtering bx end*/
 
 .nw-quick-bx img {
   width: 16px;

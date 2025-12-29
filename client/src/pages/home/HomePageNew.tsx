@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown,  faFilter, faSearch } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faArrowTrendDown, faFilter, faSearch } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
@@ -575,15 +575,15 @@ const HomePageNew = () => {
         setActiveFilters(newFilters)
     }
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault()
-        const newFilters = {
-            ...activeFilters,
-            searchQuery: searchQuery,
-            searchType: "coin" as const
-        }
-        setActiveFilters(newFilters)
-    }
+    // const handleSearch = (e: React.FormEvent) => {
+    //     e.preventDefault()
+    //     const newFilters = {
+    //         ...activeFilters,
+    //         searchQuery: searchQuery,
+    //         searchType: "coin" as const
+    //     }
+    //     setActiveFilters(newFilters)
+    // }
 
     const handleFilterUpdate = (key: string, value: any) => {
         const newFilters = {
@@ -630,6 +630,43 @@ const HomePageNew = () => {
 
     const quickBuyInputRef = useRef<HTMLInputElement>(null)
 
+
+
+    const options = ["nobody", "this", "that", "here", "something", "anything"];
+
+    // const [searchQuery, setSearchQuery] = useState("");
+    const [filteredOptions, setFilteredOptions] = useState([]);
+    const [showDropdown, setShowDropdown] = useState(false);
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        // You can perform a search action here if needed
+        console.log("Search submitted:", searchQuery);
+    };
+
+    const handleChange = (e) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+
+        if (value.trim() === "") {
+            setFilteredOptions([]);
+            setShowDropdown(false);
+            return;
+        }
+
+        const filtered = options.filter((option) =>
+            option.toLowerCase().includes(value.toLowerCase())
+        );
+        setFilteredOptions(filtered);
+        setShowDropdown(filtered.length > 0);
+    };
+
+    const handleSelect = (option) => {
+        setSearchQuery(option);
+        setShowDropdown(false);
+    };
+
+
     return (
         <>
             <section className="">
@@ -647,14 +684,14 @@ const HomePageNew = () => {
                             </div>
                             <div>
                                 <a href="javascript:void(0)" className="visualize-btn" onClick={() => setIsOpen(true)}>
-                                     VISUALIZE <PiMagicWand />
+                                    VISUALIZE <PiMagicWand />
                                 </a>
                             </div>
                         </div>
 
                         {/* Search and Quick Buy */}
                         <div className="d-flex align-items-center gap-1">
-                            <form className="custom-frm-bx flex-grow-1" onSubmit={handleSearch}>
+                            {/* <form className="custom-frm-bx flex-grow-1" onSubmit={handleSearch}>
                                 <input
                                     type="text"
                                     className="form-control pe-5"
@@ -667,7 +704,85 @@ const HomePageNew = () => {
                                         <FontAwesomeIcon icon={faSearch} />
                                     </button>
                                 </div>
-                            </form>
+                            </form> */}
+
+                            {/* <div className="search-container flex-grow-1">
+                                <form className="custom-frm-bx mb-0" onSubmit={handleSearch}>
+                                    <input
+                                        type="text"
+                                        className="form-control pe-5"
+                                        placeholder="Search by token name or address..."
+                                        value={searchQuery}
+                                        onChange={handleChange}
+                                        onFocus={() => setShowDropdown(filteredOptions.length > 0)}
+                                    />
+                                    <div className="searching-bx">
+                                        <button className="search-btn" type="submit">
+                                            <FontAwesomeIcon icon={faSearch} />
+                                        </button>
+                                    </div>
+                                </form>
+
+                             
+                                {showDropdown && (
+                                    <ul className="dropdown-options">
+                                        {filteredOptions.map((option, index) => (
+                                            <li
+                                                key={index}
+                                                className="dropdown-item"
+                                                onClick={() => handleSelect(option)}
+                                            >
+                                                {option}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div> */}
+
+                            <div className="search-container flex-grow-1">
+                                <form className="custom-frm-bx " onSubmit={handleSearch}>
+                                    <input
+                                        type="text"
+                                        className="form-control pe-5"
+                                        placeholder="Search by token name or address..."
+                                        value={searchQuery}
+                                        onChange={handleChange}
+                                        onFocus={() => setShowDropdown(filteredOptions.length > 0)}
+                                    />
+                                    <div className="searching-bx">
+                                        <button className="search-btn" type="submit">
+                                            <FontAwesomeIcon icon={faSearch} />
+                                        </button>
+                                        {searchQuery && (
+                                            <button
+                                                type="button"
+                                                className="clear-input-btn"
+                                                onClick={() => setSearchQuery("")}
+                                            >
+                                                ×
+                                            </button>
+                                        )}
+                                    </div>
+                                </form>
+
+                                {showDropdown && (
+                                    <ul className="dropdown-options">
+                                        {filteredOptions.map((option, index) => (
+                                            <li
+                                                key={index}
+                                                className="dropdown-item"
+                                                onClick={() => handleSelect(option)}
+                                            >
+                                                {option}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+
+
+
                             <div className="custom-frm-bx nw-quick-bx">
                                 <button
                                     className="quick-btn"
@@ -874,7 +989,7 @@ const HomePageNew = () => {
                                                             <a
                                                                 href="javascript:void(0)"
                                                                 className="quick-nw-btn quick-copy-btn"
-                                                           
+
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
@@ -952,6 +1067,43 @@ const HomePageNew = () => {
                                                     </div>
                                                 </div>
                                             </div>
+
+                                            {/* skeleton Body */}
+                                            {/* <div className="custom-card skeleton-card">
+
+                                                <div className="left-item-bx">
+                                                    <div className="skeleton skeleton-avatar"></div>
+
+                                                    <div className="whale-content flex-grow-1">
+                                                        <div className="skeleton skeleton-text nw-sm"></div>
+
+                                                        <div className="tags">
+                                                            <div className="skeleton skeleton-badge"></div>
+                                                            <div className="skeleton skeleton-badge"></div>
+                                                        </div>
+
+                                                        <div className="skeleton skeleton-text nw-md"></div>
+                                                    </div>
+                                                </div>
+
+
+                                                <div className="sell-trade-bx">
+                                                    <div className="skeleton skeleton-btn"></div>
+                                                </div>
+
+                                                <div className="right-info text-end">
+                                                    <div>
+                                                        <div className="skeleton skeleton-text nw-sm"></div>
+                                                        <div className="skeleton skeleton-text nw-xs"></div>
+                                                        <div className="skeleton skeleton-text nw-xs"></div>
+                                                    </div>
+
+                                                    <div className="right-img">
+                                                        <div className="skeleton skeleton-token"></div>
+                                                    </div>
+                                                </div>
+                                            </div> */}
+
                                         </div>
                                     ))
                                 )}
