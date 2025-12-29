@@ -6,6 +6,8 @@ import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
 import { faChevronDown, faChevronUp, faClose } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { PiPlugsConnected } from "react-icons/pi";
+
 
 const BASE_URL =
   import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"
@@ -235,7 +237,7 @@ function Header() {
           )}
         </div>
         <div className="tp-header-bx" style={{ flexShrink: 0 }}>
-          <button className="connect-btn " onClick={() => setShowModal(true)}>Connect</button>
+          {/* <button className="connect-btn " onClick={() => setShowModal(true)}>Connect</button> */}
 
           {isAuthenticated && user ? (
             <div ref={dropdownRef} style={{ position: "relative" }}>
@@ -288,6 +290,16 @@ function Header() {
                       {`${user.walletAddress.slice(0, 6)}...${user.walletAddress.slice(-4)}`}
                     </div>
                   )}
+                  <div className="user-dropdown-divider" />
+                  <div
+                    className="user-dropdown-item"
+                   onClick={() => setShowModal(true)}
+                  >
+                    <PiPlugsConnected  size={14} />
+                    Connect
+                  </div>
+
+
                   <div className="user-dropdown-divider" />
                   <div
                     className="user-dropdown-item"
@@ -407,7 +419,6 @@ function Header() {
           </div>
         </div>
       )}
-
 
       {showModal && <div className="modal-backdrop fade show"></div>}
       
