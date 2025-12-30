@@ -1,3 +1,5 @@
+import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState } from "react";
 import { PiPlugs, PiTelegramLogoDuotone } from "react-icons/pi";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
@@ -18,6 +20,10 @@ function TelegramSubscription() {
 
                 <div className="row justify-content-center">
                     <div className="col-lg-4 col-md-12 col-sm-12">
+                        <div className="">
+                            <a href="javascript:void(0)" className="back-link mb-2"> <FontAwesomeIcon icon={faArrowLeft}/> Back</a>
+                        </div>
+
                         <div className="alpha-profile-card mb-3">
                             <div className="alpha-profile-title-bx nw-kol-profile">
                                 <div>

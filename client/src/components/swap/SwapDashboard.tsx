@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react"
 import { Activity, BarChart3, History, Settings } from "lucide-react"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import TransactionHistory from "./TransactionHistory"
-// Note: PriorityLevelAnalytics component was removed
+import PriorityLevelAnalytics from "./PriorityLevelAnalytics"
 
 interface SwapDashboardProps {
   className?: string
@@ -158,9 +158,11 @@ export const SwapDashboard: React.FC<SwapDashboardProps> = ({
 
         {activeTab === 'analytics' && (
           <div className="space-y-6">
-            <div className="text-center text-gray-500 py-8">
-              Analytics feature coming soon
-            </div>
+            <PriorityLevelAnalytics
+              walletAddress={wallet.address || undefined}
+              timeRange={timeRange}
+              className="priority-analytics-tab"
+            />
           </div>
         )}
 

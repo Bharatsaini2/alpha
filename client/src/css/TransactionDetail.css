@@ -336,8 +336,13 @@
   border: 1px solid #3d3d3d;
   padding: 4px;
   font-size: 10px !important;
+  cursor: pointer;
 
   display: inline-block;
+}
+
+.trans-copy-btn:hover {
+  opacity: 0.6;
 }
 
 .nws-arrow-tp {

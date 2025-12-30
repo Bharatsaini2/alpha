@@ -5,6 +5,18 @@ body {
   overflow-x: hidden !important;
 }
 
+@media (min-width: 992px) {
+  .nw-main-bx {
+    flex: 0 0 auto;
+    width: 62.666667%;
+  }
+
+  .right-side-bar {
+    flex: 0 0 auto;
+    width: 37.333333%;
+  }
+}
+
 @media (max-width: 991px) {
   /* Force everything to fit viewport */
   html,
@@ -27,7 +39,6 @@ body {
     height: 64px;
   }
 
-  /* === MOBILE SCROLLING FIX FOR ALPHA STREAM === */
   .app {
     height: auto !important;
     min-height: 100vh;

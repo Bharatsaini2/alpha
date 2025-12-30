@@ -5,6 +5,7 @@ import fallbackImage from "../../assets/default_token.svg"
 import { POPULAR_TOKENS, TokenInfo } from "../../lib/tokenList"
 import { fetchJupiterTokens, searchJupiterTokens } from "../../lib/jupiterTokens"
 import { useJupiterSearch, JupiterTokenResult } from "../../hooks/useJupiterSearch"
+import { RiVerifiedBadgeLine } from "react-icons/ri";
 import "./swap.css"
 
 // Re-export TokenInfo for backward compatibility
@@ -46,7 +47,7 @@ const TokenItem = memo<{
   return (
     <button
       onClick={() => onSelect(token)}
-      className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-[#1A1A1A] transition-colors ${
+      className={`w-full px-3 py-3 flex items-center gap-2 hover:bg-[#1A1A1A] transition-colors ${
         isSelected ? "bg-[#1A1A1A]" : ""
       }`}
     >
@@ -68,10 +69,11 @@ const TokenItem = memo<{
         <div className="flex items-center gap-2">
           <span className="font-medium text-white">{token.symbol}</span>
           {token.isPopular && (
-            <Star size={12} className="text-yellow-400 fill-current" />
+            // <Star size={12} className="text-yellow-400 fill-current" />
+            <RiVerifiedBadgeLine size={16} className="text-yellow-400 fill-current" />
           )}
           {token.isVerified && (
-            <span className="text-xs text-green-400">✓</span>
+            <span className="text-xs text-green-400"> <RiVerifiedBadgeLine/> </span>
           )}
         </div>
         <div className="text-sm text-gray-400 truncate">{token.name}</div>
@@ -397,11 +399,11 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md mx-4 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-2xl max-h-[80vh] flex flex-col"
+            className="relative w-full max-w-md mx-4   shadow-2xl max-h-[80vh] flex flex-col nw-custm-modal-bx"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 border-b border-[#2B2B2D]">
-              <h2 className="text-lg font-semibold text-white">{title}</h2>
+            <div className="flex items-center justify-between px-3 py-3 border-b border-[#2B2B2D]">
+              <h4 className="text-md font-semibold text-white mb-0">{title}</h4>
               <div className="flex items-center gap-2">
                 {tokenLoadError && (
                   <span className="text-xs text-yellow-400" title={tokenLoadError}>
@@ -418,7 +420,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             </div>
 
             {/* Search Input */}
-            <div className="p-4 border-b border-[#2B2B2D]">
+            <div className="px-3 py-2 border-b border-[#2B2B2D]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -439,7 +441,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
               {/* Show Jupiter Ultra badge when searching */}
               {searchQuery && searchQuery.length >= 2 && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-                  <span className="px-2 py-1 bg-blue-900/20 border border-blue-500/30 rounded text-blue-400">
+                  <span className="px-2 py-1 bg-blue-900/20 border border-blue-500/30 rounded text-blue-400 text-nowrap">
                     Jupiter Ultra
                   </span>
                   <span>Real-time token data with prices & verification</span>
@@ -454,7 +456,25 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             </div>
 
             {/* Token List */}
-            <div className="flex-1 overflow-y-auto">
+
+            
+              <div className="all-token-trans-bx px-3 py-2">
+                <button className="token-btn">
+                  <img src="/btn-icon.png" alt="" />
+                </button>
+                <button className="token-btn">
+                  <img src="/t-1.png" alt="" />
+                </button>
+                <button className="token-btn">
+                  <img src="/t-2.png" alt="" />
+                </button>
+                <button className="token-btn">
+                  <img src="/t-3.png" alt="" />
+                </button>
+              </div>
+
+
+            <div className="flex-1 overflow-y-auto token-scrollbar">
               {/* Error State */}
               {tokenLoadError && !isLoadingTokens && (
                 <div className="px-4 py-3 bg-yellow-900/20 border-l-4 border-yellow-500 text-yellow-400 text-sm">
@@ -462,11 +482,13 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                 </div>
               )}
 
+
+
               {/* Popular Tokens Section */}
               {!searchQuery && (
-                <div className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Star size={16} className="text-yellow-400" />
+                <div className="px-3 py-2">
+                  <div className="flex items-center gap-2 mb-0">
+                    <RiVerifiedBadgeLine size={16} className="text-yellow-400" />
                     <span className="text-sm font-medium text-gray-400">Popular Tokens</span>
                   </div>
                 </div>
@@ -474,8 +496,8 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
               {/* Recent Tokens Section */}
               {!searchQuery && recentTokens.length > 0 && (
-                <div className="px-4 pb-2">
-                  <div className="flex items-center gap-2 mb-3">
+                <div className="px-3 py-2">
+                  <div className="flex items-center gap-2 mb-0">
                     <Clock size={16} className="text-gray-400" />
                     <span className="text-sm font-medium text-gray-400">Recent</span>
                   </div>
@@ -483,9 +505,9 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
               )}
 
               {/* Token Items */}
-              <div className="pb-4">
+              <div className="pb-0">
                 {displayTokens.length === 0 && !isSearching && !isJupiterSearching && searchQuery && searchQuery.length >= 2 && (
-                  <div className="px-4 py-8 text-center text-gray-400">
+                  <div className="px-3 py-8 text-center text-gray-400">
                     <Search size={32} className="mx-auto mb-2 opacity-50" />
                     <p>No tokens found</p>
                     <p className="text-sm">Try searching with a different term</p>
@@ -494,7 +516,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                 
                 {/* Show hint for short queries */}
                 {searchQuery && searchQuery.length < 2 && (
-                  <div className="px-4 py-8 text-center text-gray-400">
+                  <div className="px-3 py-8 text-center text-gray-400">
                     <Search size={32} className="mx-auto mb-2 opacity-50" />
                     <p>Type at least 2 characters to search</p>
                   </div>
@@ -523,8 +545,8 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-[#2B2B2D]">
-              <p className="text-xs text-gray-500 text-center">
+            <div className="px-3 py-2 border-t border-[#2B2B2D]">
+              <p className="fz-14 lh-1 text-white text-center mb-0">
                 {searchQuery && searchQuery.length >= 2 
                   ? "Powered by Jupiter Ultra • Real-time prices & verification"
                   : "Search to find any token • Popular tokens shown by default"

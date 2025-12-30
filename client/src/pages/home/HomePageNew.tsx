@@ -632,7 +632,38 @@ const HomePageNew = () => {
 
 
 
-    const options = ["nobody", "this", "that", "here", "something", "anything"];
+   const options = [
+  {
+    id: "0xA1B2C3",
+    titles: "Nobody Token",
+    descriptions: "This is a demo token description",
+    images: "/pic.png"
+  },
+  {
+    id: "0xD4E5F6",
+    titles: "Something Coin",
+    descriptions: "Another sample token detail",
+     images: "/pic.png"
+  },
+  {
+    id: "0xZ9Y8X7",
+    titles: "Anything Token",
+    descriptions: "ERC20 utility token",
+     images: "/pic.png"
+  },
+  {
+    id: "0xZ9Y8X8",
+    titles: "Same Token",
+    descriptions: "ERC20 utility token",
+     images: "/pic.png"
+  },
+  {
+    id: "0xZ9Y8X9",
+    titles: "Aura Token",
+    descriptions: "ERC20 utility token",
+     images: "/pic.png"
+  }
+];
 
     // const [searchQuery, setSearchQuery] = useState("");
     const [filteredOptions, setFilteredOptions] = useState([]);
@@ -655,7 +686,7 @@ const HomePageNew = () => {
         }
 
         const filtered = options.filter((option) =>
-            option.toLowerCase().includes(value.toLowerCase())
+            option.titles?.toLowerCase()?.includes(value?.toLowerCase())
         );
         setFilteredOptions(filtered);
         setShowDropdown(filtered.length > 0);
@@ -706,84 +737,86 @@ const HomePageNew = () => {
                                 </div>
                             </form> */}
 
-                            {/* <div className="search-container flex-grow-1">
-                                <form className="custom-frm-bx mb-0" onSubmit={handleSearch}>
-                                    <input
-                                        type="text"
-                                        className="form-control pe-5"
-                                        placeholder="Search by token name or address..."
-                                        value={searchQuery}
-                                        onChange={handleChange}
-                                        onFocus={() => setShowDropdown(filteredOptions.length > 0)}
-                                    />
-                                    <div className="searching-bx">
-                                        <button className="search-btn" type="submit">
-                                            <FontAwesomeIcon icon={faSearch} />
-                                        </button>
-                                    </div>
-                                </form>
-
-                             
-                                {showDropdown && (
-                                    <ul className="dropdown-options">
-                                        {filteredOptions.map((option, index) => (
-                                            <li
-                                                key={index}
-                                                className="dropdown-item"
-                                                onClick={() => handleSelect(option)}
-                                            >
-                                                {option}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </div> */}
-
                             <div className="search-container flex-grow-1">
-                                <form className="custom-frm-bx " onSubmit={handleSearch}>
-                                    <input
-                                        type="text"
-                                        className="form-control pe-5"
-                                        placeholder="Search by token name or address..."
-                                        value={searchQuery}
-                                        onChange={handleChange}
-                                        onFocus={() => setShowDropdown(filteredOptions.length > 0)}
-                                    />
-                                    <div className="searching-bx">
-                                        <button className="search-btn" type="submit">
-                                            <FontAwesomeIcon icon={faSearch} />
-                                        </button>
-                                        {searchQuery && (
-                                            <button
-                                                type="button"
-                                                className="clear-input-btn"
-                                                onClick={() => setSearchQuery("")}
-                                            >
-                                                ×
-                                            </button>
-                                        )}
-                                    </div>
-                                </form>
+  <form className="custom-frm-bx mb-2" onSubmit={handleSearch}>
+    <input
+      type="text"
+      className="form-control pe-5"
+      placeholder="Search by token name or address..."
+      value={searchQuery}
+      onChange={handleChange}
+      onFocus={() => setShowDropdown(filteredOptions.length > 0)}
+    />
 
-                                {showDropdown && (
-                                    <ul className="dropdown-options">
-                                        {filteredOptions.map((option, index) => (
-                                            <li
-                                                key={index}
-                                                className="dropdown-item"
-                                                onClick={() => handleSelect(option)}
-                                            >
-                                                {option}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+    <div className="searching-bx">
+      <button className="search-btn" type="submit">
+        <FontAwesomeIcon icon={faSearch} />
+      </button>
+
+      {searchQuery && (
+        <button
+          type="button"
+          className="clear-input-btn"
+          onClick={() => setSearchQuery("")}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  </form>
+
+  {showDropdown && (
+    
+
+
+    <div className="dropdown-options">
+  
+  
+  <div className="dropdown-header text-end all-data-clear">
+    <button className="quick-nw-btn">Clear All</button>
+  </div>
+
+
+  <ul className="dropdown-scroll">
+    {filteredOptions.map((item, index) => (
+      <li
+        key={index}
+        className="dropdown-item d-flex align-items-start"
+        onClick={() => handleSelect(item)}
+      >
+        <img src={item?.images} alt="" className="dropdown-img" />
+
+        <div className="dropdown-content flex-grow-1">
+          <h6 className="dropdown-title">{item?.titles}</h6>
+          <p className="dropdown-desc">{item?.descriptions}</p>
+          <span className="dropdown-id">
+            <span className="cpy-title">CA:</span>{item?.id}
+            <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
+              <FontAwesomeIcon icon={faCopy} />
+            </a>
+          </span>
+        </div>
+
+        <button
+          className="dropdown-close"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDropdown(false);
+          }}
+        >
+          ×
+        </button>
+      </li>
+    ))}
+  </ul>
+
+</div>
+
+  )}
                             </div>
 
 
-
-
-                            <div className="custom-frm-bx nw-quick-bx">
+                            <div className="custom-frm-bx nw-quick-bx mb-2">
                                 <button
                                     className="quick-btn"
                                     style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%' }}
@@ -1015,7 +1048,7 @@ const HomePageNew = () => {
 
                                             {/* Card Body */}
                                             <div className="custom-card">
-                                                {/* Left - Whale Info */}
+                                                
                                                 <div className="left-item-bx">
                                                     <img
                                                         src={tx.whaleTokenURL || DefaultTokenImage}

@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import { IoSparklesOutline } from "react-icons/io5"
 import { HiChevronUpDown } from "react-icons/hi2"
 import { RiLoader2Fill } from "react-icons/ri"
-import { Settings } from "lucide-react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
   faArrowTrendDown,
@@ -20,6 +19,9 @@ import {
 import { useToast } from "../../components/ui/Toast"
 import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
+import { RiArrowUpDownFill } from "react-icons/ri"
+import { IoWalletOutline } from "react-icons/io5"
+
 // import { MdOutlineCheckBox } from "react-icons/md";
 
 interface RightSidebarNewProps {
@@ -60,7 +62,6 @@ const RightSidebarNew = ({
     error: walletError,
   } = useWalletConnection()
 
-<<<<<<< HEAD
   // Swap API hook
   const {
     getQuote,
@@ -71,15 +72,10 @@ const RightSidebarNew = ({
     error: swapError,
     clearErrors,
   } = useSwapApi()
-=======
-    // Swap API hook
-    const { getQuote, getSwapTransaction, isLoadingQuote, isLoadingSwap, error: swapError, clearErrors } = useSwapApi()
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
   // Toast notifications
   const { showToast, ToastContainer } = useToast()
 
-<<<<<<< HEAD
   // State management
   const [inputToken, setInputToken] = useState<TokenInfo>(DEFAULT_INPUT_TOKEN)
   const [outputToken, setOutputToken] =
@@ -95,23 +91,6 @@ const RightSidebarNew = ({
   const [swapStatus, setSwapStatus] = useState<string>("")
   const [lastTxSignature, setLastTxSignature] = useState<string>("")
   const [retryCount, setRetryCount] = useState<number>(0)
-=======
-    // State management
-    const [inputToken, setInputToken] = useState<TokenInfo>(DEFAULT_INPUT_TOKEN)
-    const [outputToken, setOutputToken] = useState<TokenInfo>(DEFAULT_OUTPUT_TOKEN)
-    const [inputAmount, setInputAmount] = useState<string>("") // Empty by default - user must enter amount
-    const [outputAmount, setOutputAmount] = useState<string>("")
-    const [quote, setQuote] = useState<QuoteResponse | null>(null)
-    const [slippage, setSlippage] = useState<number>(500) // Default 5% slippage (500 BPS) - user can manually change
-    const [customSlippage, setCustomSlippage] = useState<string>("")
-    const [showSlippageSettings, setShowSlippageSettings] = useState(false)
-    const [isInputModalOpen, setIsInputModalOpen] = useState(false)
-    const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
-    const [inputBalance, setInputBalance] = useState<number>(0)
-    const [isSwapping, setIsSwapping] = useState(false)
-    const [lastTxSignature, setLastTxSignature] = useState<string>("")
-    const [retryCount, setRetryCount] = useState<number>(0)
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
   // Update tokens when selectedToken prop changes
   useEffect(() => {
@@ -158,7 +137,6 @@ const RightSidebarNew = ({
     }
   }, [inputAmount, inputToken.address, outputToken.address, slippage])
 
-<<<<<<< HEAD
   // Fetch input token balance
   const fetchInputBalance = useCallback(async () => {
     try {
@@ -174,35 +152,6 @@ const RightSidebarNew = ({
       showToast("Failed to fetch token balance", "error")
     }
   }, [getBalance, inputToken.address, showToast])
-=======
-    // Close slippage dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (showSlippageSettings) {
-                const target = event.target as HTMLElement
-                // Check if click is outside the dropdown and gear icon
-                if (!target.closest('[title="Slippage Settings"]') && !target.closest('.slippage-dropdown')) {
-                    setShowSlippageSettings(false)
-                }
-            }
-        }
-
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [showSlippageSettings])
-
-    // Fetch input token balance
-    const fetchInputBalance = useCallback(async () => {
-        try {
-            const balance = await getBalance(inputToken.address === "So11111111111111111111111111111111111111112" ? undefined : inputToken.address)
-            setInputBalance(balance)
-        } catch (error) {
-            console.error("Failed to fetch balance:", error)
-            setInputBalance(0)
-            showToast("Failed to fetch token balance", "error")
-        }
-    }, [getBalance, inputToken.address, showToast])
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
   // Fetch swap quote with debouncing (handled by useSwapApi)
   const fetchQuote = useCallback(async () => {
@@ -327,85 +276,8 @@ const RightSidebarNew = ({
       // Allow empty string
       if (value === "") {
         setInputAmount("")
-<<<<<<< HEAD
         return
       }
-=======
-        setOutputAmount("")
-        setQuote(null)
-    }, [outputToken.address, showToast])
-
-    const handleOutputTokenSelect = useCallback((token: TokenInfo) => {
-        // Prevent selecting the same token for input and output
-        if (token.address === inputToken.address) {
-            showToast("Input and output tokens must be different", "error")
-            return
-        }
-
-        setOutputToken(token)
-        setIsOutputModalOpen(false)
-        setOutputAmount("")
-        setQuote(null)
-    }, [inputToken.address, showToast])
-
-    // Handle slippage change
-    const handleSlippageChange = useCallback((newSlippage: number) => {
-        setSlippage(newSlippage)
-        setCustomSlippage("") // Clear custom input when preset is selected
-    }, [])
-
-    const handleCustomSlippageChange = useCallback((value: string) => {
-        setCustomSlippage(value)
-        
-        // Validate and set slippage
-        const numValue = parseFloat(value)
-        if (!isNaN(numValue) && numValue >= 0 && numValue <= 50) {
-            // Convert percentage to BPS (basis points)
-            setSlippage(Math.floor(numValue * 100))
-        }
-    }, [])
-
-    const presetSlippages = [
-        { label: "0.5%", value: 50 },
-        { label: "1%", value: 100 },
-        { label: "3%", value: 300 },
-        { label: "5%", value: 500 },
-    ]
-
-    // Handle input amount change with validation
-    const handleInputAmountChange = useCallback((value: string) => {
-        // Allow empty string
-        if (value === "") {
-            setInputAmount("")
-            return
-        }
-
-        // Allow typing decimal point and partial numbers (like "0.", ".", "0.0")
-        // This prevents validation errors while user is still typing
-        if (value === "." || value === "0." || /^\d*\.?\d*$/.test(value)) {
-            setInputAmount(value)
-            return
-        }
-
-        // Validate number format only for complete numbers
-        const numValue = parseFloat(value)
-
-        // Silently reject invalid numbers without showing toast
-        if (isNaN(numValue) || !isFinite(numValue)) {
-            return
-        }
-
-        // Silently reject negative numbers without showing toast
-        if (numValue < 0) {
-            return
-        }
-
-        // Check for excessive decimal places
-        const decimalPlaces = (value.split('.')[1] || '').length
-        if (decimalPlaces > inputToken.decimals) {
-            return // Silently reject without toast
-        }
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
       // Allow typing decimal point and partial numbers (like "0.", ".", "0.0")
       // This prevents validation errors while user is still typing
@@ -467,23 +339,11 @@ const RightSidebarNew = ({
     }
   }, [inputBalance, inputToken.address, inputToken.decimals, showToast])
 
-<<<<<<< HEAD
   // Handle swap execution
   const handleSwap = useCallback(async () => {
     if (!wallet.connected || !wallet.publicKey || !quote) {
       return
     }
-=======
-            // Get a FRESH quote right before swap to avoid stale route errors
-            showToast("Getting fresh quote...", "info")
-            const amountInSmallestUnit = Math.floor(amount * Math.pow(10, inputToken.decimals))
-            const freshQuote = await getQuote({
-                inputMint: inputToken.address,
-                outputMint: outputToken.address,
-                amount: amountInSmallestUnit,
-                slippageBps: slippage,
-            })
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
     // Validate input amount
     const amount = parseFloat(inputAmount)
@@ -492,15 +352,11 @@ const RightSidebarNew = ({
       return
     }
 
-<<<<<<< HEAD
     // Validate sufficient balance
     if (amount > inputBalance) {
       showToast(`Insufficient ${inputToken.symbol} balance`, "error")
       return
     }
-=======
-            showToast("Generating transaction...", "info")
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
     // Validate different tokens
     if (inputToken.address === outputToken.address) {
@@ -508,13 +364,9 @@ const RightSidebarNew = ({
       return
     }
 
-<<<<<<< HEAD
     try {
       setIsSwapping(true)
       clearErrors()
-=======
-            showToast("Please sign the transaction in your wallet...", "info")
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
       // Get a FRESH quote right before swap to avoid stale route errors
       setSwapStatus("Getting fresh quote...")
@@ -534,11 +386,7 @@ const RightSidebarNew = ({
         parseFloat(freshQuote.outAmount) / Math.pow(10, outputToken.decimals)
       setOutputAmount(outAmount.toFixed(6))
 
-<<<<<<< HEAD
       setSwapStatus("Generating transaction...")
-=======
-            showToast("Submitting transaction to Solana network...", "info")
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
       // Get swap transaction with Jupiter Ultra (priority level handled automatically)
       const swapResponse = await getSwapTransaction({
@@ -547,7 +395,6 @@ const RightSidebarNew = ({
         dynamicSlippage: false, // Fixed slippage at 5%
       })
 
-<<<<<<< HEAD
       setSwapStatus("Please sign the transaction in your wallet...")
 
       // Deserialize transaction (handle both legacy and versioned transactions)
@@ -572,33 +419,13 @@ const RightSidebarNew = ({
 
       setSwapStatus("Transaction confirmed!")
       setLastTxSignature(signature)
-=======
-            setLastTxSignature(signature)
-
-            // Show success message
-            showToast("Swap completed successfully!", "success")
-
-            // Reset form
-            setInputAmount("")
-            setOutputAmount("")
-            setQuote(null)
-            setRetryCount(0)
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
       showToast("Swap completed successfully!", "success")
 
-<<<<<<< HEAD
       // Calculate amounts for tracking
       const inputAmountNum =
         parseFloat(inputAmount) * Math.pow(10, inputToken.decimals)
       const outputAmountNum = parseFloat(freshQuote.outAmount)
-=======
-            setTimeout(() => {
-                setLastTxSignature("")
-            }, 5000)
-        } catch (error: any) {
-            console.error("Swap failed:", error)
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
       // Calculate platform fee with fallback
       // Jupiter Ultra v1 doesn't return platformFee.amount, so calculate it manually
@@ -630,7 +457,6 @@ const RightSidebarNew = ({
         console.error("Failed to track trade:", trackError)
       }
 
-<<<<<<< HEAD
       // Reset form
       setInputAmount("")
       setOutputAmount("")
@@ -646,44 +472,6 @@ const RightSidebarNew = ({
       }, 5000)
     } catch (error: any) {
       console.error("Swap failed:", error)
-=======
-            if (errorCode === "USER_REJECTED") {
-                errorMessage = "Transaction cancelled"
-                showToast(errorMessage, "info")
-            } else if (errorCode === "INSUFFICIENT_FUNDS") {
-                errorMessage = `Insufficient ${inputToken.symbol} balance`
-                showToast(errorMessage, "error")
-            } else if (errorCode === "TRANSACTION_EXPIRED") {
-                errorMessage = "Transaction expired. Please try again."
-                showToast(errorMessage, "error")
-            } else if (errorCode === "NETWORK_ERROR") {
-                errorMessage = "Network error. Please check your connection."
-                showToast(errorMessage, "error")
-            } else if (errorCode === "RATE_LIMIT_EXCEEDED") {
-                errorMessage = "Too many requests. Please wait a moment."
-                showToast(errorMessage, "error")
-            } else if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("simulation failed")) {
-                // Handle Jupiter simulation errors (error 0x9, etc.)
-                if (errorMsg.includes("0x9") || errorMsg.includes("custom program error")) {
-                    errorMessage = "Swap route expired. Price may have changed. Please try again."
-                } else {
-                    errorMessage = "Transaction simulation failed. Please try again with different amount or higher slippage."
-                }
-                showToast(errorMessage, "error")
-            } else if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("slippage")) {
-                errorMessage = "Price changed too much. Please try again."
-                showToast(errorMessage, "error")
-            } else if (errorMsg) {
-                errorMessage = errorMsg
-                showToast(errorMessage, "error")
-            } else {
-                showToast(errorMessage, "error")
-            }
-        } finally {
-            setIsSwapping(false)
-        }
-    }, [wallet, quote, inputAmount, inputToken, outputToken, getSwapTransaction, sendTransaction, fetchInputBalance, clearErrors, inputBalance, showToast, slippage])
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
       // Show user-friendly error messages
       let errorMessage = "Swap failed. Please try again."
@@ -783,20 +571,8 @@ const RightSidebarNew = ({
   const exchangeRate = useMemo(() => {
     if (!quote || !inputAmount || parseFloat(inputAmount) === 0) return null
 
-<<<<<<< HEAD
     const inAmount = parseFloat(inputAmount)
     const outAmount = parseFloat(outputAmount)
-=======
-        // Fallback: Calculate platform fee manually
-        // Note: outAmount is AFTER fee deduction, so we need to calculate the actual fee
-        // If outAmount = gross - fee, and fee = gross * 0.0075, then:
-        // outAmount = gross * (1 - 0.0075) = gross * 0.9925
-        // Therefore: fee = outAmount / 0.9925 * 0.0075
-        if (outputAmount && !isNaN(parseFloat(outputAmount)) && parseFloat(outputAmount) > 0) {
-            const outAmount = parseFloat(outputAmount)
-            const grossAmount = outAmount / 0.9925 // Reverse the fee deduction
-            const feeAmount = grossAmount * 0.0075 // Calculate actual fee (0.75%)
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
     if (inAmount > 0 && outAmount > 0) {
       const rate = outAmount / inAmount
@@ -908,7 +684,13 @@ const RightSidebarNew = ({
 
   const [showRateDetails, setShowRateDetails] = useState(false)
 
-const [isSwapped, setIsSwapped] = useState(false);
+  const [isSwapped, setIsSwapped] = useState(false)
+
+  const handleToggleSwap = () => {
+    setIsSwapped(!isSwapped)
+  }
+
+  const [showMainButton, setShowMainButton] = useState(false);
 
   return (
     <>
@@ -989,7 +771,6 @@ const [isSwapped, setIsSwapped] = useState(false);
                     </button>
                   )}
                 </div>
-<<<<<<< HEAD
               </div>
             )}
 
@@ -1009,133 +790,19 @@ const [isSwapped, setIsSwapped] = useState(false);
                 Input and output tokens must be different
               </div>
             )}
-=======
-                <div className="ultra-pro-bx relative">
-                    <div className="d-flex align-items-center justify-content-between mb-2" style={{ position: 'relative' }}>
-                        <div>
-                            <button type="button" className="plan-btn" style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
-                                <IoSparklesOutline style={{ color: "#2B6AD1", marginRight: "5px" }} />
-                                ultra v3  <HiChevronUpDown />
-                            </button>
-                        </div>
-                        <div className="d-flex align-items-center gap-2" style={{ position: 'relative' }}>
-                            <span className="plan-btn flex items-center gap-1">
-                                Slippage: <span style={{ color: "#EBEBEB" }}>{(slippage / 100).toFixed(2)}%</span>
-                            </span>
-                            <button
-                                type="button"
-                                onClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    setShowSlippageSettings(!showSlippageSettings)
-                                }}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: '4px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: '#8f8f8f',
-                                    transition: 'color 0.2s ease',
-                                    zIndex: 10
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-                                onMouseLeave={(e) => e.currentTarget.style.color = '#8f8f8f'}
-                                title="Slippage Settings"
-                            >
-                                <Settings size={16} />
-                            </button>
-                            <button type="button" style={{ color: "#EBEBEB", background: 'transparent', border: 'none', cursor: 'pointer' }}>
-                                <span><RiLoader2Fill className={isLoadingQuote ? "animate-spin" : ""} /></span>
-                            </button>
-
-                    {/* Slippage Settings Dropdown */}
-                    {showSlippageSettings && (
-                        <div className="slippage-dropdown" style={{
-                            position: 'absolute',
-                            top: '100%',
-                            right: '0',
-                            marginTop: '4px',
-                            background: '#0a0a0a',
-                            border: '1px solid #292929',
-                            borderRadius: '8px',
-                            padding: '8px',
-                            minWidth: '120px',
-                            zIndex: 1000,
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
-                        }}>
-                            <div style={{ marginBottom: '6px', fontSize: '11px', color: '#8f8f8f', fontWeight: '500' }}>
-                                Slippage
-                            </div>
-                            {presetSlippages.map((preset) => (
-                                <button
-                                    key={preset.value}
-                                    onClick={() => {
-                                        handleSlippageChange(preset.value)
-                                        setShowSlippageSettings(false)
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px 12px',
-                                        background: slippage === preset.value ? '#2b6ad1' : 'transparent',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        color: slippage === preset.value ? '#ffffff' : '#ebebeb',
-                                        fontSize: '13px',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
-                                        marginBottom: '2px',
-                                        transition: 'all 0.2s ease'
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (slippage !== preset.value) {
-                                            e.currentTarget.style.background = '#1a1a1a'
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (slippage !== preset.value) {
-                                            e.currentTarget.style.background = 'transparent'
-                                        }
-                                    }}
-                                >
-                                    {preset.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                        </div>
-                    </div>
-                    <div className="market-card">
-                        {/* Wallet Status */}
-                        {wallet.connected && wallet.address && (
-                            <div className="mb-2 p-2 bg-[#1A1A1A] rounded text-xs text-gray-400">
-                                <span className="font-mono">{wallet.address.slice(0, 4)}...{wallet.address.slice(-4)}</span>
-                            </div>
-                        )}
-
-                        {/* Insufficient Balance Warning */}
-                        {wallet.connected && inputAmount && parseFloat(inputAmount) > inputBalance && (
-                            <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-500/50 rounded text-xs text-yellow-400">
-                                Insufficient {inputToken.symbol} balance. You have {inputBalance.toFixed(Math.min(inputToken.decimals, 6))} {inputToken.symbol}
-                            </div>
-                        )}
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
 
             {/* Swap Status */}
             {swapStatus && (
               <div
-                className={`mb-2 p-2 rounded text-xs ${
-                  swapStatus.includes("confirmed") ||
-                  swapStatus.includes("success")
+                className={`mb-2 p-2 rounded text-xs ${swapStatus.includes("confirmed") ||
+                    swapStatus.includes("success")
                     ? "bg-green-900/20 border border-green-500/50 text-green-400"
                     : swapStatus.includes("failed") ||
-                        swapStatus.includes("error") ||
-                        swapStatus.includes("cancelled")
+                      swapStatus.includes("error") ||
+                      swapStatus.includes("cancelled")
                       ? "bg-red-900/20 border border-red-500/50 text-red-400"
                       : "bg-blue-900/20 border border-blue-500/50 text-blue-400"
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <span>{swapStatus}</span>
@@ -1156,13 +823,22 @@ const [isSwapped, setIsSwapped] = useState(false);
               </div>
             )}
 
-<<<<<<< HEAD
             {/* Jupiter Ultra handles priority level automatically - no manual selection needed */}
 
             <div className="trade-box">
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <span className="trade-label">SELLING</span>
-                <span className="trade-label">SELLING</span>
+                <div className="d-flex align-items-center gap-1">
+                  <span className="trade-label d-flex align-items-center gap-1">
+                    {" "}
+                    <IoWalletOutline /> 0.00 Sol
+                  </span>
+                  <div className="d-flex align-items-center gap-1">
+                    <button className="halft-max-btn">Half</button>
+                    <button className="halft-max-btn">Max</button>
+                  </div>
+                </div>
+
                 {wallet.connected && (
                   <span className="text-xs text-gray-400">
                     Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
@@ -1220,51 +896,84 @@ const [isSwapped, setIsSwapped] = useState(false);
                 </div>
               </div>
             </div>
-=======
-                        {/* Jupiter Ultra handles priority level automatically - no manual selection needed */}
 
-                        <div className="trade-box">
-                            <div className="d-flex justify-content-between align-items-center mb-1">
-                                <span className="trade-label">SELLING</span>
-                                <span className="trade-label">SELLING</span>
-                                {wallet.connected && (
-                                    <span className="text-xs text-gray-400">
-                                        Balance: {inputBalance.toFixed(Math.min(inputToken.decimals, 6))} {inputToken.symbol}
-                                    </span>
-                                )}
-                            </div>
-                            <div className="trade-row">
-                                <button
-                                    onClick={() => setIsInputModalOpen(true)}
-                                    className="plan-btn"
-                                    type="button"
-                                >
-                                    <span className="dollar-pic-bx">
-                                        <img
-                                            src={inputToken.image || DefaultTokenImage}
-                                            alt={inputToken.symbol}
-                                            onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
-                                        />
-                                    </span>
-                                    <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>{inputToken.symbol}</span>
-                                    <FontAwesomeIcon icon={faChevronDown} />
-                                </button>
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
-
-
-            <div className="trade-box">
-              <div>
+            <div className="trade-box trade-new-bx">
+              <div className="swap-toggle-bx">
                 <button
                   onClick={handleSwapTokens}
                   className="swap-icon"
                   type="button"
                   disabled={!wallet.connected}
                 >
-                  ⇅
+                  <RiArrowUpDownFill />
                 </button>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <span className="trade-label">buying</span>
+                <span className="trade-label d-flex align-items-center gap-1">
+
+                  <IoWalletOutline /> 0.00 Usdc
+                </span>
+              </div>
+              <div className="trade-row">
+                <button
+                  onClick={() => setIsOutputModalOpen(true)}
+                  className="plan-btn"
+                  type="button"
+                >
+                  <span className="dollar-pic-bx">
+                    <img
+                      src={outputToken.image || DefaultTokenImage}
+                      alt={outputToken.symbol}
+                      onError={(e) => {
+                        e.currentTarget.src = DefaultTokenImage
+                      }}
+                    />
+                  </span>
+                  <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
+                    {outputToken.symbol}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} />
+                </button>
+
+                {/* <div className="amount-box">
+                  <h2>{isLoadingQuote ? "..." : outputAmount || "0.00"}</h2>
+                  <span>
+                    {outputAmount && parseFloat(outputAmount) > 0
+                      ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                      : "$0"}
+                  </span>
+                </div> */}
+
+                <div className="amount-box">
+                  {isLoadingQuote ? (
+                    <div className="nw-skeleton">
+                      <div className="skeleton-amount mb-1"></div>
+                      <div className="skeleton-usd"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <h2>{outputAmount || "0.00"}</h2>
+                      <span>
+                        {outputAmount && parseFloat(outputAmount) > 0
+                          ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                          : "$0"}
+                      </span>
+                    </>
+                  )}
+                </div>
+
+
+
+              </div>
+            </div>
+
+            {/* <div>
+  {isSwapped ? (
+    <div className="trade-box trade-new-bx">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="trade-label">buying</span>
+                <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Usdc</span>
               </div>
               <div className="trade-row">
                 <button
@@ -1295,14 +1004,275 @@ const [isSwapped, setIsSwapped] = useState(false);
                   </span>
                 </div>
               </div>
+     </div>
+  ) : (
+  
+    <div className="trade-box ">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="trade-label">SELLING</span>
+                 <div className="d-flex align-items-center gap-1">
+                  <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Sol</span>
+                  <div className="d-flex align-items-center gap-1">
+                    <button className="halft-max-btn">Half</button>
+                  <button className="halft-max-btn">Max</button>
+                  </div>
+                </div>
+
+                {wallet.connected && (
+                  <span className="text-xs text-gray-400">
+                    Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
+                  </span>
+                )}
+              </div>
+              <div className="trade-row">
+                <button
+                  onClick={() => setIsInputModalOpen(true)}
+                  className="plan-btn"
+                  type="button"
+                >
+                  <span className="dollar-pic-bx">
+                    <img
+                      src={inputToken.image || DefaultTokenImage}
+                      alt={inputToken.symbol}
+                      onError={(e) => {
+                        e.currentTarget.src = DefaultTokenImage
+                      }}
+                    />
+                  </span>
+                  <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
+                    {inputToken.symbol}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} />
+                </button>
+
+                <div className="amount-box">
+                  <input
+                    type="number"
+                    value={inputAmount}
+                    onChange={(e) => handleInputAmountChange(e.target.value)}
+                    placeholder="0.00"
+                    className="amount-input main-amount"
+                    // disabled={!wallet.connected}
+                    min="0"
+                    step="any"
+                  />
+                  <div className="d-flex justify-content-end align-items-center">
+                    <span className="text-xs text-gray-400">
+                      {inputAmount && parseFloat(inputAmount) > 0
+                        ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
+                        : "$0"}
+                    </span>
+                    {wallet.connected && inputBalance > 0 && (
+                      <button
+                        onClick={handleMaxClick}
+                        className="text-xs text-blue-400 hover:text-blue-300 ml-2"
+                        type="button"
+                      >
+                        MAX
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+     </div>
+  )}
+  <div className="text-center my-2 swap-toggle-bx">
+    <button
+      type="button"
+      className="swap-icon"
+      onClick={handleToggleSwap}
+    >
+      ⇅
+    </button>
+  </div>
+
+  {isSwapped ? (
+   
+    <div className="trade-box">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="trade-label">SELLING</span>
+                 <div className="d-flex align-items-center gap-1">
+                  <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Sol</span>
+                  <div className="d-flex align-items-center gap-1">
+                    <button className="halft-max-btn">Half</button>
+                  <button className="halft-max-btn">Max</button>
+                  </div>
+                </div>
+                {wallet.connected && (
+                  <span className="text-xs text-gray-400">
+                    Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
+                  </span>
+                )}
+              </div>
+              <div className="trade-row">
+                <button
+                  onClick={() => setIsInputModalOpen(true)}
+                  className="plan-btn"
+                  type="button"
+                >
+                  <span className="dollar-pic-bx">
+                    <img
+                      src={inputToken.image || DefaultTokenImage}
+                      alt={inputToken.symbol}
+                      onError={(e) => {
+                        e.currentTarget.src = DefaultTokenImage
+                      }}
+                    />
+                  </span>
+                  <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
+                    {inputToken.symbol}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} />
+                </button>
+
+                <div className="amount-box">
+                  <input
+                    type="number"
+                    value={inputAmount}
+                    onChange={(e) => handleInputAmountChange(e.target.value)}
+                    placeholder="0.00"
+                    className="amount-input main-amount"
+                    // disabled={!wallet.connected}
+                    min="0"
+                    step="any"
+                  />
+                  <div className="d-flex justify-content-end align-items-center">
+                    <span className="text-xs text-gray-400">
+                      {inputAmount && parseFloat(inputAmount) > 0
+                        ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
+                        : "$0"}
+                    </span>
+                    {wallet.connected && inputBalance > 0 && (
+                      <button
+                        onClick={handleMaxClick}
+                        className="text-xs text-blue-400 hover:text-blue-300 ml-2"
+                        type="button"
+                      >
+                        MAX
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+  ) : (
+   
+    <div className="trade-box trade-new-bx">
+             
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <span className="trade-label">buying</span>
+                <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Usdc</span>
+              </div>
+              <div className="trade-row">
+                <button
+                  onClick={() => setIsOutputModalOpen(true)}
+                  className="plan-btn"
+                  type="button"
+                >
+                  <span className="dollar-pic-bx">
+                    <img
+                      src={outputToken.image || DefaultTokenImage}
+                      alt={outputToken.symbol}
+                      onError={(e) => {
+                        e.currentTarget.src = DefaultTokenImage
+                      }}
+                    />
+                  </span>
+                  <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
+                    {outputToken.symbol}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} />
+                </button>
+                <div className="amount-box">
+                  <h2>{isLoadingQuote ? "..." : outputAmount || "0.00"}</h2>
+                  <span>
+                    {outputAmount && parseFloat(outputAmount) > 0
+                      ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                      : "$0"}
+                  </span>
+                </div>
+              </div>
+     </div>
+  )}
+
+</div> */}
+
+
+            <div>
+              {!showMainButton ? (
+                <button
+                  className="swap-btn"
+                  type="button"
+                  onClick={() => setShowMainButton(true)}
+                >
+                  Swap
+                  <span className="corner top-right"></span>
+                  <span className="corner bottom-left"></span>
+                </button>
+              ) : (
+
+                <>
+                  {!wallet.connected ? (
+                    <button
+                      onClick={handleConnectWallet}
+                      className="connect-wallet-btn"
+                      disabled={isWalletLoading}
+                      type="button"
+                    >
+                      {isWalletLoading ? (
+                        <span className="flex items-center justify-center">
+                          <RiLoader2Fill className="animate-spin mr-2" />
+                          CONNECTING...
+                        </span>
+                      ) : (
+                        "CONNECT WALLET"
+                      )}
+
+                      <span className="corner top-right"></span>
+                      <span className="corner bottom-left"></span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSwap}
+                      className="connect-wallet-btn"
+                      disabled={isSwapDisabled}
+                      type="button"
+                      title={
+                        !inputAmount || parseFloat(inputAmount) <= 0
+                          ? "Enter an amount"
+                          : parseFloat(inputAmount) > inputBalance
+                            ? `Insufficient ${inputToken.symbol} balance`
+                            : inputToken.address === outputToken.address
+                              ? "Input and output tokens must be different"
+                              : !quote
+                                ? "Fetching quote..."
+                                : ""
+                      }
+                    >
+                      {isSwapping ? (
+                        <span className="flex items-center justify-center">
+                          <RiLoader2Fill className="animate-spin mr-2" />
+                          SWAPPING...
+                        </span>
+                      ) : isLoadingQuote ? (
+                        <span className="flex items-center justify-center">
+                          <RiLoader2Fill className="animate-spin mr-2" />
+                          LOADING...
+                        </span>
+                      ) : (
+                        "SWAP"
+                      )}
+
+                      <span className="corner top-right"></span>
+                      <span className="corner bottom-left"></span>
+                    </button>
+                  )}
+                </>
+              )}
             </div>
 
 
-           
-
-
-
-            <div className="">
+            {/* <div className="">
               {!wallet.connected ? (
                 <button
                   onClick={handleConnectWallet}
@@ -1357,7 +1327,7 @@ const [isSwapped, setIsSwapped] = useState(false);
                   <span className="corner bottom-left"></span>
                 </button>
               )}
-            </div>
+            </div> */}
 
             {/* <div className="">
                             {!wallet.connected ? (
@@ -1417,7 +1387,7 @@ const [isSwapped, setIsSwapped] = useState(false);
                                 </button>
                                 
                             )}
-                        </div> */}
+             </div> */}
 
             {/* Exchange Rate and Fee Display */}
 
@@ -1444,7 +1414,6 @@ const [isSwapped, setIsSwapped] = useState(false);
                                 </a>
                             )} */}
 
-<<<<<<< HEAD
             {exchangeRate && (
               <a
                 href="javascript:void(0)"
@@ -1455,52 +1424,6 @@ const [isSwapped, setIsSwapped] = useState(false);
                     <div className="d-flex align-items gap-2">
                       <span>RATE</span>
                       <h5>{exchangeRate}</h5>
-=======
-                        {exchangeRate && (
-                            <button
-                                type="button"
-                                onClick={() => setShowRateDetails(!showRateDetails)}
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', padding: 0 }}
-                            >
-                                <div className="rate-box mt-3 ">
-
-
-                                    <div className="d-flex align-items gap-2 justify-content-between">
-                                        <div className="d-flex align-items gap-2">
-                                            <span>RATE</span>
-                                            <h5>{exchangeRate}</h5>
-                                        </div>
-
-
-                                        <FontAwesomeIcon
-                                            icon={showRateDetails ? faChevronUp : faChevronDown}
-                                            className="rate-chevron ms-auto"
-                                        />
-                                    </div>
-
-                                    {showRateDetails && platformFeeDisplay && (
-                                        <div className="d-flex align-items gap-2 mt-1">
-                                            <span className="text-xs text-gray-400">Platform Fee</span>
-                                            <span className="text-xs text-gray-300">
-                                                {platformFeeDisplay}
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {showRateDetails && quote && quote.priceImpactPct && (
-                                        <div className="d-flex align-items gap-2 mt-1">
-                                            <span className="text-xs text-gray-400">Price Impact</span>
-                                            <span className="text-xs text-gray-300">
-                                                {parseFloat(quote.priceImpactPct).toFixed(2)}%
-                                            </span>
-                                        </div>
-                                    )}
-
-                                </div>
-                            </button>
-                        )}
-
->>>>>>> 2f46a234fb8962e6abf4de17d7ef083a0befc151
                     </div>
 
                     <FontAwesomeIcon

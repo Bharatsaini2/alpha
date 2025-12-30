@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { X, Settings } from "lucide-react"
+import { X, ArrowDownUp, Settings } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Transaction, VersionedTransaction } from "@solana/web3.js"
+import DefaultTokenImage from "../../assets/default_token.svg"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useSwapApi, QuoteResponse } from "../../hooks/useSwapApi"
 import { TokenSelectionModal, TokenInfo } from "./TokenSelectionModal"
@@ -43,8 +44,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   initialOutputToken,
   initialAmount,
 }) => {
-  const { wallet, sendTransaction, getBalance } = useWalletConnection()
-  const { getQuote, getSwapTransaction, isLoadingQuote, isLoadingSwap, clearErrors } = useSwapApi()
+  const { wallet, connect, sendTransaction, getBalance } = useWalletConnection()
+  const { getQuote, getSwapTransaction, trackTrade, isLoadingQuote, isLoadingSwap, clearErrors } = useSwapApi()
   const { showToast } = useToast()
 
   const [inputToken, setInputToken] = useState<TokenInfo>(initialInputToken || DEFAULT_INPUT_TOKEN)
@@ -52,13 +53,14 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [inputAmount, setInputAmount] = useState<string>(initialAmount || "")
   const [outputAmount, setOutputAmount] = useState<string>("")
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
-  const [slippage, setSlippage] = useState<number>(500) // Default 5% slippage (500 BPS) - user can manually change
-  const [customSlippage, setCustomSlippage] = useState<string>("")
+  const [slippage, setSlippage] = useState<number>(500) // Fixed 5% slippage (500 BPS) - NOT dynamic
   const [showSlippageSettings, setShowSlippageSettings] = useState(false)
   const [isInputModalOpen, setIsInputModalOpen] = useState(false)
   const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
   const [inputBalance, setInputBalance] = useState<number>(0)
   const [isSwapping, setIsSwapping] = useState(false)
+  const [swapStatus, setSwapStatus] = useState<string>("")
+  const [lastTxSignature, setLastTxSignature] = useState<string>("")
 
   // Update initial values when props change
   useEffect(() => {
@@ -152,7 +154,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       clearErrors()
 
       // Get a FRESH quote right before swap to avoid stale route errors
-      showToast("Getting fresh quote...", "info")
+      setSwapStatus("Getting fresh quote...")
       const amount = parseFloat(inputAmount)
       if (isNaN(amount) || amount <= 0) {
         throw new Error("Invalid amount")
@@ -172,14 +174,14 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       const outAmount = parseFloat(freshQuote.outAmount) / Math.pow(10, outputToken.decimals)
       setOutputAmount(outAmount.toFixed(6))
 
-      showToast("Generating transaction...", "info")
+      setSwapStatus("Generating transaction...")
       const swapResponse = await getSwapTransaction({
         quoteResponse: freshQuote,
         userPublicKey: wallet.publicKey.toBase58(),
         dynamicSlippage: false, // Fixed slippage at 5%
       })
 
-      showToast("Please sign the transaction in your wallet...", "info")
+      setSwapStatus("Please sign the transaction...")
       const transactionBuffer = Buffer.from(swapResponse.swapTransaction, "base64")
 
       // Try to deserialize as versioned transaction first (Jupiter uses versioned transactions)
@@ -191,17 +193,48 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         transaction = Transaction.from(transactionBuffer)
       }
 
-      showToast("Submitting transaction to Solana network...", "info")
+      setSwapStatus("Submitting transaction...")
       const signature = await sendTransaction(transaction)
 
-      // Show success message
+      setSwapStatus("Transaction confirmed!")
+      setLastTxSignature(signature)
       showToast("Swap completed successfully!", "success")
+
+      // Track trade
+      const inputAmountNum = parseFloat(inputAmount) * Math.pow(10, inputToken.decimals)
+      const outputAmountNum = parseFloat(freshQuote.outAmount)
+
+      // Calculate platform fee with fallback
+      // Jupiter Ultra v1 doesn't return platformFee.amount, so calculate it manually
+      let platformFee = 0
+      if (freshQuote.platformFee?.amount && !isNaN(Number(freshQuote.platformFee.amount))) {
+        platformFee = parseFloat(freshQuote.platformFee.amount)
+      } else {
+        // Fallback: Calculate 0.75% of output amount
+        platformFee = outputAmountNum * 0.0075
+      }
+
+      try {
+        await trackTrade({
+          signature,
+          walletAddress: wallet.publicKey.toBase58(),
+          inputMint: inputToken.address,
+          outputMint: outputToken.address,
+          inputAmount: inputAmountNum,
+          outputAmount: outputAmountNum,
+          platformFee,
+        })
+      } catch (trackError) {
+        console.error("Failed to track trade:", trackError)
+      }
 
       // Reset and close after success
       setTimeout(() => {
         setInputAmount("")
         setOutputAmount("")
         setQuote(null)
+        setSwapStatus("")
+        setLastTxSignature("")
         onClose()
       }, 3000)
     } catch (error: any) {
@@ -215,68 +248,84 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("invalidaccountdata")) {
         errorMessage = "Route expired. Please try again with higher slippage."
       } else if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("simulation failed")) {
-        // Handle Jupiter simulation errors (error 0x9, etc.)
-        if (errorMsg.includes("0x9") || errorMsg.includes("custom program error")) {
-          errorMessage = "Swap route expired. Price may have changed. Please try again."
-        } else {
-          errorMessage = "Transaction simulation failed. Try increasing slippage or reducing amount."
-        }
+        errorMessage = "Transaction simulation failed. Try increasing slippage or reducing amount."
       } else if (errorMsg) {
         errorMessage = errorMsg
       }
 
       showToast(errorMessage, "error")
+      setSwapStatus(errorMessage)
+      setTimeout(() => setSwapStatus(""), 5000)
     } finally {
       setIsSwapping(false)
     }
-  }, [wallet, inputAmount, inputToken, outputToken, slippage, getQuote, getSwapTransaction, sendTransaction, clearErrors, showToast, onClose])
+  }, [wallet, inputAmount, inputToken, outputToken, slippage, getQuote, getSwapTransaction, sendTransaction, trackTrade, clearErrors, showToast, onClose])
 
-  const handleSlippageChange = (newSlippage: number) => {
-    setSlippage(newSlippage)
-    setCustomSlippage("") // Clear custom input when preset is selected
+  const handleSwapTokens = () => {
+    const temp = inputToken
+    setInputToken(outputToken)
+    setOutputToken(temp)
+    setInputAmount("")
+    setOutputAmount("")
+    setQuote(null)
   }
 
-  const handleCustomSlippageChange = (value: string) => {
-    setCustomSlippage(value)
-    
-    // Validate and set slippage
-    const numValue = parseFloat(value)
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= 50) {
-      // Convert percentage to BPS (basis points)
-      setSlippage(Math.floor(numValue * 100))
+  const exchangeRate = useMemo(() => {
+    if (!quote || !inputAmount || parseFloat(inputAmount) === 0) return null
+    const inAmount = parseFloat(inputAmount)
+    const outAmount = parseFloat(outputAmount)
+    if (inAmount > 0 && outAmount > 0) {
+      const rate = outAmount / inAmount
+      return `1 ${inputToken.symbol} ≈ ${rate.toFixed(6)} ${outputToken.symbol}`
     }
-  }
-
-  const presetSlippages = [
-    { label: "0.5%", value: 50 },
-    { label: "1%", value: 100 },
-    { label: "3%", value: 300 },
-    { label: "5%", value: 500 },
-  ]
+    return null
+  }, [quote, inputAmount, outputAmount, inputToken.symbol, outputToken.symbol])
 
   const platformFeeDisplay = useMemo(() => {
+    console.log('[Platform Fee Debug]', {
+      hasQuote: !!quote,
+      hasPlatformFee: !!quote?.platformFee,
+      platformFeeAmount: quote?.platformFee?.amount,
+      platformFeeObject: quote?.platformFee,
+      outputAmount,
+      outputAmountParsed: parseFloat(outputAmount || '0'),
+      outputTokenDecimals: outputToken.decimals,
+      outputTokenSymbol: outputToken.symbol
+    });
+
     if (!quote) return null
 
     // Try to use platform fee from quote response first
     if (quote.platformFee?.amount && !isNaN(Number(quote.platformFee.amount))) {
       const feeAmountRaw = quote.platformFee.amount
+      console.log('[Platform Fee] Using quote.platformFee.amount:', feeAmountRaw);
       const feeAmount = parseFloat(feeAmountRaw) / Math.pow(10, outputToken.decimals)
       if (!isNaN(feeAmount) && isFinite(feeAmount)) {
+        console.log('[Platform Fee] Calculated from quote:', feeAmount);
         return `${feeAmount.toFixed(6)} ${outputToken.symbol} (0.75%)`
       }
     }
 
-    // Fallback: Calculate platform fee manually
+    // Fallback: Calculate platform fee manually (0.75% of output amount)
+    // Jupiter Ultra v1 doesn't return platformFee.amount, but fee is still collected
+    console.log('[Platform Fee] Using fallback calculation...');
     if (outputAmount && !isNaN(parseFloat(outputAmount)) && parseFloat(outputAmount) > 0) {
       const outAmount = parseFloat(outputAmount)
-      const grossAmount = outAmount / 0.9925
-      const feeAmount = grossAmount * 0.0075
+      const feeAmount = outAmount * 0.0075 // 0.75% = 0.0075
+
+      console.log('[Platform Fee] Fallback result:', {
+        outputAmount,
+        outAmount,
+        feeAmount,
+        formatted: `~${feeAmount.toFixed(6)} ${outputToken.symbol} (0.75%)`
+      });
 
       if (!isNaN(feeAmount) && isFinite(feeAmount) && feeAmount > 0) {
         return `~${feeAmount.toFixed(6)} ${outputToken.symbol} (0.75%)`
       }
     }
 
+    console.log('[Platform Fee] No valid calculation possible');
     return null
   }, [quote, outputAmount, outputToken])
 
@@ -315,6 +364,227 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         title="Select Output Token"
       />
 
+      {/* <AnimatePresence>
+        {isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={onClose}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[#0A0A0A] border border-[#292929] rounded-xl shadow-2xl"
+            >
+       
+              <div className="flex items-center justify-between p-4 border-b border-[#292929]">
+                <h2 className="text-lg font-semibold text-white">Swap Tokenss</h2>
+                <button
+                  onClick={onClose}
+                  className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+          
+              <div className="p-4 space-y-4">
+              
+                {!wallet.connected ? (
+                  <button
+                    onClick={connect}
+                    className="w-full py-3 bg-[#2B6AD1] hover:bg-[#2B6AD1]/90 text-white font-semibold rounded-lg transition-colors"
+                  >
+                    Connect Wallet to Swap
+                  </button>
+                ) : (
+                  <>
+                
+                    {swapStatus && (
+                      <div className={`p-3 rounded-lg text-sm ${
+                        swapStatus.includes("confirmed") || swapStatus.includes("success")
+                          ? "bg-green-900/20 border border-green-500/50 text-green-400"
+                          : swapStatus.includes("failed") || swapStatus.includes("error")
+                          ? "bg-red-900/20 border border-red-500/50 text-red-400"
+                          : "bg-blue-900/20 border border-blue-500/50 text-blue-400"
+                      }`}>
+                        {swapStatus}
+                        {lastTxSignature && (
+                          <a
+                            href={`https://solscan.io/tx/${lastTxSignature}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block mt-1 underline hover:text-white"
+                          >
+                            View on Solscan →
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+            
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">You Pay</span>
+                        {wallet.connected && (
+                          <span className="text-gray-400">
+                            Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 bg-[#141414] border border-[#292929] rounded-lg p-3">
+                        <button
+                          onClick={() => setIsInputModalOpen(true)}
+                          className="flex items-center gap-2 px-3 py-2 bg-[#1A1A1A] hover:bg-[#222] rounded-lg transition-colors"
+                        >
+                          <img
+                            src={inputToken.image || DefaultTokenImage}
+                            alt={inputToken.symbol}
+                            className="w-6 h-6 rounded-full"
+                            onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
+                          />
+                          <span className="text-white font-medium">{inputToken.symbol}</span>
+                        </button>
+                        <input
+                          type="number"
+                          value={inputAmount}
+                          onChange={(e) => setInputAmount(e.target.value)}
+                          placeholder="0.00"
+                          className="flex-1 bg-transparent text-white text-xl font-bold text-right focus:outline-none"
+                          disabled={!wallet.connected}
+                        />
+                      </div>
+                    </div>
+
+                   
+                    <div className="flex justify-center">
+                      <button
+                        onClick={handleSwapTokens}
+                        className="p-2 bg-[#1A1A1A] hover:bg-[#222] rounded-full transition-all hover:rotate-180"
+                        disabled={!wallet.connected}
+                      >
+                        <ArrowDownUp size={20} className="text-gray-400" />
+                      </button>
+                    </div>
+
+              
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">You Receive</span>
+                        {isLoadingQuote && <span className="text-gray-400">Loading...</span>}
+                      </div>
+                      <div className="flex items-center gap-2 bg-[#141414] border border-[#292929] rounded-lg p-3">
+                        <button
+                          onClick={() => setIsOutputModalOpen(true)}
+                          className="flex items-center gap-2 px-3 py-2 bg-[#1A1A1A] hover:bg-[#222] rounded-lg transition-colors"
+                        >
+                          <img
+                            src={outputToken.image || DefaultTokenImage}
+                            alt={outputToken.symbol}
+                            className="w-6 h-6 rounded-full"
+                            onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
+                          />
+                          <span className="text-white font-medium">{outputToken.symbol}</span>
+                        </button>
+                        <div className="flex-1 text-white text-xl font-bold text-right">
+                          {outputAmount || "0"}
+                        </div>
+                      </div>
+                    </div>
+
+              
+                    {quote && (
+                      <div className="space-y-2 p-3 bg-[#141414] rounded-lg text-sm">
+                        {exchangeRate && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Rate</span>
+                            <span className="text-white">{exchangeRate}</span>
+                          </div>
+                        )}
+                        {platformFeeDisplay && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Platform Fee</span>
+                            <span className="text-white">{platformFeeDisplay}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-400">Slippage</span>
+                          <button
+                            onClick={() => setShowSlippageSettings(!showSlippageSettings)}
+                            className="flex items-center gap-1 text-white hover:text-blue-400 transition-colors"
+                          >
+                            <span>{(slippage / 100).toFixed(2)}%</span>
+                            <Settings size={14} />
+                          </button>
+                        </div>
+                        
+                    
+                        {showSlippageSettings && (
+                          <div className="pt-2 border-t border-[#292929]">
+                            <div className="flex gap-2 mb-2">
+                              {[50, 100, 300, 500].map((bps) => (
+                                <button
+                                  key={bps}
+                                  onClick={() => setSlippage(bps)}
+                                  className={`flex-1 py-1 px-2 rounded text-xs transition-colors ${
+                                    slippage === bps
+                                      ? "bg-[#2B6AD1] text-white"
+                                      : "bg-[#1A1A1A] text-gray-400 hover:bg-[#222]"
+                                  }`}
+                                >
+                                  {(bps / 100).toFixed(2)}%
+                                </button>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                value={slippage / 100}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value)
+                                  if (!isNaN(value) && value >= 0 && value <= 50) {
+                                    setSlippage(Math.round(value * 100))
+                                  }
+                                }}
+                                step="0.1"
+                                min="0"
+                                max="50"
+                                className="flex-1 bg-[#1A1A1A] border border-[#292929] rounded px-2 py-1 text-white text-xs focus:outline-none focus:border-[#2B6AD1]"
+                                placeholder="Custom %"
+                              />
+                              <span className="text-xs text-gray-400">Custom</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Higher slippage = higher chance of success, but worse price
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+              
+                    <button
+                      onClick={handleSwap}
+                      disabled={isSwapDisabled}
+                      className="w-full py-3 bg-[#2B6AD1] hover:bg-[#2B6AD1]/90 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors"
+                    >
+                      {isSwapping ? "Swapping..." : isLoadingQuote ? "Loading Quote..." : "Swap"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence> */}
+
+
+
       <AnimatePresence>
         {isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -335,8 +605,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
               <div className="flex items-start justify-between p-3 border-b border-[#292929]">
                 <div className="confirm-title-bx">
-                  <h4 className="">Quick Buy Confirmation</h4>
-                  <p className="">Review Details before signing</p>
+                  <h4 className="">Quick By Confirmation</h4>
+                  <p className="">Review Details before siging</p>
                 </div>
 
                 <div>
@@ -351,217 +621,71 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
 
               <div className="p-3 space-y-3">
-                {/* Token Info */}
                 <div className="solana-bx">
                   <div className="solana-parent-bx">
                     <div className="solana-content-bx">
-                      <img 
-                        src={outputToken.image || "/solana-icon.png"} 
-                        alt={outputToken.symbol}
-                        onError={(e) => { e.currentTarget.src = "/solana-icon.png" }}
-                      />
+                      <img src="/solana-icon.png" alt="" />
                       <div>
-                        <h4>{outputToken.name}</h4>
-                        <p>{outputToken.symbol}</p>
+                        <h4>Solana</h4>
+                        <p>Sol</p>
                       </div>
                     </div>
 
                     <div className="solana-cp-bx">
-                      <h6>{outputToken.address.slice(0, 4)}...{outputToken.address.slice(-4)}</h6> 
-                      <span>
-                        <button
-                          type="button"
-                          className="solana-cp-btn"
-                          onClick={() => {
-                            navigator.clipboard.writeText(outputToken.address)
-                            showToast("Address copied!", "success")
-                          }}
-                          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
-                        >
-                          <FontAwesomeIcon icon={faCopy} />
-                        </button>
-                      </span>
+                      <h6>9xQZ...pump</h6> <span><a href="javascript:void(0)" className="solana-cp-btn"><FontAwesomeIcon icon={faCopy} /></a></span>
                     </div>
                   </div>
                 </div>
 
-                {/* Buy Details */}
                 <div className="buy-detail-bx">
                   <h4>Buy Details</h4>
                   <div className="solana-your-pay">
                     <div className="solana-you-pay">
                       <h6>You Pay</h6>
-                      <h5>{inputAmount || "0"} {inputToken.symbol}</h5>
+                      <h5>0.5 Sal</h5>
                     </div>
                     <div className="solana-receive-bx">
                       <h6>You Receive</h6>
-                      <h5>{outputAmount || "0"} {outputToken.symbol}</h5>
+                      <h5>1,243,333 Token</h5>
                     </div>
                   </div>
                 </div>
-
-                {/* Slippage and Price Impact */}
                 <div className="slippage-bx">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h6>Slippage : {(slippage / 100).toFixed(2)}%</h6>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        setShowSlippageSettings(!showSlippageSettings)
-                      }}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: '4px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: '#8f8f8f',
-                        transition: 'color 0.2s ease',
-                        zIndex: 10
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = '#ffffff'}
-                      onMouseLeave={(e) => e.currentTarget.style.color = '#8f8f8f'}
-                      title="Slippage Settings"
-                    >
-                      <Settings size={16} />
-                    </button>
+                  <div>
+                    <h6>Slippage : 5 percent</h6>
                   </div>
                   <div>
-                    <h6>price impact : <span className="impact-percent">{quote?.priceImpactPct || "0"}%</span></h6>
+                    <h6>price impact : <span className="impact-percent">2.8 percent</span></h6>
                   </div>
                 </div>
 
-                {/* Slippage Settings Panel */}
-                {showSlippageSettings && (
-                  <div className="slippage-settings-panel">
-                    <h6 style={{ marginBottom: '12px', color: '#ebebeb', fontSize: '14px' }}>Slippage Tolerance</h6>
-                    
-                    {/* Preset Slippage Buttons */}
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                      {presetSlippages.map((preset) => (
-                        <button
-                          key={preset.value}
-                          onClick={() => handleSlippageChange(preset.value)}
-                          className={`slippage-preset-btn ${slippage === preset.value && !customSlippage ? 'active' : ''}`}
-                        >
-                          {preset.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Custom Slippage Input */}
-                    <div style={{ marginBottom: '8px' }}>
-                      <label style={{ display: 'block', marginBottom: '6px', color: '#8f8f8f', fontSize: '12px' }}>
-                        Custom Slippage (0-50%)
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="number"
-                          value={customSlippage}
-                          onChange={(e) => handleCustomSlippageChange(e.target.value)}
-                          placeholder="Enter custom %"
-                          min="0"
-                          max="50"
-                          step="0.1"
-                          className="custom-slippage-input"
-                        />
-                        <span style={{ 
-                          position: 'absolute', 
-                          right: '12px', 
-                          top: '50%', 
-                          transform: 'translateY(-50%)',
-                          color: '#8f8f8f',
-                          fontSize: '12px',
-                          pointerEvents: 'none'
-                        }}>
-                          %
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Slippage Warning */}
-                    {slippage > 500 && (
-                      <div style={{ 
-                        padding: '8px 12px', 
-                        background: 'rgba(251, 191, 36, 0.1)', 
-                        border: '1px solid rgba(251, 191, 36, 0.3)',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        color: '#fbbf24',
-                        marginTop: '8px'
-                      }}>
-                        ⚠️ High slippage may result in unfavorable rates
-                      </div>
-                    )}
-
-                    {slippage < 50 && (
-                      <div style={{ 
-                        padding: '8px 12px', 
-                        background: 'rgba(239, 68, 68, 0.1)', 
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        borderRadius: '6px',
-                        fontSize: '11px',
-                        color: '#ef4444',
-                        marginTop: '8px'
-                      }}>
-                        ⚠️ Low slippage may cause transaction failures
-                      </div>
-                    )}
-
-                    <div style={{ 
-                      marginTop: '12px', 
-                      padding: '8px 12px', 
-                      background: 'rgba(43, 106, 209, 0.1)', 
-                      border: '1px solid rgba(43, 106, 209, 0.3)',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      color: '#2b6ad1'
-                    }}>
-                      💡 Default is 5%. Lower slippage (0.5-1%) for stable pairs, keep 3-5% for volatile tokens
-                    </div>
-                  </div>
-                )}
-
-                {/* Fee Breakdown */}
                 <div className="solana-breakdown">
                   <h5>Fee BreakDown</h5>
                   <ul className="break-down-list">
-                    <li className="break-down-item">
-                      Platform fee (0.75 percent)
-                      <span className="break-down-title"> {platformFeeDisplay || "Calculating..."} </span>
-                    </li>
-                    <li className="break-down-item">
-                      Network fee 
-                      <span className="break-down-title"> ~ 0.00001 SOL </span>
-                    </li>
-                    <li className="break-down-item">
-                      Priority fee
-                      <div className="switch-wrapper">
+                    <li className="break-down-item">Platform fee (0.75 percent)<span className="break-down-title"> 0.00375 SOL </span></li>
+                    <li className="break-down-item">Network fee <span className="break-down-title"> ~ 0.00375 SOL </span></li>
+                    <li className="break-down-item">Priority fee
+                         <div className="switch-wrapper">
                         <div className="switch">
-                          <input type="checkbox" id="toggle7" disabled />
+                          <input type="checkbox" id="toggle7" />
                           <label htmlFor="toggle7"></label>
                         </div>
-                        <span className="switch-title">Auto</span>
+
+                        <span className="switch-title">Off</span>
                       </div>
                     </li>
                   </ul>
                 </div>
 
-                {/* Total Cost */}
                 <div className="solana-total-bx">
                   <div>
                     <h6>Total cost</h6>
                   </div>
                   <div>
-                    <h5>~ {inputAmount || "0"} {inputToken.symbol}</h5>
+                    <h5>~ 0.00375 SOL</h5>
                   </div>
                 </div>
 
-                {/* Activity Status */}
                 <div className="salana-activity-bx">
                   <ul className="salana-activity-list">
                     <li>
@@ -576,25 +700,16 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   </ul>
                 </div>
 
-                {/* Action Buttons */}
                 <div className="salana-btn-bx">
-                  <button 
-                    className="salana-btn"
-                    onClick={onClose}
-                    disabled={isSwapping}
-                  >
-                    Cancel
+                  <button className="salana-btn">Cancel
+
                     <span className="corner top-right"></span>
-                    <span className="corner bottom-left"></span>
+                                        <span className="corner bottom-left"></span>
                   </button>
-                  <button 
-                    className="salana-btn"
-                    onClick={handleSwap}
-                    disabled={isSwapDisabled || !wallet.connected}
-                  >
-                    {!wallet.connected ? "Connect Wallet" : isSwapping ? "Swapping..." : "Confirm"}
+                  <button className="salana-btn">Confirm 
+
                     <span className="corner top-right"></span>
-                    <span className="corner bottom-left"></span>
+                                        <span className="corner bottom-left"></span>
                   </button>
                 </div>
 

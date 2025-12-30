@@ -166,7 +166,7 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                             {data.whaleAddress.slice(0, 9)}...{data.whaleAddress.slice(-9)}
                         </span>
                         <Copy
-                            className="copy-icon"
+                            className="trans-copy-btn"
                             onClick={() => onCopy(data.whaleAddress, "Whale Address")}
                         />
                     </div>
