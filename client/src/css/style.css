@@ -400,6 +400,7 @@ input[type="number"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 8px 0px;
 }
 
 .left-sidebar-logo img {
@@ -412,7 +413,7 @@ input[type="number"] {
 }
 
 .left-sidebar-list {
-  margin-top: 20px;
+  margin-top: 30px;
   text-align: left;
 }
 
@@ -420,7 +421,6 @@ input[type="number"] {
   font-weight: 400;
   font-size: 10px;
   line-height: 100%;
-  letter-spacing: 4%;
   text-transform: uppercase;
   color: #525252;
 }
@@ -833,11 +833,6 @@ input[type="number"] {
   flex: 1;
 }
 
-.tags {
-  display: flex;
-  margin: 6px 0;
-}
-
 .sell-trade-bx {
   min-width: 90px;
   display: flex;
@@ -1003,15 +998,15 @@ input[type="number"] {
 
 .tags .tag-title {
   display: inline-block;
-  padding: 2px 6px;
+  padding: 4px 6px;
   font-weight: 400;
   font-size: 10px;
   line-height: 140%;
-  vertical-align: middle;
   text-transform: uppercase;
+  letter-spacing: 1px;
   color: #8f8f8f;
   background-color: #0a0a0a;
-  border: 1px solid #3d3d3d;
+  border: 1px solid #141414;
 }
 
 .sold-out-title {
@@ -1044,9 +1039,11 @@ input[type="number"] {
   font-size: 12px;
   line-height: 140%;
   text-align: center;
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: #ebebeb;
   margin-bottom: 0;
+  margin-right: 2px;
 }
 
 .hotness-high-score {
@@ -1189,7 +1186,7 @@ input[type="number"] {
 .quick-list {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
 
 .nw-arrow-tp {
@@ -1204,22 +1201,42 @@ input[type="number"] {
   font-weight: 500;
   font-size: 12px;
   line-height: 140%;
-  vertical-align: middle;
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: #ebebeb;
 }
 
 .quick-copy-btn {
-  display: inline-block;
+  /* display: inline-block; */
   background-color: #0a0a0a;
   border: 1px solid #3d3d3d;
   padding: 5px 4px;
   font-weight: 500;
-  font-size: 10.5px;
-  line-height: 140%;
-  vertical-align: middle;
+  font-size: 14px;
+  line-height: 0px;
   text-transform: uppercase;
   color: #ebebeb;
+  width: 25px;
+  height: 27px;
+  text-align: center;
+  line-height: 27px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.custom-amount-frm {
+  background-color: transparent;
+  width: 100%;
+  border: 1px solid #3d3d3d;
+  padding: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #8f8f8f;
+}
+
+.custm-input-filed {
+  padding: 4px 8px;
 }
 
 .quick-nw-btn:hover {
@@ -1324,7 +1341,7 @@ input[type="number"] {
   padding: 8px;
   margin-bottom: 10px;
   position: relative;
-  height: 109px;
+  height: 116px;
   transition: border-color 0.3s ease;
   display: flex;
   flex-direction: column;
@@ -1935,6 +1952,141 @@ font-size: 16px;
   background-color: #141414;
 }
 
+.sub-drop-header {
+  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #141414;
+}
+
+.sub-drop-header h6 {
+  font-size: 10px;
+  color: #525252;
+  text-transform: uppercase;
+  font-weight: 600;
+  text-align: start;
+  margin-bottom: 4px;
+}
+
+.sub-drop-header h4 {
+  text-align: start;
+  font-size: 12px;
+  color: #ffff;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.paper-plan-connect-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #0a0a0a;
+  border: 1px solid #3d3d3d;
+  padding: 8px 4px;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 0px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: #8f8f8f;
+}
+
+.paper-plan-connect-btn:hover {
+  background-color: #2b2a2a;
+  color: #858585;
+}
+
+.parent-dropdown-content {
+  padding: 10px;
+}
+
+.nw-label {
+  display: block;
+  font-size: 10px !important;
+  text-align: start !important;
+  color: #3d3d3d !important;
+}
+
+.subscription-dropdown-menu {
+  background-color: #141414;
+  border: 1px solid #2b2a2a;
+}
+
+.subscription-dropdown-menu .subs-items {
+  font-size: 12px;
+  text-align: start;
+  color: #858585;
+  padding: 5px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.subscription-dropdown-menu .nw-subs-items {
+  font-size: 12px;
+  text-align: start;
+  color: #858585;
+  padding: 5px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.subscription-dropdown-menu .nw-subs-items.active {
+  color: #fff;
+}
+
+.hotness-range {
+  width: 100%;
+  height: 6px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    #0d6efd 0%,
+    #0d6efd var(--range-progress, 50%),
+    #e5e7eb var(--range-progress, 50%)
+  );
+  outline: none;
+  appearance: none;
+}
+
+.hotness-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #0d6efd;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.25);
+}
+
+.hotness-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #0d6efd;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* Labels */
+.range-label {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.range-value {
+  font-size: 30px;
+  font-weight: 600;
+  color: #0d6efd;
+}
+
+.range-title h6 {
+  font-size: 12px;
+  color: #8a8a8a;
+  font-weight: 400;
+  margin-bottom: 0;
+}
+
 @keyframes lds-spinner {
   0% {
     opacity: 1;
@@ -2227,16 +2379,17 @@ font-size: 16px;
 .all-data-clear {
   border-bottom: 1px solid #292929;
   padding: 5px 2px;
+  border-top: 1px solid #292929;
 }
 
 .dropdown-options .dropdown-item {
-  padding: 10px;
+  padding: 8px;
   cursor: pointer;
   text-align: start;
   font-size: 12px;
   color: #fff;
   text-transform: uppercase;
-  gap: 10px;
+  gap: 8px;
   border-bottom: 1px solid #292929;
 }
 
@@ -2245,34 +2398,34 @@ font-size: 16px;
 }
 
 .dropdown-img {
-  width: 64px;
-  height: 64px;
+  width: 50px;
+  height: 50px;
   border-radius: 0px;
+  border: 1px solid #3d3d3d;
 }
 
 .dropdown-content h6 {
   font-weight: 400;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 140%;
-  letter-spacing: 4%;
+  letter-spacing: 1px;
   text-transform: uppercase;
   color: #ebebeb;
-  margin-bottom: 0;
+  margin-bottom: 4px;
 }
 
 .dropdown-desc {
   font-weight: 400;
-  font-size: 12px;
-  line-height: 140%;
+  font-size: 10px;
+  line-height: 120%;
   text-transform: uppercase;
   color: #8f8f8f;
   margin-bottom: 0;
-  padding: 5px 0;
 }
 
 .dropdown-id {
   font-weight: 400;
-  font-size: 12px;
+  font-size: 10px;
   line-height: 140%;
   text-transform: uppercase;
   color: #8f8f8f;

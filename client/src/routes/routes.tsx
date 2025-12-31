@@ -15,6 +15,7 @@ import { ProtectedRoute } from "../components/common/ProtectedRoute"
 import KolFeedProfile from "../pages/home/KolFeedProfile"
 import ProfilePage from "../pages/home/ProfilePage"
 import TelegramSubscription from "../pages/home/TelegramSubscription"
+import Notification from "../pages/home/Notification"
 
 
 const AppRoutes = () => {
@@ -51,6 +52,7 @@ const AppRoutes = () => {
          <Route path="kol-feed-profile" element={<KolFeedProfile />} />
          <Route path="profile-page" element={<ProfilePage />} />
          <Route path="telegram-subscription" element={<TelegramSubscription />} />
+         <Route path="notification" element={<Notification />} />
         
       </Route>
 

@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown, faFilter, faSearch } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faArrowTrendDown, faFilter, faPaperPlane, faSearch, faShareNodes } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
@@ -16,8 +16,11 @@ import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
 import RightSidebarNew from "./RightSidebarNew"
 import { faCopy } from "@fortawesome/free-regular-svg-icons";
+import { RiFileCopyLine } from "react-icons/ri";
 
 import SwapModal from "../../components/swap/SwapModal"
+
+
 
 
 const hotnessOptions = [
@@ -36,6 +39,16 @@ const amountOptions = [
 ]
 
 const tagOptions = [
+    "SMART MONEY",
+    "HEAVY ACCUMULATOR",
+    "SNIPER",
+    "FLIPPER",
+    "COORDINATED GROUP",
+    "DORMANT WHALE",
+    "KOL",
+]
+
+const subOptions = [
     "SMART MONEY",
     "HEAVY ACCUMULATOR",
     "SNIPER",
@@ -632,38 +645,38 @@ const HomePageNew = () => {
 
 
 
-   const options = [
-  {
-    id: "0xA1B2C3",
-    titles: "Nobody Token",
-    descriptions: "This is a demo token description",
-    images: "/pic.png"
-  },
-  {
-    id: "0xD4E5F6",
-    titles: "Something Coin",
-    descriptions: "Another sample token detail",
-     images: "/pic.png"
-  },
-  {
-    id: "0xZ9Y8X7",
-    titles: "Anything Token",
-    descriptions: "ERC20 utility token",
-     images: "/pic.png"
-  },
-  {
-    id: "0xZ9Y8X8",
-    titles: "Same Token",
-    descriptions: "ERC20 utility token",
-     images: "/pic.png"
-  },
-  {
-    id: "0xZ9Y8X9",
-    titles: "Aura Token",
-    descriptions: "ERC20 utility token",
-     images: "/pic.png"
-  }
-];
+    const options = [
+        {
+            id: "0xA1B2C3",
+            titles: "Nobody Token",
+            descriptions: "This is a demo token description",
+            images: "/pic.png"
+        },
+        {
+            id: "0xD4E5F6",
+            titles: "Something Coin",
+            descriptions: "Another sample token detail",
+            images: "/pic.png"
+        },
+        {
+            id: "0xZ9Y8X7",
+            titles: "Anything Token",
+            descriptions: "ERC20 utility token",
+            images: "/pic.png"
+        },
+        {
+            id: "0xZ9Y8X8",
+            titles: "Same Token",
+            descriptions: "ERC20 utility token",
+            images: "/pic.png"
+        },
+        {
+            id: "0xZ9Y8X9",
+            titles: "Aura Token",
+            descriptions: "ERC20 utility token",
+            images: "/pic.png"
+        }
+    ];
 
     // const [searchQuery, setSearchQuery] = useState("");
     const [filteredOptions, setFilteredOptions] = useState([]);
@@ -696,6 +709,46 @@ const HomePageNew = () => {
         setSearchQuery(option);
         setShowDropdown(false);
     };
+
+
+
+
+
+
+
+    const [triggerOpen, setTriggerOpen] = useState(false);
+    const [walletTypeOpen, setWalletTypeOpen] = useState(false);
+    const [amountOpen, setAmountOpen] = useState(false);
+
+    const [trigger, setTrigger] = useState("Hotness Score");
+    const [walletType, setWalletType] = useState("Any Label");
+    const [amount, setAmount] = useState("$1K");
+    const [customAmount, setCustomAmount] = useState("");
+
+    const closeAll = () => {
+        setTriggerOpen(false);
+        setWalletTypeOpen(false);
+        setAmountOpen(false);
+    };
+
+    useEffect(() => {
+        document.addEventListener("click", closeAll);
+        return () => document.removeEventListener("click", closeAll);
+    }, []);
+
+
+    const [walletTypes, setWalletTypes] = useState([]);
+
+    const toggleWalletType = (value) => {
+        setWalletTypes((prev) =>
+            prev.includes(value)
+                ? prev.filter((item) => item !== value)
+                : [...prev, value]
+        );
+    };
+
+
+const [hotness, setHotness] = useState(50);
 
 
     return (
@@ -738,85 +791,85 @@ const HomePageNew = () => {
                             </form> */}
 
                             <div className="search-container flex-grow-1">
-  <form className="custom-frm-bx mb-2" onSubmit={handleSearch}>
-    <input
-      type="text"
-      className="form-control pe-5"
-      placeholder="Search by token name or address..."
-      value={searchQuery}
-      onChange={handleChange}
-      onFocus={() => setShowDropdown(filteredOptions.length > 0)}
-    />
+                                <form className="custom-frm-bx mb-3" onSubmit={handleSearch}>
+                                    <input
+                                        type="text"
+                                        className="form-control pe-5"
+                                        placeholder="Search by token name or address..."
+                                        value={searchQuery}
+                                        onChange={handleChange}
+                                        onFocus={() => setShowDropdown(filteredOptions.length > 0)}
+                                    />
 
-    <div className="searching-bx">
-      <button className="search-btn" type="submit">
-        <FontAwesomeIcon icon={faSearch} />
-      </button>
+                                    <div className="searching-bx">
+                                        <button className="search-btn" type="submit">
+                                            <FontAwesomeIcon icon={faSearch} />
+                                        </button>
 
-      {searchQuery && (
-        <button
-          type="button"
-          className="clear-input-btn"
-          onClick={() => setSearchQuery("")}
-        >
-          ×
-        </button>
-      )}
-    </div>
-  </form>
+                                        {searchQuery && (
+                                            <button
+                                                type="button"
+                                                className="clear-input-btn"
+                                                onClick={() => setSearchQuery("")}
+                                            >
+                                                ×
+                                            </button>
+                                        )}
+                                    </div>
+                                </form>
 
-  {showDropdown && (
-    
-
-
-    <div className="dropdown-options">
-  
-  
-  <div className="dropdown-header text-end all-data-clear">
-    <button className="quick-nw-btn">Clear All</button>
-  </div>
+                                {showDropdown && (
 
 
-  <ul className="dropdown-scroll">
-    {filteredOptions.map((item, index) => (
-      <li
-        key={index}
-        className="dropdown-item d-flex align-items-start"
-        onClick={() => handleSelect(item)}
-      >
-        <img src={item?.images} alt="" className="dropdown-img" />
 
-        <div className="dropdown-content flex-grow-1">
-          <h6 className="dropdown-title">{item?.titles}</h6>
-          <p className="dropdown-desc">{item?.descriptions}</p>
-          <span className="dropdown-id">
-            <span className="cpy-title">CA:</span>{item?.id}
-            <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
-              <FontAwesomeIcon icon={faCopy} />
-            </a>
-          </span>
-        </div>
+                                    <div className="dropdown-options">
 
-        <button
-          className="dropdown-close"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowDropdown(false);
-          }}
-        >
-          ×
-        </button>
-      </li>
-    ))}
-  </ul>
 
-</div>
+                                        <div className="dropdown-header text-end all-data-clear">
+                                            <button className="quick-nw-btn">Clear All</button>
+                                        </div>
 
-  )}
+
+                                        <ul className="dropdown-scroll">
+                                            {filteredOptions.map((item, index) => (
+                                                <li
+                                                    key={index}
+                                                    className="dropdown-item d-flex align-items-start"
+                                                    onClick={() => handleSelect(item)}
+                                                >
+                                                    <img src={item?.images} alt="" className="dropdown-img" />
+
+                                                    <div className="dropdown-content flex-grow-1">
+                                                        <h6 className="dropdown-title">{item?.titles}</h6>
+                                                        <p className="dropdown-desc">{item?.descriptions}</p>
+                                                        <span className="dropdown-id">
+                                                            <span className="cpy-title">CA:</span>{item?.id}
+                                                            <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
+                                                                <FontAwesomeIcon icon={faCopy} />
+                                                            </a>
+                                                        </span>
+                                                    </div>
+
+                                                    <button
+                                                        className="dropdown-close"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setShowDropdown(false);
+                                                        }}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                    </div>
+
+                                )}
                             </div>
 
 
-                            <div className="custom-frm-bx nw-quick-bx mb-2">
+                            <div className="custom-frm-bx nw-quick-bx mb-3">
                                 <button
                                     className="quick-btn"
                                     style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%' }}
@@ -922,8 +975,14 @@ const HomePageNew = () => {
                                                             onClick={() => handleFilterUpdate('amount', opt.value)}
                                                         >
                                                             {opt.label}
+
                                                         </button>
+
+
                                                     ))}
+                                                    <div className="custm-input-filed">
+                                                        <input type="text" className="custom-amount-frm" placeholder="Custom..." />
+                                                    </div>
                                                 </div>
                                             )}
                                         </li>
@@ -956,7 +1015,219 @@ const HomePageNew = () => {
                                                 </div>
                                             )}
                                         </li>
-                                        <li><a href="javascript:void(0)" className="plan-btn">Subscription <HiChevronUpDown /></a></li>
+                                        <li onClick={(e) => e.stopPropagation()}>
+                                            <a href="javascript:void(0)"
+                                                className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                                                onClick={() => setOpenDropdown(openDropdown === 'subs' ? null : 'subs')}>
+                                                {activeFilters.tags.length > 0
+                                                    ? `Subscription: ${activeFilters.tags.length}`
+                                                    : 'Subscription'} <HiChevronUpDown />
+                                            </a>
+                                            {openDropdown === 'subs' && (
+                                                <div className="filter-dropdown-menu w-xs">
+                                                    <div className="parent-dropdown-content">
+                                                        <div className="sub-drop-header">
+                                                            <div className="sub-drop-content">
+                                                                <h6>System Config</h6>
+                                                                <h4>Whale Feed Alerts</h4>
+                                                            </div>
+
+                                                            <div>
+                                                                <button className="paper-plan-connect-btn"> <FontAwesomeIcon icon={faPaperPlane} /> Connect</button>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* <div className="custom-frm-bx">
+                                                        <label htmlFor="" className="nw-label">Trigger Condition</label>
+                                                        <select name="" id="" className="form-select">
+                                                        <option value="">Hotness Score</option>
+                                                    </select>
+                                                    </div>
+
+                                                    <div className="custom-frm-bx">
+                                                        <label htmlFor="" className="nw-label">Wallet Filter</label>
+                                                    <select name="" id="" className="form-select">
+                                                        <option value="">Any Label</option>
+                                                        <option value="">Smart Money</option>
+                                                    </select>
+                                                    </div>
+
+                                                    <div className="custom-frm-bx">
+                                                        <label htmlFor="" className="nw-label">Wallet Filter</label>
+                                                    <select name="" id="" className="form-select">
+                                                        <option value="">$1K</option>
+                                                        <option value="">$5K</option>
+                                                        <option value="">
+                                                            <input type="text" className="form-control" />
+                                                        </option>
+
+                                                    </select>
+                                                    </div> */}
+
+                                                        {/* <div className="custom-frm-bx position-relative">
+                                                            <label className="nw-label">Trigger Condition</label>
+                                                            <div
+                                                                className="form-select cursor-pointer text-start"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setTriggerOpen(!triggerOpen);
+
+                                                                }}
+                                                            >
+                                                                {trigger}
+                                                            </div>
+
+                                                            {triggerOpen && (
+                                                                <ul className="dropdown-menu show w-100">
+                                                                    <li onClick={() => setTrigger("Hotness Score")}>Hotness Score</li>
+                                                                    <li onClick={() => setTrigger("Volume Spike")}>Volume Spike</li>
+                                                                </ul>
+                                                            )}
+                                                        </div> */}
+                                                        <div className="custom-frm-bx position-relative">
+  <label className="nw-label">Trigger Condition</label>
+
+  <div
+    className="form-select cursor-pointer text-start"
+    onClick={(e) => {
+      e.stopPropagation();
+      setTriggerOpen(!triggerOpen);
+    }}
+  >
+    Hotness Score ({hotness})
+  </div>
+
+  {triggerOpen && (
+    <div
+      className="subscription-dropdown-menu show w-100 p-3" onClick={(e) => e.stopPropagation()}
+    >
+      
+      <div className=" text-center mt-2">
+        <div>
+         <span className="range-value">{hotness}</span>
+       </div>
+
+        <div className="range-title">
+        <h6 className="mb-0 text-sm">Sensitivity TheresHold</h6>
+      </div>
+       
+
+         <input
+        type="range"
+        min="0"
+        max="100"
+        value={hotness}
+        onChange={(e) => setHotness(e.target.value)}
+        className="hotness-range"
+        style={{ "--range-progress": `${hotness}%` }}
+      />
+       
+      </div>
+    </div>
+  )}
+</div>
+
+                                                      
+
+
+                                                        <div className="custom-frm-bx position-relative">
+                                                            <label className="nw-label">Wallet Filter</label>
+
+                                                            <div
+                                                                className="form-select cursor-pointer text-start"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setWalletTypeOpen(!walletTypeOpen);
+                                                                }}
+                                                            >
+                                                                {walletTypes.length > 0 ? walletTypes.join(", ") : "Select Wallet Type"}
+                                                            </div>
+
+                                                            {walletTypeOpen && (
+                                                                <ul className="subscription-dropdown-menu show w-100">
+                                                                    {["Any Label", "Smart Money", "Whale", "Insider"].map((item) => (
+                                                                        <li
+                                                                            key={item}
+                                                                            className={`nw-subs-items ${walletTypes.includes(item) ? "active" : ""
+                                                                                }`}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                toggleWalletType(item);
+                                                                            }}
+                                                                        >
+                                                                            {item}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="custom-frm-bx position-relative">
+                                                            <label className="nw-label">Wallet Amount</label>
+                                                            <div
+                                                                className="form-select cursor-pointer text-start"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setAmountOpen(!amountOpen);
+                                                                }}
+                                                            >
+                                                                {amount}
+                                                            </div>
+
+                                                            {amountOpen && (
+                                                                <div
+                                                                    className="subscription-dropdown-menu show w-100 p-2"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <div
+                                                                        className="subs-items"
+                                                                        onClick={() => {
+                                                                            setAmount("$1K");
+                                                                            setAmountOpen(false);
+                                                                        }}
+                                                                    >
+                                                                        $1K
+                                                                    </div>
+                                                                    <div
+                                                                        className="subs-items"
+                                                                        onClick={() => {
+                                                                            setAmount("$5K");
+                                                                            setAmountOpen(false);
+                                                                        }}
+                                                                    >
+                                                                        $5K
+                                                                    </div>
+
+                                                                    <input
+                                                                        type="text"
+                                                                        className="form-control mt-2"
+                                                                        placeholder="Custom amount"
+                                                                        value={customAmount}
+                                                                        onChange={(e) => {
+                                                                            setCustomAmount(e.target.value);
+                                                                            setAmount(e.target.value);
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <div>
+                                                            <button className="connect-wallet-btn">Active</button>
+                                                        </div>
+
+                                                    </div>
+
+
+                                                </div>
+                                            )}
+                                        </li>
+
+
+                                        {/* <li><a href="javascript:void(0)" className="plan-btn">Subscription <HiChevronUpDown /></a></li> */}
+
+
+
                                         <li>
                                             <a href="javascript:void(0)"
                                                 className="plan-btn d-block"
@@ -1028,9 +1299,10 @@ const HomePageNew = () => {
                                                                     handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
                                                                 }}
                                                             >
-                                                                <FontAwesomeIcon icon={faCopy} />
+                                                                {/* <FontAwesomeIcon icon={faCopy} /> */}
 
-                                                                {/* <FaRegCopy /> */}
+
+                                                                <RiFileCopyLine />
                                                             </a>
                                                         </li>
                                                         <li className="quick-item">
@@ -1048,7 +1320,7 @@ const HomePageNew = () => {
 
                                             {/* Card Body */}
                                             <div className="custom-card">
-                                                
+
                                                 <div className="left-item-bx">
                                                     <img
                                                         src={tx.whaleTokenURL || DefaultTokenImage}

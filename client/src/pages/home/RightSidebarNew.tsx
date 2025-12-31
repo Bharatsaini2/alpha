@@ -735,13 +735,13 @@ const RightSidebarNew = ({
               <span className="plan-btn flex items-center gap-1">
                 Slippage: <span style={{ color: "#EBEBEB" }}>5.00%</span>
               </span>
-              <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
+              {inputAmount>0&& <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
                 <span>
                   <RiLoader2Fill
                     className={isLoadingQuote ? "animate-spin" : ""}
                   />
                 </span>
-              </a>
+              </a>}
             </div>
           </div>
           <div className="market-card">
