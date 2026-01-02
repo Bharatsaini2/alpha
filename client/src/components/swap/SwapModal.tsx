@@ -642,7 +642,13 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   <div className="solana-your-pay">
                     <div className="solana-you-pay">
                       <h6>You Pay</h6>
+
+                     <div className="d-flex aling-items-center justify-end gap-2">
+                       <div className="amount-box w-20">
+                        <input type="text" className="amount-input main-amount" placeholder="" />
+                      </div>
                       <h5>0.5 Sal</h5>
+                     </div>
                     </div>
                     <div className="solana-receive-bx">
                       <h6>You Receive</h6>
@@ -701,10 +707,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 </div>
 
                 <div className="salana-btn-bx">
-                  <button className="salana-btn">Cancel
-
-                    <span className="corner top-right"></span>
-                                        <span className="corner bottom-left"></span>
+                  <button className="swap-btn w-50">Cancel                    
                   </button>
                   <button className="salana-btn">Confirm 
 

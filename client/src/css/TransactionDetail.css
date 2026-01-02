@@ -513,7 +513,7 @@
 .solana-you-pay h5 {
   font-weight: 400;
   font-size: 24px;
-  line-height: 140%;
+  /* line-height: 140%; */
   text-transform: uppercase;
   color: #ebebeb;
   margin-bottom: 0;

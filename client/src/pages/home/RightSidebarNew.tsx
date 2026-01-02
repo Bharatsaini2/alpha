@@ -80,6 +80,7 @@ const RightSidebarNew = ({
   const [inputToken, setInputToken] = useState<TokenInfo>(DEFAULT_INPUT_TOKEN)
   const [outputToken, setOutputToken] =
     useState<TokenInfo>(DEFAULT_OUTPUT_TOKEN)
+  const [isLoading,setIsLoading]=useState(false)
   const [inputAmount, setInputAmount] = useState<string>("") // Empty by default - user must enter amount
   const [outputAmount, setOutputAmount] = useState<string>("")
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
@@ -155,6 +156,7 @@ const RightSidebarNew = ({
 
   // Fetch swap quote with debouncing (handled by useSwapApi)
   const fetchQuote = useCallback(async () => {
+    setIsLoading(true)
     try {
       const amount = parseFloat(inputAmount)
       if (isNaN(amount) || amount <= 0) return
@@ -196,6 +198,7 @@ const RightSidebarNew = ({
       }
 
       setOutputAmount(outAmount.toFixed(6))
+      setIsLoading(false)
       setRetryCount(0) // Reset retry count on success
     } catch (error: any) {
       console.error("Failed to fetch quote:", error)
@@ -735,7 +738,7 @@ const RightSidebarNew = ({
               <span className="plan-btn flex items-center gap-1">
                 Slippage: <span style={{ color: "#EBEBEB" }}>5.00%</span>
               </span>
-              {inputAmount>0&& <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
+              {isLoading&& <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
                 <span>
                   <RiLoader2Fill
                     className={isLoadingQuote ? "animate-spin" : ""}
@@ -1198,20 +1201,7 @@ const RightSidebarNew = ({
 </div> */}
 
 
-            <div>
-              {!showMainButton ? (
-                <button
-                  className="swap-btn"
-                  type="button"
-                  onClick={() => setShowMainButton(true)}
-                >
-                  Swap
-                  <span className="corner top-right"></span>
-                  <span className="corner bottom-left"></span>
-                </button>
-              ) : (
-
-                <>
+            {/* <div>
                   {!wallet.connected ? (
                     <button
                       onClick={handleConnectWallet}
@@ -1267,12 +1257,11 @@ const RightSidebarNew = ({
                       <span className="corner bottom-left"></span>
                     </button>
                   )}
-                </>
-              )}
-            </div>
+               
+            </div> */}
 
 
-            {/* <div className="">
+            <div className="">
               {!wallet.connected ? (
                 <button
                   onClick={handleConnectWallet}
@@ -1327,7 +1316,7 @@ const RightSidebarNew = ({
                   <span className="corner bottom-left"></span>
                 </button>
               )}
-            </div> */}
+            </div>
 
             {/* <div className="">
                             {!wallet.connected ? (

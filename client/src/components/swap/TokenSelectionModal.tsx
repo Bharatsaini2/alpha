@@ -5,7 +5,8 @@ import fallbackImage from "../../assets/default_token.svg"
 import { POPULAR_TOKENS, TokenInfo } from "../../lib/tokenList"
 import { fetchJupiterTokens, searchJupiterTokens } from "../../lib/jupiterTokens"
 import { useJupiterSearch, JupiterTokenResult } from "../../hooks/useJupiterSearch"
-import { RiVerifiedBadgeLine } from "react-icons/ri";
+import { RiVerifiedBadgeFill } from "react-icons/ri";
+
 import "./swap.css"
 
 // Re-export TokenInfo for backward compatibility
@@ -56,7 +57,7 @@ const TokenItem = memo<{
         <img
           src={token.image || fallbackImage}
           alt={token.symbol}
-          className="w-10 h-10 rounded-full border border-[#2B2B2D]"
+          className="w-10 h-10 rounded-0 border border-[#2B2B2D]"
           onError={(e) => {
             const target = e.target as HTMLImageElement
             target.src = fallbackImage
@@ -67,16 +68,17 @@ const TokenItem = memo<{
       {/* Token Info */}
       <div className="flex-1 text-left min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-medium text-white">{token.symbol}</span>
+          <span className="text-sm text-white">{token.symbol}</span>
           {token.isPopular && (
             // <Star size={12} className="text-yellow-400 fill-current" />
-            <RiVerifiedBadgeLine size={16} className="text-yellow-400 fill-current" />
+            <RiVerifiedBadgeFill  size={14} className="text-white fill-current" />
           )}
           {token.isVerified && (
-            <span className="text-xs text-green-400"> <RiVerifiedBadgeLine/> </span>
+            <span className="text-xs text-green-400"> <RiVerifiedBadgeFill/> </span>
           )}
         </div>
         <div className="text-sm text-gray-400 truncate">{token.name}</div>
+        <div className=" text-gray-400 text-xs"><span>xCPG2h9Dy</span></div>
         {/* Show price and mcap if available from Jupiter Ultra */}
         {(token.usdPrice || token.mcap) && (
           <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -100,6 +102,12 @@ const TokenItem = memo<{
           )}
         </div>
       )}
+
+      <div>
+        <h6 className="text-xs" style={{fontSize : "12px", fontWeight : "400"}}>0.00 Sol</h6>
+      </div>
+
+
     </button>
   )
 })
@@ -402,8 +410,45 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             className="relative w-full max-w-md mx-4   shadow-2xl max-h-[80vh] flex flex-col nw-custm-modal-bx"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-3 py-3 border-b border-[#2B2B2D]">
-              <h4 className="text-md font-semibold text-white mb-0">{title}</h4>
+            <div className=" gap-2 flex items-center justify-between px-3  py-2 border-b border-[#2B2B2D]">
+              {/* <h4 className="text-md font-semibold text-white mb-0">{title}</h4> */}
+              <div className="flex-grow-1">
+              <div className="relative custom-frm-bx mb-0">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchQuery}
+                  onChange={handleSearchChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Search by name, symbol, or address..."
+                  className="form-control "
+                  style={{paddingLeft : "35px"}}
+                />
+                {(isSearching || isJupiterSearching) && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  </div>
+                )}
+              </div>
+    
+              {/* {searchQuery && searchQuery.length >= 2 && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
+                  <span className="px-2 py-1 bg-blue-900/20 border border-blue-500/30 rounded text-blue-400 text-nowrap">
+                    Jupiter Ultra
+                  </span>
+                  <span>Real-time token data with prices & verification</span>
+                </div>
+              )} */}
+      
+              {jupiterError && (
+                <div className="mt-2 text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded px-2 py-1">
+                  ❌ {jupiterError}
+                </div>
+              )}
+            </div>
+
+
               <div className="flex items-center gap-2">
                 {tokenLoadError && (
                   <span className="text-xs text-yellow-400" title={tokenLoadError}>
@@ -419,9 +464,9 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
               </div>
             </div>
 
-            {/* Search Input */}
-            <div className="px-3 py-2 border-b border-[#2B2B2D]">
-              <div className="relative">
+        
+            {/* <div className="px-3 py-2 border-b border-[#2B2B2D]">
+              <div className="relative custom-frm-bx">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   ref={searchInputRef}
@@ -430,7 +475,8 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                   onChange={handleSearchChange}
                   onKeyDown={handleKeyDown}
                   placeholder="Search by name, symbol, or address..."
-                  className="w-full bg-[#16171C] border border-[#2A2A2D] rounded-lg pl-10 pr-4 py-3 text-white placeholder-gray-400 focus:border-white focus:outline-none transition-colors"
+                  className="form-control "
+                  style={{paddingLeft : "35px"}}
                 />
                 {(isSearching || isJupiterSearching) && (
                   <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -438,7 +484,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                   </div>
                 )}
               </div>
-              {/* Show Jupiter Ultra badge when searching */}
+    
               {searchQuery && searchQuery.length >= 2 && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
                   <span className="px-2 py-1 bg-blue-900/20 border border-blue-500/30 rounded text-blue-400 text-nowrap">
@@ -447,13 +493,13 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                   <span>Real-time token data with prices & verification</span>
                 </div>
               )}
-              {/* Show error if Jupiter search fails */}
+        }
               {jupiterError && (
                 <div className="mt-2 text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded px-2 py-1">
                   ❌ {jupiterError}
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* Token List */}
 
@@ -484,15 +530,15 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
 
 
-              {/* Popular Tokens Section */}
-              {!searchQuery && (
+             
+              {/* {!searchQuery && (
                 <div className="px-3 py-2">
                   <div className="flex items-center gap-2 mb-0">
                     <RiVerifiedBadgeLine size={16} className="text-yellow-400" />
                     <span className="text-sm font-medium text-gray-400">Popular Tokens</span>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {/* Recent Tokens Section */}
               {!searchQuery && recentTokens.length > 0 && (
@@ -544,15 +590,15 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-3 py-2 border-t border-[#2B2B2D]">
+          
+            {/* <div className="px-3 py-2 border-t border-[#2B2B2D]">
               <p className="fz-14 lh-1 text-white text-center mb-0">
                 {searchQuery && searchQuery.length >= 2 
                   ? "Powered by Jupiter Ultra • Real-time prices & verification"
                   : "Search to find any token • Popular tokens shown by default"
                 }
               </p>
-            </div>
+            </div> */}
           </motion.div>
         </div>
       )}

@@ -986,7 +986,9 @@ input[type="number"] {
   vertical-align: middle;
   text-transform: uppercase;
   color: #ebebeb;
+  text-align: start;
   margin-bottom: 0;
+  text-wrap-mode: nowrap;
 }
 
 .tags {
@@ -2525,4 +2527,119 @@ font-size: 16px;
 
 .halft-max-btn:hover {
   background-color: #0a0a0a;
+}
+
+.config-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.config-modal {
+  background: #0b0b0b;
+  padding: 30px;
+  width: 420px;
+  border-radius: 12px;
+}
+
+.config-title {
+  text-align: center;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  color: #fff;
+  font-size: 18px;
+}
+
+.config-box {
+  border: 1px dashed #2a2a2a;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.config-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  color: #aaa;
+}
+
+.config-row span:last-child {
+  color: #fff;
+}
+
+.green {
+  color: #00ff7f;
+}
+
+.green-dot {
+  color: #00ff7f;
+}
+
+.green-dot i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #00ff7f;
+  border-radius: 50%;
+  margin-left: 6px;
+}
+
+.close-btn {
+  width: 100%;
+  background: #1a1a1a;
+  color: #fff;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  background: #222;
+}
+
+.swap-transition-bx {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+}
+
+.swap-check {
+  color: #14904d;
+  font-size: 18px;
+  display: flex;
+}
+
+.swap-transition-bx h5 {
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 140%;
+  letter-spacing: 4%;
+  text-transform: uppercase;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.swap-transition-bx p {
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 12px;
+  line-height: 140%;
+  letter-spacing: 4%;
+  text-transform: uppercase;
+  color: #b8b8b8;
+  margin-bottom: 8px;
+}
+
+.nw-sign-frm {
+  background-color: #0a0a0a;
+  border: 1px solid #292929;
+  padding: 24px 16px;
+  border-radius: 0;
+  max-width: 438px !important;
 }

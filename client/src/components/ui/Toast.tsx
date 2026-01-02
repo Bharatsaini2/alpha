@@ -4,6 +4,7 @@ import { CheckIcon, XIcon } from "lucide-react"
 import { createPortal } from "react-dom"
 import { FaRegCheckSquare } from "react-icons/fa";
 import { ImSpinner4 } from "react-icons/im";
+import { MdOutlineCheckBox} from "react-icons/md";
 
 
 
@@ -85,7 +86,7 @@ const Toast: React.FC<ToastProps> = ({
 
 
       {/* New Coppied Address */}
-      <div className="coppied-address">
+      {/* <div className="coppied-address">
         <div className="coppied-content">
           <span className="coppied-icon"><FaRegCheckSquare /></span>
           <p>Address copied to clipboard!</p>
@@ -96,7 +97,7 @@ const Toast: React.FC<ToastProps> = ({
             Close
           </button>
         </div>
-      </div>
+      </div> */}
 
 
 
@@ -129,6 +130,22 @@ const Toast: React.FC<ToastProps> = ({
           
         </div>
       </div>  */}
+
+       <div className="nw-sign-frm ">
+        <div className="swap-transition-bx">
+                    <span className="swap-check"><MdOutlineCheckBox /></span>
+                    <div>
+                      <h5>Transaction confirmed</h5>
+                      <p>swapped 20 sol for 5,809 trump</p>
+                      <div className="d-flex align-items-center gap-2">
+                        <a href="javscript:void(0)" className="coppied-btn">view tx</a>
+                        <a href="javscript:void(0)" className="coppied-btn" onClick={() => onClose(id)}>close</a>
+                      </div>
+                    </div>
+                  </div>
+       </div>
+
+
 
 
 

@@ -7,6 +7,10 @@ import { useAuth } from "../../contexts/AuthContext"
 import { faChevronDown, faChevronUp, faClose } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { PiPlugsConnected } from "react-icons/pi";
+import { FaRegUserCircle } from "react-icons/fa";
+import { RiTelegram2Fill } from "react-icons/ri";
+
+
 
 
 const BASE_URL =
@@ -175,9 +179,9 @@ function Header() {
                     top: 100%;
                     right: 0;
                     margin-top: 4px;
-                    background: #1a1a1c;
+                    background: #0a0a0a;
                     border: 1px solid #3D3D3D;
-                    border-radius: 4px;
+                    border-radius: 0px;
                     min-width: 180px;
                     z-index: 1000;
                     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -199,7 +203,7 @@ function Header() {
                 .user-dropdown-divider {
                     height: 1px;
                     background: #3D3D3D;
-                    margin: 4px 0;
+                    margin: 0px;
                 }
             `}</style>
 
@@ -291,6 +295,25 @@ function Header() {
                     </div>
                   )}
                   <div className="user-dropdown-divider" />
+
+                  <div
+                    className="user-dropdown-item"
+                   onClick={() => setShowModal(true)}
+                  >
+                    <FaRegUserCircle   size={14} />
+                    Profile
+                  </div>
+                  <div className="user-dropdown-divider" />
+
+                  <div
+                    className="user-dropdown-item"
+                   onClick={() => setShowModal(true)}
+                  >
+                    <RiTelegram2Fill   size={14} />
+                    Telegram Subscription
+                  </div>
+                  <div className="user-dropdown-divider" />
+
                   <div
                     className="user-dropdown-item"
                    onClick={() => setShowModal(true)}
@@ -315,6 +338,10 @@ function Header() {
               )}
             </div>
           ) : (
+            
+
+          
+
             <button className="connect-btn" onClick={openLoginModal}>
               CONNECT
             </button>

@@ -747,8 +747,10 @@ const HomePageNew = () => {
         );
     };
 
+    const [isSaved, setIsSaved] = useState(false);
 
-const [hotness, setHotness] = useState(50);
+
+    const [hotness, setHotness] = useState(10);
 
 
     return (
@@ -983,6 +985,10 @@ const [hotness, setHotness] = useState(50);
                                                     <div className="custm-input-filed">
                                                         <input type="text" className="custom-amount-frm" placeholder="Custom..." />
                                                     </div>
+
+                                                    <div className="quick-nw-btn">
+                                                        <button>Submit</button>
+                                                    </div>
                                                 </div>
                                             )}
                                         </li>
@@ -1015,6 +1021,7 @@ const [hotness, setHotness] = useState(50);
                                                 </div>
                                             )}
                                         </li>
+
                                         <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
                                                 className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
@@ -1024,7 +1031,7 @@ const [hotness, setHotness] = useState(50);
                                                     : 'Subscription'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'subs' && (
-                                                <div className="filter-dropdown-menu w-xs">
+                                                <div className="filter-dropdown-menu w-sm">
                                                     <div className="parent-dropdown-content">
                                                         <div className="sub-drop-header">
                                                             <div className="sub-drop-content">
@@ -1037,97 +1044,49 @@ const [hotness, setHotness] = useState(50);
                                                             </div>
                                                         </div>
 
-                                                        {/* <div className="custom-frm-bx">
-                                                        <label htmlFor="" className="nw-label">Trigger Condition</label>
-                                                        <select name="" id="" className="form-select">
-                                                        <option value="">Hotness Score</option>
-                                                    </select>
-                                                    </div>
 
-                                                    <div className="custom-frm-bx">
-                                                        <label htmlFor="" className="nw-label">Wallet Filter</label>
-                                                    <select name="" id="" className="form-select">
-                                                        <option value="">Any Label</option>
-                                                        <option value="">Smart Money</option>
-                                                    </select>
-                                                    </div>
 
-                                                    <div className="custom-frm-bx">
-                                                        <label htmlFor="" className="nw-label">Wallet Filter</label>
-                                                    <select name="" id="" className="form-select">
-                                                        <option value="">$1K</option>
-                                                        <option value="">$5K</option>
-                                                        <option value="">
-                                                            <input type="text" className="form-control" />
-                                                        </option>
-
-                                                    </select>
-                                                    </div> */}
-
-                                                        {/* <div className="custom-frm-bx position-relative">
+                                                        <div className="custom-frm-bx position-relative">
                                                             <label className="nw-label">Trigger Condition</label>
                                                             <div
                                                                 className="form-select cursor-pointer text-start"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setTriggerOpen(!triggerOpen);
-
                                                                 }}
                                                             >
-                                                                {trigger}
+                                                                Hotness Score ({hotness})
                                                             </div>
 
                                                             {triggerOpen && (
-                                                                <ul className="dropdown-menu show w-100">
-                                                                    <li onClick={() => setTrigger("Hotness Score")}>Hotness Score</li>
-                                                                    <li onClick={() => setTrigger("Volume Spike")}>Volume Spike</li>
-                                                                </ul>
+                                                                <div
+                                                                    className="subscription-dropdown-menu show w-100 p-3" onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    <div className=" text-center mt-2">
+                                                                        <div>
+                                                                            <span className="range-value">{hotness}</span>
+                                                                        </div>
+
+                                                                        <div className="range-title">
+                                                                            <h6 className="mb-0 text-sm">Sensitivity TheresHold</h6>
+                                                                        </div>
+
+                                                                        <input
+                                                                            type="range"
+                                                                            min="0"
+                                                                            max="10"
+                                                                            value={hotness}
+                                                                            onChange={(e) => setHotness(e.target.value)}
+                                                                            className="hotness-range"
+                                                                            style={{ "--range-progress": `${(hotness / 10) * 100}%` }}
+                                                                        />
+
+                                                                    </div>
+                                                                </div>
                                                             )}
-                                                        </div> */}
-                                                        <div className="custom-frm-bx position-relative">
-  <label className="nw-label">Trigger Condition</label>
+                                                        </div>
 
-  <div
-    className="form-select cursor-pointer text-start"
-    onClick={(e) => {
-      e.stopPropagation();
-      setTriggerOpen(!triggerOpen);
-    }}
-  >
-    Hotness Score ({hotness})
-  </div>
 
-  {triggerOpen && (
-    <div
-      className="subscription-dropdown-menu show w-100 p-3" onClick={(e) => e.stopPropagation()}
-    >
-      
-      <div className=" text-center mt-2">
-        <div>
-         <span className="range-value">{hotness}</span>
-       </div>
-
-        <div className="range-title">
-        <h6 className="mb-0 text-sm">Sensitivity TheresHold</h6>
-      </div>
-       
-
-         <input
-        type="range"
-        min="0"
-        max="100"
-        value={hotness}
-        onChange={(e) => setHotness(e.target.value)}
-        className="hotness-range"
-        style={{ "--range-progress": `${hotness}%` }}
-      />
-       
-      </div>
-    </div>
-  )}
-</div>
-
-                                                      
 
 
                                                         <div className="custom-frm-bx position-relative">
@@ -1212,9 +1171,57 @@ const [hotness, setHotness] = useState(50);
                                                             )}
                                                         </div>
 
-                                                        <div>
-                                                            <button className="connect-wallet-btn">Active</button>
-                                                        </div>
+                                                        {isSaved && (
+                                                            <div className="config-overlay">
+                                                                <div className="config-modal">
+                                                                    <h3 className="config-title">CONFIGURATION SAVED</h3>
+
+                                                                    <div className="config-box">
+                                                                        <div className="config-row">
+                                                                            <span>Feed Type</span>
+                                                                            <span>Whale Alerts</span>
+                                                                        </div>
+
+                                                                        <div className="config-row">
+                                                                            <span>Min Score</span>
+                                                                            <span className="green">{hotness}</span>
+                                                                        </div>
+
+                                                                        <div className="config-row">
+                                                                            <span>Labels</span>
+                                                                            <span>{walletTypes.join(", ") || "Any Label"}</span>
+                                                                        </div>
+
+                                                                        <div className="config-row">
+                                                                            <span>Min Volume</span>
+                                                                            <span>{amount}</span>
+                                                                        </div>
+
+                                                                        <div className="config-row">
+                                                                            <span>Status</span>
+                                                                            <span className="green-dot">
+                                                                                Active <i></i>
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <button
+                                                                        className="close-btn"
+                                                                        onClick={() => setIsSaved(false)}
+                                                                    >
+                                                                        CLOSE
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+
+                                                        <button
+                                                            className="connect-wallet-btn"
+                                                            onClick={() => setIsSaved(true)}
+                                                        >
+                                                            Connect
+                                                        </button>
 
                                                     </div>
 
@@ -1223,19 +1230,65 @@ const [hotness, setHotness] = useState(50);
                                             )}
                                         </li>
 
-
-                                        {/* <li><a href="javascript:void(0)" className="plan-btn">Subscription <HiChevronUpDown /></a></li> */}
-
-
-
-                                        <li>
+                                        {/* <li>
                                             <a href="javascript:void(0)"
                                                 className="plan-btn d-block"
                                                 onClick={clearFilters}
                                                 title="Clear all filters">
                                                 <FontAwesomeIcon icon={faFilter} />
                                             </a>
+                                        </li> */}
+
+                                        <li onClick={(e) => e.stopPropagation()}>
+                                            <a href="javascript:void(0)"
+                                                className={`plan-btn d-block ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                                                onClick={() => setOpenDropdown(openDropdown === 'newFilter' ? null : 'newFilter')}>
+                                                {activeFilters.tags.length > 0
+                                                    ? `: ${activeFilters.tags.length}`
+                                                    : ''} <FontAwesomeIcon icon={faFilter} />
+                                            </a>
+                                            {openDropdown === 'newFilter' && (
+                                                <div className="filter-dropdown-menu w-xs p-2">
+                                                     <div className="row">
+                                                            
+                                                              <div className="col-lg-6">
+                                                              <div className="custom-frm-bx ">
+                                                        <label htmlFor="">Age (minutes)</label>
+                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                                              </div>
+                                                              </div>
+
+                                                               <div className="col-lg-6">
+
+                                                              <div className="custom-frm-bx">
+                                                                 <label htmlFor=""></label>
+                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                                              </div>
+                                                              </div>
+
+                                                              <div className="col-lg-6">
+                                                              <div className="custom-frm-bx mb-0">
+                                                        <label htmlFor="">Market Cap (K)</label>
+                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                                              </div>
+                                                              </div>
+
+                                                               <div className="col-lg-6">
+
+                                                              <div className="custom-frm-bx mb-0">
+                                                                 <label htmlFor=""></label>
+                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                                              </div>
+                                                              </div>
+                                                              
+                                                            </div>
+                                                    
+                                                   
+                                                  
+                                                </div>
+                                            )}
                                         </li>
+
                                     </ul>
                                 </div>
                             </div>
@@ -1270,7 +1323,7 @@ const [hotness, setHotness] = useState(50);
                                                 })
                                             }
                                         >
-                                            {/* Card Header */}
+
                                             <div className="d-flex align-items-center justify-content-between nw-btm-brd">
                                                 <div>
                                                     <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
@@ -1318,7 +1371,7 @@ const [hotness, setHotness] = useState(50);
                                                 </div>
                                             </div>
 
-                                            {/* Card Body */}
+                                        
                                             <div className="custom-card">
 
                                                 <div className="left-item-bx">
@@ -1328,7 +1381,7 @@ const [hotness, setHotness] = useState(50);
                                                         onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
                                                     />
                                                     <div className="whale-content flex-grow-1">
-                                                        <h4 className="username">{tx.whaleTokenSymbol}</h4>
+                                                        <h4 className="username">{tx.whaleTokenSymbol} LAUNCHCOIN Whale (A4DC..) </h4>
                                                         <div className="tags">
                                                             {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                                                 <span key={i} className="tag-title">{tag}</span>
@@ -1343,7 +1396,7 @@ const [hotness, setHotness] = useState(50);
                                                     </div>
                                                 </div>
 
-                                                {/* Center - Buy/Sell Badge */}
+                                                
                                                 <div className="sell-trade-bx">
                                                     {tx.type === 'sell' ? (
                                                         <span className="sell-title">
@@ -1356,7 +1409,7 @@ const [hotness, setHotness] = useState(50);
                                                     )}
                                                 </div>
 
-                                                {/* Right - Token Info */}
+                                                
                                                 <div className="right-info text-end">
                                                     <div>
                                                         <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
@@ -1373,7 +1426,7 @@ const [hotness, setHotness] = useState(50);
                                                 </div>
                                             </div>
 
-                                            {/* skeleton Body */}
+                                           
                                             {/* <div className="custom-card skeleton-card">
 
                                                 <div className="left-item-bx">
@@ -1397,7 +1450,7 @@ const [hotness, setHotness] = useState(50);
                                                 </div>
 
                                                 <div className="right-info text-end">
-                                                    <div>
+                                                    <div className="d-flex flex-column align-items-end">
                                                         <div className="skeleton skeleton-text nw-sm"></div>
                                                         <div className="skeleton skeleton-text nw-xs"></div>
                                                         <div className="skeleton skeleton-text nw-xs"></div>
