@@ -1516,8 +1516,8 @@ input[type="number"] {
 
 .swap-toggle-bx {
   position: absolute;
-  top: -25px;
-  /* top: 92px; */
+  /* top: -25px; */
+  top: 92px;
   left: 45%;
   z-index: 1;
 }
@@ -2241,9 +2241,9 @@ font-size: 16px;
   }
 
   /* Quick buy box hide on mobile */
-  .nw-quick-bx {
+  /* .nw-quick-bx {
     display: none;
-  }
+  } */
 
   /* Search form full width */
   .custom-frm-bx.flex-grow-1 {
@@ -2332,6 +2332,23 @@ font-size: 16px;
   height: 52px;
   display: flex;
   align-items: center;
+}
+
+.spinner-rotate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .dropdown-options {
@@ -2643,3 +2660,309 @@ font-size: 16px;
   border-radius: 0;
   max-width: 438px !important;
 }
+
+.execute-btn {
+  position: relative;
+  width: 100%;
+  background: #000;
+  font-size: 16px;
+  text-align: center;
+  display: block;
+  width: 100%;
+  border: none;
+  padding: 8px;
+  letter-spacing: 2px;
+  box-shadow: 0px 4px 4px 0px #ffffff1f inset;
+  font-weight: 400;
+  font-size: 16px;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+.execute-btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    #0d2dcd 7.97%,
+    rgba(13, 45, 205, 0.02) 15.29%,
+    rgba(13, 45, 205, 0.02) 100%
+  );
+  transform: translateX(-100%);
+}
+
+.execute-btn .btn-text {
+  position: relative;
+  z-index: 2;
+}
+
+.execute-btn.loading::before {
+  animation: executeLoader 1.8s linear infinite;
+}
+
+@keyframes executeLoader {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.execute-btn span.excute-corner {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+}
+
+.execute-btn span.excute-corner.top-right {
+  top: 0px;
+  right: 0px;
+  border-top: 1px solid #7b91fe;
+  border-right: 1px solid #7b91fe;
+}
+
+.execute-btn span.excute-corner.bottom-left {
+  content: "";
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 4px;
+  height: 4px;
+  border-top: 1px solid #7b91fe;
+  border-left: 1px solid #7b91fe;
+}
+
+.execute-btn span.excute-corner.bottom-right {
+  content: "";
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 4px;
+  height: 4px;
+  border-bottom: 1px solid #7b91fe;
+  border-right: 1px solid #7b91fe;
+}
+.execute-btn span.excute-corner.top-left {
+  bottom: 0px;
+  left: 0px;
+  border-bottom: 1px solid #7b91fe;
+  border-left: 1px solid #7b91fe;
+}
+
+.dots {
+  display: inline-block;
+  width: 20px;
+  text-align: left;
+}
+
+.dots::after {
+  content: "";
+  animation: dotsAnim 1.5s steps(3, end) infinite;
+}
+
+@keyframes dotsAnim {
+  0% {
+    content: "";
+  }
+  33% {
+    content: ".";
+  }
+  66% {
+    content: "..";
+  }
+  100% {
+    content: "...";
+  }
+}
+
+.category-filtering-add {
+  background-color: #292929;
+  padding: 3px 5px;
+  display: inline-block;
+  border: 1px solid #141414;
+}
+
+.category-filter-items {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.category-filter-items h6 {
+  margin-bottom: 0;
+  font-size: 12px;
+  color: #858585;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+.filter-remv-btn {
+  display: inline-block;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.filter-remv-btn:hover {
+  color: rgba(255, 0, 0, 0.678);
+}
+
+.category-remove-filting {
+  margin-top: 5px;
+}
+
+.category-remove-filting ul {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.profile-navlink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ebebeb;
+  font-size: 12px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+/* New Data Anmiate Card Css */
+
+/* .buy-animate,
+.sell-animate {
+  animation:
+    cardEnter 2s ease-out,
+    flashFade 3s ease-in-out;
+}
+
+@keyframes cardEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(-1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.buy-animate {
+  --flash-color: rgba(46, 204, 113, 0.22);
+}
+
+.sell-animate {
+  --flash-color: rgba(231, 76, 60, 0.22);
+}
+
+@keyframes flashFade {
+  0% {
+    background-color: var(--flash-color);
+  }
+  100% {
+    background-color: transparent;
+  }
+} */
+
+.buy-animate,
+.sell-animate {
+  animation:
+    cardSlide 0.6s cubic-bezier(0.25, 1, 0.5, 1),
+    flashGlow 1.2s ease-out;
+  transform-origin: top;
+  will-change: transform, opacity, background-color;
+}
+
+@keyframes cardSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(-15px) scale(0.98);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(5px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+.buy-animate {
+  --flash-color: rgba(46, 204, 113, 0.18);
+}
+
+.sell-animate {
+  --flash-color: rgba(231, 76, 60, 0.18);
+}
+
+@keyframes flashGlow {
+  0% {
+    background-color: var(--flash-color);
+    box-shadow: 0 0 10px var(--flash-color);
+  }
+  50% {
+    background-color: rgba(0, 0, 0, 0);
+    box-shadow: 0 0 0px transparent;
+  }
+  100% {
+    background-color: transparent;
+    box-shadow: 0 0 0px transparent;
+  }
+}
+
+/* New Data Anmiate Card Css */
+
+/* Header mobile Resposnive */
+/* Mobile Menu Button */
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #fff;
+}
+
+/* Sidebar Close Button */
+.sidebar-close-btn {
+  display: none;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  z-index: 1001;
+}
+
+/* MOBILE STYLES */
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 260px;
+    height: 100vh;
+    background: #0b1220;
+    z-index: 1000;
+    transition: right 0.3s ease;
+  }
+
+  .sidebar.sidebar-open {
+    right: 0;
+  }
+
+  .sidebar-close-btn {
+    display: block;
+  }
+}
+
+/* Header mobile Resposnive */

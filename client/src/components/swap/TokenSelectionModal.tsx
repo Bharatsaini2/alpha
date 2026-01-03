@@ -8,6 +8,8 @@ import { useJupiterSearch, JupiterTokenResult } from "../../hooks/useJupiterSear
 import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 import "./swap.css"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faCopy } from "@fortawesome/free-solid-svg-icons"
 
 // Re-export TokenInfo for backward compatibility
 export type { TokenInfo }
@@ -57,7 +59,7 @@ const TokenItem = memo<{
         <img
           src={token.image || fallbackImage}
           alt={token.symbol}
-          className="w-10 h-10 rounded-0 border border-[#2B2B2D]"
+          className="w-11 h-11 rounded-0 border border-[#2B2B2D]"
           onError={(e) => {
             const target = e.target as HTMLImageElement
             target.src = fallbackImage
@@ -67,8 +69,8 @@ const TokenItem = memo<{
 
       {/* Token Info */}
       <div className="flex-1 text-left min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-white">{token.symbol}</span>
+        <div className="flex items-center gap-1 dropdown-content">
+          <h6 className="dropdown-title mb-0">{token.symbol}</h6>
           {token.isPopular && (
             // <Star size={12} className="text-yellow-400 fill-current" />
             <RiVerifiedBadgeFill  size={14} className="text-white fill-current" />
@@ -77,8 +79,18 @@ const TokenItem = memo<{
             <span className="text-xs text-green-400"> <RiVerifiedBadgeFill/> </span>
           )}
         </div>
-        <div className="text-sm text-gray-400 truncate">{token.name}</div>
-        <div className=" text-gray-400 text-xs"><span>xCPG2h9Dy</span></div>
+        <div >
+          <p className="dropdown-desc">  {token.name} </p>
+         </div>
+        <div className="dropdown-id">
+          <span>CA: </span>
+            <span className="cpy-title ">CRCLhwcP1...t7</span>
+            <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
+              <FontAwesomeIcon icon={faCopy} />
+              </a>
+          </div>
+
+
         {/* Show price and mcap if available from Jupiter Ultra */}
         {(token.usdPrice || token.mcap) && (
           <div className="flex items-center gap-2 text-xs text-gray-500">

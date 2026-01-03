@@ -25,25 +25,29 @@ const MainLayout = () => {
     return () => document.removeEventListener("keydown", handleEscape)
   }, [])
 
+
+
   return (
+    <>
     <div className="app">
-      {/* Sidebar */}
+     
       <Sidebar />
 
-      {/* Main Content Area */}
+      
       <div className="main">
-        {/* Header */}
+       
         <Header />
 
-        {/* Main Content */}
+        
         <section className="content">
           <Outlet />
         </section>
       </div>
 
-      {/* Auth Modals */}
+     
       <AuthManager />
     </div>
+    </>
   )
 }
 

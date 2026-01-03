@@ -89,6 +89,7 @@ const RightSidebarNew = ({
   const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
   const [inputBalance, setInputBalance] = useState<number>(0)
   const [isSwapping, setIsSwapping] = useState(false)
+  const [isConnect, setISConnect] = useState(false)
   const [swapStatus, setSwapStatus] = useState<string>("")
   const [lastTxSignature, setLastTxSignature] = useState<string>("")
   const [retryCount, setRetryCount] = useState<number>(0)
@@ -220,6 +221,7 @@ const RightSidebarNew = ({
 
   // Handle wallet connection
   const handleConnectWallet = useCallback(async () => {
+    setISConnect(true)
     try {
       await connect()
       showToast("Wallet connected successfully", "success")
@@ -236,6 +238,8 @@ const RightSidebarNew = ({
       } else {
         showToast("Failed to connect wallet. Please try again.", "error")
       }
+    }finally{
+setISConnect(false)
     }
   }, [connect, showToast])
 
@@ -828,7 +832,7 @@ const RightSidebarNew = ({
 
             {/* Jupiter Ultra handles priority level automatically - no manual selection needed */}
 
-            <div className="trade-box">
+            {/* <div className="trade-box">
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <span className="trade-label">SELLING</span>
                 <div className="d-flex align-items-center gap-1">
@@ -938,16 +942,6 @@ const RightSidebarNew = ({
                   </span>
                   <FontAwesomeIcon icon={faChevronDown} />
                 </button>
-
-                {/* <div className="amount-box">
-                  <h2>{isLoadingQuote ? "..." : outputAmount || "0.00"}</h2>
-                  <span>
-                    {outputAmount && parseFloat(outputAmount) > 0
-                      ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
-                      : "$0"}
-                  </span>
-                </div> */}
-
                 <div className="amount-box">
                   {isLoadingQuote ? (
                     <div className="nw-skeleton">
@@ -969,14 +963,27 @@ const RightSidebarNew = ({
 
 
               </div>
-            </div>
+            </div> */}
 
-            {/* <div>
+           <div>
   {isSwapped ? (
     <div className="trade-box trade-new-bx">
+              {/* <div className="swap-toggle-bx">
+                <button
+                  onClick={handleSwapTokens}
+                  className="swap-icon"
+                  type="button"
+                  disabled={!wallet.connected}
+                >
+                  <RiArrowUpDownFill />
+                </button>
+              </div> */}
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <span className="trade-label">buying</span>
-                <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Usdc</span>
+                <span className="trade-label d-flex align-items-center gap-1">
+
+                  <IoWalletOutline /> 0.00 Usdc
+                </span>
               </div>
               <div className="trade-row">
                 <button
@@ -999,13 +1006,25 @@ const RightSidebarNew = ({
                   <FontAwesomeIcon icon={faChevronDown} />
                 </button>
                 <div className="amount-box">
-                  <h2>{isLoadingQuote ? "..." : outputAmount || "0.00"}</h2>
-                  <span>
-                    {outputAmount && parseFloat(outputAmount) > 0
-                      ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
-                      : "$0"}
-                  </span>
+                  {isLoadingQuote ? (
+                    <div className="nw-skeleton">
+                      <div className="skeleton-amount mb-1"></div>
+                      <div className="skeleton-usd"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <h2>{outputAmount || "0.00"}</h2>
+                      <span>
+                        {outputAmount && parseFloat(outputAmount) > 0
+                          ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                          : "$0"}
+                      </span>
+                    </>
+                  )}
                 </div>
+
+
+
               </div>
      </div>
   ) : (
@@ -1161,10 +1180,22 @@ const RightSidebarNew = ({
   ) : (
    
     <div className="trade-box trade-new-bx">
-             
+              {/* <div className="swap-toggle-bx">
+                <button
+                  onClick={handleSwapTokens}
+                  className="swap-icon"
+                  type="button"
+                  disabled={!wallet.connected}
+                >
+                  <RiArrowUpDownFill />
+                </button>
+              </div> */}
               <div className="d-flex justify-content-between align-items-center mb-1">
                 <span className="trade-label">buying</span>
-                <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Usdc</span>
+                <span className="trade-label d-flex align-items-center gap-1">
+
+                  <IoWalletOutline /> 0.00 Usdc
+                </span>
               </div>
               <div className="trade-row">
                 <button
@@ -1187,18 +1218,30 @@ const RightSidebarNew = ({
                   <FontAwesomeIcon icon={faChevronDown} />
                 </button>
                 <div className="amount-box">
-                  <h2>{isLoadingQuote ? "..." : outputAmount || "0.00"}</h2>
-                  <span>
-                    {outputAmount && parseFloat(outputAmount) > 0
-                      ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
-                      : "$0"}
-                  </span>
+                  {isLoadingQuote ? (
+                    <div className="nw-skeleton">
+                      <div className="skeleton-amount mb-1"></div>
+                      <div className="skeleton-usd"></div>
+                    </div>
+                  ) : (
+                    <>
+                      <h2>{outputAmount || "0.00"}</h2>
+                      <span>
+                        {outputAmount && parseFloat(outputAmount) > 0
+                          ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                          : "$0"}
+                      </span>
+                    </>
+                  )}
                 </div>
+
+
+
               </div>
      </div>
   )}
 
-</div> */}
+        </div>
 
 
             {/* <div>
@@ -1261,7 +1304,7 @@ const RightSidebarNew = ({
             </div> */}
 
 
-            <div className="">
+            {!isConnect && <div className="">
               {!wallet.connected ? (
                 <button
                   onClick={handleConnectWallet}
@@ -1316,7 +1359,21 @@ const RightSidebarNew = ({
                   <span className="corner bottom-left"></span>
                 </button>
               )}
-            </div>
+            </div>}
+
+
+{/* Execute Btn */}
+{ isConnect && <button className="execute-btn loading mt-2">
+  <span className="btn-text executing-text">
+    EXECUTING TRANSACTION<span className="dots"></span>
+  </span>
+  <span className="excute-corner top-left"></span>
+  <span className="excute-corner top-right"></span>
+  <span className="excute-corner bottom-right"></span>
+  <span className="excute-corner bottom-left"></span>
+</button>}
+
+
 
             {/* <div className="">
                             {!wallet.connected ? (

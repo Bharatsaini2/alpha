@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown, faFilter, faPaperPlane, faSearch, faShareNodes } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch, faShareNodes } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
@@ -635,11 +635,26 @@ const HomePageNew = () => {
     }
 
     // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = () => setOpenDropdown(null)
-        document.addEventListener("click", handleClickOutside)
-        return () => document.removeEventListener("click", handleClickOutside)
-    }, [])
+    // useEffect(() => {
+    //     const handleClickOutside = () => setOpenDropdown(null)
+    //     document.addEventListener("click", handleClickOutside)
+    //     return () => document.removeEventListener("click", handleClickOutside)
+    // }, [])
+     const searchRef = useRef(null);
+
+        useEffect(() => {
+        function handleClickOutside(event) {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setShowDropdown(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
 
     const quickBuyInputRef = useRef<HTMLInputElement>(null)
 
@@ -764,7 +779,7 @@ const HomePageNew = () => {
 
                     {/* Transactions Feed Column - Shows second on mobile, first on desktop */}
                     <div className="col-lg-8 order-2 order-lg-1 nw-main-bx">
-                        <div className="d-flex align-items-center justify-content-between mb-3">
+                        <div className="d-flex align-items-center justify-content-between mb-3 ">
                             <div>
                                 <span className="trading-icon-title">Recent transactions</span>
                             </div>
@@ -776,7 +791,7 @@ const HomePageNew = () => {
                         </div>
 
                         {/* Search and Quick Buy */}
-                        <div className="d-flex align-items-center gap-1">
+                        <div className="d-flex align-items-center gap-1 mobile-searching-bx">
                             {/* <form className="custom-frm-bx flex-grow-1" onSubmit={handleSearch}>
                                 <input
                                     type="text"
@@ -792,7 +807,7 @@ const HomePageNew = () => {
                                 </div>
                             </form> */}
 
-                            <div className="search-container flex-grow-1">
+                            <div className="search-container flex-grow-1"  ref={searchRef}>
                                 <form className="custom-frm-bx mb-3" onSubmit={handleSearch}>
                                     <input
                                         type="text"
@@ -807,7 +822,6 @@ const HomePageNew = () => {
                                         <button className="search-btn" type="submit">
                                             <FontAwesomeIcon icon={faSearch} />
                                         </button>
-
                                         {searchQuery && (
                                             <button
                                                 type="button"
@@ -821,17 +835,10 @@ const HomePageNew = () => {
                                 </form>
 
                                 {showDropdown && (
-
-
-
                                     <div className="dropdown-options">
-
-
                                         <div className="dropdown-header text-end all-data-clear">
                                             <button className="quick-nw-btn">Clear All</button>
                                         </div>
-
-
                                         <ul className="dropdown-scroll">
                                             {filteredOptions.map((item, index) => (
                                                 <li
@@ -870,7 +877,6 @@ const HomePageNew = () => {
                                 )}
                             </div>
 
-
                             <div className="custom-frm-bx nw-quick-bx mb-3">
                                 <button
                                     className="quick-btn"
@@ -902,7 +908,7 @@ const HomePageNew = () => {
 
                         {/* Filters */}
                         <div>
-                            <div className="d-flex align-items-center justify-content-between">
+                            <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
                                 <div>
                                     <ul className="nav nav-tabs custom-tabs" role="tablist">
                                         <li className="nav-item" role="presentation">
@@ -1043,8 +1049,6 @@ const HomePageNew = () => {
                                                                 <button className="paper-plan-connect-btn"> <FontAwesomeIcon icon={faPaperPlane} /> Connect</button>
                                                             </div>
                                                         </div>
-
-
 
                                                         <div className="custom-frm-bx position-relative">
                                                             <label className="nw-label">Trigger Condition</label>
@@ -1249,48 +1253,77 @@ const HomePageNew = () => {
                                             </a>
                                             {openDropdown === 'newFilter' && (
                                                 <div className="filter-dropdown-menu w-xs p-2">
-                                                     <div className="row">
-                                                            
-                                                              <div className="col-lg-6">
-                                                              <div className="custom-frm-bx ">
-                                                        <label htmlFor="">Age (minutes)</label>
-                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
-                                                              </div>
-                                                              </div>
+                                                    <div className="row">
 
-                                                               <div className="col-lg-6">
-
-                                                              <div className="custom-frm-bx">
-                                                                 <label htmlFor=""></label>
-                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
-                                                              </div>
-                                                              </div>
-
-                                                              <div className="col-lg-6">
-                                                              <div className="custom-frm-bx mb-0">
-                                                        <label htmlFor="">Market Cap (K)</label>
-                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
-                                                              </div>
-                                                              </div>
-
-                                                               <div className="col-lg-6">
-
-                                                              <div className="custom-frm-bx mb-0">
-                                                                 <label htmlFor=""></label>
-                                                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
-                                                              </div>
-                                                              </div>
-                                                              
+                                                        <div className="col-lg-6">
+                                                            <div className="custom-frm-bx ">
+                                                                <label htmlFor="">Age (minutes)</label>
+                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
                                                             </div>
-                                                    
-                                                   
-                                                  
+                                                        </div>
+
+                                                        <div className="col-lg-6">
+
+                                                            <div className="custom-frm-bx">
+                                                                <label htmlFor=""></label>
+                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="col-lg-6">
+                                                            <div className="custom-frm-bx mb-0">
+                                                                <label htmlFor="">Market Cap (K)</label>
+                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="col-lg-6">
+
+                                                            <div className="custom-frm-bx mb-0">
+                                                                <label htmlFor=""></label>
+                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                                            </div>
+                                                        </div>
+
+                                                    </div>
+
+
+
                                                 </div>
                                             )}
                                         </li>
 
                                     </ul>
                                 </div>
+                            </div>
+
+                            <div className="category-remove-filting">
+                                <ul>
+                                    <li>
+                                        <div className="category-filtering-add">
+                                            <div className="category-filter-items">
+                                                <h6>  Hotness Score : <span> &gt;3 </span>  </h6>
+                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div className="category-filtering-add">
+                                            <div className="category-filter-items">
+                                                <h6>  Amount : <span> &gt;$1,000 </span>  </h6>
+                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div className="category-filtering-add">
+                                            <div className="category-filter-items">
+                                                <h6>  Tags : <span> Sniper </span>  </h6>
+                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
                             </div>
 
                             {/* Transactions List */}
@@ -1323,6 +1356,8 @@ const HomePageNew = () => {
                                                 })
                                             }
                                         >
+
+
 
                                             <div className="d-flex align-items-center justify-content-between nw-btm-brd">
                                                 <div>
@@ -1371,8 +1406,11 @@ const HomePageNew = () => {
                                                 </div>
                                             </div>
 
-                                        
-                                            <div className="custom-card">
+
+
+
+                                            {/* <div className="custom-card"> */}
+                                            <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
 
                                                 <div className="left-item-bx">
                                                     <img
@@ -1381,7 +1419,7 @@ const HomePageNew = () => {
                                                         onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
                                                     />
                                                     <div className="whale-content flex-grow-1">
-                                                        <h4 className="username">{tx.whaleTokenSymbol} LAUNCHCOIN Whale (A4DC..) </h4>
+                                                        <h4 className="username">{tx.whaleTokenSymbol} Whale (A4DC..) </h4>
                                                         <div className="tags">
                                                             {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                                                 <span key={i} className="tag-title">{tag}</span>
@@ -1396,7 +1434,7 @@ const HomePageNew = () => {
                                                     </div>
                                                 </div>
 
-                                                
+
                                                 <div className="sell-trade-bx">
                                                     {tx.type === 'sell' ? (
                                                         <span className="sell-title">
@@ -1409,9 +1447,9 @@ const HomePageNew = () => {
                                                     )}
                                                 </div>
 
-                                                
+
                                                 <div className="right-info text-end">
-                                                    <div>
+                                                    <div className="left-crd-content">
                                                         <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
                                                         <p>{tx.type === 'sell' ? tx.transaction?.tokenIn?.name?.substring(0, 20) : tx.transaction?.tokenOut?.name?.substring(0, 20)}</p>
                                                         <small className="mc-title">MC: ${formatNumber(getMarketCap(tx))} / AGE: {tx.age}</small>
@@ -1426,7 +1464,7 @@ const HomePageNew = () => {
                                                 </div>
                                             </div>
 
-                                           
+
                                             {/* <div className="custom-card skeleton-card">
 
                                                 <div className="left-item-bx">

@@ -9,6 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { PiPlugsConnected } from "react-icons/pi";
 import { FaRegUserCircle } from "react-icons/fa";
 import { RiTelegram2Fill } from "react-icons/ri";
+import { Link } from "react-router-dom"
 
 
 
@@ -296,21 +297,18 @@ function Header() {
                   )}
                   <div className="user-dropdown-divider" />
 
-                  <div
-                    className="user-dropdown-item"
-                   onClick={() => setShowModal(true)}
-                  >
-                    <FaRegUserCircle   size={14} />
-                    Profile
+                  <div className="user-dropdown-item">
+
+                    <Link to="/profile-page" className="profile-navlink"> <FaRegUserCircle   size={14} />
+                    Profile  </Link>
+
+                    
                   </div>
                   <div className="user-dropdown-divider" />
 
-                  <div
-                    className="user-dropdown-item"
-                   onClick={() => setShowModal(true)}
-                  >
-                    <RiTelegram2Fill   size={14} />
-                    Telegram Subscription
+                  <div className="user-dropdown-item" >
+                    <Link to="/telegram-subscription" className="profile-navlink"> <RiTelegram2Fill   size={14} />
+                    Telegram Subscription  </Link>
                   </div>
                   <div className="user-dropdown-divider" />
 

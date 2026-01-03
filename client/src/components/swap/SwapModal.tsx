@@ -637,7 +637,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   </div>
                 </div>
 
-                <div className="buy-detail-bx">
+                {/* <div className="buy-detail-bx">
                   <h4>Buy Details</h4>
                   <div className="solana-your-pay">
                     <div className="solana-you-pay">
@@ -655,7 +655,59 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                       <h5>1,243,333 Token</h5>
                     </div>
                   </div>
+                </div> */}
+
+                <div className="buy-detail-bx">
+                  <h4>Buy Details</h4>
+
+                  <div className="solana-your-pay">
+                    {/* YOU PAY */}
+                    <div className="solana-you-pay">
+                      <h6>You Pay</h6>
+
+                      <div className="d-flex align-items-center justify-content-end">
+                        <div className="amount-box w-3xs">
+                          <input
+                            type="number"
+                            placeholder="0.00"
+                            className="amount-input main-amount fz-18"
+                            min="0"
+                            step="any"
+                          />
+                        </div>
+
+                        <h5></h5>
+                      </div>
+                    </div>
+
+                    {/* YOU RECEIVE */}
+
+                    <div className="amount-box">
+                      {isLoadingQuote ? (
+                        <div className="nw-skeleton">
+                          <div className="skeleton-amount mb-1"></div>
+                          <div className="skeleton-usd"></div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="solana-receive-bx">
+                            <h6>You Receive</h6>
+                            <h5>1,243,333 Token</h5>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* <div className="solana-receive-bx">
+      <h6>You Receive</h6>
+       <h5>1,243,333 Token</h5>
+    </div> */}
+                  </div>
                 </div>
+
+
+
+
                 <div className="slippage-bx">
                   <div>
                     <h6>Slippage : 5 percent</h6>
@@ -671,7 +723,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                     <li className="break-down-item">Platform fee (0.75 percent)<span className="break-down-title"> 0.00375 SOL </span></li>
                     <li className="break-down-item">Network fee <span className="break-down-title"> ~ 0.00375 SOL </span></li>
                     <li className="break-down-item">Priority fee
-                         <div className="switch-wrapper">
+                      <div className="switch-wrapper">
                         <div className="switch">
                           <input type="checkbox" id="toggle7" />
                           <label htmlFor="toggle7"></label>
@@ -707,12 +759,12 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 </div>
 
                 <div className="salana-btn-bx">
-                  <button className="swap-btn w-50">Cancel                    
+                  <button className="swap-btn w-50">Cancel
                   </button>
-                  <button className="salana-btn">Confirm 
+                  <button className="salana-btn">Confirm
 
                     <span className="corner top-right"></span>
-                                        <span className="corner bottom-left"></span>
+                    <span className="corner bottom-left"></span>
                   </button>
                 </div>
 

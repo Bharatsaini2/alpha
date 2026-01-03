@@ -6,8 +6,6 @@ import { FaRegCheckSquare } from "react-icons/fa";
 import { ImSpinner4 } from "react-icons/im";
 import { MdOutlineCheckBox} from "react-icons/md";
 
-
-
 export interface ToastProps {
   id: string
   message: string
@@ -86,7 +84,7 @@ const Toast: React.FC<ToastProps> = ({
 
 
       {/* New Coppied Address */}
-      {/* <div className="coppied-address">
+      <div className="coppied-address">
         <div className="coppied-content">
           <span className="coppied-icon"><FaRegCheckSquare /></span>
           <p>Address copied to clipboard!</p>
@@ -97,16 +95,12 @@ const Toast: React.FC<ToastProps> = ({
             Close
           </button>
         </div>
-      </div> */}
-
-
-
-
+      </div>
 
       {/* New Connecting Modal */}
       {/* <div className="coppied-address connecting-bx">
         <div className="coppied-content">
-          <span className="coppied-icon text-white"><ImSpinner4 /></span>
+          <span className="coppied-icon text-white spinner-rotate"><ImSpinner4 /></span>
           <p>connecting wallet           
           </p>
           <div className="three-dots">
@@ -131,7 +125,9 @@ const Toast: React.FC<ToastProps> = ({
         </div>
       </div>  */}
 
-       <div className="nw-sign-frm ">
+
+{/* Trans Success Modal */}
+      {/* <div className="nw-sign-frm ">
         <div className="swap-transition-bx">
                     <span className="swap-check"><MdOutlineCheckBox /></span>
                     <div>
@@ -143,7 +139,7 @@ const Toast: React.FC<ToastProps> = ({
                       </div>
                     </div>
                   </div>
-       </div>
+       </div>  */}
 
 
 
