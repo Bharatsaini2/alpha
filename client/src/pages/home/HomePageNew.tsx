@@ -1559,7 +1559,7 @@ const HomePageNew = () => {
                                                             )}
                                                         </div>
                                                         <div className={`sold-out-title ${tx.type === 'buy' ? 'sold-title' : ''}`}>
-                                                            {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                            {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </div>
                                                     </div>
                                                 </div>
