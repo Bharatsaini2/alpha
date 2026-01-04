@@ -93,10 +93,38 @@ const RightSidebarNew = ({
   const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
   const [inputBalance, setInputBalance] = useState<number>(0)
   const [isSwapping, setIsSwapping] = useState(false)
+  const [swapProgress, setSwapProgress] = useState<number>(0) // Progress bar percentage (0-100)
+  const [swapButtonStatus, setSwapButtonStatus] = useState<'idle' | 'executing' | 'success'>('idle') // Button animation status
   const [isConnect, setISConnect] = useState(false)
   const [swapStatus, setSwapStatus] = useState<string>("")
   const [lastTxSignature, setLastTxSignature] = useState<string>("")
   const [retryCount, setRetryCount] = useState<number>(0)
+
+  // Auto-reset form after success (robust reset logic)
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
+    if (swapButtonStatus === 'success') {
+      timeoutId = setTimeout(() => {
+        // Reset ALL states as requested by user
+        setInputAmount("")
+        setOutputAmount("")
+        setQuote(null)
+        setRetryCount(0)
+
+        // Reset UI states
+        setSwapButtonStatus('idle')
+        setSwapProgress(0)
+        setIsSwapping(false)
+        setLastTxSignature("") // Clear signature as well if desired, or keep separate
+        clearErrors()
+      }, 2000)
+    }
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [swapButtonStatus, clearErrors])
 
   // Update tokens when selectedToken prop changes
   useEffect(() => {
@@ -394,7 +422,17 @@ const RightSidebarNew = ({
 
     try {
       setIsSwapping(true)
+      setSwapButtonStatus('executing') // Start animation
+      setSwapProgress(0) // Reset progress
       clearErrors()
+
+      // Simulate smooth progress animation
+      const progressInterval = setInterval(() => {
+        setSwapProgress(prev => {
+          if (prev >= 90) return prev // Cap at 90% until transaction completes
+          return prev + Math.random() * 15 // Random increments for smooth animation
+        })
+      }, 200)
 
       // Get a FRESH quote right before swap to avoid stale route errors
       const amountInSmallestUnit = Math.floor(
@@ -446,9 +484,15 @@ const RightSidebarNew = ({
       try {
         signature = await sendTransaction(transaction)
       } catch (txError: any) {
-        // Re-throw to be caught by outer catch block
+        // Clear progress interval and re-throw
+        clearInterval(progressInterval)
         throw txError
       }
+
+      // Transaction successful - complete progress and show success
+      clearInterval(progressInterval)
+      setSwapProgress(100)
+      setSwapButtonStatus('success')
 
       // Only show success and copy if we get here (user signed)
       setLastTxSignature(signature)
@@ -490,11 +534,7 @@ const RightSidebarNew = ({
         // Silently ignore - non-critical
       }
 
-      // Reset form
-      setInputAmount("")
-      setOutputAmount("")
-      setQuote(null)
-      setRetryCount(0)
+      // Reset form logic moved to useEffect watching swapButtonStatus
 
       // Refresh balance
       await fetchInputBalance()
@@ -558,6 +598,10 @@ const RightSidebarNew = ({
 
       // Show the toast with appropriate type
       showToast(errorMessage, toastType)
+
+      // Reset button animation states on error
+      setSwapButtonStatus('idle')
+      setSwapProgress(0)
     } finally {
       setIsSwapping(false)
     }
@@ -1400,7 +1444,13 @@ const RightSidebarNew = ({
                 <button
                   onClick={handleSwap}
                   className="connect-wallet-btn"
-                  disabled={isSwapDisabled}
+                  style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    backgroundColor: swapButtonStatus === 'executing' ? '#000' : undefined,
+                    transition: 'background-color 0.3s ease'
+                  }}
+                  disabled={isSwapDisabled || swapButtonStatus !== 'idle'}
                   type="button"
                   title={
                     !inputAmount || parseFloat(inputAmount) <= 0
@@ -1414,19 +1464,38 @@ const RightSidebarNew = ({
                             : ""
                   }
                 >
-                  {isSwapping ? (
-                    <span className="flex items-center justify-center">
-                      <RiLoader2Fill className="animate-spin mr-2" />
-                      SWAPPING...
-                    </span>
-                  ) : isLoadingQuote ? (
-                    <span className="flex items-center justify-center">
-                      <RiLoader2Fill className="animate-spin mr-2" />
-                      LOADING...
-                    </span>
-                  ) : (
-                    "SWAP"
+                  {/* Progress Bar Background */}
+                  {swapButtonStatus !== 'idle' && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        height: '100%',
+                        width: `${swapProgress}%`,
+                        backgroundColor: '#4F46E5',
+                        transition: 'width 0.3s ease',
+                        zIndex: 0
+                      }}
+                    />
                   )}
+
+                  {/* Button Text */}
+                  <span style={{ position: 'relative', zIndex: 1 }}>
+                    {swapButtonStatus === 'executing' ? (
+                      "Executing Transaction"
+                    ) : swapButtonStatus === 'success' ? (
+                      "Transaction Successful"
+                    ) : isLoadingQuote ? (
+                      <span className="flex items-center justify-center">
+                        <RiLoader2Fill className="animate-spin mr-2" />
+                        LOADING...
+                      </span>
+                    ) : (
+                      "SWAP"
+                    )}
+                  </span>
+
                   <span className="corner top-right"></span>
                   <span className="corner bottom-left"></span>
                 </button>
