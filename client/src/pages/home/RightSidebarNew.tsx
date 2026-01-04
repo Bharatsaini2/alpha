@@ -1082,280 +1082,264 @@ const RightSidebarNew = ({
             </div> */}
 
             <div>
-              {isSwapped ? (
-                <div className="trade-box trade-new-bx">
-                  {/* <div className="swap-toggle-bx">
-                <button
-                  onClick={handleSwapTokens}
-                  className="swap-icon"
-                  type="button"
-                  disabled={!wallet.connected}
-                >
-                  <RiArrowUpDownFill />
-                </button>
-              </div> */}
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <span className="trade-label">buying</span>
-                    <span className="trade-label d-flex align-items-center gap-1">
+              <div className="trade-interface-wrapper">
+                {isSwapped ? (
+                  <>
+                    <div className="trade-box trade-new-bx">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <span className="trade-label">buying</span>
+                        <span className="trade-label d-flex align-items-center gap-1">
 
-                      <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
-                    </span>
-                  </div>
-                  <div className="trade-row">
-                    <button
-                      onClick={() => setIsOutputModalOpen(true)}
-                      className="plan-btn"
-                      type="button"
-                    >
-                      <span className="dollar-pic-bx">
-                        <img
-                          src={outputToken.image || DefaultTokenImage}
-                          alt={outputToken.symbol}
-                          onError={(e) => {
-                            e.currentTarget.src = DefaultTokenImage
-                          }}
-                        />
-                      </span>
-                      <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
-                        {outputToken.symbol}
-                      </span>
-                      <FontAwesomeIcon icon={faChevronDown} />
-                    </button>
-                    <div className="amount-box">
-                      {isLoadingQuote ? (
-                        <div className="nw-skeleton">
-                          <div className="skeleton-amount mb-1"></div>
-                          <div className="skeleton-usd"></div>
-                        </div>
-                      ) : (
-                        <>
-                          <h2>{outputAmount || "0.00"}</h2>
-                          <span>
-                            {outputAmount && parseFloat(outputAmount) > 0
-                              ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
-                              : "$0"}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-
-
-                  </div>
-                </div>
-              ) : (
-
-                <div className="trade-box ">
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <span className="trade-label">SELLING</span>
-                    <div className="d-flex align-items-center gap-1">
-                      <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}</span>
-                      <div className="d-flex align-items-center gap-1">
-                        <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
-                        <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
-                      </div>
-                    </div>
-
-                    {wallet.connected && (
-                      <span className="text-xs text-gray-400">
-                        Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
-                      </span>
-                    )}
-                  </div>
-                  <div className="trade-row">
-                    <button
-                      onClick={() => setIsInputModalOpen(true)}
-                      className="plan-btn"
-                      type="button"
-                    >
-                      <span className="dollar-pic-bx">
-                        <img
-                          src={inputToken.image || DefaultTokenImage}
-                          alt={inputToken.symbol}
-                          onError={(e) => {
-                            e.currentTarget.src = DefaultTokenImage
-                          }}
-                        />
-                      </span>
-                      <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
-                        {inputToken.symbol}
-                      </span>
-                      <FontAwesomeIcon icon={faChevronDown} />
-                    </button>
-
-                    <div className="amount-box">
-                      <input
-                        type="number"
-                        value={inputAmount}
-                        onChange={(e) => handleInputAmountChange(e.target.value)}
-                        placeholder="0.00"
-                        className="amount-input main-amount"
-                        // disabled={!wallet.connected}
-                        min="0"
-                        step="any"
-                      />
-                      <div className="d-flex justify-content-end align-items-center">
-                        <span className="text-xs text-gray-400">
-                          {inputAmount && parseFloat(inputAmount) > 0
-                            ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
-                            : "$0"}
+                          <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
                         </span>
-                        {wallet.connected && inputBalance > 0 && (
-                          <button
-                            onClick={handleMaxClick}
-                            className="text-xs text-blue-400 hover:text-blue-300 ml-2"
-                            type="button"
-                          >
-                            MAX
-                          </button>
-                        )}
+                      </div>
+                      <div className="trade-row">
+                        <button
+                          onClick={() => setIsOutputModalOpen(true)}
+                          className="plan-btn"
+                          type="button"
+                        >
+                          <span className="dollar-pic-bx">
+                            <img
+                              src={outputToken.image || DefaultTokenImage}
+                              alt={outputToken.symbol}
+                              onError={(e) => {
+                                e.currentTarget.src = DefaultTokenImage
+                              }}
+                            />
+                          </span>
+                          <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
+                            {outputToken.symbol}
+                          </span>
+                          <FontAwesomeIcon icon={faChevronDown} />
+                        </button>
+                        <div className="amount-box">
+                          {isLoadingQuote ? (
+                            <div className="nw-skeleton">
+                              <div className="skeleton-amount mb-1"></div>
+                              <div className="skeleton-usd"></div>
+                            </div>
+                          ) : (
+                            <>
+                              <h2>{outputAmount || "0.00"}</h2>
+                              <span>
+                                {outputAmount && parseFloat(outputAmount) > 0
+                                  ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                                  : "$0"}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+
+
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
-              <div className="text-center my-2 swap-toggle-bx">
-                <button
-                  type="button"
-                  className="swap-icon"
-                  onClick={handleToggleSwap}
-                >
-                  ⇅
-                </button>
+
+                    <div className="swap-toggle-bx">
+                      <button
+                        type="button"
+                        className="swap-icon"
+                        onClick={handleToggleSwap}
+                      >
+                        ⇅
+                      </button>
+                    </div>
+
+                    <div className="trade-box">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <span className="trade-label">SELLING</span>
+                        <div className="d-flex align-items-center gap-1">
+                          <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}</span>
+                          <div className="d-flex align-items-center gap-1">
+                            <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
+                            <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
+                          </div>
+                        </div>
+
+                      </div>
+                      <div className="trade-row">
+                        <button
+                          onClick={() => setIsInputModalOpen(true)}
+                          className="plan-btn"
+                          type="button"
+                        >
+                          <span className="dollar-pic-bx">
+                            <img
+                              src={inputToken.image || DefaultTokenImage}
+                              alt={inputToken.symbol}
+                              onError={(e) => {
+                                e.currentTarget.src = DefaultTokenImage
+                              }}
+                            />
+                          </span>
+                          <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
+                            {inputToken.symbol}
+                          </span>
+                          <FontAwesomeIcon icon={faChevronDown} />
+                        </button>
+
+                        <div className="amount-box">
+                          <input
+                            type="number"
+                            value={inputAmount}
+                            onChange={(e) => handleInputAmountChange(e.target.value)}
+                            placeholder="0.00"
+                            className="amount-input main-amount"
+                            // disabled={!wallet.connected}
+                            min="0"
+                            step="any"
+                          />
+                          <div className="d-flex justify-content-end align-items-center">
+                            <span className="text-xs text-gray-400">
+                              {inputAmount && parseFloat(inputAmount) > 0
+                                ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
+                                : "$0"}
+                            </span>
+                            {wallet.connected && inputBalance > 0 && (
+                              <button
+                                onClick={handleMaxClick}
+                                className="text-xs text-blue-400 hover:text-blue-300 ml-2"
+                                type="button"
+                              >
+                                MAX
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="trade-box ">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <span className="trade-label">SELLING</span>
+                        <div className="d-flex align-items-center gap-1">
+                          <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}</span>
+                          <div className="d-flex align-items-center gap-1">
+                            <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
+                            <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
+                          </div>
+                        </div>
+
+
+                      </div>
+                      <div className="trade-row">
+                        <button
+                          onClick={() => setIsInputModalOpen(true)}
+                          className="plan-btn"
+                          type="button"
+                        >
+                          <span className="dollar-pic-bx">
+                            <img
+                              src={inputToken.image || DefaultTokenImage}
+                              alt={inputToken.symbol}
+                              onError={(e) => {
+                                e.currentTarget.src = DefaultTokenImage
+                              }}
+                            />
+                          </span>
+                          <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
+                            {inputToken.symbol}
+                          </span>
+                          <FontAwesomeIcon icon={faChevronDown} />
+                        </button>
+
+                        <div className="amount-box">
+                          <input
+                            type="number"
+                            value={inputAmount}
+                            onChange={(e) => handleInputAmountChange(e.target.value)}
+                            placeholder="0.00"
+                            className="amount-input main-amount"
+                            // disabled={!wallet.connected}
+                            min="0"
+                            step="any"
+                          />
+                          <div className="d-flex justify-content-end align-items-center">
+                            <span className="text-xs text-gray-400">
+                              {inputAmount && parseFloat(inputAmount) > 0
+                                ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
+                                : "$0"}
+                            </span>
+                            {wallet.connected && inputBalance > 0 && (
+                              <button
+                                onClick={handleMaxClick}
+                                className="text-xs text-blue-400 hover:text-blue-300 ml-2"
+                                type="button"
+                              >
+                                MAX
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="swap-toggle-bx">
+                      <button
+                        type="button"
+                        className="swap-icon"
+                        onClick={handleToggleSwap}
+                      >
+                        ⇅
+                      </button>
+                    </div>
+
+                    <div className="trade-box trade-new-bx">
+                      <div className="d-flex justify-content-between align-items-center mb-1">
+                        <span className="trade-label">buying</span>
+                        <span className="trade-label d-flex align-items-center gap-1">
+
+                          <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
+                        </span>
+                      </div>
+                      <div className="trade-row">
+                        <button
+                          onClick={() => setIsOutputModalOpen(true)}
+                          className="plan-btn"
+                          type="button"
+                        >
+                          <span className="dollar-pic-bx">
+                            <img
+                              src={outputToken.image || DefaultTokenImage}
+                              alt={outputToken.symbol}
+                              onError={(e) => {
+                                e.currentTarget.src = DefaultTokenImage
+                              }}
+                            />
+                          </span>
+                          <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
+                            {outputToken.symbol}
+                          </span>
+                          <FontAwesomeIcon icon={faChevronDown} />
+                        </button>
+                        <div className="amount-box">
+                          {isLoadingQuote ? (
+                            <div className="nw-skeleton">
+                              <div className="skeleton-amount mb-1"></div>
+                              <div className="skeleton-usd"></div>
+                            </div>
+                          ) : (
+                            <>
+                              <h2>{outputAmount || "0.00"}</h2>
+                              <span>
+                                {outputAmount && parseFloat(outputAmount) > 0
+                                  ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                                  : "$0"}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+
+
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-
-              {isSwapped ? (
-
-                <div className="trade-box">
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <span className="trade-label">SELLING</span>
-                    <div className="d-flex align-items-center gap-1">
-                      <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}</span>
-                      <div className="d-flex align-items-center gap-1">
-                        <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
-                        <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
-                      </div>
-                    </div>
-                    {wallet.connected && (
-                      <span className="text-xs text-gray-400">
-                        Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
-                      </span>
-                    )}
-                  </div>
-                  <div className="trade-row">
-                    <button
-                      onClick={() => setIsInputModalOpen(true)}
-                      className="plan-btn"
-                      type="button"
-                    >
-                      <span className="dollar-pic-bx">
-                        <img
-                          src={inputToken.image || DefaultTokenImage}
-                          alt={inputToken.symbol}
-                          onError={(e) => {
-                            e.currentTarget.src = DefaultTokenImage
-                          }}
-                        />
-                      </span>
-                      <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
-                        {inputToken.symbol}
-                      </span>
-                      <FontAwesomeIcon icon={faChevronDown} />
-                    </button>
-
-                    <div className="amount-box">
-                      <input
-                        type="number"
-                        value={inputAmount}
-                        onChange={(e) => handleInputAmountChange(e.target.value)}
-                        placeholder="0.00"
-                        className="amount-input main-amount"
-                        // disabled={!wallet.connected}
-                        min="0"
-                        step="any"
-                      />
-                      <div className="d-flex justify-content-end align-items-center">
-                        <span className="text-xs text-gray-400">
-                          {inputAmount && parseFloat(inputAmount) > 0
-                            ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
-                            : "$0"}
-                        </span>
-                        {wallet.connected && inputBalance > 0 && (
-                          <button
-                            onClick={handleMaxClick}
-                            className="text-xs text-blue-400 hover:text-blue-300 ml-2"
-                            type="button"
-                          >
-                            MAX
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-
-                <div className="trade-box trade-new-bx">
-                  {/* <div className="swap-toggle-bx">
-                <button
-                  onClick={handleSwapTokens}
-                  className="swap-icon"
-                  type="button"
-                  disabled={!wallet.connected}
-                >
-                  <RiArrowUpDownFill />
-                </button>
-              </div> */}
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <span className="trade-label">buying</span>
-                    <span className="trade-label d-flex align-items-center gap-1">
-
-                      <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
-                    </span>
-                  </div>
-                  <div className="trade-row">
-                    <button
-                      onClick={() => setIsOutputModalOpen(true)}
-                      className="plan-btn"
-                      type="button"
-                    >
-                      <span className="dollar-pic-bx">
-                        <img
-                          src={outputToken.image || DefaultTokenImage}
-                          alt={outputToken.symbol}
-                          onError={(e) => {
-                            e.currentTarget.src = DefaultTokenImage
-                          }}
-                        />
-                      </span>
-                      <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
-                        {outputToken.symbol}
-                      </span>
-                      <FontAwesomeIcon icon={faChevronDown} />
-                    </button>
-                    <div className="amount-box">
-                      {isLoadingQuote ? (
-                        <div className="nw-skeleton">
-                          <div className="skeleton-amount mb-1"></div>
-                          <div className="skeleton-usd"></div>
-                        </div>
-                      ) : (
-                        <>
-                          <h2>{outputAmount || "0.00"}</h2>
-                          <span>
-                            {outputAmount && parseFloat(outputAmount) > 0
-                              ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
-                              : "$0"}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-
-
-                  </div>
-                </div>
-              )}
 
             </div>
 

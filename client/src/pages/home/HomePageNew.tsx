@@ -1549,7 +1549,7 @@ const HomePageNew = () => {
                                                         onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
                                                     />
                                                     <div className="whale-content flex-grow-1">
-                                                        <h4 className="username">{tx.whaleTokenSymbol} Whale (A4DC..) </h4>
+                                                        <h4 className="username">{tx.whaleTokenSymbol} Whale ({tx.whaleAddress?.slice(0, 4)}..) </h4>
                                                         <div className="tags">
                                                             {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                                                 <span key={i} className="tag-title">{tag}</span>

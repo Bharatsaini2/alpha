@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react"
-import { Mail } from "lucide-react"
 import { createPortal } from "react-dom"
 import Phantom from "../../assets/phantom.svg"
 import Google from "../../assets/google.svg"
-import XIcon from "../../assets/twitter.svg"
-import Telegram from "../../assets/telegram.png"
 import { useAppKit, useAppKitAccount } from "@reown/appkit/react"
 import { useAuth } from "../../contexts/AuthContext"
 import axios from "axios"
@@ -14,21 +11,15 @@ const API_BASE = import.meta.env.VITE_SERVER_URL
 interface LoginModalProps {
   isOpen: boolean
   onClose: () => void
-  onOTPRequested: (email: string) => void
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({
   isOpen,
   onClose,
-  onOTPRequested,
 }) => {
   const { open } = useAppKit()
   const { address, isConnected: walletConnected } = useAppKitAccount()
   const { login } = useAuth()
-
-  const [formData, setFormData] = useState({
-    email: "",
-  })
 
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
@@ -37,7 +28,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
-      setFormData({ email: "" })
       setErrors({})
       setMessage("")
       setIsLoading(false)
@@ -51,64 +41,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   }, [walletConnected, address, isOpen])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: "",
-      }))
-    }
-  }
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {}
-
-    if (!formData.email) {
-      newErrors.email = "Email is required"
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) return
-
-    setIsLoading(true)
-    setMessage("")
-    try {
-      // Request OTP
-      const response = await axios.post(`${API_BASE}/auth/request-otp`, {
-        email: formData.email,
-      })
-
-      if (response.data.success) {
-        setMessage(response.data.message)
-        onOTPRequested(formData.email)
-      } else {
-        setErrors({ email: response.data.message })
-      }
-    } catch (error: any) {
-      console.error("OTP request error:", error)
-      setErrors({
-        email:
-          error.response?.data?.message ||
-          "Failed to send OTP. Please try again.",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handlePhantomLogin = () => {
     // Open Reown AppKit connect modal
@@ -259,119 +192,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }, 1000)
   }
 
-  const handleTwitterLogin = () => {
-    setIsLoading(true)
-    setErrors({})
 
-    // Detect if we're on mobile
-    const isMobile =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      )
-
-    if (isMobile) {
-      // On mobile, redirect in the same window instead of popup
-      window.location.href = `${API_BASE}/auth/twitter`
-      return
-    }
-
-    // Desktop: Use popup approach
-    const popup = window.open(
-      `${API_BASE}/auth/twitter`,
-      "twitter-auth",
-      "width=500,height=600,scrollbars=yes,resizable=yes,top=100,left=100"
-    )
-
-    if (!popup) {
-      setErrors({
-        twitter: "Popup blocked. Please allow popups for this site.",
-      })
-      setIsLoading(false)
-      return
-    }
-
-    const messageListener = (event: MessageEvent) => {
-      // Filter out unrelated messages
-      if (
-        typeof event.data === "string" &&
-        event.data.includes("setImmediate")
-      ) {
-        return
-      }
-
-      // Enhanced origin validation for mobile and varied environments
-      const allowedOrigins = [
-        "http://localhost:9090",
-        "http://localhost:5173",
-        "https://localhost:9090",
-        "https://localhost:5173",
-        window.location.origin,
-        "http://139.59.61.252",
-        "http://139.59.61.252:9090",
-        "https://app.alpha-block.ai",
-        "https://api.alpha-block.ai",
-      ]
-
-      // Check if it's a Cloudflare tunnel URL or other development URLs
-      const isCloudflareTunnel = event.origin.includes("trycloudflare.com")
-      const isLocalhost = event.origin.includes("localhost")
-      const isSameOrigin = event.origin === window.location.origin
-
-      if (
-        !allowedOrigins.includes(event.origin) &&
-        !isCloudflareTunnel &&
-        !isLocalhost &&
-        !isSameOrigin
-      ) {
-        return
-      }
-
-      // Only process OAuth messages
-      if (
-        !event.data ||
-        typeof event.data !== "object" ||
-        !event.data.hasOwnProperty("success")
-      ) {
-        return
-      }
-
-      if (event.data.success) {
-        // Store tokens and redirect
-        login(
-          event.data.data.user,
-          event.data.data.accessToken,
-          event.data.data.refreshToken
-        )
-        onClose()
-      } else {
-        setErrors({
-          twitter: event.data.error || "Twitter authentication failed",
-        })
-      }
-
-      // Clean up
-      window.removeEventListener("message", messageListener)
-      setIsLoading(false)
-    }
-
-    window.addEventListener("message", messageListener)
-
-    // Check if popup was closed manually
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkClosed)
-        window.removeEventListener("message", messageListener)
-        setIsLoading(false)
-        setErrors({ twitter: "Authentication cancelled" })
-      }
-    }, 1000)
-  }
-
-  const handleTelegramLogin = () => {
-    // Placeholder as backend Telegram login is not yet implemented
-    alert("Telegram Login coming soon!")
-    console.log("Telegram Login requested")
-  }
 
   const handleEscapeKey = (e: KeyboardEvent) => {
     if (e.key === "Escape" && isOpen) {
@@ -394,10 +215,20 @@ const LoginModal: React.FC<LoginModalProps> = ({
     }
   }, [isOpen])
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose()
+    }
+  }
+
   if (!isOpen) return null
 
   return createPortal(
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center overflow-y-auto z-[9000]">
+
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center overflow-y-auto z-[9000]"
+      onClick={handleBackdropClick}
+    >
       <style>{`
         .auth-container {
           width: 100%;
@@ -499,43 +330,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
           <img src="/AppIcon.png" alt="Alpha" className="w-16 h-16 object-contain" />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-3">
-            <label className="auth-label block">EMAIL ADDRESS</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#444444]" />
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`auth-input w-full pl-12 pr-4 py-3 outline-none transition-all ${errors.email ? "border-[#FF6B6B] border-opacity-50" : ""
-                  }`}
-                placeholder="YOUR EMAIL ADDRESS"
-                autoFocus
-              />
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="continue-btn w-full disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white"></div>
-            ) : (
-              "CONTINUE"
-            )}
-          </button>
-        </form>
-
-        <div className="or-divider">
-          <div className="or-line"></div>
-          <span className="px-4">OR</span>
-          <div className="or-line"></div>
-        </div>
-
         <div className="space-y-4">
           {/* Phantom */}
           <button className="social-btn" onClick={handlePhantomLogin} disabled={isLoading}>
@@ -545,26 +339,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
             <div className="corner corner-br"></div>
             <img src={Phantom} alt="" className="w-5 h-5 opacity-90" />
             <span>LOG IN WITH PHANTOM</span>
-          </button>
-
-          {/* X */}
-          <button className="social-btn" onClick={handleTwitterLogin} disabled={isLoading}>
-            <div className="corner corner-tl"></div>
-            <div className="corner corner-tr"></div>
-            <div className="corner corner-bl"></div>
-            <div className="corner corner-br"></div>
-            <img src={XIcon} alt="" className="w-5 h-4 opacity-90" />
-            <span>LOG IN WITH X</span>
-          </button>
-
-          {/* Telegram */}
-          <button className="social-btn" onClick={handleTelegramLogin} disabled={isLoading}>
-            <div className="corner corner-tl"></div>
-            <div className="corner corner-tr"></div>
-            <div className="corner corner-bl"></div>
-            <div className="corner corner-br"></div>
-            <img src={Telegram} alt="" className="w-5 h-5 opacity-90" />
-            <span>LOG IN WITH TELEGRAM</span>
           </button>
 
           {/* Google */}
@@ -580,11 +354,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
 
         {/* Error Messages */}
         <div className="mt-4 text-center">
-          {errors.email && <p className="text-xs text-[#FF6B6B]">{errors.email}</p>}
           {message && <p className="text-xs text-[#05C96A]">{message}</p>}
           {errors.phantom && <p className="text-xs text-[#FF6B6B]">{errors.phantom}</p>}
           {errors.google && <p className="text-xs text-[#FF6B6B]">{errors.google}</p>}
-          {errors.twitter && <p className="text-xs text-[#FF6B6B]">{errors.twitter}</p>}
         </div>
       </div>
     </div>,
