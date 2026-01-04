@@ -1221,8 +1221,8 @@ const processInfluencerSignature = async (
           amount:
             Math.abs(tokenSentChange.change_amount) /
             Math.pow(10, tokenSentChange.decimals),
-          symbol: 'Unknown',
-          name: 'Unknown',
+          symbol: tokenSentChange.symbol || 'Unknown',
+          name: tokenSentChange.name || 'Unknown',
         }
 
         tokenOut = {
@@ -1230,8 +1230,8 @@ const processInfluencerSignature = async (
           amount:
             tokenReceivedChange.change_amount /
             Math.pow(10, tokenReceivedChange.decimals),
-          symbol: 'Unknown',
-          name: 'Unknown',
+          symbol: tokenReceivedChange.symbol || 'Unknown',
+          name: tokenReceivedChange.name || 'Unknown',
         }
         swapSource = 'token_balance'
         logger.info(`✅ Swap data extracted from: token_balance_changes`)
