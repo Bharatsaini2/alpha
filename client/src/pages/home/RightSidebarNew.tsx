@@ -149,7 +149,6 @@ const RightSidebarNew = ({
       )
       setInputBalance(balance)
     } catch (error) {
-      console.error("Failed to fetch balance:", error)
       setInputBalance(0)
       showToast("Failed to fetch token balance", "error")
     }
@@ -181,7 +180,6 @@ const RightSidebarNew = ({
 
       // Validate outAmount is a valid number string
       if (!outAmountRaw || isNaN(Number(outAmountRaw))) {
-        console.error("Invalid outAmount in quote response:", outAmountRaw)
         setOutputAmount("0.00")
         showToast("Invalid quote response. Please try again.", "error")
         return
@@ -192,7 +190,6 @@ const RightSidebarNew = ({
 
       // Validate calculated amount
       if (isNaN(outAmount) || !isFinite(outAmount)) {
-        console.error("Invalid calculated output amount:", outAmount)
         setOutputAmount("0.00")
         showToast("Invalid quote calculation. Please try again.", "error")
         return
@@ -202,7 +199,6 @@ const RightSidebarNew = ({
       setIsLoading(false)
       setRetryCount(0) // Reset retry count on success
     } catch (error: any) {
-      console.error("Failed to fetch quote:", error)
       setQuote(null)
       setOutputAmount("")
 
@@ -226,8 +222,6 @@ const RightSidebarNew = ({
       await connect()
       showToast("Wallet connected successfully", "success")
     } catch (error: any) {
-      console.error("Failed to connect wallet:", error)
-
       // Show user-friendly error message
       if (error.code === "USER_REJECTED") {
         showToast("Connection cancelled", "info")
@@ -376,7 +370,6 @@ setISConnect(false)
       clearErrors()
 
       // Get a FRESH quote right before swap to avoid stale route errors
-      setSwapStatus("Getting fresh quote...")
       const amountInSmallestUnit = Math.floor(
         amount * Math.pow(10, inputToken.decimals)
       )
@@ -393,16 +386,12 @@ setISConnect(false)
         parseFloat(freshQuote.outAmount) / Math.pow(10, outputToken.decimals)
       setOutputAmount(outAmount.toFixed(6))
 
-      setSwapStatus("Generating transaction...")
-
       // Get swap transaction with Jupiter Ultra (priority level handled automatically)
       const swapResponse = await getSwapTransaction({
         quoteResponse: freshQuote,
         userPublicKey: wallet.publicKey.toBase58(),
         dynamicSlippage: false, // Fixed slippage at 5%
       })
-
-      setSwapStatus("Please sign the transaction in your wallet...")
 
       // Deserialize transaction (handle both legacy and versioned transactions)
       const transactionBuffer = Buffer.from(
@@ -419,15 +408,27 @@ setISConnect(false)
         transaction = Transaction.from(transactionBuffer)
       }
 
-      setSwapStatus("Submitting transaction to Solana network...")
+      // Show wallet signing prompt BEFORE sending with a small delay to ensure it renders
+      showToast("Please sign the transaction in your wallet", "info")
+      
+      // Small delay to ensure toast renders before wallet popup
+      await new Promise(resolve => setTimeout(resolve, 100))
 
-      // Send transaction
-      const signature = await sendTransaction(transaction)
+      // Send transaction (this will block until user signs or cancels)
+      let signature: string
+      try {
+        signature = await sendTransaction(transaction)
+      } catch (txError: any) {
+        // Re-throw to be caught by outer catch block
+        throw txError
+      }
 
-      setSwapStatus("Transaction confirmed!")
+      // Only show success and copy if we get here (user signed)
       setLastTxSignature(signature)
 
-      showToast("Swap completed successfully!", "success")
+      // Copy transaction signature to clipboard
+      await navigator.clipboard.writeText(signature)
+      showToast("Transaction successful! Address copied to clipboard", "success")
 
       // Calculate amounts for tracking
       const inputAmountNum =
@@ -447,7 +448,7 @@ setISConnect(false)
         platformFee = outputAmountNum * 0.0075
       }
 
-      // Track trade (priority level will be automatically determined by Jupiter Ultra)
+      // Track trade
       try {
         await trackTrade({
           signature,
@@ -457,11 +458,9 @@ setISConnect(false)
           inputAmount: inputAmountNum,
           outputAmount: outputAmountNum,
           platformFee,
-          // ✅ Priority level is handled automatically by Jupiter Ultra
         })
       } catch (trackError) {
-        // Don't fail the swap if tracking fails
-        console.error("Failed to track trade:", trackError)
+        // Silently ignore - non-critical
       }
 
       // Reset form
@@ -474,56 +473,64 @@ setISConnect(false)
       await fetchInputBalance()
 
       setTimeout(() => {
-        setSwapStatus("")
         setLastTxSignature("")
       }, 5000)
     } catch (error: any) {
-      console.error("Swap failed:", error)
-
       // Show user-friendly error messages
       let errorMessage = "Swap failed. Please try again."
+      let toastType: "error" | "info" = "error"
 
-      // Safely extract error message
+      // Safely extract error message and code
       const errorMsg =
-        typeof error.message === "string"
+        typeof error?.message === "string"
           ? error.message
-          : String(error.message || "")
-      const errorCode = error.code || ""
+          : String(error?.message || "")
+      const errorCode = error?.code || ""
+      const errorName = error?.name || ""
 
-      if (errorCode === "USER_REJECTED") {
+      // Check for user cancellation FIRST (most common case)
+      // Check multiple possible indicators of user rejection
+      if (
+        errorCode === "USER_REJECTED" ||
+        errorCode === 4001 || // Standard wallet rejection code (number)
+        errorCode === "4001" || // Standard wallet rejection code (string)
+        errorName === "WalletSignTransactionError" ||
+        errorMsg.toLowerCase().includes("user rejected") ||
+        errorMsg.toLowerCase().includes("user cancelled") ||
+        errorMsg.toLowerCase().includes("user canceled") ||
+        errorMsg.toLowerCase().includes("user denied") ||
+        errorMsg.toLowerCase().includes("rejected by user")
+      ) {
         errorMessage = "Transaction cancelled"
-        showToast(errorMessage, "info")
-      } else if (errorCode === "INSUFFICIENT_FUNDS") {
+        toastType = "info"
+      } else if (errorCode === "INSUFFICIENT_FUNDS" || errorMsg.toLowerCase().includes("insufficient")) {
         errorMessage = `Insufficient ${inputToken.symbol} balance`
-        showToast(errorMessage, "error")
-      } else if (errorCode === "TRANSACTION_EXPIRED") {
+      } else if (errorCode === "TRANSACTION_EXPIRED" || errorMsg.toLowerCase().includes("expired")) {
         errorMessage = "Transaction expired. Please try again."
-        showToast(errorMessage, "error")
-      } else if (errorCode === "NETWORK_ERROR") {
+      } else if (errorCode === "NETWORK_ERROR" || errorMsg.toLowerCase().includes("network")) {
         errorMessage = "Network error. Please check your connection."
-        showToast(errorMessage, "error")
-      } else if (errorCode === "RATE_LIMIT_EXCEEDED") {
+      } else if (errorCode === "RATE_LIMIT_EXCEEDED" || errorMsg.toLowerCase().includes("rate limit")) {
         errorMessage = "Too many requests. Please wait a moment."
-        showToast(errorMessage, "error")
+      } else if (
+        errorMsg &&
+        typeof errorMsg === "string" &&
+        (errorMsg.toLowerCase().includes("simulation failed") ||
+         errorMsg.toLowerCase().includes("custom program error") ||
+         errorMsg.toLowerCase().includes("0x1"))
+      ) {
+        errorMessage = "Transaction simulation failed. Try increasing slippage or reducing amount."
       } else if (
         errorMsg &&
         typeof errorMsg === "string" &&
         errorMsg.toLowerCase().includes("slippage")
       ) {
         errorMessage = "Price changed too much. Please try again."
-        showToast(errorMessage, "error")
       } else if (errorMsg) {
         errorMessage = errorMsg
-        showToast(errorMessage, "error")
-      } else {
-        showToast(errorMessage, "error")
       }
 
-      setSwapStatus(errorMessage)
-
-      setTimeout(() => {
-        setSwapStatus("")
-      }, 5000)
+      // Show the toast with appropriate type
+      showToast(errorMessage, toastType)
     } finally {
       setIsSwapping(false)
     }
@@ -761,74 +768,9 @@ setISConnect(false)
               </div>
             )}
 
-            {/* Error Display */}
-            {(walletError || swapError) && (
-              <div className="mb-2 p-2 bg-red-900/20 border border-red-500/50 rounded text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-red-400">
-                    {getUserFriendlyError(walletError || swapError)}
-                  </span>
-                  {swapError && retryCount < 3 && (
-                    <button
-                      onClick={handleRetryQuote}
-                      className="text-blue-400 hover:text-blue-300 underline ml-2"
-                      type="button"
-                    >
-                      Retry
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
+            {/* All errors shown via toast popups - no UI box warnings */}
 
-            {/* Insufficient Balance Warning */}
-            {wallet.connected &&
-              inputAmount &&
-              parseFloat(inputAmount) > inputBalance && (
-                <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-500/50 rounded text-xs text-yellow-400">
-                  Insufficient {inputToken.symbol} balance. You have{" "}
-                  {inputBalance.toFixed(4)} {inputToken.symbol}
-                </div>
-              )}
-
-            {/* Same Token Warning */}
-            {wallet.connected && inputToken.address === outputToken.address && (
-              <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-500/50 rounded text-xs text-yellow-400">
-                Input and output tokens must be different
-              </div>
-            )}
-
-            {/* Swap Status */}
-            {swapStatus && (
-              <div
-                className={`mb-2 p-2 rounded text-xs ${swapStatus.includes("confirmed") ||
-                    swapStatus.includes("success")
-                    ? "bg-green-900/20 border border-green-500/50 text-green-400"
-                    : swapStatus.includes("failed") ||
-                      swapStatus.includes("error") ||
-                      swapStatus.includes("cancelled")
-                      ? "bg-red-900/20 border border-red-500/50 text-red-400"
-                      : "bg-blue-900/20 border border-blue-500/50 text-blue-400"
-                  }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span>{swapStatus}</span>
-                  {isSwapping && (
-                    <RiLoader2Fill className="animate-spin ml-2" />
-                  )}
-                </div>
-                {lastTxSignature && (
-                  <a
-                    href={`https://solscan.io/tx/${lastTxSignature}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-1 inline-block underline hover:text-white"
-                  >
-                    View on Solscan →
-                  </a>
-                )}
-              </div>
-            )}
+            {/* All status messages removed - using toast popups only */}
 
             {/* Jupiter Ultra handles priority level automatically - no manual selection needed */}
 
@@ -1539,13 +1481,15 @@ setISConnect(false)
               className="quick-buy-btn"
               onClick={() =>
                 handleQuickBuy({
-                  // TODO: Replace with real token address from API
-                  address: "So11111111111111111111111111111111111111112", // Placeholder - use SOL for testing
+                  // Placeholder token - TRUMP (using a real token address for testing)
+                  address: "HaP8r3ksG76PhQLTqR8FYBeNiQpejcFbQmiHbg787Ut1", // Example token address
                   symbol: "TRUMP",
                   name: "OFFICIAL TRUMP",
                   decimals: 9,
                 })
               }
+              aria-label="Quick buy TRUMP token"
+              title="Quick buy this token"
               disabled={
                 !wallet.connected ||
                 !inputAmount ||
@@ -1576,13 +1520,15 @@ setISConnect(false)
               className="quick-buy-btn"
               onClick={() =>
                 handleQuickBuy({
-                  // TODO: Replace with real token address from API
-                  address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // Placeholder - use USDC for testing
+                  // Placeholder token - SOLO (keeping USDC as a valid different token)
+                  address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC address
                   symbol: "SOLO",
                   name: "SOLOMON",
                   decimals: 6,
                 })
               }
+              aria-label="Quick buy SOLO token"
+              title="Quick buy this token"
               disabled={
                 !wallet.connected ||
                 !inputAmount ||
@@ -1613,13 +1559,15 @@ setISConnect(false)
               className="quick-buy-btn"
               onClick={() =>
                 handleQuickBuy({
-                  // TODO: Replace with real token address from API
-                  address: "So11111111111111111111111111111111111111112", // Placeholder - use SOL for testing
+                  // Placeholder token - JAZZ (using BONK as example)
+                  address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", // BONK address
                   symbol: "JAZZ",
                   name: "JAZZ HANDS",
-                  decimals: 9,
+                  decimals: 5,
                 })
               }
+              aria-label="Quick buy JAZZ token"
+              title="Quick buy this token"
               disabled={
                 !wallet.connected ||
                 !inputAmount ||
@@ -1650,13 +1598,15 @@ setISConnect(false)
               className="quick-buy-btn"
               onClick={() =>
                 handleQuickBuy({
-                  // TODO: Replace with real token address from API
-                  address: "So11111111111111111111111111111111111111112", // Placeholder - use SOL for testing
+                  // Placeholder token - PIXEL (using WIF as example)
+                  address: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", // WIF address
                   symbol: "PIXEL",
                   name: "PIXEL PALS",
-                  decimals: 9,
+                  decimals: 6,
                 })
               }
+              aria-label="Quick buy PIXEL token"
+              title="Quick buy this token"
               disabled={
                 !wallet.connected ||
                 !inputAmount ||
@@ -1687,13 +1637,15 @@ setISConnect(false)
               className="quick-buy-btn"
               onClick={() =>
                 handleQuickBuy({
-                  // TODO: Replace with real token address from API
-                  address: "So11111111111111111111111111111111111111112", // Placeholder - use SOL for testing
+                  // Placeholder token - GXY (using POPCAT as example)
+                  address: "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr", // POPCAT address
                   symbol: "GXY",
                   name: "GALAXY",
                   decimals: 9,
                 })
               }
+              aria-label="Quick buy GXY token"
+              title="Quick buy this token"
               disabled={
                 !wallet.connected ||
                 !inputAmount ||

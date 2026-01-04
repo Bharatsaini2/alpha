@@ -599,7 +599,7 @@
 }
 
 .impact-percent {
-  color: rgb(180, 180, 83);
+  color: #ef4444; /* Red color for high price impact (> 5%) */
 }
 
 .solana-total-bx {

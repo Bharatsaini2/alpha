@@ -190,11 +190,10 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
           
           if (now - data.timestamp < CACHE_DURATION) {
             setAllTokens(data.tokens)
-            console.log(`✅ Loaded ${data.tokens.length} tokens from cache`)
           }
         }
       } catch (error) {
-        console.error("Failed to load cached tokens:", error)
+        // Failed to load cached tokens
       }
     }
 
@@ -212,7 +211,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
         setRecentTokens(Array.isArray(parsed) ? parsed : [])
       }
     } catch (error) {
-      console.error("Failed to load recent tokens:", error)
+      // Failed to load recent tokens
     }
   }, [])
 

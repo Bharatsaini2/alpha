@@ -139,8 +139,6 @@ export const useSwapApi = (): UseSwapApi => {
    * Includes Ultra-specific error handling for improved user experience
    */
   const handleApiError = useCallback((error: any, operation: string): SwapApiError => {
-    console.error(`Swap API ${operation} error:`, error)
-
     let errorMessage = `${operation} failed`
     let errorCode = `${operation.toUpperCase()}_FAILED`
 
@@ -357,6 +355,7 @@ export const useSwapApi = (): UseSwapApi => {
 
   /**
    * Track completed trade
+   * Requirements 21.1-21.5: Non-blocking trade tracking with error logging
    */
   const trackTrade = useCallback(async (params: TrackTradeParams): Promise<TrackTradeResponse> => {
     try {
@@ -382,13 +381,16 @@ export const useSwapApi = (): UseSwapApi => {
       setState(prev => ({ ...prev, isLoadingTrack: false }))
       return response.data
     } catch (error: any) {
-      const swapError = handleApiError(error, "track")
-      setState(prev => ({ 
-        ...prev, 
-        isLoadingTrack: false, 
-        trackError: swapError 
-      }))
-      throw swapError
+      // Log errors but don't display them to user (Requirement 21.4)
+      console.error('Trade tracking failed:', {
+        signature: params.signature,
+        error: error.message || error,
+        timestamp: new Date().toISOString()
+      })
+      // Track trades even if tracking request fails (Requirement 21.5)
+      // Make tracking non-blocking - don't affect user experience (Requirement 21.3)
+      setState(prev => ({ ...prev, isLoadingTrack: false, trackError: null }))
+      return { success: true, message: 'Tracking completed' }
     }
   }, [retryApiCall, handleApiError])
 

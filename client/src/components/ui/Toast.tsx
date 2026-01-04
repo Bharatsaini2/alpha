@@ -87,7 +87,7 @@ const Toast: React.FC<ToastProps> = ({
       <div className="coppied-address">
         <div className="coppied-content">
           <span className="coppied-icon"><FaRegCheckSquare /></span>
-          <p>Address copied to clipboard!</p>
+          <p>{message}</p>
           <button
             onClick={() => onClose(id)}
             className="coppied-btn"

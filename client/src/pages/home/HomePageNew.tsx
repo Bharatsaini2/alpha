@@ -19,6 +19,8 @@ import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { RiFileCopyLine } from "react-icons/ri";
 
 import SwapModal from "../../components/swap/SwapModal"
+import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
+import { useWalletConnection } from "../../hooks/useWalletConnection"
 
 
 
@@ -257,11 +259,13 @@ const HomePageNew = () => {
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
     const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set())
     const [isOpen, setIsOpen] = useState(false)
-    const [quickBuyAmount, setQuickBuyAmount] = useState("0")
+    const [quickBuyAmount, setQuickBuyAmount] = useState(() => loadQuickBuyAmount() || "0")
+    const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
     const [searchQuery, setSearchQuery] = useState("")
     const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
     const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
     const { showToast, ToastContainer } = useToast()
+    const { wallet } = useWalletConnection()
     const navigate = useNavigate()
 
     const [transactions, setTransactions] = useState<any[]>([])
@@ -568,6 +572,20 @@ const HomePageNew = () => {
     }
 
     const handleQuickBuy = (tx: any) => {
+        // Validate quick buy amount
+        const validation = validateQuickBuyAmount(quickBuyAmount)
+        if (!validation.isValid) {
+            showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
+            return
+        }
+
+        // Validate wallet connection
+        if (!wallet.connected) {
+            showToast("Please connect your wallet to continue", "error")
+            return
+        }
+
+        // Extract token info from clicked item
         const tokenInfo = {
             symbol: tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol,
             name: tx.type === 'sell' ? tx.transaction.tokenIn.name : tx.transaction.tokenOut.name,
@@ -575,8 +593,28 @@ const HomePageNew = () => {
             image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
             decimals: 9, // Default for most Solana tokens
         }
+        
+        // Open SwapModal in 'quickBuy' mode with SOL as input token
         setSwapTokenInfo(tokenInfo)
         setIsSwapModalOpen(true)
+    }
+
+    const handleQuickBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        setQuickBuyAmount(value)
+        
+        // Validate and show error if invalid
+        const validation = validateQuickBuyAmount(value)
+        if (!validation.isValid && value !== '') {
+            setQuickBuyAmountError(validation.error || '')
+        } else {
+            setQuickBuyAmountError('')
+        }
+        
+        // Save to session storage if valid
+        if (validation.isValid) {
+            saveQuickBuyAmount(value)
+        }
     }
 
     const handleFilterTabChange = (filterType: string) => {
@@ -884,25 +922,40 @@ const HomePageNew = () => {
                                     onClick={() => quickBuyInputRef.current?.focus()}
                                 >
                                     <img src="/quick-btn.png" alt="" /> quick buy amount
-                                    {/* <input
+                                    <input
                                         ref={quickBuyInputRef}
                                         type="number"
                                         value={quickBuyAmount}
-                                        onChange={(e) => setQuickBuyAmount(e.target.value)}
+                                        onChange={handleQuickBuyAmountChange}
                                         onClick={(e) => e.stopPropagation()}
-                                        placeholder="100"
+                                        placeholder="0.5"
+                                        min="0"
+                                        step="0.1"
                                         style={{
                                             background: 'transparent',
-                                            border: 'none',
+                                            border: quickBuyAmountError ? '1px solid #ef4444' : 'none',
                                             color: '#fff',
-                                            width: '50px',
+                                            width: '60px',
                                             textAlign: 'right',
                                             outline: 'none',
-                                            fontSize: 'inherit',
-                                            marginLeft: 'auto'
+                                            fontSize: '14px',
+                                            borderRadius: '4px',
+                                            padding: '2px 4px'
                                         }}
-                                    /> */}
+                                        title={quickBuyAmountError || ''}
+                                    />
+                                    <span style={{ color: '#fff', fontSize: '14px' }}>SOL</span>
                                 </button>
+                                {quickBuyAmountError && (
+                                    <div style={{ 
+                                        color: '#ef4444', 
+                                        fontSize: '11px', 
+                                        marginTop: '4px',
+                                        paddingLeft: '8px'
+                                    }}>
+                                        {quickBuyAmountError}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1373,6 +1426,17 @@ const HomePageNew = () => {
                                                                 href="javascript:void(0)"
                                                                 className="quick-nw-btn"
                                                                 onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                onKeyDown={(e) => {
+                                                                  if (e.key === 'Enter' || e.key === ' ') {
+                                                                    e.preventDefault()
+                                                                    e.stopPropagation()
+                                                                    handleQuickBuy(tx)
+                                                                  }
+                                                                }}
+                                                                aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
+                                                                title="Quick buy this token"
                                                             >
                                                                 quick buy
                                                             </a>
@@ -1529,6 +1593,14 @@ const HomePageNew = () => {
                 onClose={() => {
                     setIsSwapModalOpen(false)
                     setSwapTokenInfo(null)
+                }}
+                mode="quickBuy"
+                initialInputToken={{
+                    address: "So11111111111111111111111111111111111111112",
+                    symbol: "SOL",
+                    name: "Solana",
+                    decimals: 9,
+                    image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
                 }}
                 initialOutputToken={swapTokenInfo}
                 initialAmount={quickBuyAmount}

@@ -19,6 +19,9 @@ import { TopCoin, TopCoinsParams } from "../../lib/types"
 import { useToast } from "../../components/ui/Toast"
 import { LastUpdatedTicker } from "../../components/TicketComponent"
 import { useSearchHistory } from "../../hooks/useSearchHistory"
+import SwapModal from "../../components/swap/SwapModal"
+import { useWalletConnection } from "../../hooks/useWalletConnection"
+import { validateQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
 
 // Simple debounce function
 function debounce<T extends (...args: TArgs) => void, TArgs extends unknown[]>(
@@ -57,6 +60,9 @@ const TopCoinsPage = () => {
   const [expandedCoin, setExpandedCoin] = useState<string | null>(null)
   const { showToast, ToastContainer } = useToast()
   const width = useWindowWidth()
+  const { wallet } = useWalletConnection()
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
+  const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
   // Add more space between bars for mobile devices
   const isMobile = width < 600
   // API data state
@@ -597,6 +603,38 @@ const TopCoinsPage = () => {
       console.error("Failed to copy token address:", error)
       showToast("Failed to copy address", "error")
     }
+  }
+
+  // Handle Quick Buy
+  const handleQuickBuy = (coin: TopCoin) => {
+    // Load quick buy amount from storage
+    const quickBuyAmount = loadQuickBuyAmount() || "100"
+    
+    // Validate quick buy amount
+    const validation = validateQuickBuyAmount(quickBuyAmount)
+    if (!validation.isValid) {
+      showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
+      return
+    }
+
+    // Validate wallet connection
+    if (!wallet.connected) {
+      showToast("Please connect your wallet to continue", "error")
+      return
+    }
+
+    // Extract token info from coin data
+    const tokenInfo = {
+      symbol: coin.symbol,
+      name: coin.name,
+      address: coin.tokenAddress,
+      image: coin.imageUrl,
+      decimals: 9, // Default for most Solana tokens
+    }
+    
+    // Open SwapModal in 'quickBuy' mode with SOL as input token
+    setSwapTokenInfo(tokenInfo)
+    setIsSwapModalOpen(true)
   }
 
   return (
