@@ -27,6 +27,8 @@ import { IoWalletOutline } from "react-icons/io5"
 interface RightSidebarNewProps {
   selectedToken?: any
   quickBuyAmount?: string
+  pageType?: 'alpha' | 'kol' // Determine which page we're on (alpha streams or kol feed)
+  transactions?: any[] // Whale transactions for calculating hot coins
 }
 
 // Default tokens for swap
@@ -51,6 +53,8 @@ const DEFAULT_OUTPUT_TOKEN: TokenInfo = {
 const RightSidebarNew = ({
   selectedToken,
   quickBuyAmount,
+  pageType = 'alpha', // Default to 'alpha' for Alpha Streams page
+  transactions = [] // Default to empty array
 }: RightSidebarNewProps) => {
   // Wallet connection hook
   const {
@@ -80,7 +84,7 @@ const RightSidebarNew = ({
   const [inputToken, setInputToken] = useState<TokenInfo>(DEFAULT_INPUT_TOKEN)
   const [outputToken, setOutputToken] =
     useState<TokenInfo>(DEFAULT_OUTPUT_TOKEN)
-  const [isLoading,setIsLoading]=useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [inputAmount, setInputAmount] = useState<string>("") // Empty by default - user must enter amount
   const [outputAmount, setOutputAmount] = useState<string>("")
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
@@ -232,8 +236,8 @@ const RightSidebarNew = ({
       } else {
         showToast("Failed to connect wallet. Please try again.", "error")
       }
-    }finally{
-setISConnect(false)
+    } finally {
+      setISConnect(false)
     }
   }, [connect, showToast])
 
@@ -321,6 +325,28 @@ setISConnect(false)
     setQuote(null)
   }, [inputToken, outputToken])
 
+  // Handle half button
+  const handleHalfClick = useCallback(() => {
+    if (inputBalance > 0) {
+      // Calculate half of the balance
+      let halfAmount = inputBalance / 2
+
+      // Reserve some SOL for transaction fees if input is SOL
+      if (inputToken.address === "So11111111111111111111111111111111111111112") {
+        const maxAmount = Math.max(0, inputBalance - 0.01) // Reserve 0.01 SOL for fees
+        halfAmount = maxAmount / 2
+      }
+
+      // Validate half amount is positive
+      if (halfAmount <= 0) {
+        showToast("Insufficient balance", "error")
+        return
+      }
+
+      setInputAmount(halfAmount.toFixed(inputToken.decimals))
+    }
+  }, [inputBalance, inputToken.address, inputToken.decimals, showToast])
+
   // Handle max button
   const handleMaxClick = useCallback(() => {
     if (inputBalance > 0) {
@@ -339,6 +365,7 @@ setISConnect(false)
       setInputAmount(maxAmount.toFixed(inputToken.decimals))
     }
   }, [inputBalance, inputToken.address, inputToken.decimals, showToast])
+
 
   // Handle swap execution
   const handleSwap = useCallback(async () => {
@@ -410,7 +437,7 @@ setISConnect(false)
 
       // Show wallet signing prompt BEFORE sending with a small delay to ensure it renders
       showToast("Please sign the transaction in your wallet", "info")
-      
+
       // Small delay to ensure toast renders before wallet popup
       await new Promise(resolve => setTimeout(resolve, 100))
 
@@ -515,8 +542,8 @@ setISConnect(false)
         errorMsg &&
         typeof errorMsg === "string" &&
         (errorMsg.toLowerCase().includes("simulation failed") ||
-         errorMsg.toLowerCase().includes("custom program error") ||
-         errorMsg.toLowerCase().includes("0x1"))
+          errorMsg.toLowerCase().includes("custom program error") ||
+          errorMsg.toLowerCase().includes("0x1"))
       ) {
         errorMessage = "Transaction simulation failed. Try increasing slippage or reducing amount."
       } else if (
@@ -701,10 +728,113 @@ setISConnect(false)
   const [isSwapped, setIsSwapped] = useState(false)
 
   const handleToggleSwap = () => {
-    setIsSwapped(!isSwapped)
+    handleSwapTokens()
   }
 
   const [showMainButton, setShowMainButton] = useState(false);
+
+  // Calculate hot coins based on transactions
+  const hotCoins = useMemo(() => {
+    console.log('Hot Coins Calculation - Total transactions:', transactions?.length)
+
+    if (!transactions || transactions.length === 0) {
+      console.log('No transactions available')
+      return []
+    }
+
+    // Try different thresholds until we get at least 5 coins
+    const thresholds = [7, 6, 5, 4, 3, 2, 1, 0]
+    let finalCoins: any[] = []
+
+    for (const threshold of thresholds) {
+      // Filter transactions with current hotness threshold
+      const hotTransactions = transactions.filter((tx: any) => {
+        const score = tx.hotnessScore || tx.hotness_score || 0
+        return score >= threshold
+      })
+
+      console.log(`Threshold ${threshold}: ${hotTransactions.length} hot transactions`)
+
+      // Count occurrences of each coin (using tokenOut for buy transactions)
+      const coinFrequency = new Map<string, { count: number; data: any }>()
+
+      hotTransactions.forEach((tx: any) => {
+        // Try multiple possible data structures
+        const coinSymbol = tx.tokenOutSymbol ||
+          tx.transaction?.tokenOut?.symbol ||
+          tx.outTokenSymbol ||
+          tx.token_out_symbol
+
+        const coinAddress = tx.transaction?.tokenOut?.address ||
+          tx.outTokenAddress ||
+          tx.token_out_address
+
+        const coinImage = tx.transaction?.tokenOut?.imageUrl ||
+          tx.outTokenURL ||
+          tx.token_out_image
+
+        const coinName = tx.transaction?.tokenOut?.name ||
+          tx.outTokenName ||
+          tx.token_out_name ||
+          coinSymbol
+
+        const marketCap = tx.transaction?.tokenOut?.marketCap ||
+          tx.outTokenMarketCap ||
+          tx.token_out_market_cap ||
+          '0'
+
+        if (coinSymbol && coinAddress) {
+          const existing = coinFrequency.get(coinAddress)
+          if (existing) {
+            existing.count++
+          } else {
+            coinFrequency.set(coinAddress, {
+              count: 1,
+              data: {
+                symbol: coinSymbol,
+                address: coinAddress,
+                image: coinImage,
+                name: coinName,
+                marketCap: marketCap,
+                hotnessScore: tx.hotnessScore || tx.hotness_score || 0
+              }
+            })
+          }
+        }
+      })
+
+      console.log(`Threshold ${threshold}: ${coinFrequency.size} unique coins`)
+
+      // Convert to array and sort by frequency
+      const coinArray = Array.from(coinFrequency.values())
+
+      // Separate coins appearing 2+ times and once
+      const multipleAppearances = coinArray
+        .filter(coin => coin.count >= 2)
+        .sort((a, b) => b.count - a.count)
+
+      const singleAppearances = coinArray
+        .filter(coin => coin.count === 1)
+        .sort((a, b) => (b.data.hotnessScore || 0) - (a.data.hotnessScore || 0))
+
+      // Combine: prioritize multiple appearances, then fill with single appearances
+      const allCoins = [...multipleAppearances, ...singleAppearances].map(coin => coin.data)
+
+      // If we have at least 5 coins, use this threshold
+      if (allCoins.length >= 5) {
+        finalCoins = allCoins.slice(0, 5)
+        console.log(`Using threshold ${threshold} - found ${allCoins.length} coins, showing top 5`)
+        break
+      } else if (threshold === 0) {
+        // Last threshold, use whatever we have
+        finalCoins = allCoins.slice(0, 5)
+        console.log(`Using threshold 0 (last resort) - found ${allCoins.length} coins`)
+      }
+    }
+
+    console.log('Final hot coins:', finalCoins)
+    return finalCoins
+  }, [transactions])
 
   return (
     <>
@@ -749,7 +879,7 @@ setISConnect(false)
               <span className="plan-btn flex items-center gap-1">
                 Slippage: <span style={{ color: "#EBEBEB" }}>5.00%</span>
               </span>
-              {isLoading&& <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
+              {isLoading && <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
                 <span>
                   <RiLoader2Fill
                     className={isLoadingQuote ? "animate-spin" : ""}
@@ -783,8 +913,8 @@ setISConnect(false)
                     <IoWalletOutline /> 0.00 Sol
                   </span>
                   <div className="d-flex align-items-center gap-1">
-                    <button className="halft-max-btn">Half</button>
-                    <button className="halft-max-btn">Max</button>
+                    <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
+                    <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
                   </div>
                 </div>
 
@@ -861,7 +991,7 @@ setISConnect(false)
                 <span className="trade-label">buying</span>
                 <span className="trade-label d-flex align-items-center gap-1">
 
-                  <IoWalletOutline /> 0.00 Usdc
+                  <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
                 </span>
               </div>
               <div className="trade-row">
@@ -907,10 +1037,10 @@ setISConnect(false)
               </div>
             </div> */}
 
-           <div>
-  {isSwapped ? (
-    <div className="trade-box trade-new-bx">
-              {/* <div className="swap-toggle-bx">
+            <div>
+              {isSwapped ? (
+                <div className="trade-box trade-new-bx">
+                  {/* <div className="swap-toggle-bx">
                 <button
                   onClick={handleSwapTokens}
                   className="swap-icon"
@@ -920,270 +1050,270 @@ setISConnect(false)
                   <RiArrowUpDownFill />
                 </button>
               </div> */}
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="trade-label">buying</span>
-                <span className="trade-label d-flex align-items-center gap-1">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <span className="trade-label">buying</span>
+                    <span className="trade-label d-flex align-items-center gap-1">
 
-                  <IoWalletOutline /> 0.00 Usdc
-                </span>
-              </div>
-              <div className="trade-row">
-                <button
-                  onClick={() => setIsOutputModalOpen(true)}
-                  className="plan-btn"
-                  type="button"
-                >
-                  <span className="dollar-pic-bx">
-                    <img
-                      src={outputToken.image || DefaultTokenImage}
-                      alt={outputToken.symbol}
-                      onError={(e) => {
-                        e.currentTarget.src = DefaultTokenImage
-                      }}
-                    />
-                  </span>
-                  <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
-                    {outputToken.symbol}
-                  </span>
-                  <FontAwesomeIcon icon={faChevronDown} />
-                </button>
-                <div className="amount-box">
-                  {isLoadingQuote ? (
-                    <div className="nw-skeleton">
-                      <div className="skeleton-amount mb-1"></div>
-                      <div className="skeleton-usd"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <h2>{outputAmount || "0.00"}</h2>
-                      <span>
-                        {outputAmount && parseFloat(outputAmount) > 0
-                          ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
-                          : "$0"}
+                      <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
+                    </span>
+                  </div>
+                  <div className="trade-row">
+                    <button
+                      onClick={() => setIsOutputModalOpen(true)}
+                      className="plan-btn"
+                      type="button"
+                    >
+                      <span className="dollar-pic-bx">
+                        <img
+                          src={outputToken.image || DefaultTokenImage}
+                          alt={outputToken.symbol}
+                          onError={(e) => {
+                            e.currentTarget.src = DefaultTokenImage
+                          }}
+                        />
                       </span>
-                    </>
-                  )}
-                </div>
+                      <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
+                        {outputToken.symbol}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronDown} />
+                    </button>
+                    <div className="amount-box">
+                      {isLoadingQuote ? (
+                        <div className="nw-skeleton">
+                          <div className="skeleton-amount mb-1"></div>
+                          <div className="skeleton-usd"></div>
+                        </div>
+                      ) : (
+                        <>
+                          <h2>{outputAmount || "0.00"}</h2>
+                          <span>
+                            {outputAmount && parseFloat(outputAmount) > 0
+                              ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                              : "$0"}
+                          </span>
+                        </>
+                      )}
+                    </div>
 
 
 
-              </div>
-     </div>
-  ) : (
-  
-    <div className="trade-box ">
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="trade-label">SELLING</span>
-                 <div className="d-flex align-items-center gap-1">
-                  <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Sol</span>
-                  <div className="d-flex align-items-center gap-1">
-                    <button className="halft-max-btn">Half</button>
-                  <button className="halft-max-btn">Max</button>
                   </div>
                 </div>
+              ) : (
 
-                {wallet.connected && (
-                  <span className="text-xs text-gray-400">
-                    Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
-                  </span>
-                )}
-              </div>
-              <div className="trade-row">
-                <button
-                  onClick={() => setIsInputModalOpen(true)}
-                  className="plan-btn"
-                  type="button"
-                >
-                  <span className="dollar-pic-bx">
-                    <img
-                      src={inputToken.image || DefaultTokenImage}
-                      alt={inputToken.symbol}
-                      onError={(e) => {
-                        e.currentTarget.src = DefaultTokenImage
-                      }}
-                    />
-                  </span>
-                  <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
-                    {inputToken.symbol}
-                  </span>
-                  <FontAwesomeIcon icon={faChevronDown} />
-                </button>
+                <div className="trade-box ">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <span className="trade-label">SELLING</span>
+                    <div className="d-flex align-items-center gap-1">
+                      <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}</span>
+                      <div className="d-flex align-items-center gap-1">
+                        <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
+                        <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
+                      </div>
+                    </div>
 
-                <div className="amount-box">
-                  <input
-                    type="number"
-                    value={inputAmount}
-                    onChange={(e) => handleInputAmountChange(e.target.value)}
-                    placeholder="0.00"
-                    className="amount-input main-amount"
-                    // disabled={!wallet.connected}
-                    min="0"
-                    step="any"
-                  />
-                  <div className="d-flex justify-content-end align-items-center">
-                    <span className="text-xs text-gray-400">
-                      {inputAmount && parseFloat(inputAmount) > 0
-                        ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
-                        : "$0"}
-                    </span>
-                    {wallet.connected && inputBalance > 0 && (
-                      <button
-                        onClick={handleMaxClick}
-                        className="text-xs text-blue-400 hover:text-blue-300 ml-2"
-                        type="button"
-                      >
-                        MAX
-                      </button>
+                    {wallet.connected && (
+                      <span className="text-xs text-gray-400">
+                        Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
+                      </span>
                     )}
                   </div>
-                </div>
-              </div>
-     </div>
-  )}
-  <div className="text-center my-2 swap-toggle-bx">
-    <button
-      type="button"
-      className="swap-icon"
-      onClick={handleToggleSwap}
-    >
-      ⇅
-    </button>
-  </div>
+                  <div className="trade-row">
+                    <button
+                      onClick={() => setIsInputModalOpen(true)}
+                      className="plan-btn"
+                      type="button"
+                    >
+                      <span className="dollar-pic-bx">
+                        <img
+                          src={inputToken.image || DefaultTokenImage}
+                          alt={inputToken.symbol}
+                          onError={(e) => {
+                            e.currentTarget.src = DefaultTokenImage
+                          }}
+                        />
+                      </span>
+                      <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
+                        {inputToken.symbol}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronDown} />
+                    </button>
 
-  {isSwapped ? (
-   
-    <div className="trade-box">
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="trade-label">SELLING</span>
-                 <div className="d-flex align-items-center gap-1">
-                  <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> 0.00 Sol</span>
-                  <div className="d-flex align-items-center gap-1">
-                    <button className="halft-max-btn">Half</button>
-                  <button className="halft-max-btn">Max</button>
+                    <div className="amount-box">
+                      <input
+                        type="number"
+                        value={inputAmount}
+                        onChange={(e) => handleInputAmountChange(e.target.value)}
+                        placeholder="0.00"
+                        className="amount-input main-amount"
+                        // disabled={!wallet.connected}
+                        min="0"
+                        step="any"
+                      />
+                      <div className="d-flex justify-content-end align-items-center">
+                        <span className="text-xs text-gray-400">
+                          {inputAmount && parseFloat(inputAmount) > 0
+                            ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
+                            : "$0"}
+                        </span>
+                        {wallet.connected && inputBalance > 0 && (
+                          <button
+                            onClick={handleMaxClick}
+                            className="text-xs text-blue-400 hover:text-blue-300 ml-2"
+                            type="button"
+                          >
+                            MAX
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-                {wallet.connected && (
-                  <span className="text-xs text-gray-400">
-                    Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
-                  </span>
-                )}
-              </div>
-              <div className="trade-row">
+              )}
+              <div className="text-center my-2 swap-toggle-bx">
                 <button
-                  onClick={() => setIsInputModalOpen(true)}
-                  className="plan-btn"
                   type="button"
+                  className="swap-icon"
+                  onClick={handleToggleSwap}
                 >
-                  <span className="dollar-pic-bx">
-                    <img
-                      src={inputToken.image || DefaultTokenImage}
-                      alt={inputToken.symbol}
-                      onError={(e) => {
-                        e.currentTarget.src = DefaultTokenImage
-                      }}
-                    />
-                  </span>
-                  <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
-                    {inputToken.symbol}
-                  </span>
-                  <FontAwesomeIcon icon={faChevronDown} />
+                  ⇅
                 </button>
+              </div>
 
-                <div className="amount-box">
-                  <input
-                    type="number"
-                    value={inputAmount}
-                    onChange={(e) => handleInputAmountChange(e.target.value)}
-                    placeholder="0.00"
-                    className="amount-input main-amount"
-                    // disabled={!wallet.connected}
-                    min="0"
-                    step="any"
-                  />
-                  <div className="d-flex justify-content-end align-items-center">
-                    <span className="text-xs text-gray-400">
-                      {inputAmount && parseFloat(inputAmount) > 0
-                        ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
-                        : "$0"}
-                    </span>
-                    {wallet.connected && inputBalance > 0 && (
-                      <button
-                        onClick={handleMaxClick}
-                        className="text-xs text-blue-400 hover:text-blue-300 ml-2"
-                        type="button"
-                      >
-                        MAX
-                      </button>
+              {isSwapped ? (
+
+                <div className="trade-box">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <span className="trade-label">SELLING</span>
+                    <div className="d-flex align-items-center gap-1">
+                      <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}</span>
+                      <div className="d-flex align-items-center gap-1">
+                        <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
+                        <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
+                      </div>
+                    </div>
+                    {wallet.connected && (
+                      <span className="text-xs text-gray-400">
+                        Balance: {inputBalance.toFixed(4)} {inputToken.symbol}
+                      </span>
                     )}
                   </div>
+                  <div className="trade-row">
+                    <button
+                      onClick={() => setIsInputModalOpen(true)}
+                      className="plan-btn"
+                      type="button"
+                    >
+                      <span className="dollar-pic-bx">
+                        <img
+                          src={inputToken.image || DefaultTokenImage}
+                          alt={inputToken.symbol}
+                          onError={(e) => {
+                            e.currentTarget.src = DefaultTokenImage
+                          }}
+                        />
+                      </span>
+                      <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
+                        {inputToken.symbol}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronDown} />
+                    </button>
+
+                    <div className="amount-box">
+                      <input
+                        type="number"
+                        value={inputAmount}
+                        onChange={(e) => handleInputAmountChange(e.target.value)}
+                        placeholder="0.00"
+                        className="amount-input main-amount"
+                        // disabled={!wallet.connected}
+                        min="0"
+                        step="any"
+                      />
+                      <div className="d-flex justify-content-end align-items-center">
+                        <span className="text-xs text-gray-400">
+                          {inputAmount && parseFloat(inputAmount) > 0
+                            ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
+                            : "$0"}
+                        </span>
+                        {wallet.connected && inputBalance > 0 && (
+                          <button
+                            onClick={handleMaxClick}
+                            className="text-xs text-blue-400 hover:text-blue-300 ml-2"
+                            type="button"
+                          >
+                            MAX
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+
+                <div className="trade-box trade-new-bx">
+                  {/* <div className="swap-toggle-bx">
+                <button
+                  onClick={handleSwapTokens}
+                  className="swap-icon"
+                  type="button"
+                  disabled={!wallet.connected}
+                >
+                  <RiArrowUpDownFill />
+                </button>
+              </div> */}
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <span className="trade-label">buying</span>
+                    <span className="trade-label d-flex align-items-center gap-1">
+
+                      <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
+                    </span>
+                  </div>
+                  <div className="trade-row">
+                    <button
+                      onClick={() => setIsOutputModalOpen(true)}
+                      className="plan-btn"
+                      type="button"
+                    >
+                      <span className="dollar-pic-bx">
+                        <img
+                          src={outputToken.image || DefaultTokenImage}
+                          alt={outputToken.symbol}
+                          onError={(e) => {
+                            e.currentTarget.src = DefaultTokenImage
+                          }}
+                        />
+                      </span>
+                      <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
+                        {outputToken.symbol}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronDown} />
+                    </button>
+                    <div className="amount-box">
+                      {isLoadingQuote ? (
+                        <div className="nw-skeleton">
+                          <div className="skeleton-amount mb-1"></div>
+                          <div className="skeleton-usd"></div>
+                        </div>
+                      ) : (
+                        <>
+                          <h2>{outputAmount || "0.00"}</h2>
+                          <span>
+                            {outputAmount && parseFloat(outputAmount) > 0
+                              ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
+                              : "$0"}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+
+
+                  </div>
+                </div>
+              )}
+
             </div>
-  ) : (
-   
-    <div className="trade-box trade-new-bx">
-              {/* <div className="swap-toggle-bx">
-                <button
-                  onClick={handleSwapTokens}
-                  className="swap-icon"
-                  type="button"
-                  disabled={!wallet.connected}
-                >
-                  <RiArrowUpDownFill />
-                </button>
-              </div> */}
-              <div className="d-flex justify-content-between align-items-center mb-1">
-                <span className="trade-label">buying</span>
-                <span className="trade-label d-flex align-items-center gap-1">
-
-                  <IoWalletOutline /> 0.00 Usdc
-                </span>
-              </div>
-              <div className="trade-row">
-                <button
-                  onClick={() => setIsOutputModalOpen(true)}
-                  className="plan-btn"
-                  type="button"
-                >
-                  <span className="dollar-pic-bx">
-                    <img
-                      src={outputToken.image || DefaultTokenImage}
-                      alt={outputToken.symbol}
-                      onError={(e) => {
-                        e.currentTarget.src = DefaultTokenImage
-                      }}
-                    />
-                  </span>
-                  <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
-                    {outputToken.symbol}
-                  </span>
-                  <FontAwesomeIcon icon={faChevronDown} />
-                </button>
-                <div className="amount-box">
-                  {isLoadingQuote ? (
-                    <div className="nw-skeleton">
-                      <div className="skeleton-amount mb-1"></div>
-                      <div className="skeleton-usd"></div>
-                    </div>
-                  ) : (
-                    <>
-                      <h2>{outputAmount || "0.00"}</h2>
-                      <span>
-                        {outputAmount && parseFloat(outputAmount) > 0
-                          ? `~$${(parseFloat(outputAmount) * 1).toFixed(2)}`
-                          : "$0"}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-
-
-              </div>
-     </div>
-  )}
-
-        </div>
 
 
             {/* <div>
@@ -1304,16 +1434,16 @@ setISConnect(false)
             </div>}
 
 
-{/* Execute Btn */}
-{ isConnect && <button className="execute-btn loading mt-2">
-  <span className="btn-text executing-text">
-    EXECUTING TRANSACTION<span className="dots"></span>
-  </span>
-  <span className="excute-corner top-left"></span>
-  <span className="excute-corner top-right"></span>
-  <span className="excute-corner bottom-right"></span>
-  <span className="excute-corner bottom-left"></span>
-</button>}
+            {/* Execute Btn */}
+            {isConnect && <button className="execute-btn loading mt-2">
+              <span className="btn-text executing-text">
+                EXECUTING TRANSACTION<span className="dots"></span>
+              </span>
+              <span className="excute-corner top-left"></span>
+              <span className="excute-corner top-right"></span>
+              <span className="excute-corner bottom-right"></span>
+              <span className="excute-corner bottom-left"></span>
+            </button>}
 
 
 
@@ -1451,210 +1581,68 @@ setISConnect(false)
       {/* Hot KOL Coins */}
       <div className="market-bx ultra-pro-bx nw-market-bx">
         <div className="py-2">
-          <span className="trading-icon-title">HOT KOL COINS</span>
+          <span className="trading-icon-title">{pageType === 'kol' ? 'HOT KOL COINS' : 'HOT COINS'}</span>
         </div>
         <div className="hot-coins-card">
-          {/* These would be populated from API in production */}
-          <div className="coin-row">
-            <div className="coin-left">
-              <span className="rank">#1</span>
-              <img
-                src="/hot-coin.png"
-                className="coin-img"
-                alt="coin"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none"
-                }}
-              />
-              <div className="coin-info">
-                <div className="coin-title">
-                  <span className="coin-name">TRUMP</span>
-                  <span className="coin-sub">OFFICIAL TRUMP</span>
-                  <span className="nw-coin-badge">
-                    <IoMdTrendingUp /> 2.10%
-                  </span>
+          {hotCoins.length > 0 ? (
+            hotCoins.map((coin, index) => (
+              <div className="coin-row" key={coin.address || index}>
+                <div className="coin-left">
+                  <span className="rank">#{index + 1}</span>
+                  {coin.image ? (
+                    <img
+                      src={coin.image}
+                      className="coin-img"
+                      alt={coin.symbol}
+                      onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                        e.currentTarget.src = DefaultTokenImage
+                      }}
+                    />
+                  ) : (
+                    <div className="coin-circle">
+                      <span>{coin.symbol?.charAt(0) || '?'}</span>
+                    </div>
+                  )}
+                  <div className="coin-info">
+                    <div className="coin-title">
+                      <span className="coin-name">{coin.symbol || 'Unknown'}</span>
+                      <span className="coin-sub">{coin.name || coin.symbol}</span>
+                      <span className="nw-coin-badge">
+                        <IoMdTrendingUp /> {coin.hotnessScore || 0}
+                      </span>
+                    </div>
+                    <div className="coin-meta">
+                      MC: ${coin.marketCap ? (parseFloat(coin.marketCap) / 1000000).toFixed(2) : '0'}M
+                    </div>
+                  </div>
                 </div>
-                <div className="coin-meta">MC: $1.40B / AGE: 10M</div>
+                <button
+                  className="quick-buy-btn"
+                  onClick={() =>
+                    handleQuickBuy({
+                      address: coin.address,
+                      symbol: coin.symbol,
+                      name: coin.name,
+                      decimals: 9, // Default decimals for Solana tokens
+                    })
+                  }
+                  aria-label={`Quick buy ${coin.symbol} token`}
+                  title={`Quick buy this token`}
+                  disabled={
+                    !wallet.connected ||
+                    !inputAmount ||
+                    parseFloat(inputAmount) <= 0
+                  }
+                >
+                  QUICK BUY
+                </button>
               </div>
+            ))
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5 }}>
+              No hot coins available
             </div>
-            <button
-              className="quick-buy-btn"
-              onClick={() =>
-                handleQuickBuy({
-                  // Placeholder token - TRUMP (using a real token address for testing)
-                  address: "HaP8r3ksG76PhQLTqR8FYBeNiQpejcFbQmiHbg787Ut1", // Example token address
-                  symbol: "TRUMP",
-                  name: "OFFICIAL TRUMP",
-                  decimals: 9,
-                })
-              }
-              aria-label="Quick buy TRUMP token"
-              title="Quick buy this token"
-              disabled={
-                !wallet.connected ||
-                !inputAmount ||
-                parseFloat(inputAmount) <= 0
-              }
-            >
-              QUICK BUY
-            </button>
-          </div>
-          <div className="coin-row">
-            <div className="coin-left">
-              <span className="rank">#2</span>
-              <div className="coin-circle">
-                <span>S</span>
-              </div>
-              <div className="coin-info">
-                <div className="coin-title">
-                  <span className="coin-name">SOLO</span>
-                  <span className="coin-sub">SOLOMON</span>
-                  <span className=" nw-coin-badge">
-                    <IoMdTrendingUp /> 2.10%
-                  </span>
-                </div>
-                <div className="coin-meta">MC: $23.8M / AGE: 19H</div>
-              </div>
-            </div>
-            <button
-              className="quick-buy-btn"
-              onClick={() =>
-                handleQuickBuy({
-                  // Placeholder token - SOLO (keeping USDC as a valid different token)
-                  address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // USDC address
-                  symbol: "SOLO",
-                  name: "SOLOMON",
-                  decimals: 6,
-                })
-              }
-              aria-label="Quick buy SOLO token"
-              title="Quick buy this token"
-              disabled={
-                !wallet.connected ||
-                !inputAmount ||
-                parseFloat(inputAmount) <= 0
-              }
-            >
-              QUICK BUY
-            </button>
-          </div>
-          <div className="coin-row">
-            <div className="coin-left">
-              <span className="rank">#3</span>
-              <div className="coin-circle">
-                <span>J</span>
-              </div>
-              <div className="coin-info">
-                <div className="coin-title">
-                  <span className="coin-name">JAZZ</span>
-                  <span className="coin-sub">JAZZ HANDS</span>
-                  <span className="coin-badge down">
-                    <FontAwesomeIcon icon={faArrowTrendDown} /> 1.50%
-                  </span>
-                </div>
-                <div className="coin-meta">MC: $5.2M / AGE: 3D</div>
-              </div>
-            </div>
-            <button
-              className="quick-buy-btn"
-              onClick={() =>
-                handleQuickBuy({
-                  // Placeholder token - JAZZ (using BONK as example)
-                  address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", // BONK address
-                  symbol: "JAZZ",
-                  name: "JAZZ HANDS",
-                  decimals: 5,
-                })
-              }
-              aria-label="Quick buy JAZZ token"
-              title="Quick buy this token"
-              disabled={
-                !wallet.connected ||
-                !inputAmount ||
-                parseFloat(inputAmount) <= 0
-              }
-            >
-              QUICK BUY
-            </button>
-          </div>
-          <div className="coin-row">
-            <div className="coin-left">
-              <span className="rank">#4</span>
-              <div className="coin-circle">
-                <span>P</span>
-              </div>
-              <div className="coin-info">
-                <div className="coin-title">
-                  <span className="coin-name">PIXEL</span>
-                  <span className="coin-sub">PIXEL PALS</span>
-                  <span className="nw-coin-badge">
-                    <IoMdTrendingUp /> 3.20%
-                  </span>
-                </div>
-                <div className="coin-meta">MC: $12.4M / AGE: 2W</div>
-              </div>
-            </div>
-            <button
-              className="quick-buy-btn"
-              onClick={() =>
-                handleQuickBuy({
-                  // Placeholder token - PIXEL (using WIF as example)
-                  address: "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm", // WIF address
-                  symbol: "PIXEL",
-                  name: "PIXEL PALS",
-                  decimals: 6,
-                })
-              }
-              aria-label="Quick buy PIXEL token"
-              title="Quick buy this token"
-              disabled={
-                !wallet.connected ||
-                !inputAmount ||
-                parseFloat(inputAmount) <= 0
-              }
-            >
-              QUICK BUY
-            </button>
-          </div>
-          <div className="coin-row">
-            <div className="coin-left">
-              <span className="rank">#5</span>
-              <div className="coin-circle">
-                <span>G</span>
-              </div>
-              <div className="coin-info">
-                <div className="coin-title">
-                  <span className="coin-name">GXY</span>
-                  <span className="coin-sub">GALAXY</span>
-                  <span className="nw-coin-badge">
-                    <IoMdTrendingUp /> 2.00%
-                  </span>
-                </div>
-                <div className="coin-meta">MC: $8.1M / AGE: 1M</div>
-              </div>
-            </div>
-            <button
-              className="quick-buy-btn"
-              onClick={() =>
-                handleQuickBuy({
-                  // Placeholder token - GXY (using POPCAT as example)
-                  address: "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr", // POPCAT address
-                  symbol: "GXY",
-                  name: "GALAXY",
-                  decimals: 9,
-                })
-              }
-              aria-label="Quick buy GXY token"
-              title="Quick buy this token"
-              disabled={
-                !wallet.connected ||
-                !inputAmount ||
-                parseFloat(inputAmount) <= 0
-              }
-            >
-              QUICK BUY
-            </button>
-          </div>
+          )}
         </div>
       </div>
 

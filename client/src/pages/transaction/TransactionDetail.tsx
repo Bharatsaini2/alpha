@@ -149,14 +149,14 @@ const TransactionDetail = () => {
       setTokenInAmountDisplay({
         value: isUSD ? parseFloat(transactionData.solAmount.sellSolAmount).toFixed(4) : parseFloat(transactionData.transaction.tokenIn.usdAmount).toLocaleString(),
         currency: isUSD ? "SOL" : "USD",
-        symbol: isUSD ? "SOL" : "$",
+        symbol: isUSD ? "" : "$",
       })
     } else {
       const isUSD = tokenOutAmountDisplay.currency === "USD"
       setTokenOutAmountDisplay({
         value: isUSD ? parseFloat(transactionData.solAmount.buySolAmount).toFixed(4) : parseFloat(transactionData.transaction.tokenOut.usdAmount).toLocaleString(),
         currency: isUSD ? "SOL" : "USD",
-        symbol: isUSD ? "SOL" : "$",
+        symbol: isUSD ? "" : "$",
       })
     }
   }
@@ -167,7 +167,7 @@ const TransactionDetail = () => {
     setDetailsAmountDisplay({
       value: isUSD ? parseFloat(transactionData.solAmount.buySolAmount).toFixed(4) : parseFloat(transactionData.transaction.tokenOut.usdAmount).toLocaleString(),
       currency: isUSD ? "SOL" : "USD",
-      symbol: isUSD ? "SOL" : "$",
+      symbol: isUSD ? "" : "$",
     })
   }
 
@@ -178,10 +178,10 @@ const TransactionDetail = () => {
 
   const handleQuickBuy = () => {
     if (!transactionData) return
-    
+
     // Load quick buy amount from storage
     const quickBuyAmount = loadQuickBuyAmount() || "100"
-    
+
     // Validate quick buy amount
     const validation = validateQuickBuyAmount(quickBuyAmount)
     if (!validation.isValid) {
@@ -194,7 +194,7 @@ const TransactionDetail = () => {
       showToast("Please connect your wallet to continue", "error")
       return
     }
-    
+
     // Extract token info from transaction data
     const isBuy = transactionType === "buy"
     const tokenInfo = {
@@ -204,7 +204,7 @@ const TransactionDetail = () => {
       image: isBuy ? transactionData.transaction.tokenOut.imageUrl : transactionData.transaction.tokenIn.imageUrl,
       decimals: 9, // Default for most Solana tokens
     }
-    
+
     // Open SwapModal in 'quickBuy' mode with SOL as input token
     setSwapTokenInfo(tokenInfo)
     setIsSwapModalOpen(true)
@@ -243,7 +243,7 @@ const TransactionDetail = () => {
         onCopy={handleCopy}
         onQuickBuy={handleQuickBuy}
       />
-      
+
       <SwapModal
         isOpen={isSwapModalOpen}
         onClose={() => {
@@ -261,7 +261,7 @@ const TransactionDetail = () => {
         initialOutputToken={swapTokenInfo}
         initialAmount={loadQuickBuyAmount() || "100"}
       />
-      
+
       <ToastContainer />
     </div>
   )

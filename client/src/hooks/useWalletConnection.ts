@@ -1,15 +1,15 @@
 import { useState, useCallback, useEffect } from "react"
 import { useAppKit, useAppKitAccount, useAppKitProvider } from "@reown/appkit/react"
-import { 
-  PublicKey, 
-  Transaction, 
+import {
+  PublicKey,
+  Transaction,
   VersionedTransaction,
   LAMPORTS_PER_SOL,
   Connection
 } from "@solana/web3.js"
-import { 
-  getAssociatedTokenAddress, 
-  getAccount, 
+import {
+  getAssociatedTokenAddress,
+  getAccount,
   TokenAccountNotFoundError,
   TokenInvalidAccountOwnerError
 } from "@solana/spl-token"
@@ -56,7 +56,7 @@ export const useWalletConnection = (): UseWalletConnection => {
   const { open } = useAppKit()
   const { address, isConnected, status } = useAppKitAccount()
   const { walletProvider } = useAppKitProvider<any>("solana")
-  
+
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<WalletConnectionError | null>(null)
 
@@ -89,14 +89,14 @@ export const useWalletConnection = (): UseWalletConnection => {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       await open()
     } catch (err: any) {
       console.error("Wallet connection error:", err)
-      
+
       let errorMessage = "Failed to connect wallet"
       let errorCode = "CONNECTION_FAILED"
-      
+
       if (err.name === "WalletNotReadyError") {
         errorMessage = "Wallet is not ready. Please install or unlock your wallet."
         errorCode = "WALLET_NOT_READY"
@@ -110,13 +110,13 @@ export const useWalletConnection = (): UseWalletConnection => {
         errorMessage = "Connection cancelled by user"
         errorCode = "USER_REJECTED"
       }
-      
+
       setError({
         code: errorCode,
         message: errorMessage,
         details: err
       })
-      
+
       throw err
     } finally {
       setIsLoading(false)
@@ -130,17 +130,17 @@ export const useWalletConnection = (): UseWalletConnection => {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       await open({ view: "Account" })
     } catch (err: any) {
       console.error("Wallet disconnection error:", err)
-      
+
       setError({
         code: "DISCONNECTION_FAILED",
         message: "Failed to disconnect wallet",
         details: err
       })
-      
+
       throw err
     } finally {
       setIsLoading(false)
@@ -154,7 +154,7 @@ export const useWalletConnection = (): UseWalletConnection => {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       if (!publicKey || !isConnected) {
         throw new Error("Wallet not connected")
       }
@@ -179,7 +179,7 @@ export const useWalletConnection = (): UseWalletConnection => {
 
       // Wait for confirmation
       const confirmation = await connection.confirmTransaction(signature, "confirmed")
-      
+
       if (confirmation.value.err) {
         throw new Error(`Transaction failed: ${confirmation.value.err}`)
       }
@@ -187,10 +187,10 @@ export const useWalletConnection = (): UseWalletConnection => {
       return signature
     } catch (err: any) {
       console.error("Transaction error:", err)
-      
+
       let errorMessage = "Transaction failed"
       let errorCode = "TRANSACTION_FAILED"
-      
+
       if (err.message?.includes("User rejected")) {
         errorMessage = "Transaction cancelled by user"
         errorCode = "USER_REJECTED"
@@ -201,13 +201,13 @@ export const useWalletConnection = (): UseWalletConnection => {
         errorMessage = "Transaction expired. Please try again."
         errorCode = "TRANSACTION_EXPIRED"
       }
-      
+
       setError({
         code: errorCode,
         message: errorMessage,
         details: err
       })
-      
+
       throw err
     } finally {
       setIsLoading(false)
@@ -228,19 +228,50 @@ export const useWalletConnection = (): UseWalletConnection => {
         const balance = await connection.getBalance(publicKey)
         return balance / LAMPORTS_PER_SOL
       } else {
-        // Get token balance
-        const tokenBalance = await getTokenBalance(tokenMint)
-        return tokenBalance?.uiAmount || 0
+        // Get token balance - inline logic to avoid circular dependency
+        try {
+          const mintPublicKey = new PublicKey(tokenMint)
+
+          // Get associated token account address
+          const associatedTokenAddress = await getAssociatedTokenAddress(
+            mintPublicKey,
+            publicKey
+          )
+
+          try {
+            // Get token account info
+            const tokenAccount = await getAccount(connection, associatedTokenAddress)
+
+            // Get mint info to determine decimals
+            const mintInfo = await connection.getParsedAccountInfo(mintPublicKey)
+            const decimals = (mintInfo.value?.data as any)?.parsed?.info?.decimals || 0
+
+            const balance = Number(tokenAccount.amount)
+            const uiAmount = balance / Math.pow(10, decimals)
+
+            return uiAmount
+          } catch (err: any) {
+            if (err instanceof TokenAccountNotFoundError ||
+              err instanceof TokenInvalidAccountOwnerError) {
+              // Token account doesn't exist, balance is 0
+              return 0
+            }
+            throw err
+          }
+        } catch (err: any) {
+          console.error("Error fetching token balance:", err)
+          return 0
+        }
       }
     } catch (err: any) {
       console.error("Error fetching balance:", err)
-      
+
       setError({
         code: "BALANCE_FETCH_FAILED",
         message: "Failed to fetch wallet balance",
         details: err
       })
-      
+
       return 0
     }
   }, [publicKey, isConnected, connection])
@@ -255,7 +286,7 @@ export const useWalletConnection = (): UseWalletConnection => {
       }
 
       const mintPublicKey = new PublicKey(tokenMint)
-      
+
       // Get associated token account address
       const associatedTokenAddress = await getAssociatedTokenAddress(
         mintPublicKey,
@@ -265,14 +296,14 @@ export const useWalletConnection = (): UseWalletConnection => {
       try {
         // Get token account info
         const tokenAccount = await getAccount(connection, associatedTokenAddress)
-        
+
         // Get mint info to determine decimals
         const mintInfo = await connection.getParsedAccountInfo(mintPublicKey)
         const decimals = (mintInfo.value?.data as any)?.parsed?.info?.decimals || 0
-        
+
         const balance = Number(tokenAccount.amount)
         const uiAmount = balance / Math.pow(10, decimals)
-        
+
         return {
           mint: tokenMint,
           balance,
@@ -280,8 +311,8 @@ export const useWalletConnection = (): UseWalletConnection => {
           uiAmount
         }
       } catch (err: any) {
-        if (err instanceof TokenAccountNotFoundError || 
-            err instanceof TokenInvalidAccountOwnerError) {
+        if (err instanceof TokenAccountNotFoundError ||
+          err instanceof TokenInvalidAccountOwnerError) {
           // Token account doesn't exist, balance is 0
           return {
             mint: tokenMint,
@@ -294,13 +325,13 @@ export const useWalletConnection = (): UseWalletConnection => {
       }
     } catch (err: any) {
       console.error("Error fetching token balance:", err)
-      
+
       setError({
         code: "TOKEN_BALANCE_FETCH_FAILED",
         message: `Failed to fetch balance for token ${tokenMint}`,
         details: err
       })
-      
+
       return null
     }
   }, [publicKey, isConnected, connection])
@@ -345,13 +376,13 @@ export const useWalletConnection = (): UseWalletConnection => {
       return balances
     } catch (err: any) {
       console.error("Error fetching all token balances:", err)
-      
+
       setError({
         code: "ALL_BALANCES_FETCH_FAILED",
         message: "Failed to fetch wallet token balances",
         details: err
       })
-      
+
       return []
     }
   }, [publicKey, isConnected, connection])
