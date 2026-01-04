@@ -488,7 +488,7 @@ export const trackTrade = catchAsyncErrors(
     } = req.body
 
     // Just log for monitoring - no database storage needed
-    logger.info({
+    logger.info('Trade completed successfully', {
       operation: 'trackTrade',
       signature,
       walletAddress,
@@ -498,7 +498,7 @@ export const trackTrade = catchAsyncErrors(
       outputAmount,
       platformFee,
       timestamp: new Date().toISOString(),
-    }, 'Trade completed successfully')
+    })
 
     res.status(200).json({
       success: true,

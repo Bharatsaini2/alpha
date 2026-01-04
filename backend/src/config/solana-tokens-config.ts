@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 import { Metaplex, PublicKey } from '@metaplex-foundation/js'
 import { Connection } from '@solana/web3.js'
 import logger from '../utils/logger'
+import { redisClient } from './redis'
 dotenv.config()
 
 const BIRD_EYE_API_KEY =
@@ -225,7 +226,7 @@ export async function getTokenCreationInfo(tokenAddress: string) {
       return cached
     }
   } catch (error) {
-    logger.warn(`Redis cache read failed for ${cacheKey}:`, error)
+    logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
   }
 
   console.log('🔴 Birdeye API call (creation):', tokenAddress)
@@ -247,7 +248,7 @@ export async function getTokenCreationInfo(tokenAddress: string) {
       try {
         await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, creationTime)
       } catch (error) {
-        logger.warn(`Redis cache write failed for ${cacheKey}:`, error)
+        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
       }
     }
     
@@ -271,7 +272,7 @@ export async function getTokenMarketCapAndPriceUsingBirdEye(
       return JSON.parse(cached)
     }
   } catch (error) {
-    logger.warn(`Redis cache read failed for ${cacheKey}:`, error)
+    logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
   }
 
   console.log('🔴 Birdeye API call (market):', tokenAddress)
@@ -293,7 +294,7 @@ export async function getTokenMarketCapAndPriceUsingBirdEye(
       try {
         await redisClient.setex(cacheKey, 60, JSON.stringify(data))
       } catch (error) {
-        logger.warn(`Redis cache write failed for ${cacheKey}:`, error)
+        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
       }
     }
     
@@ -318,7 +319,7 @@ export async function getTokenImageUrl(tokenAddress: string) {
       return cached
     }
   } catch (error) {
-    logger.warn(`Redis cache read failed for ${cacheKey}:`, error)
+    logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
   }
 
   console.log('🔴 Birdeye API call (image):', tokenAddress)
@@ -340,7 +341,7 @@ export async function getTokenImageUrl(tokenAddress: string) {
       try {
         await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, imageUrl)
       } catch (error) {
-        logger.warn(`Redis cache write failed for ${cacheKey}:`, error)
+        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
       }
     }
     
