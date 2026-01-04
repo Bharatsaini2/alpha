@@ -1151,13 +1151,26 @@ const processInfluencerSignature = async (
 
     logger.info(`TX Type KOL: ${parsedTx.result?.type}`)
 
-    const txType: any = parsedTx?.result?.type
-    if (!parsedTx.success || (txType !== 'SWAP' && txType !== 'SWAP2')) {
+    // Check if transaction succeeded
+    if (!parsedTx.success) {
+      logger.info(`KOL [Filter] Skipping ${signature}: Transaction failed`)
+      return
+    }
+
+    // Instead of checking transaction type, check for swap indicators
+    const tokenBalanceChanges = parsedTx.result?.token_balance_changes || []
+    const hasSwapIndicators = tokenBalanceChanges.length >= 2
+
+    if (!hasSwapIndicators) {
       logger.info(
-        `KOL [Filter] Skipping ${signature}: Not a successful SWAP transaction according to Shyft.`,
+        `KOL [Filter] Skipping ${signature}: No swap indicators found (${tokenBalanceChanges.length} balance changes)`,
       )
       return
     }
+
+    logger.info(
+      `✅ Swap detected via token balance changes (${tokenBalanceChanges.length} changes)`,
+    )
 
     const actions = parsedTx?.result?.actions
 

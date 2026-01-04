@@ -185,7 +185,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         .then(safetyInfo => {
           setTokenSafetyInfo(safetyInfo)
         })
-        .catch(() => {
+        .catch(error => {
+          console.error('Failed to fetch token safety info:', error)
           // Set default safe values on error
           setTokenSafetyInfo({
             liquidity: 'Healthy',
@@ -209,6 +210,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       const balance = await getBalance()
       setSolBalance(balance)
     } catch (error) {
+      console.error("Failed to fetch SOL balance:", error)
       setSolBalance(0)
     }
   }, [getBalance])
@@ -229,6 +231,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       )
       setInputBalance(balance)
     } catch (error) {
+      console.error("Failed to fetch balance:", error)
       setInputBalance(0)
     }
   }, [getBalance, inputToken.address])
@@ -247,12 +250,22 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   }, [])
 
   const fetchQuote = useCallback(async () => {
+    // Log quote fetch for monitoring (Requirement 10.5)
+    console.log('[QuickBuy] Fetching quote:', {
+      mode,
+      inputAmount,
+      inputToken: inputToken.symbol,
+      outputToken: outputToken.symbol,
+      timestamp: new Date().toISOString()
+    })
+    
     try {
       const amount = parseFloat(inputAmount)
       if (isNaN(amount) || amount <= 0) return
 
       // Validate that input and output tokens are different
       if (inputToken.address === outputToken.address) {
+        console.error("Cannot swap: input and output tokens are the same")
         setQuote(null)
         setOutputAmount("")
         showToast("Cannot swap the same token. Please select a different token.", "error")
@@ -275,6 +288,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       // Validate outAmount is a valid number string
       if (!outAmountRaw || isNaN(Number(outAmountRaw))) {
+        console.error("Invalid outAmount in quote response:", outAmountRaw)
         setOutputAmount("0.00")
         showToast("Invalid quote response. Please try again.", "error")
         return
@@ -284,6 +298,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       // Validate calculated amount
       if (isNaN(outAmount) || !isFinite(outAmount)) {
+        console.error("Invalid calculated output amount:", outAmount)
         setOutputAmount("0.00")
         showToast("Invalid quote calculation. Please try again.", "error")
         return
@@ -291,6 +306,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       setOutputAmount(outAmount.toFixed(6))
     } catch (error: any) {
+      console.error("Failed to fetch quote:", error)
       setQuote(null)
       setOutputAmount("")
       showToast(error.message || "Failed to fetch quote", "error")
@@ -302,6 +318,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     if (mode === 'quickBuy' && isOpen && !hasInitialQuote && inputAmount && parseFloat(inputAmount) > 0) {
       // Validate tokens are different (prevent same token swap)
       if (inputToken.address === outputToken.address) {
+        console.error("Cannot swap: input and output tokens are the same")
         setQuote(null)
         setOutputAmount("")
         showToast("Cannot swap the same token. Please select a different token.", "error")
@@ -432,6 +449,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       } catch (clipboardError) {
         // Requirement 16.3: Handle clipboard access failures gracefully
         // If clipboard fails, still show success but inform user to copy manually
+        console.error("Failed to copy to clipboard:", clipboardError)
         showToast("Transaction successful! Click the copy button to copy signature.", "success")
       }
 
@@ -462,6 +480,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           platformFee,
         })
       } catch (trackError) {
+        // Log errors but don't display them to user (Requirement 21.4)
+        console.error('Failed to track trade:', trackError)
         // Track trades even if tracking request fails (Requirement 21.5)
         // Continue execution without affecting user experience
       }
@@ -533,6 +553,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       await navigator.clipboard.writeText(text)
       showToast(message, 'success')
     } catch (error) {
+      console.error('Failed to copy to clipboard:', error)
       showToast('Failed to copy to clipboard', 'error')
     }
   }
@@ -542,6 +563,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       await navigator.clipboard.writeText(transactionSignature)
       showToast('Transaction signature copied to clipboard', 'success')
     } catch (error) {
+      console.error('Failed to copy signature to clipboard:', error)
       showToast('Failed to copy. Please copy manually from the text below.', 'error')
     }
   }

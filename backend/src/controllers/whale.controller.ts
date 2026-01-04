@@ -852,13 +852,26 @@ const processSignature = async (signatureJson: any): Promise<void> => {
 
     logger.info(`TX Type Whale: ${parsedTx.result?.type}`)
 
-    const txType: any = parsedTx?.result?.type
-    if (!parsedTx.success || (txType !== 'SWAP' && txType !== 'SWAP2')) {
+    // Check if transaction succeeded
+    if (!parsedTx.success) {
+      logger.info(`Whale [Filter] Skipping ${signature}: Transaction failed`)
+      return
+    }
+
+    // Instead of checking transaction type, check for swap indicators
+    const tokenBalanceChanges = parsedTx.result?.token_balance_changes || []
+    const hasSwapIndicators = tokenBalanceChanges.length >= 2
+
+    if (!hasSwapIndicators) {
       logger.info(
-        `Whale [Filter] Skipping ${signature}: Not a successful SWAP or SWAP2 transaction according to Shyft.`,
+        `Whale [Filter] Skipping ${signature}: No swap indicators found (${tokenBalanceChanges.length} balance changes)`,
       )
       return
     }
+
+    logger.info(
+      `✅ Swap detected via token balance changes (${tokenBalanceChanges.length} changes)`,
+    )
 
     const actions = parsedTx?.result?.actions
 
