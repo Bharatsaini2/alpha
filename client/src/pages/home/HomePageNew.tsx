@@ -256,7 +256,7 @@ const HomePageNew = () => {
     const [searchQuery, setSearchQuery] = useState("")
     const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
     const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
-    const { showToast, ToastContainer } = useToast()
+    const { showToast } = useToast()
     const { wallet } = useWalletConnection()
     const navigate = useNavigate()
 
@@ -834,8 +834,8 @@ const HomePageNew = () => {
                 <div className="row">
                     {/* Right Sidebar - Shows first on mobile, second on desktop */}
                     <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
-                        <RightSidebarNew 
-                            pageType="alpha" 
+                        <RightSidebarNew
+                            pageType="alpha"
                             transactions={transactions}
                             quickBuyAmount={quickBuyAmount}
                         />
@@ -1684,7 +1684,7 @@ const HomePageNew = () => {
                 initialAmount={quickBuyAmount}
             />
 
-            <ToastContainer />
+
         </>
     )
 }

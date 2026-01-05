@@ -22,7 +22,6 @@ import { IoMdTrendingUp } from "react-icons/io"
 import { RiArrowUpDownFill } from "react-icons/ri"
 import { IoWalletOutline } from "react-icons/io5"
 import SwapModal from "../../components/swap/SwapModal"
-import { useAuth } from "../../contexts/AuthContext"
 
 // import { MdOutlineCheckBox } from "react-icons/md";
 
@@ -68,9 +67,6 @@ const RightSidebarNew = ({
     error: walletError,
   } = useWalletConnection()
 
-  // Auth hook for login modal
-  const { openLoginModal } = useAuth()
-
   // Swap API hook
   const {
     getQuote,
@@ -83,7 +79,7 @@ const RightSidebarNew = ({
   } = useSwapApi()
 
   // Toast notifications
-  const { showToast, ToastContainer } = useToast()
+  const { showToast } = useToast()
 
   // State management
   const [inputToken, setInputToken] = useState<TokenInfo>(DEFAULT_INPUT_TOKEN)
@@ -286,11 +282,11 @@ const RightSidebarNew = ({
     }
   }, [inputAmount, inputToken, outputToken, slippage, getQuote, showToast])
 
-  // Handle wallet connection - opens login modal for authentication
+  // Handle wallet connection - opens standard wallet modal
   const handleConnectWallet = useCallback(async () => {
-    // Open the login modal which handles both authentication and wallet connection
-    openLoginModal()
-  }, [openLoginModal])
+    // Open the standard wallet modal
+    await connect()
+  }, [connect])
 
   // Handle token selection
   const handleInputTokenSelect = useCallback(
@@ -654,7 +650,7 @@ const RightSidebarNew = ({
     async (token: any) => {
       console.log('Quick Buy clicked:', token)
       console.log('Quick Buy Amount:', quickBuyAmount)
-      
+
       if (!wallet.connected) {
         showToast("Please connect your wallet first", "error")
         return
@@ -927,7 +923,7 @@ const RightSidebarNew = ({
   return (
     <>
       {/* Toast Container */}
-      <ToastContainer />
+
 
       {/* Token Selection Modals */}
       <TokenSelectionModal
@@ -964,9 +960,7 @@ const RightSidebarNew = ({
               </a>
             </div>
             <div className="d-flex align-items-center gap-2">
-              <span className="plan-btn flex items-center gap-1">
-                Slippage: <span style={{ color: "#EBEBEB" }}>5.00%</span>
-              </span>
+
               {isLoading && <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
                 <span>
                   <RiLoader2Fill
@@ -1043,15 +1037,7 @@ const RightSidebarNew = ({
                         ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
                         : "$0"}
                     </span>
-                    {wallet.connected && inputBalance > 0 && (
-                      <button
-                        onClick={handleMaxClick}
-                        className="text-xs text-blue-400 hover:text-blue-300 ml-2"
-                        type="button"
-                      >
-                        MAX
-                      </button>
-                    )}
+
                   </div>
                 </div>
               </div>
@@ -1233,15 +1219,7 @@ const RightSidebarNew = ({
                                 ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
                                 : "$0"}
                             </span>
-                            {wallet.connected && inputBalance > 0 && (
-                              <button
-                                onClick={handleMaxClick}
-                                className="text-xs text-blue-400 hover:text-blue-300 ml-2"
-                                type="button"
-                              >
-                                MAX
-                              </button>
-                            )}
+
                           </div>
                         </div>
                       </div>
@@ -1300,15 +1278,7 @@ const RightSidebarNew = ({
                                 ? `~$${(parseFloat(inputAmount) * 1).toFixed(2)}`
                                 : "$0"}
                             </span>
-                            {wallet.connected && inputBalance > 0 && (
-                              <button
-                                onClick={handleMaxClick}
-                                className="text-xs text-blue-400 hover:text-blue-300 ml-2"
-                                type="button"
-                              >
-                                MAX
-                              </button>
-                            )}
+
                           </div>
                         </div>
                       </div>
