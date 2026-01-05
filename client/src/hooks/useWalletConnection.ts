@@ -229,7 +229,7 @@ export const useWalletConnection = (): UseWalletConnection => {
 
       if (!tokenMint) {
         // Get SOL balance
-        const balance = await connection.getBalance(publicKey)
+        const balance = await connection.getBalance(publicKey, 'confirmed')
         return balance / LAMPORTS_PER_SOL
       } else {
         // Get token balance - inline logic to avoid circular dependency
@@ -244,7 +244,7 @@ export const useWalletConnection = (): UseWalletConnection => {
 
           try {
             // Get token account info
-            const tokenAccount = await getAccount(connection, associatedTokenAddress)
+            const tokenAccount = await getAccount(connection, associatedTokenAddress, 'confirmed')
 
             // Get mint info to determine decimals
             const mintInfo = await connection.getParsedAccountInfo(mintPublicKey)
@@ -299,7 +299,7 @@ export const useWalletConnection = (): UseWalletConnection => {
 
       try {
         // Get token account info
-        const tokenAccount = await getAccount(connection, associatedTokenAddress)
+        const tokenAccount = await getAccount(connection, associatedTokenAddress, 'confirmed')
 
         // Get mint info to determine decimals
         const mintInfo = await connection.getParsedAccountInfo(mintPublicKey)
@@ -354,7 +354,8 @@ export const useWalletConnection = (): UseWalletConnection => {
         publicKey,
         {
           programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-        }
+        },
+        'confirmed'
       )
 
       const balances: TokenBalance[] = []

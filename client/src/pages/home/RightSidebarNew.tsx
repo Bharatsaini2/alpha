@@ -216,6 +216,20 @@ const RightSidebarNew = ({
     }
   }, [getBalance, outputToken.address])
 
+  // Listen for global balance change events
+  useEffect(() => {
+    const handleBalanceChange = () => {
+      fetchInputBalance()
+      fetchOutputBalance()
+    }
+
+    window.addEventListener('wallet-balance-changed', handleBalanceChange)
+
+    return () => {
+      window.removeEventListener('wallet-balance-changed', handleBalanceChange)
+    }
+  }, [fetchInputBalance, fetchOutputBalance])
+
   // Fetch swap quote with debouncing (handled by useSwapApi)
   const fetchQuote = useCallback(async () => {
     setIsLoading(true)
@@ -518,6 +532,9 @@ const RightSidebarNew = ({
       await navigator.clipboard.writeText(signature)
       // Show transaction success toast with "View Tx" button
       showToast("Transaction successful!", "success", "transaction", { txSignature: signature })
+
+      // Dispatch global event to update balances everywhere
+      window.dispatchEvent(new CustomEvent('wallet-balance-changed'))
 
       // Calculate amounts for tracking
       const inputAmountNum =
@@ -1425,7 +1442,7 @@ const RightSidebarNew = ({
                   style={{
                     position: 'relative',
                     overflow: 'hidden',
-                    backgroundColor: swapButtonStatus === 'executing' ? '#050508' : undefined,
+                    backgroundColor: swapButtonStatus === 'executing' ? '#050508' : '#162ECD',
                     transition: 'background-color 0.3s ease'
                   }}
                   disabled={isSwapDisabled || swapButtonStatus !== 'idle'}
@@ -1451,7 +1468,8 @@ const RightSidebarNew = ({
                         left: 0,
                         height: '100%',
                         width: `${swapProgress}%`,
-                        background: 'linear-gradient(90deg, #1e40af 0%, #1e1b4b 50%, #0a0a2e 100%)',
+                        background: 'linear-gradient(90deg, #162ECD 0%, #162ECD 80%, transparent 100%)',
+                        boxShadow: '0 0 10px rgba(22, 46, 205, 0.4)',
                         transition: 'width 0.3s ease',
                         zIndex: 0
                       }}
@@ -1459,11 +1477,11 @@ const RightSidebarNew = ({
                   )}
 
                   {/* Button Text */}
-                  <span style={{ position: 'relative', zIndex: 1 }}>
+                  <span style={{ position: 'relative', zIndex: 1, fontWeight: 600, letterSpacing: '1px' }}>
                     {swapButtonStatus === 'executing' ? (
-                      "Executing Transaction"
+                      "EXECUTING TRANSACTION ..."
                     ) : swapButtonStatus === 'success' ? (
-                      "Transaction Successful"
+                      "TRANSACTION SUCCESSFUL"
                     ) : isLoadingQuote ? (
                       <span className="flex items-center justify-center">
                         <RiLoader2Fill className="animate-spin mr-2" />
