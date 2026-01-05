@@ -83,13 +83,14 @@ export const useWalletConnection = (): UseWalletConnection => {
   }, [removeToast])
 
   // Monitor connection status for success toast
+  // Monitor connection status cleanup
   useEffect(() => {
     if (isConnected && connectingRef.current) {
       dismissConnectingToast()
-      showToast("Wallet Connected Successfully", "success")
+      // Success toast is now handled globally by WalletToastManager
       connectingRef.current = false
     }
-  }, [isConnected, showToast, dismissConnectingToast])
+  }, [isConnected, dismissConnectingToast])
 
   // Monitor disconnection or failure
   useEffect(() => {

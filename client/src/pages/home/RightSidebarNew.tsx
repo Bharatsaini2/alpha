@@ -27,7 +27,7 @@ import SwapModal from "../../components/swap/SwapModal"
 
 interface RightSidebarNewProps {
   selectedToken?: any
-  quickBuyAmount?: string
+
   pageType?: 'alpha' | 'kol' // Determine which page we're on (alpha streams or kol feed)
   transactions?: any[] // Whale transactions for calculating hot coins
 }
@@ -53,7 +53,7 @@ const DEFAULT_OUTPUT_TOKEN: TokenInfo = {
 
 const RightSidebarNew = ({
   selectedToken,
-  quickBuyAmount,
+
   pageType = 'alpha', // Default to 'alpha' for Alpha Streams page
   transactions = [] // Default to empty array
 }: RightSidebarNewProps) => {
@@ -141,12 +141,7 @@ const RightSidebarNew = ({
     }
   }, [selectedToken])
 
-  // Update input amount when quickBuyAmount prop changes
-  useEffect(() => {
-    if (quickBuyAmount && parseFloat(quickBuyAmount) > 0) {
-      setInputAmount(quickBuyAmount)
-    }
-  }, [quickBuyAmount])
+
 
   // Fetch input token balance when wallet connects or token changes
   useEffect(() => {
@@ -521,7 +516,8 @@ const RightSidebarNew = ({
 
       // Copy transaction signature to clipboard
       await navigator.clipboard.writeText(signature)
-      showToast("Transaction successful! Address copied to clipboard", "success")
+      // Show transaction success toast with "View Tx" button
+      showToast("Transaction successful!", "success", "transaction", { txSignature: signature })
 
       // Calculate amounts for tracking
       const inputAmountNum =
@@ -649,17 +645,9 @@ const RightSidebarNew = ({
   const handleQuickBuy = useCallback(
     async (token: any) => {
       console.log('Quick Buy clicked:', token)
-      console.log('Quick Buy Amount:', quickBuyAmount)
 
       if (!wallet.connected) {
         showToast("Please connect your wallet first", "error")
-        return
-      }
-
-      // Validate quick buy amount - check if it's a valid number greater than 0
-      const amount = parseFloat(quickBuyAmount || "0")
-      if (isNaN(amount) || amount <= 0) {
-        showToast("Please set a valid quick buy amount", "error")
         return
       }
 
@@ -673,13 +661,12 @@ const RightSidebarNew = ({
       }
 
       console.log('Opening SwapModal with token:', tokenInfo)
-      console.log('Quick Buy Amount to use:', quickBuyAmount)
 
       // Open SwapModal in 'quickBuy' mode with SOL as input token
       setSwapTokenInfo(tokenInfo)
       setIsSwapModalOpen(true)
     },
-    [wallet.connected, quickBuyAmount, showToast]
+    [wallet.connected, showToast]
   )
 
   // Calculate exchange rate
@@ -1753,7 +1740,7 @@ const RightSidebarNew = ({
           image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
         }}
         initialOutputToken={swapTokenInfo}
-        initialAmount={quickBuyAmount}
+
       />
     </>
   )

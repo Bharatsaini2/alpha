@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react"
+import { Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { CheckIcon, XIcon } from "lucide-react"
 import { createPortal } from "react-dom"
@@ -61,15 +62,15 @@ const Toast: React.FC<ToastProps> = ({
             <p>{message}</p>
             <div className="d-flex align-items-center gap-2 mt-2">
               {txSignature && (
-                <a
-                  href={`https://solscan.io/tx/${txSignature}`}
+                <Link
+                  to={`/transaction/${txSignature}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="coppied-btn"
                   style={{ textDecoration: 'none' }}
                 >
                   view tx
-                </a>
+                </Link>
               )}
               <button className="coppied-btn" onClick={() => onClose(id)}>close</button>
             </div>

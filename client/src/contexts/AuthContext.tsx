@@ -6,7 +6,7 @@ import React, {
   ReactNode,
 } from "react"
 import axios from "axios"
-import { useDisconnect } from "@reown/appkit/react"
+import axios from "axios"
 
 const API_BASE =
   import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"
@@ -55,7 +55,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const [isAuthFlowActive, setIsAuthFlowActive] = useState(false)
-  const { disconnect } = useDisconnect()
 
   const isAuthenticated = !!user
 
@@ -187,7 +186,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error("Logout error:", error)
     } finally {
       // Clear local state regardless of server response
-      await disconnect()
       setUser(null)
       localStorage.removeItem("user")
       localStorage.removeItem("accessToken")

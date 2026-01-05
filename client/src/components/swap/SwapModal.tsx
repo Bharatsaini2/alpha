@@ -74,7 +74,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [transactionSignature, setTransactionSignature] = useState<string>("")
   const [showSignature, setShowSignature] = useState<boolean>(false)
   const [autoCloseTimerId, setAutoCloseTimerId] = useState<NodeJS.Timeout | null>(null)
-  
+
   // Loading states for different stages (Requirement 22.1, 22.2, 22.3, 22.4)
   const [isPreparingTransaction, setIsPreparingTransaction] = useState<boolean>(false)
   const [isSigningTransaction, setIsSigningTransaction] = useState<boolean>(false)
@@ -105,7 +105,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     if (!isOpen) {
       // Reset initial quote flag (Requirements 7.2, 7.5)
       setHasInitialQuote(false)
-      
+
       // Clear any pending auto-close timer
       if (autoCloseTimerId) {
         clearTimeout(autoCloseTimerId)
@@ -258,7 +258,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       outputToken: outputToken.symbol,
       timestamp: new Date().toISOString()
     })
-    
+
     try {
       const amount = parseFloat(inputAmount)
       if (isNaN(amount) || amount <= 0) return
@@ -316,6 +316,11 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   // Fetch quote ONCE when Quick Buy modal opens (Requirements 1.1, 1.3, 4.1, 6.1, 6.2)
   useEffect(() => {
     if (mode === 'quickBuy' && isOpen && !hasInitialQuote && inputAmount && parseFloat(inputAmount) > 0) {
+      // Ensure state has synced with props before running validation
+      if (initialOutputToken && outputToken.address !== initialOutputToken.address) {
+        return;
+      }
+
       // Validate tokens are different (prevent same token swap)
       if (inputToken.address === outputToken.address) {
         console.error("Cannot swap: input and output tokens are the same")
@@ -324,11 +329,11 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         showToast("Cannot swap the same token. Please select a different token.", "error")
         return
       }
-      
+
       fetchQuote()
       setHasInitialQuote(true)
     }
-  }, [mode, isOpen, hasInitialQuote, inputAmount, inputToken.address, outputToken.address])
+  }, [mode, isOpen, hasInitialQuote, inputAmount, inputToken.address, outputToken.address, initialOutputToken])
 
   // Fetch quote when amount or tokens change (ONLY for swap mode) (Requirements 2.1, 2.2, 2.3, 4.2, 5.2)
   useEffect(() => {
@@ -336,14 +341,14 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     if (mode === 'quickBuy') {
       return
     }
-    
+
     // Don't fetch quote if input and output tokens are the same
     if (inputToken.address === outputToken.address) {
       setQuote(null)
       setOutputAmount("")
       return
     }
-    
+
     if (inputAmount && parseFloat(inputAmount) > 0) {
       fetchQuote()
     } else {
@@ -401,13 +406,13 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       // Transaction prepared, now waiting for signature
       setIsPreparingTransaction(false)
-      
+
       // Requirement 22.3: Display loading indicator during transaction signing
       setIsSigningTransaction(true)
 
       // Show wallet signing prompt BEFORE sending with a small delay to ensure it renders
       showToast("Please sign the transaction in your wallet", "info")
-      
+
       // Small delay to ensure toast renders before wallet popup
       await new Promise(resolve => setTimeout(resolve, 100))
 
@@ -415,10 +420,10 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       let signature: string
       try {
         signature = await sendTransaction(transaction)
-        
+
         // Transaction signed, now submitting to blockchain
         setIsSigningTransaction(false)
-        
+
         // Requirement 22.4: Display loading indicator during transaction submission
         setIsSubmittingTransaction(true)
       } catch (txError: any) {
@@ -445,7 +450,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         // Requirement 16.2: Display "Address copied to clipboard" confirmation message
         showToast("Address copied to clipboard", "success")
         // Requirement 15.3: Display "Transaction successful!" on success
-        showToast("Transaction successful!", "success")
+        showToast("Transaction successful!", "success", "transaction", { txSignature: signature })
       } catch (clipboardError) {
         // Requirement 16.3: Handle clipboard access failures gracefully
         // If clipboard fails, still show success but inform user to copy manually
@@ -494,7 +499,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         onClose()
         setAutoCloseTimerId(null)
       }, 3000)
-      
+
       setAutoCloseTimerId(timerId)
     } catch (error: any) {
       // Requirement 17.4: Keep modal open on transaction failure to allow retry
@@ -502,7 +507,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       setIsPreparingTransaction(false)
       setIsSigningTransaction(false)
       setIsSubmittingTransaction(false)
-      
+
       let errorMessage = "Swap failed. Please try again."
       let toastType: "error" | "info" = "error"
 
@@ -536,7 +541,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       // Show the toast with appropriate type
       showToast(errorMessage, toastType)
-      
+
       // Modal stays open to allow retry - no auto-close on error
     } finally {
       setIsSwapping(false)
@@ -622,7 +627,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     if (isSwapping || isLoadingQuote || isLoadingSwap) return true
     if (!inputAmount || parseFloat(inputAmount) <= 0) return true
     if (!quote) return true
-    
+
     // For Quick Buy mode, check SOL balance against total cost (Requirement 13.4)
     if (mode === 'quickBuy') {
       if (solBalance < totalCostInSOL) return true
@@ -630,7 +635,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       // For regular swap mode, check input token balance
       if (parseFloat(inputAmount) > inputBalance) return true
     }
-    
+
     return false
   }, [wallet.connected, isSwapping, isLoadingQuote, isLoadingSwap, inputAmount, quote, mode, solBalance, totalCostInSOL, inputBalance])
 
@@ -859,7 +864,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       <AnimatePresence>
         {isOpen && (
-          <div 
+          <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             role="dialog"
             aria-modal="true"
@@ -944,19 +949,19 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                       textAlign: 'center',
                       maxWidth: '300px'
                     }}>
-                      {isSigningTransaction 
-                        ? 'Please approve the transaction in your wallet' 
+                      {isSigningTransaction
+                        ? 'Please approve the transaction in your wallet'
                         : 'Your transaction is being submitted to the blockchain'}
                     </p>
                   </div>
                 )}
-                
+
                 {mode === 'quickBuy' && (
                   <div className="solana-bx">
                     <div className="solana-parent-bx">
                       <div className="solana-content-bx">
-                        <img 
-                          src={outputToken.image || DefaultTokenImage} 
+                        <img
+                          src={outputToken.image || DefaultTokenImage}
                           alt={`${outputToken.symbol} token logo`}
                           onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
                         />
@@ -967,10 +972,10 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                       </div>
 
                       <div className="solana-cp-bx">
-                        <h6 aria-label={`Token contract address: ${outputToken.address}`}>{shortenAddress(outputToken.address)}</h6> 
+                        <h6 aria-label={`Token contract address: ${outputToken.address}`}>{shortenAddress(outputToken.address)}</h6>
                         <span>
-                          <a 
-                            href="javascript:void(0)" 
+                          <a
+                            href="javascript:void(0)"
                             className="solana-cp-btn"
                             onClick={() => copyToClipboard(outputToken.address, 'Address copied to clipboard')}
                             aria-label="Copy token contract address to clipboard"
@@ -1093,7 +1098,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                     <h6>Slippage: {(slippage / 100).toFixed(2)}%</h6>
                   </div>
                   <div>
-                    <h6>Price impact: 
+                    <h6>Price impact:
                       {isLoadingQuote ? (
                         <span className="loading-dots" style={{ marginLeft: '4px' }}>Loading</span>
                       ) : (
@@ -1124,9 +1129,9 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                       <span>Priority fee</span>
                       <div className="switch-wrapper">
                         <div className="switch">
-                          <input 
-                            type="checkbox" 
-                            id="toggle7" 
+                          <input
+                            type="checkbox"
+                            id="toggle7"
                             checked={priorityFeeEnabled}
                             onChange={(e) => setPriorityFeeEnabled(e.target.checked)}
                             aria-label="Enable priority fee for faster transaction processing"
@@ -1149,7 +1154,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   </div>
                   <div>
                     {isLoadingQuote ? (
-                      <div 
+                      <div
                         style={{
                           background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
                           backgroundSize: '200% 100%',
@@ -1171,29 +1176,29 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
                 {/* Display balance error for Quick Buy mode (Requirement 13.3) */}
                 {mode === 'quickBuy' && balanceError && (
-                  <div 
-                    className="balance-error-bx" 
-                    style={{ 
-                      padding: '8px 12px', 
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)', 
-                      border: '1px solid rgba(239, 68, 68, 0.3)', 
+                  <div
+                    className="balance-error-bx"
+                    style={{
+                      padding: '8px 12px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
                       borderRadius: '6px',
                       marginTop: '8px'
                     }}
                     role="alert"
                     aria-live="assertive"
                   >
-                    <p style={{ 
-                      color: '#ef4444', 
-                      fontSize: '14px', 
+                    <p style={{
+                      color: '#ef4444',
+                      fontSize: '14px',
                       margin: 0,
                       fontWeight: 500
                     }}>
                       {balanceError}
                     </p>
-                    <p style={{ 
-                      color: '#9ca3af', 
-                      fontSize: '12px', 
+                    <p style={{
+                      color: '#9ca3af',
+                      fontSize: '12px',
                       margin: '4px 0 0 0'
                     }}>
                       Balance: {solBalance.toFixed(6)} SOL | Required: {totalCostInSOL.toFixed(6)} SOL
@@ -1203,27 +1208,27 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
                 {/* Display transaction signature after successful transaction (Requirements 16.4, 16.5) */}
                 {showSignature && transactionSignature && (
-                  <div 
-                    className="transaction-signature-bx" 
-                    style={{ 
-                      padding: '12px', 
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)', 
-                      border: '1px solid rgba(34, 197, 94, 0.3)', 
+                  <div
+                    className="transaction-signature-bx"
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px solid rgba(34, 197, 94, 0.3)',
                       borderRadius: '6px',
                       marginTop: '8px'
                     }}
                     role="status"
                     aria-live="polite"
                   >
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
                       alignItems: 'center',
                       marginBottom: '8px'
                     }}>
-                      <h6 style={{ 
-                        color: '#22c55e', 
-                        fontSize: '14px', 
+                      <h6 style={{
+                        color: '#22c55e',
+                        fontSize: '14px',
                         margin: 0,
                         fontWeight: 600
                       }}>
@@ -1246,9 +1251,9 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                         <FontAwesomeIcon icon={faCopy} style={{ color: '#22c55e' }} />
                       </button>
                     </div>
-                    <p style={{ 
-                      color: '#9ca3af', 
-                      fontSize: '12px', 
+                    <p style={{
+                      color: '#9ca3af',
+                      fontSize: '12px',
                       margin: 0,
                       wordBreak: 'break-all',
                       fontFamily: 'monospace'
@@ -1276,62 +1281,62 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                 <div className="salana-activity-bx" role="region" aria-label="Token safety indicators">
                   <ul className="salana-activity-list">
                     <li>
-                      <div> 
-                        <span className="salana-atv-bx"> 
-                          Liquidity: 
-                          <h6 
+                      <div>
+                        <span className="salana-atv-bx">
+                          Liquidity:
+                          <h6
                             className={tokenSafetyInfo ? getLiquidityStatusClass(tokenSafetyInfo.liquidity) : ''}
                             aria-label={`Liquidity status: ${tokenSafetyInfo?.liquidity || 'Unknown'}`}
                           >
                             {tokenSafetyInfo?.liquidity || 'Unknown'}
-                          </h6> 
-                        </span> 
+                          </h6>
+                        </span>
                       </div>
                     </li>
                     <li>
-                      <div> 
-                        <span className="salana-atv-bx"> 
-                          Trading: 
-                          <h6 
+                      <div>
+                        <span className="salana-atv-bx">
+                          Trading:
+                          <h6
                             className={tokenSafetyInfo ? getTradingStatusClass(tokenSafetyInfo.trading) : ''}
                             aria-label={`Trading status: ${tokenSafetyInfo?.trading || 'Unknown'}`}
                           >
                             {tokenSafetyInfo?.trading || 'Unknown'}
-                          </h6> 
-                        </span> 
+                          </h6>
+                        </span>
                       </div>
                     </li>
                     <li>
-                      <div> 
-                        <span className="salana-atv-bx"> 
-                          Honeypot: 
-                          <h6 
+                      <div>
+                        <span className="salana-atv-bx">
+                          Honeypot:
+                          <h6
                             className="status-healthy"
                             aria-label="Honeypot check: Safe"
                           >
                             Safe
-                          </h6> 
-                        </span> 
+                          </h6>
+                        </span>
                       </div>
                     </li>
                   </ul>
                 </div>
 
                 <div className="salana-btn-bx">
-                  <button 
-                    className="swap-btn w-50" 
+                  <button
+                    className="swap-btn w-50"
                     onClick={onClose}
                     aria-label="Cancel transaction and close modal"
                   >
                     Cancel
                   </button>
-                  <button 
+                  <button
                     ref={confirmButtonRef}
                     className="salana-btn"
                     onClick={handleSwap}
                     disabled={isSwapDisabled}
                     aria-label={
-                      isSwapDisabled 
+                      isSwapDisabled
                         ? (balanceError ? 'Insufficient balance to confirm transaction' : 'Confirm button disabled - waiting for quote or invalid input')
                         : 'Confirm and execute transaction'
                     }

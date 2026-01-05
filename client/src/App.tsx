@@ -8,6 +8,7 @@ import { solana } from "@reown/appkit/networks"
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets"
 import { useEffect } from "react"
 import { ToastProvider } from "./components/ui/Toast"
+import { WalletToastManager } from "./components/wallet/WalletToastManager"
 
 const solanaWeb3JsAdapter = new SolanaAdapter({
   wallets: [new PhantomWalletAdapter() as any],
@@ -43,7 +44,7 @@ createAppKit({
     email: false,
   },
   // @ts-ignore
-  enableReconnect: false,
+  enableReconnect: true,
 })
 
 function App() {
@@ -80,13 +81,14 @@ function App() {
   }, [])
 
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <Router>
+    <Router>
+      <ToastProvider>
+        <WalletToastManager />
+        <AuthProvider>
           <AppRoutes />
-        </Router>
-      </AuthProvider>
-    </ToastProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </Router>
   )
 }
 

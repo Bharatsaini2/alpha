@@ -837,7 +837,7 @@ const HomePageNew = () => {
                         <RightSidebarNew
                             pageType="alpha"
                             transactions={transactions}
-                            quickBuyAmount={quickBuyAmount}
+
                         />
                     </div>
 
