@@ -834,7 +834,11 @@ const HomePageNew = () => {
                 <div className="row">
                     {/* Right Sidebar - Shows first on mobile, second on desktop */}
                     <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
-                        <RightSidebarNew pageType="alpha" transactions={transactions} />
+                        <RightSidebarNew 
+                            pageType="alpha" 
+                            transactions={transactions}
+                            quickBuyAmount={quickBuyAmount}
+                        />
                     </div>
 
                     {/* Transactions Feed Column - Shows second on mobile, first on desktop */}
@@ -886,7 +890,15 @@ const HomePageNew = () => {
                                             <button
                                                 type="button"
                                                 className="clear-input-btn"
-                                                onClick={() => setSearchQuery("")}
+                                                onClick={() => {
+                                                    setSearchQuery("")
+                                                    // Clear search filter when X button is clicked
+                                                    setActiveFilters({
+                                                        ...activeFilters,
+                                                        searchQuery: "",
+                                                        searchType: null
+                                                    })
+                                                }}
                                             >
                                                 ×
                                             </button>

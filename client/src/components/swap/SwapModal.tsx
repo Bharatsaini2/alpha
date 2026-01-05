@@ -47,7 +47,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   initialOutputToken,
   initialAmount,
 }) => {
-  const { wallet, sendTransaction, getBalance } = useWalletConnection()
+  const { wallet, connect, sendTransaction, getBalance } = useWalletConnection()
   const { getQuote, getSwapTransaction, trackTrade, isLoadingQuote, isLoadingSwap, clearErrors } = useSwapApi()
   const { showToast } = useToast()
 

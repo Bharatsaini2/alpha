@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { createPortal } from "react-dom"
 import Phantom from "../../assets/phantom.svg"
-import Google from "../../assets/google.svg"
 import { useAppKit, useAppKitAccount } from "@reown/appkit/react"
 import { useAuth } from "../../contexts/AuthContext"
 import axios from "axios"
@@ -93,103 +92,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleGoogleLogin = () => {
-    setIsLoading(true)
-    setErrors({})
-
-    // Detect if we're on mobile
-    const isMobile =
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      )
-
-    if (isMobile) {
-      // On mobile, redirect in the same window instead of popup
-      window.location.href = `${API_BASE}/auth/google`
-      return
-    }
-
-    // Desktop: Use popup approach
-    const popup = window.open(
-      `${API_BASE}/auth/google`,
-      "google-auth",
-      "width=500,height=600,scrollbars=yes,resizable=yes,top=100,left=100"
-    )
-
-    if (!popup) {
-      setErrors({ google: "Popup blocked. Please allow popups for this site." })
-      setIsLoading(false)
-      return
-    }
-
-    const messageListener = (event: MessageEvent) => {
-      // Filter out unrelated messages
-      if (
-        typeof event.data === "string" &&
-        event.data.includes("setImmediate")
-      ) {
-        return
-      }
-
-      // Verify origin for security - allow both frontend and backend origins
-      const allowedOrigins = [
-        "http://localhost:9090",
-        "http://localhost:5173",
-        window.location.origin,
-        "http://139.59.61.252",
-        "http://139.59.61.252:9090",
-        "https://app.alpha-block.ai",
-        "https://api.alpha-block.ai",
-      ]
-
-      // Check if it's a Cloudflare tunnel URL
-      const isCloudflareTunnel = event.origin.includes("trycloudflare.com")
-
-      if (!allowedOrigins.includes(event.origin) && !isCloudflareTunnel) {
-        return
-      }
-
-      // Only process OAuth messages
-      if (
-        !event.data ||
-        typeof event.data !== "object" ||
-        !event.data.hasOwnProperty("success")
-      ) {
-        return
-      }
-
-      if (event.data.success) {
-        // Store tokens and redirect
-        login(
-          event.data.data.user,
-          event.data.data.accessToken,
-          event.data.data.refreshToken
-        )
-        onClose()
-      } else {
-        setErrors({
-          google: event.data.error || "Google authentication failed",
-        })
-      }
-
-      // Clean up
-      window.removeEventListener("message", messageListener)
-      setIsLoading(false)
-    }
-
-    window.addEventListener("message", messageListener)
-
-    // Check if popup was closed manually
-    const checkClosed = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(checkClosed)
-        window.removeEventListener("message", messageListener)
-        setIsLoading(false)
-        setErrors({ google: "Authentication cancelled" })
-      }
-    }, 1000)
   }
 
 
@@ -340,23 +242,12 @@ const LoginModal: React.FC<LoginModalProps> = ({
             <img src={Phantom} alt="" className="w-5 h-5 opacity-90" />
             <span>LOG IN WITH PHANTOM</span>
           </button>
-
-          {/* Google */}
-          <button className="social-btn" onClick={handleGoogleLogin} disabled={isLoading}>
-            <div className="corner corner-tl"></div>
-            <div className="corner corner-tr"></div>
-            <div className="corner corner-bl"></div>
-            <div className="corner corner-br"></div>
-            <img src={Google} alt="" className="w-5 h-5 opacity-90" />
-            <span>LOG IN WITH GOOGLE</span>
-          </button>
         </div>
 
         {/* Error Messages */}
         <div className="mt-4 text-center">
           {message && <p className="text-xs text-[#05C96A]">{message}</p>}
           {errors.phantom && <p className="text-xs text-[#FF6B6B]">{errors.phantom}</p>}
-          {errors.google && <p className="text-xs text-[#FF6B6B]">{errors.google}</p>}
         </div>
       </div>
     </div>,

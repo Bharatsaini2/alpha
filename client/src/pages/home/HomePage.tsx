@@ -789,11 +789,12 @@ const HomePage = () => {
     tokens: Array<{ value: string; type: string }>
     displayQuery?: string
   }) => {
+    // If searchQuery is empty, clear the search filters
     const newFilters = {
       ...activeFilters,
-      searchQuery: searchData.searchQuery, // Use address for backend search
-      searchType: "coin" as const, // Force coin-only search for HomePage
-      displayQuery: searchData.displayQuery || searchData.searchQuery, // Use symbol/name for display
+      searchQuery: searchData.searchQuery || "", // Use address for backend search
+      searchType: searchData.searchQuery ? ("coin" as const) : null, // Clear searchType if no query
+      displayQuery: searchData.displayQuery || searchData.searchQuery || "", // Use symbol/name for display
     }
 
     setActiveFilters(newFilters)

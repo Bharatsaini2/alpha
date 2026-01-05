@@ -21,6 +21,8 @@ import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
 import { RiArrowUpDownFill } from "react-icons/ri"
 import { IoWalletOutline } from "react-icons/io5"
+import SwapModal from "../../components/swap/SwapModal"
+import { useAuth } from "../../contexts/AuthContext"
 
 // import { MdOutlineCheckBox } from "react-icons/md";
 
@@ -66,6 +68,9 @@ const RightSidebarNew = ({
     error: walletError,
   } = useWalletConnection()
 
+  // Auth hook for login modal
+  const { openLoginModal } = useAuth()
+
   // Swap API hook
   const {
     getQuote,
@@ -92,6 +97,7 @@ const RightSidebarNew = ({
   const [isInputModalOpen, setIsInputModalOpen] = useState(false)
   const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
   const [inputBalance, setInputBalance] = useState<number>(0)
+  const [outputBalance, setOutputBalance] = useState<number>(0)
   const [isSwapping, setIsSwapping] = useState(false)
   const [swapProgress, setSwapProgress] = useState<number>(0) // Progress bar percentage (0-100)
   const [swapButtonStatus, setSwapButtonStatus] = useState<'idle' | 'executing' | 'success'>('idle') // Button animation status
@@ -149,11 +155,29 @@ const RightSidebarNew = ({
   // Fetch input token balance when wallet connects or token changes
   useEffect(() => {
     if (wallet.connected && wallet.publicKey) {
-      fetchInputBalance()
+      // Fetch immediately when wallet connects or tokens change
+      // Fetch input balance
+      getBalance(
+        inputToken.address === "So11111111111111111111111111111111111111112"
+          ? undefined
+          : inputToken.address
+      )
+        .then((balance) => setInputBalance(balance))
+        .catch(() => setInputBalance(0))
+
+      // Fetch output balance
+      getBalance(
+        outputToken.address === "So11111111111111111111111111111111111111112"
+          ? undefined
+          : outputToken.address
+      )
+        .then((balance) => setOutputBalance(balance))
+        .catch(() => setOutputBalance(0))
     } else {
       setInputBalance(0)
+      setOutputBalance(0)
     }
-  }, [wallet.connected, wallet.publicKey, inputToken.address])
+  }, [wallet.connected, wallet.publicKey, inputToken.address, outputToken.address, getBalance])
 
   // Fetch quote when input amount or tokens change
   useEffect(() => {
@@ -185,6 +209,21 @@ const RightSidebarNew = ({
       showToast("Failed to fetch token balance", "error")
     }
   }, [getBalance, inputToken.address, showToast])
+
+  // Fetch output token balance
+  const fetchOutputBalance = useCallback(async () => {
+    try {
+      const balance = await getBalance(
+        outputToken.address === "So11111111111111111111111111111111111111112"
+          ? undefined
+          : outputToken.address
+      )
+      setOutputBalance(balance)
+    } catch (error) {
+      setOutputBalance(0)
+      // Don't show toast for output balance fetch failure to avoid spam
+    }
+  }, [getBalance, outputToken.address])
 
   // Fetch swap quote with debouncing (handled by useSwapApi)
   const fetchQuote = useCallback(async () => {
@@ -247,27 +286,11 @@ const RightSidebarNew = ({
     }
   }, [inputAmount, inputToken, outputToken, slippage, getQuote, showToast])
 
-  // Handle wallet connection
+  // Handle wallet connection - opens login modal for authentication
   const handleConnectWallet = useCallback(async () => {
-    setISConnect(true)
-    try {
-      await connect()
-      showToast("Wallet connected successfully", "success")
-    } catch (error: any) {
-      // Show user-friendly error message
-      if (error.code === "USER_REJECTED") {
-        showToast("Connection cancelled", "info")
-      } else if (error.code === "WALLET_NOT_FOUND") {
-        showToast("Wallet not found. Please install a Solana wallet.", "error")
-      } else if (error.code === "WALLET_NOT_READY") {
-        showToast("Wallet is not ready. Please unlock your wallet.", "error")
-      } else {
-        showToast("Failed to connect wallet. Please try again.", "error")
-      }
-    } finally {
-      setISConnect(false)
-    }
-  }, [connect, showToast])
+    // Open the login modal which handles both authentication and wallet connection
+    openLoginModal()
+  }, [openLoginModal])
 
   // Handle token selection
   const handleInputTokenSelect = useCallback(
@@ -346,12 +369,15 @@ const RightSidebarNew = ({
   // Handle swap tokens
   const handleSwapTokens = useCallback(() => {
     const tempToken = inputToken
+    const tempBalance = inputBalance
     setInputToken(outputToken)
     setOutputToken(tempToken)
+    setInputBalance(outputBalance)
+    setOutputBalance(tempBalance)
     setInputAmount("")
     setOutputAmount("")
     setQuote(null)
-  }, [inputToken, outputToken])
+  }, [inputToken, outputToken, inputBalance, outputBalance])
 
   // Handle half button
   const handleHalfClick = useCallback(() => {
@@ -536,8 +562,9 @@ const RightSidebarNew = ({
 
       // Reset form logic moved to useEffect watching swapButtonStatus
 
-      // Refresh balance
+      // Refresh balances after successful transaction
       await fetchInputBalance()
+      await fetchOutputBalance()
 
       setTimeout(() => {
         setLastTxSignature("")
@@ -615,41 +642,48 @@ const RightSidebarNew = ({
     sendTransaction,
     trackTrade,
     fetchInputBalance,
+    fetchOutputBalance,
     clearErrors,
     inputBalance,
     showToast,
     slippage,
   ])
 
-  // Handle Quick Buy - simply pre-fills the swap form with the token
+  // Handle Quick Buy - opens SwapModal popup like HomePageNew
   const handleQuickBuy = useCallback(
     async (token: any) => {
+      console.log('Quick Buy clicked:', token)
+      console.log('Quick Buy Amount:', quickBuyAmount)
+      
       if (!wallet.connected) {
         showToast("Please connect your wallet first", "error")
         return
       }
 
-      if (!inputAmount || parseFloat(inputAmount) <= 0) {
-        showToast("Please enter an amount greater than 0", "error")
+      // Validate quick buy amount - check if it's a valid number greater than 0
+      const amount = parseFloat(quickBuyAmount || "0")
+      if (isNaN(amount) || amount <= 0) {
+        showToast("Please set a valid quick buy amount", "error")
         return
       }
 
-      // Set the output token to the selected token
-      const newOutputToken: TokenInfo = {
-        address: token.address || token.mint,
+      // Extract token info for SwapModal
+      const tokenInfo = {
         symbol: token.symbol,
         name: token.name || token.symbol,
-        decimals: token.decimals || 9,
+        address: token.address || token.mint,
         image: token.image || token.logoURI,
+        decimals: token.decimals || 9,
       }
 
-      setOutputToken(newOutputToken)
-      showToast(
-        `Ready to swap ${inputAmount} ${inputToken.symbol} for ${token.symbol}`,
-        "success"
-      )
+      console.log('Opening SwapModal with token:', tokenInfo)
+      console.log('Quick Buy Amount to use:', quickBuyAmount)
+
+      // Open SwapModal in 'quickBuy' mode with SOL as input token
+      setSwapTokenInfo(tokenInfo)
+      setIsSwapModalOpen(true)
     },
-    [wallet.connected, inputAmount, inputToken, showToast]
+    [wallet.connected, quickBuyAmount, showToast]
   )
 
   // Calculate exchange rate
@@ -776,8 +810,10 @@ const RightSidebarNew = ({
   }
 
   const [showMainButton, setShowMainButton] = useState(false);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
+  const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
 
-  // Calculate hot coins based on transactions
+  // Calculate hot coins based on transactions with new logic
   const hotCoins = useMemo(() => {
     console.log('Hot Coins Calculation - Total transactions:', transactions?.length)
 
@@ -786,8 +822,8 @@ const RightSidebarNew = ({
       return []
     }
 
-    // Try different thresholds until we get at least 5 coins
-    const thresholds = [7, 6, 5, 4, 3, 2, 1, 0]
+    // New logic: Start with threshold 7, cascade down to 6, 5, 4 if no coins meet criteria
+    const thresholds = [7, 6, 5, 4]
     let finalCoins: any[] = []
 
     for (const threshold of thresholds) {
@@ -800,7 +836,7 @@ const RightSidebarNew = ({
       console.log(`Threshold ${threshold}: ${hotTransactions.length} hot transactions`)
 
       // Count occurrences of each coin (using tokenOut for buy transactions)
-      const coinFrequency = new Map<string, { count: number; data: any }>()
+      const coinFrequency = new Map<string, { count: number; data: any; maxScore: number }>()
 
       hotTransactions.forEach((tx: any) => {
         // Try multiple possible data structures
@@ -827,20 +863,25 @@ const RightSidebarNew = ({
           tx.token_out_market_cap ||
           '0'
 
+        const currentScore = tx.hotnessScore || tx.hotness_score || 0
+
         if (coinSymbol && coinAddress) {
           const existing = coinFrequency.get(coinAddress)
           if (existing) {
             existing.count++
+            // Track the highest hotness score for this coin
+            existing.maxScore = Math.max(existing.maxScore, currentScore)
           } else {
             coinFrequency.set(coinAddress, {
               count: 1,
+              maxScore: currentScore,
               data: {
                 symbol: coinSymbol,
                 address: coinAddress,
                 image: coinImage,
                 name: coinName,
                 marketCap: marketCap,
-                hotnessScore: tx.hotnessScore || tx.hotness_score || 0
+                hotnessScore: currentScore
               }
             })
           }
@@ -849,31 +890,34 @@ const RightSidebarNew = ({
 
       console.log(`Threshold ${threshold}: ${coinFrequency.size} unique coins`)
 
-      // Convert to array and sort by frequency
-      const coinArray = Array.from(coinFrequency.values())
-
-      // Separate coins appearing 2+ times and once
-      const multipleAppearances = coinArray
+      // NEW LOGIC: Only show coins appearing 2+ times
+      const eligibleCoins = Array.from(coinFrequency.values())
         .filter(coin => coin.count >= 2)
-        .sort((a, b) => b.count - a.count)
+        .sort((a, b) => {
+          // Primary sort: by hotness score (descending)
+          if (b.maxScore !== a.maxScore) {
+            return b.maxScore - a.maxScore
+          }
+          // Secondary sort: by frequency (descending)
+          return b.count - a.count
+        })
+        .map(coin => ({
+          ...coin.data,
+          hotnessScore: coin.maxScore, // Use the highest score
+          count: coin.count
+        }))
 
-      const singleAppearances = coinArray
-        .filter(coin => coin.count === 1)
-        .sort((a, b) => (b.data.hotnessScore || 0) - (a.data.hotnessScore || 0))
+      console.log(`Threshold ${threshold}: ${eligibleCoins.length} eligible coins (appearing 2+ times)`)
 
-      // Combine: prioritize multiple appearances, then fill with single appearances
-      const allCoins = [...multipleAppearances, ...singleAppearances].map(coin => coin.data)
-
-      // If we have at least 5 coins, use this threshold
-      if (allCoins.length >= 5) {
-        finalCoins = allCoins.slice(0, 5)
-        console.log(`Using threshold ${threshold} - found ${allCoins.length} coins, showing top 5`)
+      // If we have any coins at this threshold, use them
+      if (eligibleCoins.length > 0) {
+        finalCoins = eligibleCoins.slice(0, 5) // Show top 5
+        console.log(`Using threshold ${threshold} - found ${eligibleCoins.length} coins, showing top ${finalCoins.length}`)
         break
-      } else if (threshold === 0) {
-        // Last threshold, use whatever we have
-        finalCoins = allCoins.slice(0, 5)
-        console.log(`Using threshold 0 (last resort) - found ${allCoins.length} coins`)
       }
+
+      // Continue to next threshold if no coins found
+      console.log(`No coins found at threshold ${threshold}, trying next threshold...`)
     }
 
     console.log('Final hot coins:', finalCoins)
@@ -933,14 +977,7 @@ const RightSidebarNew = ({
             </div>
           </div>
           <div className="market-card">
-            {/* Wallet Status */}
-            {wallet.connected && wallet.address && (
-              <div className="mb-2 p-2 bg-[#1A1A1A] rounded text-xs text-gray-400">
-                <span className="font-mono">
-                  {wallet.address.slice(0, 4)}...{wallet.address.slice(-4)}
-                </span>
-              </div>
-            )}
+            {/* Input Token Section */}
 
             {/* All errors shown via toast popups - no UI box warnings */}
 
@@ -1035,7 +1072,7 @@ const RightSidebarNew = ({
                 <span className="trade-label">buying</span>
                 <span className="trade-label d-flex align-items-center gap-1">
 
-                  <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
+                  <IoWalletOutline /> {wallet.connected ? outputBalance.toFixed(4) : '0.00'} {outputToken.symbol}
                 </span>
               </div>
               <div className="trade-row">
@@ -1090,7 +1127,7 @@ const RightSidebarNew = ({
                         <span className="trade-label">buying</span>
                         <span className="trade-label d-flex align-items-center gap-1">
 
-                          <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
+                          <IoWalletOutline /> {wallet.connected ? outputBalance.toFixed(4) : '0.00'} {outputToken.symbol}
                         </span>
                       </div>
                       <div className="trade-row">
@@ -1292,7 +1329,7 @@ const RightSidebarNew = ({
                         <span className="trade-label">buying</span>
                         <span className="trade-label d-flex align-items-center gap-1">
 
-                          <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}
+                          <IoWalletOutline /> {wallet.connected ? outputBalance.toFixed(4) : '0.00'} {outputToken.symbol}
                         </span>
                       </div>
                       <div className="trade-row">
@@ -1431,7 +1468,7 @@ const RightSidebarNew = ({
                   style={{
                     position: 'relative',
                     overflow: 'hidden',
-                    backgroundColor: swapButtonStatus === 'executing' ? '#000' : undefined,
+                    backgroundColor: swapButtonStatus === 'executing' ? '#050508' : undefined,
                     transition: 'background-color 0.3s ease'
                   }}
                   disabled={isSwapDisabled || swapButtonStatus !== 'idle'}
@@ -1457,7 +1494,7 @@ const RightSidebarNew = ({
                         left: 0,
                         height: '100%',
                         width: `${swapProgress}%`,
-                        backgroundColor: '#4F46E5',
+                        background: 'linear-gradient(90deg, #1e40af 0%, #1e1b4b 50%, #0a0a2e 100%)',
                         transition: 'width 0.3s ease',
                         zIndex: 0
                       }}
@@ -1680,12 +1717,8 @@ const RightSidebarNew = ({
                     })
                   }
                   aria-label={`Quick buy ${coin.symbol} token`}
-                  title={`Quick buy this token`}
-                  disabled={
-                    !wallet.connected ||
-                    !inputAmount ||
-                    parseFloat(inputAmount) <= 0
-                  }
+                  title={`Quick buy this token with SOL`}
+                  disabled={!wallet.connected}
                 >
                   QUICK BUY
                 </button>
@@ -1733,6 +1766,25 @@ const RightSidebarNew = ({
           </div>
         </div>
       </div>
+
+      {/* SwapModal for Quick Buy */}
+      <SwapModal
+        isOpen={isSwapModalOpen}
+        onClose={() => {
+          setIsSwapModalOpen(false)
+          setSwapTokenInfo(null)
+        }}
+        mode="quickBuy"
+        initialInputToken={{
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
+          decimals: 9,
+          image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
+        }}
+        initialOutputToken={swapTokenInfo}
+        initialAmount={quickBuyAmount}
+      />
     </>
   )
 }

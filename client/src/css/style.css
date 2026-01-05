@@ -2182,14 +2182,14 @@ font-size: 16px;
     font-size: 18px;
   }
 
-  /* Coin row responsiveness - hide quick buy on mobile */
+  /* Coin row responsiveness - show quick buy button */
   .coin-row {
     flex-wrap: nowrap;
     gap: 8px;
   }
 
   .coin-row .quick-buy-btn {
-    display: none;
+    display: inline-block;
   }
 
   .coin-left {

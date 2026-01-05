@@ -80,6 +80,9 @@ const io = new Server(wss, {
       'http://localhost:3001',
       'http://localhost:8080',
       'https://app.alpha-block.ai',
+      'https://alpha-block.ai',
+      'http://app.alpha-block.ai',
+      'http://alpha-block.ai',
       'http://localhost:4173',
       'http://139.59.61.252:9090',
       'http://139.59.61.252:3000',
@@ -92,6 +95,38 @@ const io = new Server(wss, {
     credentials: true,
   },
 })
+
+// CORS configuration - MUST be before other middleware
+app.use(
+  cors({
+    origin: [
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'http://localhost:5175',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:4173',
+      'http://localhost:8080',
+      'https://app.alpha-block.ai',
+      'https://alpha-block.ai',
+      'http://app.alpha-block.ai',
+      'http://alpha-block.ai',
+      'http://139.59.61.252:9090',
+      'http://139.59.61.252:3000',
+      'http://139.59.61.252:3001',
+      'http://139.59.61.252:8080',
+      // Allow all Cloudflare tunnel URLs
+      /^https:\/\/.*\.trycloudflare\.com$/,
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With'],
+    credentials: true,
+    optionsSuccessStatus: 200,
+  }),
+)
+
+// Handle preflight requests
+app.options('*', cors())
 
 // Middleware
 app.use(express.json({ limit: '50mb' }))
@@ -113,30 +148,6 @@ app.use(
 // Passport middleware
 app.use(passport.initialize())
 app.use(passport.session())
-app.use(
-  cors({
-    // origin: process.env.ORIGIN,
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:5174',
-      'http://localhost:5175',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:4173',
-      'http://localhost:8080',
-      'https://app.alpha-block.ai',
-      'http://139.59.61.252:9090',
-      'http://139.59.61.252:3000',
-      'http://139.59.61.252:3001',
-      'http://139.59.61.252:8080',
-      // Allow all Cloudflare tunnel URLs
-      /^https:\/\/.*\.trycloudflare\.com$/,
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
-    credentials: true,
-  }),
-)
 app.use(express.json())
 
 // WebSocket Connection Handling
