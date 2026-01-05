@@ -1,9 +1,9 @@
 import React, { useState, useCallback, useRef, useEffect, memo } from "react"
-import { Search, X, Clock, Star } from "lucide-react"
+import { Search, X, Clock } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import fallbackImage from "../../assets/default_token.svg"
 import { POPULAR_TOKENS, TokenInfo } from "../../lib/tokenList"
-import { fetchJupiterTokens, searchJupiterTokens } from "../../lib/jupiterTokens"
+
 import { useJupiterSearch, JupiterTokenResult } from "../../hooks/useJupiterSearch"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { RiVerifiedBadgeFill } from "react-icons/ri";
@@ -156,7 +156,7 @@ const RECENT_TOKENS_KEY = "swap_recent_tokens"
 const MAX_RECENT_TOKENS = 5
 
 // Debounce utility function
-function debounce<T extends (...args: unknown[]) => unknown>(
+function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -173,7 +173,6 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   onTokenSelect,
   excludeToken,
   userWallet,
-  title = "Select Token",
 }) => {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<TokenInfo[]>([])
@@ -182,10 +181,6 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   const [recentTokens, setRecentTokens] = useState<TokenInfo[]>([])
   const [userBalances, setUserBalances] = useState<Record<string, number>>({})
   const [isLoadingBalances, setIsLoadingBalances] = useState(false)
-  // Don't load all tokens upfront - only load on search
-  const [allTokens, setAllTokens] = useState<TokenInfo[]>([])
-  const [isLoadingTokens, setIsLoadingTokens] = useState(false)
-  const [tokenLoadError, setTokenLoadError] = useState<string | null>(null)
 
   const searchInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -193,32 +188,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   // Use Jupiter Ultra search hook
   const { searchTokens: searchJupiterUltra, isSearching: isJupiterSearching, error: jupiterError } = useJupiterSearch()
 
-  // Don't load Jupiter tokens upfront - only load when user searches
-  // This makes the modal open instantly
-  useEffect(() => {
-    // Only load tokens from cache if available
-    const loadCachedTokens = () => {
-      try {
-        const cached = localStorage.getItem('jupiter_token_list')
-        if (cached) {
-          const data = JSON.parse(cached)
-          const now = Date.now()
-          const CACHE_DURATION = 1000 * 60 * 60 // 1 hour
 
-          if (now - data.timestamp < CACHE_DURATION) {
-            setAllTokens(data.tokens)
-            console.log(`✅ Loaded ${data.tokens.length} tokens from cache`)
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load cached tokens:", error)
-      }
-    }
-
-    if (isOpen) {
-      loadCachedTokens()
-    }
-  }, [isOpen])
 
   // Load recent tokens from localStorage
   useEffect(() => {
@@ -493,11 +463,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
 
               <div className="flex items-center gap-2">
-                {tokenLoadError && (
-                  <span className="text-xs text-yellow-400" title={tokenLoadError}>
-                    ⚠️
-                  </span>
-                )}
+
                 <button
                   onClick={onClose}
                   className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
@@ -564,12 +530,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
 
             <div className="flex-1 overflow-y-auto token-scrollbar">
-              {/* Error State */}
-              {tokenLoadError && !isLoadingTokens && (
-                <div className="px-4 py-3 bg-yellow-900/20 border-l-4 border-yellow-500 text-yellow-400 text-sm">
-                  {tokenLoadError}
-                </div>
-              )}
+
 
 
 

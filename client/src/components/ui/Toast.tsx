@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react"
-import { Link } from "react-router-dom"
+
 import { motion, AnimatePresence } from "framer-motion"
-import { CheckIcon, XIcon } from "lucide-react"
+import { XIcon } from "lucide-react"
 import { createPortal } from "react-dom"
 import { FaRegCheckSquare } from "react-icons/fa";
 import { ImSpinner4 } from "react-icons/im";
@@ -62,15 +62,15 @@ const Toast: React.FC<ToastProps> = ({
             <p>{message}</p>
             <div className="d-flex align-items-center gap-2 mt-2">
               {txSignature && (
-                <Link
-                  to={`/transaction/${txSignature}`}
+                <a
+                  href={`https://solscan.io/tx/${txSignature}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="coppied-btn"
                   style={{ textDecoration: 'none' }}
                 >
                   view tx
-                </Link>
+                </a>
               )}
               <button className="coppied-btn" onClick={() => onClose(id)}>close</button>
             </div>

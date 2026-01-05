@@ -153,7 +153,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/top-kol-coins") ? "nav-active" : ""
                                     }`}
-                                onClick={() => navigate("/top-kol-coins")}
+                                onClick={(e) => e.preventDefault()}
                             >
                                 <FontAwesomeIcon icon={faCoins} />
                                 <span>Top KOL Coins</span>
@@ -168,7 +168,7 @@ function Sidebar() {
                         <li className="nav-item-bar">
                             <a
                                 className={`nav-link-item ${isActive("/kol") ? "nav-active" : ""}`}
-                                onClick={() => navigate("/kol")}
+                                onClick={(e) => e.preventDefault()}
                             >
                                 <FontAwesomeIcon icon={faRss} />
                                 <span>KOL FEED</span>
@@ -179,7 +179,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/all-kol-coins") ? "nav-active" : ""
                                     }`}
-                                onClick={() => navigate("/all-kol-coins")}
+                                onClick={(e) => e.preventDefault()}
                             >
                                 <FontAwesomeIcon icon={faRankingStar} />
                                 <span>TOP KOL COINS</span>
@@ -195,7 +195,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/whale-leaderboard") ? "nav-active" : ""
                                     }`}
-                                onClick={() => navigate("/whale-leaderboard")}
+                                onClick={(e) => e.preventDefault()}
                             >
                                 <FontAwesomeIcon icon={faCrown} />
                                 <span>WHALES LEADERBOARD</span>
@@ -206,7 +206,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/signal-engine") ? "nav-active" : ""
                                     }`}
-                                onClick={() => navigate("/signal-engine")}
+                                onClick={(e) => e.preventDefault()}
                             >
                                 <FontAwesomeIcon icon={faSatelliteDish} />
                                 <span>SIGNAL ENGINE</span>
@@ -217,7 +217,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/subscription") ? "nav-active" : ""
                                     }`}
-                                onClick={() => navigate("/subscription")}
+                                onClick={(e) => e.preventDefault()}
                             >
                                 <FontAwesomeIcon icon={faStar} />
                                 <span>SUBSCRIPTION</span>
