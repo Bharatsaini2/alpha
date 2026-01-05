@@ -235,6 +235,7 @@ const TokenizedSearchInput = React.forwardRef<
     const clearAllTokens = () => {
       setSearchTokens([])
       setInputValue("")
+      // Execute search with empty tokens to clear filters
       executeSearch([])
 
       // Focus back to input

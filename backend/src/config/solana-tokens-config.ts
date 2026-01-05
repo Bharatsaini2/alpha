@@ -6,6 +6,7 @@ import dotenv from 'dotenv'
 import { Metaplex, PublicKey } from '@metaplex-foundation/js'
 import { Connection } from '@solana/web3.js'
 import logger from '../utils/logger'
+import { redisClient } from './redis'
 dotenv.config()
 
 const BIRD_EYE_API_KEY =
@@ -215,7 +216,20 @@ export async function getTokenData(tokenAddress: string, retries = 3) {
 }
 
 export async function getTokenCreationInfo(tokenAddress: string) {
-  console.log('bireye call : ', tokenAddress)
+  // Check Redis cache first
+  const cacheKey = `token:creation:${tokenAddress}`
+  
+  try {
+    const cached = await redisClient.get(cacheKey)
+    if (cached) {
+      console.log('✅ Cache HIT (creation):', tokenAddress)
+      return cached
+    }
+  } catch (error) {
+    logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
+  }
+
+  console.log('🔴 Birdeye API call (creation):', tokenAddress)
 
   const url = `https://public-api.birdeye.so/defi/token_creation_info?address=${tokenAddress}`
   try {
@@ -226,7 +240,19 @@ export async function getTokenCreationInfo(tokenAddress: string) {
         'x-chain': 'solana',
       },
     })
-    return response.data.data.blockHumanTime
+    
+    const creationTime = response.data.data.blockHumanTime
+    
+    // Cache for 7 days (token creation time never changes)
+    if (creationTime) {
+      try {
+        await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, creationTime)
+      } catch (error) {
+        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
+      }
+    }
+    
+    return creationTime
   } catch (error) {
     console.error(`Error fetching creation info for ${tokenAddress}:`, error)
     return null
@@ -236,6 +262,21 @@ export async function getTokenCreationInfo(tokenAddress: string) {
 export async function getTokenMarketCapAndPriceUsingBirdEye(
   tokenAddress: string,
 ) {
+  // Check Redis cache first (cache for 1 minute since price changes frequently)
+  const cacheKey = `token:market:${tokenAddress}`
+  
+  try {
+    const cached = await redisClient.get(cacheKey)
+    if (cached) {
+      console.log('✅ Cache HIT (market):', tokenAddress)
+      return JSON.parse(cached)
+    }
+  } catch (error) {
+    logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
+  }
+
+  console.log('🔴 Birdeye API call (market):', tokenAddress)
+
   const url = `https://public-api.birdeye.so/defi/v3/token/market-data?address=${tokenAddress}&ui_amount_mode=scaled`
   try {
     const response = await axios.get(url, {
@@ -245,7 +286,19 @@ export async function getTokenMarketCapAndPriceUsingBirdEye(
         'x-chain': 'solana',
       },
     })
-    return response.data.data
+    
+    const data = response.data.data
+    
+    // Cache for 1 minute (price data changes frequently)
+    if (data) {
+      try {
+        await redisClient.setex(cacheKey, 60, JSON.stringify(data))
+      } catch (error) {
+        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
+      }
+    }
+    
+    return data
   } catch (error) {
     console.error(
       `Error fetching market cap and price for ${tokenAddress}:`,
@@ -256,6 +309,21 @@ export async function getTokenMarketCapAndPriceUsingBirdEye(
 }
 
 export async function getTokenImageUrl(tokenAddress: string) {
+  // Check Redis cache first
+  const cacheKey = `token:image:${tokenAddress}`
+  
+  try {
+    const cached = await redisClient.get(cacheKey)
+    if (cached) {
+      console.log('✅ Cache HIT (image):', tokenAddress)
+      return cached
+    }
+  } catch (error) {
+    logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
+  }
+
+  console.log('🔴 Birdeye API call (image):', tokenAddress)
+
   const url = `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${tokenAddress}`
   try {
     const response = await axios.get(url, {
@@ -265,7 +333,19 @@ export async function getTokenImageUrl(tokenAddress: string) {
         'x-chain': 'solana',
       },
     })
-    return response.data.data.logo_uri
+    
+    const imageUrl = response.data.data.logo_uri
+    
+    // Cache for 7 days (image URLs rarely change)
+    if (imageUrl) {
+      try {
+        await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, imageUrl)
+      } catch (error) {
+        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
+      }
+    }
+    
+    return imageUrl
   } catch (error) {
     console.error(`Error fetching image url for ${tokenAddress}:`, error)
     return null

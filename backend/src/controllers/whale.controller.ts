@@ -850,15 +850,30 @@ const processSignature = async (signatureJson: any): Promise<void> => {
 
     const parsedTx = JSON.parse(parsedData)
 
-    logger.info(`TX Type Whale: ${parsedTx.result?.type}`)
+    const txType = parsedTx.result?.type
 
-    const txType: any = parsedTx?.result?.type
-    if (!parsedTx.success || (txType !== 'SWAP' && txType !== 'SWAP2')) {
+    logger.info(`TX Type Whale: ${txType}`)
+
+    // Check if transaction succeeded
+    if (!parsedTx.success) {
+      logger.info(`Whale [Filter] Skipping ${signature}: Transaction failed`)
+      return
+    }
+
+    // Instead of checking transaction type, check for swap indicators
+    const tokenBalanceChanges = parsedTx.result?.token_balance_changes || []
+    const hasSwapIndicators = tokenBalanceChanges.length >= 2
+
+    if (!hasSwapIndicators) {
       logger.info(
-        `Whale [Filter] Skipping ${signature}: Not a successful SWAP or SWAP2 transaction according to Shyft.`,
+        `Whale [Filter] Skipping ${signature}: No swap indicators found (${tokenBalanceChanges.length} balance changes)`,
       )
       return
     }
+
+    logger.info(
+      `✅ Swap detected via token balance changes (${tokenBalanceChanges.length} changes)`,
+    )
 
     const actions = parsedTx?.result?.actions
 
@@ -885,24 +900,81 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       logger.info(`✅ Swap data extracted from: tokens_swapped`)
     } else if (
       parsedTx.result?.token_balance_changes &&
-      parsedTx.result.token_balance_changes.length > 0 &&
-      txType === 'SWAP'
+      parsedTx.result.token_balance_changes.length > 0
     ) {
       logger.info(
         `⚠️ tokens_swapped not found. Checking token_balance_changes...`,
       )
 
-      const balanceChanges = parsedTx.result.token_balance_changes.filter(
-        (change: any) => change.owner === swapper && change.change_amount !== 0,
-      )
+      // Log raw balance changes to understand the data structure
+      logger.info(`🔍 Raw balance changes (${parsedTx.result.token_balance_changes.length} total):`)
+      parsedTx.result.token_balance_changes.forEach((change: any, idx: number) => {
+        logger.info(`  [${idx}] mint: ${change.mint?.substring(0, 8)}..., owner: ${change.owner?.substring(0, 8)}..., change_amount: ${change.change_amount}, raw_amount: ${change.raw_amount}`)
+      })
 
-      // Negative change = token OUT, Positive change = token IN
-      const tokenSentChange = balanceChanges.find(
-        (c: any) => c.change_amount < 0,
+      // Get all non-zero balance changes (don't filter by owner yet)
+      const allBalanceChanges = parsedTx.result.token_balance_changes.filter(
+        (change: any) => change.change_amount !== 0,
       )
-      const tokenReceivedChange = balanceChanges.find(
-        (c: any) => c.change_amount > 0,
-      )
+      
+      logger.info(`📊 Found ${allBalanceChanges.length} non-zero balance changes`)
+      
+      if (allBalanceChanges.length < 2) {
+        logger.info(`⚠️ Not enough non-zero balance changes for a swap (need at least 2, got ${allBalanceChanges.length})`)
+        // Continue to TOKEN_TRANSFER fallback
+      }
+
+      // Group balance changes by mint (token address)
+      const changesByMint = new Map<string, any[]>()
+      allBalanceChanges.forEach((change: any) => {
+        if (!changesByMint.has(change.mint)) {
+          changesByMint.set(change.mint, [])
+        }
+        changesByMint.get(change.mint)!.push(change)
+      })
+      
+      // For a swap, we expect 2 different tokens with opposite changes
+      // Strategy: Find any negative and positive changes across all balance changes
+      // The swapper should have at least one change, but the other might be in a different account
+      let tokenSentChange: any = null
+      let tokenReceivedChange: any = null
+      
+      // First, try to find both changes belonging to the swapper
+      for (const [mint, changes] of changesByMint.entries()) {
+        const swapperChange = changes.find((c: any) => c.owner === swapper)
+        
+        if (swapperChange) {
+          if (swapperChange.change_amount < 0 && !tokenSentChange) {
+            tokenSentChange = swapperChange
+          } else if (swapperChange.change_amount > 0 && !tokenReceivedChange) {
+            tokenReceivedChange = swapperChange
+          }
+        }
+      }
+      
+      // If we didn't find both, look for ANY negative/positive changes in the transaction
+      // This handles cases where tokens go through intermediate accounts
+      if (!tokenSentChange || !tokenReceivedChange) {
+        for (const [mint, changes] of changesByMint.entries()) {
+          // Skip if we already found this token type
+          if (tokenSentChange && changes.some(c => c.mint === tokenSentChange.mint)) continue
+          if (tokenReceivedChange && changes.some(c => c.mint === tokenReceivedChange.mint)) continue
+          
+          // Find any negative change (token sent)
+          if (!tokenSentChange) {
+            const negativeChange = changes.find((c: any) => c.change_amount < 0)
+            if (negativeChange) tokenSentChange = negativeChange
+          }
+          
+          // Find any positive change (token received)
+          if (!tokenReceivedChange) {
+            const positiveChange = changes.find((c: any) => c.change_amount > 0)
+            if (positiveChange) tokenReceivedChange = positiveChange
+          }
+        }
+      }
+      
+      logger.info(`🔍 Token sent: ${tokenSentChange ? 'Found' : 'Not found'}, Token received: ${tokenReceivedChange ? 'Found' : 'Not found'}`)
 
       if (tokenSentChange && tokenReceivedChange) {
         tokenIn = {
@@ -910,8 +982,8 @@ const processSignature = async (signatureJson: any): Promise<void> => {
           amount:
             Math.abs(tokenSentChange.change_amount) /
             Math.pow(10, tokenSentChange.decimals),
-          symbol: 'Unknown',
-          name: 'Unknown',
+          symbol: tokenSentChange.symbol || 'Unknown',
+          name: tokenSentChange.name || 'Unknown',
         }
 
         tokenOut = {
@@ -919,8 +991,8 @@ const processSignature = async (signatureJson: any): Promise<void> => {
           amount:
             tokenReceivedChange.change_amount /
             Math.pow(10, tokenReceivedChange.decimals),
-          symbol: 'Unknown',
-          name: 'Unknown',
+          symbol: tokenReceivedChange.symbol || 'Unknown',
+          name: tokenReceivedChange.name || 'Unknown',
         }
         swapSource = 'token_balance'
         logger.info(`✅ Swap data extracted from: token_balance_changes`)
@@ -941,15 +1013,15 @@ const processSignature = async (signatureJson: any): Promise<void> => {
         tokenIn = {
           token_address: sentTransfer.info.token_address,
           amount: sentTransfer.info.amount,
-          symbol: 'Unknown',
-          name: 'Unknown',
+          symbol: sentTransfer.info.symbol || 'Unknown',
+          name: sentTransfer.info.name || 'Unknown',
         }
 
         tokenOut = {
           token_address: receivedTransfer.info.token_address,
           amount: receivedTransfer.info.amount,
-          symbol: 'Unknown',
-          name: 'Unknown',
+          symbol: receivedTransfer.info.symbol || 'Unknown',
+          name: receivedTransfer.info.name || 'Unknown',
         }
         swapSource = 'token_transfer'
         logger.info(`✅ Swap data extracted from: TOKEN_TRANSFER`)

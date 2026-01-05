@@ -32,7 +32,7 @@
 
 .alpha-user-details {
   align-items: start;
-  gap: 15px;
+  gap: 16px;
   display: flex;
 }
 
@@ -72,7 +72,7 @@
 .nw-user-info-bx {
   align-items: center;
   gap: 30px;
-  padding-top: 25px;
+  padding-top: 24px;
   display: flex;
 }
 
@@ -179,7 +179,7 @@
   text-wrap-mode: nowrap;
   background: #141414;
   border-right: 1px solid #292929;
-  padding: 8px 16px;
+  padding: 8px 12px;
   font-size: 14px;
   font-weight: 500;
 }
@@ -188,12 +188,17 @@
   text-transform: uppercase;
   color: #ccc;
   background-color: #000;
-  border: 0.5px solid #292929;
-  padding: 8px 16px;
+  border-bottom: 0.5px solid #292929;
+  border-right: 0.5px solid #292929;
+  padding: 8px 12px;
   font-size: 12px;
   font-weight: 500;
   line-height: 140%;
   text-align: start;
+}
+
+.crypto-table td:last-child {
+  border-right: 0px;
 }
 
 .coin-cell {

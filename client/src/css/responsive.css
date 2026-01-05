@@ -27,18 +27,6 @@ body {
     width: 100% !important;
   }
 
-  .nw-user-info-bx {
-    flex-direction: column;
-    gap: 10px;
-    align-items: start;
-    padding-top: 15px;
-  }
-
-  .alpha-user-details img {
-    width: 64px;
-    height: 64px;
-  }
-
   .app {
     height: auto !important;
     min-height: 100vh;
@@ -255,6 +243,19 @@ body {
   .custom-tabs .nav-link {
     font-size: 12px !important;
     padding: 4px 16px !important;
+    width: 100% !important;
+  }
+
+  .portfolio-tab-container .custom-tabs {
+    width: 100%;
+  }
+
+  .portfolio-tab-container .nav-item {
+    width: 50%;
+  }
+
+  .portfolio-tab-container {
+    margin-top: 15px;
   }
 
   /* Rate box */
@@ -381,6 +382,171 @@ body {
   .nw-quick-bx .quick-btn {
     line-height: 0px;
   }
+
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .main {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  /* .content {
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+    padding: 12px 10px;
+  } */
+
+  .custom-tab-content {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  /* Fix container widths */
+  .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .col-lg-4,
+  .col-lg-8 {
+    padding-left: 0;
+    padding-right: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Market box responsiveness */
+  .market-bx {
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .ultra-pro-bx {
+    padding: 10px;
+  }
+
+  /* Trade box responsiveness */
+  .trade-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Amount box */
+  .amount-box h2 {
+    font-size: 18px;
+  }
+
+  /* Coin row responsiveness - hide quick buy on mobile */
+  .coin-row {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .coin-row .quick-buy-btn {
+    display: none;
+  }
+
+  .coin-left {
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .coin-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .coin-title {
+    flex-wrap: wrap;
+  }
+
+  .coin-circle {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    font-size: 14px;
+  }
+
+  /* Plan buttons list - wrap on mobile */
+  .plan-btn-list {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .plan-btn {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+
+  /* Custom tabs - scroll horizontally if needed */
+  .custom-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  /* Rate box  */
+  .rate-box h5 {
+    font-size: 12px;
+  }
+
+  /* Connect wallet button */
+  .connect-wallet-btn {
+    font-size: 12px;
+    padding: 10px 16px;
+  }
+
+  /* Quick buy box hide on mobile */
+  /* .nw-quick-bx {
+    display: none;
+  } */
+
+  .custom-frm-bx.flex-grow-1 {
+    flex: 1;
+  }
+
+  .whale-address-section {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header-right-actions {
+    flex-grow: 1;
+    justify-content: space-between;
+  }
+
+  .alpha-user-details img {
+    width: 80px;
+    height: 80px;
+  }
+
+  .alpha-user-details h4 {
+    font-size: 14px !important;
+  }
+
+  .nw-user-info-bx {
+    flex-direction: column;
+    gap: 10px !important;
+    align-items: start !important;
+    padding-top: 16px !important;
+  }
+
+  .mb-content-bx {
+    margin-top: 15px;
+  }
+
+  .back-link {
+    margin-bottom: 10px !important;
+  }
 }
 
 @media (max-width: 768px) {
@@ -407,5 +573,29 @@ body {
 
   .sidebar {
     display: none !important;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 260px;
+    height: 100vh;
+    background: #0b1220;
+    z-index: 1000;
+    transition: right 0.3s ease;
+  }
+
+  .sidebar.sidebar-open {
+    right: 0;
+  }
+
+  .sidebar-close-btn {
+    display: block;
   }
 }

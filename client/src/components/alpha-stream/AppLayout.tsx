@@ -7,6 +7,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
     return (
+      <>
         <div className="app">
             <Sidebar />
             <div className="main">
@@ -16,5 +17,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </section>
             </div>
         </div>
+      </>
     )
 }

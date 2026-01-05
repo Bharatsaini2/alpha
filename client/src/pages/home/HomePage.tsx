@@ -14,6 +14,9 @@ import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
 import TokenizedSearchInput from "../../components/TokenizedSearchInput"
 import RightSidebar from "../../components/right-sidebar/RightSidebar"
+import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
+import SwapModal from "../../components/swap/SwapModal"
+import { useWalletConnection } from "../../hooks/useWalletConnection"
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:9090", {
   transports: ["websocket"],
@@ -254,9 +257,12 @@ const HomePage = () => {
   const [filtersPopupOpen, setFiltersPopupOpen] = useState(false)
   const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set())
   const [isOpen, setIsOpen] = useState(false)
-  const [quickBuyAmount, setQuickBuyAmount] = useState("100")
+  const [quickBuyAmount, setQuickBuyAmount] = useState(() => loadQuickBuyAmount() || "100")
+  const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
   const [selectedToken, setSelectedToken] = useState<any>(null)
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
   const { showToast, ToastContainer } = useToast()
+  const { wallet } = useWalletConnection()
   const [clearSearchTrigger, setClearSearchTrigger] = useState(0)
   const navigate = useNavigate()
   const filters = [
@@ -783,11 +789,12 @@ const HomePage = () => {
     tokens: Array<{ value: string; type: string }>
     displayQuery?: string
   }) => {
+    // If searchQuery is empty, clear the search filters
     const newFilters = {
       ...activeFilters,
-      searchQuery: searchData.searchQuery, // Use address for backend search
-      searchType: "coin" as const, // Force coin-only search for HomePage
-      displayQuery: searchData.displayQuery || searchData.searchQuery, // Use symbol/name for display
+      searchQuery: searchData.searchQuery || "", // Use address for backend search
+      searchType: searchData.searchQuery ? ("coin" as const) : null, // Clear searchType if no query
+      displayQuery: searchData.displayQuery || searchData.searchQuery || "", // Use symbol/name for display
     }
 
     setActiveFilters(newFilters)
@@ -799,13 +806,49 @@ const HomePage = () => {
   }
 
   const handleQuickBuy = (tx: any) => {
+    // Validate quick buy amount
+    const validation = validateQuickBuyAmount(quickBuyAmount)
+    if (!validation.isValid) {
+      showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
+      return
+    }
+
+    // Validate wallet connection
+    if (!wallet.connected) {
+      showToast("Please connect your wallet to continue", "error")
+      return
+    }
+
+    // Extract token info from clicked item
     const tokenInfo = {
       symbol: tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol,
       name: tx.type === 'sell' ? tx.transaction.tokenIn.name : tx.transaction.tokenOut.name,
       address: tx.type === 'sell' ? tx.tokenInAddress : tx.tokenOutAddress,
       image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
+      decimals: 9, // Default for most Solana tokens
     }
+    
+    // Open SwapModal in 'quickBuy' mode with SOL as input token
     setSelectedToken(tokenInfo)
+    setIsSwapModalOpen(true)
+  }
+
+  const handleQuickBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setQuickBuyAmount(value)
+    
+    // Validate and show error if invalid
+    const validation = validateQuickBuyAmount(value)
+    if (!validation.isValid && value !== '') {
+      setQuickBuyAmountError(validation.error || '')
+    } else {
+      setQuickBuyAmountError('')
+    }
+    
+    // Save to session storage if valid
+    if (validation.isValid) {
+      saveQuickBuyAmount(value)
+    }
   }
 
   return (
@@ -1107,11 +1150,20 @@ const HomePage = () => {
                 <input
                   type="number"
                   value={quickBuyAmount}
-                  onChange={(e) => setQuickBuyAmount(e.target.value)}
-                  className="bg-transparent text-white text-sm focus:outline-none w-16 text-right"
+                  onChange={handleQuickBuyAmountChange}
+                  className={`bg-transparent text-white text-sm focus:outline-none w-16 text-right ${quickBuyAmountError ? 'border border-red-500 rounded px-1' : ''}`}
                   placeholder="100"
+                  min="0"
+                  step="0.1"
+                  title={quickBuyAmountError || ''}
                 />
+                <span className="text-gray-400 text-xs">SOL</span>
               </div>
+              {quickBuyAmountError && (
+                <div className="text-red-500 text-xs mt-1">
+                  {quickBuyAmountError}
+                </div>
+              )}
             </div>
 
             {hasNewTransactions && (
@@ -2661,12 +2713,15 @@ const HomePage = () => {
                           <button
                             className="px-4 py-1.5 bg-transparent hover:bg-[#00D9AC]/10 border border-[#00D9AC] text-[11px] text-[#00D9AC] rounded font-semibold transition-colors uppercase tracking-wider"
                             onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
+                            aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
+                            title="Quick buy this token"
                           >
                             QUICK BUY
                           </button>
                           <button
                             className="p-1.5 text-gray-500 hover:text-white transition-colors bg-transparent border border-[#2A2A2D] rounded hover:border-gray-500"
                             onClick={(e) => { e.stopPropagation(); handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature) }}
+                            aria-label="Copy token address to clipboard"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
@@ -2812,6 +2867,25 @@ const HomePage = () => {
       <ReactFlowProvider>
         <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </ReactFlowProvider>
+      
+      <SwapModal
+        isOpen={isSwapModalOpen}
+        onClose={() => {
+          setIsSwapModalOpen(false)
+          setSelectedToken(null)
+        }}
+        mode="quickBuy"
+        initialInputToken={{
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
+          decimals: 9,
+          image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
+        }}
+        initialOutputToken={selectedToken}
+        initialAmount={quickBuyAmount}
+      />
+      
       <ToastContainer />
     </>
   )

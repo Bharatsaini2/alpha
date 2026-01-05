@@ -471,7 +471,39 @@ const WRAPPED_SOL_MINT = 'So11111111111111111111111111111111111111112';
 // Removed unused function: getTransactionHistory
 // This function referenced undefined models (PlatformTradeModel) and was not being used
 
-// Removed unused functions: getPriorityLevelAnalytics and trackTrade
-// These functions referenced undefined models (PlatformTradeModel, WalletTradeModel) and types (TrackTradeRequest, TrackTradeResponse)
-// and were not being used (routes were already removed)
+/**
+ * Track completed trade (lightweight - no database storage)
+ * Just logs the trade for monitoring purposes
+ */
+export const trackTrade = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const {
+      signature,
+      walletAddress,
+      inputMint,
+      outputMint,
+      inputAmount,
+      outputAmount,
+      platformFee,
+    } = req.body
+
+    // Just log for monitoring - no database storage needed
+    logger.info('Trade completed successfully', {
+      operation: 'trackTrade',
+      signature,
+      walletAddress,
+      inputMint,
+      outputMint,
+      inputAmount,
+      outputAmount,
+      platformFee,
+      timestamp: new Date().toISOString(),
+    })
+
+    res.status(200).json({
+      success: true,
+      message: 'Trade tracked successfully',
+    })
+  }
+)
 

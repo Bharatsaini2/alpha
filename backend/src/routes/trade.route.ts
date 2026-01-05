@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getSwapQuote,
   getSwapTransaction,
+  trackTrade,
 } from '../controllers/trade.controller';
 import { searchTokens } from '../controllers/jupiter-search.controller';
 
@@ -57,5 +58,20 @@ router.get('/quote', getSwapQuote);
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 router.post('/swap', getSwapTransaction);
+
+/**
+ * POST /track
+ * Track completed trade (lightweight logging only)
+ * 
+ * Request Body:
+ * - signature: Transaction signature (required)
+ * - walletAddress: User's wallet address (required)
+ * - inputMint: Input token address (required)
+ * - outputMint: Output token address (required)
+ * - inputAmount: Input amount (required)
+ * - outputAmount: Output amount (required)
+ * - platformFee: Platform fee amount (optional)
+ */
+router.post('/track', trackTrade);
 
 export default router;

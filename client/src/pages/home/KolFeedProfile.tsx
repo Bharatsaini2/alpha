@@ -97,7 +97,7 @@ function KolFeedProfile() {
             </div>
 
             {/* Content */}
-            <div className="tab-content custom-tab-content mt-3">
+            <div className="tab-content custom-tab-content mt-lg-3 mt-sm-0">
               {activeTab === "portfolio" && (
                 <div className="tab-pane active">
                   <div className="table-responsive crypto-table-responsive">

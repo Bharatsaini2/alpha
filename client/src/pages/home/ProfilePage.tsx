@@ -24,7 +24,7 @@ function ProfilePage() {
                                         <div>
                                             <h4>Blissful Design</h4>
                                             <div className="nw-user-info-bx">
-                                                <div>
+                                                <div className="mb-content-bx">
                                                     <h6>email</h6>
                                                     <p>eng@blissful.design</p>
                                                 </div>

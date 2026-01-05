@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch, faShareNodes } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
@@ -19,6 +19,8 @@ import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { RiFileCopyLine } from "react-icons/ri";
 
 import SwapModal from "../../components/swap/SwapModal"
+import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
+import { useWalletConnection } from "../../hooks/useWalletConnection"
 
 
 
@@ -48,15 +50,7 @@ const tagOptions = [
     "KOL",
 ]
 
-const subOptions = [
-    "SMART MONEY",
-    "HEAVY ACCUMULATOR",
-    "SNIPER",
-    "FLIPPER",
-    "COORDINATED GROUP",
-    "DORMANT WHALE",
-    "KOL",
-]
+
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:9090", {
     transports: ["websocket"],
@@ -257,11 +251,13 @@ const HomePageNew = () => {
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
     const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set())
     const [isOpen, setIsOpen] = useState(false)
-    const [quickBuyAmount, setQuickBuyAmount] = useState("0")
+    const [quickBuyAmount, setQuickBuyAmount] = useState(() => loadQuickBuyAmount() || "0")
+    const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
     const [searchQuery, setSearchQuery] = useState("")
     const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
     const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
-    const { showToast, ToastContainer } = useToast()
+    const { showToast } = useToast()
+    const { wallet } = useWalletConnection()
     const navigate = useNavigate()
 
     const [transactions, setTransactions] = useState<any[]>([])
@@ -568,6 +564,20 @@ const HomePageNew = () => {
     }
 
     const handleQuickBuy = (tx: any) => {
+        // Validate quick buy amount
+        const validation = validateQuickBuyAmount(quickBuyAmount)
+        if (!validation.isValid) {
+            showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
+            return
+        }
+
+        // Validate wallet connection
+        if (!wallet.connected) {
+            showToast("Please connect your wallet to continue", "error")
+            return
+        }
+
+        // Extract token info from clicked item
         const tokenInfo = {
             symbol: tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol,
             name: tx.type === 'sell' ? tx.transaction.tokenIn.name : tx.transaction.tokenOut.name,
@@ -575,8 +585,28 @@ const HomePageNew = () => {
             image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
             decimals: 9, // Default for most Solana tokens
         }
+
+        // Open SwapModal in 'quickBuy' mode with SOL as input token
         setSwapTokenInfo(tokenInfo)
         setIsSwapModalOpen(true)
+    }
+
+    const handleQuickBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        setQuickBuyAmount(value)
+
+        // Validate and show error if invalid
+        const validation = validateQuickBuyAmount(value)
+        if (!validation.isValid && value !== '') {
+            setQuickBuyAmountError(validation.error || '')
+        } else {
+            setQuickBuyAmountError('')
+        }
+
+        // Save to session storage if valid
+        if (validation.isValid) {
+            saveQuickBuyAmount(value)
+        }
     }
 
     const handleFilterTabChange = (filterType: string) => {
@@ -616,23 +646,24 @@ const HomePageNew = () => {
         handleFilterUpdate('tags', newTags)
     }
 
-    const clearFilters = () => {
-        const resetFilters = {
-            searchQuery: "",
-            searchType: null,
-            hotness: null,
-            transactionType: null,
-            tags: [],
-            amount: null,
-            ageMin: null,
-            ageMax: null,
-            marketCapMin: null,
-            marketCapMax: null,
-        }
-        setActiveFilters(resetFilters)
-        setActiveFilter("all")
-        setSearchQuery("")
-    }
+    // Clear filters function (currently unused but kept for future use)
+    // const clearFilters = () => {
+    //     const resetFilters = {
+    //         searchQuery: "",
+    //         searchType: null,
+    //         hotness: null,
+    //         transactionType: null,
+    //         tags: [],
+    //         amount: null,
+    //         ageMin: null,
+    //         ageMax: null,
+    //         marketCapMin: null,
+    //         marketCapMax: null,
+    //     }
+    //     setActiveFilters(resetFilters)
+    //     setActiveFilter("all")
+    //     setSearchQuery("")
+    // }
 
     // Close dropdown when clicking outside
     // useEffect(() => {
@@ -640,11 +671,11 @@ const HomePageNew = () => {
     //     document.addEventListener("click", handleClickOutside)
     //     return () => document.removeEventListener("click", handleClickOutside)
     // }, [])
-     const searchRef = useRef(null);
+    const searchRef = useRef<HTMLDivElement>(null);
 
-        useEffect(() => {
-        function handleClickOutside(event) {
-            if (searchRef.current && !searchRef.current.contains(event.target)) {
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
                 setShowDropdown(false);
             }
         }
@@ -694,22 +725,42 @@ const HomePageNew = () => {
     ];
 
     // const [searchQuery, setSearchQuery] = useState("");
-    const [filteredOptions, setFilteredOptions] = useState([]);
+    const [filteredOptions, setFilteredOptions] = useState<any[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
-    const handleSearch = (e) => {
+    const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        // You can perform a search action here if needed
-        console.log("Search submitted:", searchQuery);
+
+        // If there's a search query, apply it as a filter
+        if (searchQuery.trim()) {
+            // Update active filters with the search query
+            setActiveFilters({
+                ...activeFilters,
+                searchQuery: searchQuery.trim(),
+                searchType: 'all'
+            });
+
+            // Close dropdown
+            setShowDropdown(false);
+        }
     };
 
-    const handleChange = (e) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setSearchQuery(value);
 
         if (value.trim() === "") {
             setFilteredOptions([]);
             setShowDropdown(false);
+
+            // Clear search filter when input is empty
+            if (activeFilters.searchQuery) {
+                setActiveFilters({
+                    ...activeFilters,
+                    searchQuery: "",
+                    searchType: null
+                });
+            }
             return;
         }
 
@@ -720,8 +771,17 @@ const HomePageNew = () => {
         setShowDropdown(filtered.length > 0);
     };
 
-    const handleSelect = (option) => {
-        setSearchQuery(option);
+    const handleSelect = (option: any) => {
+        // Set the search query to the selected option's title
+        setSearchQuery(option.titles);
+
+        // Apply the search filter
+        setActiveFilters({
+            ...activeFilters,
+            searchQuery: option.titles,
+            searchType: 'all'
+        });
+
         setShowDropdown(false);
     };
 
@@ -735,26 +795,26 @@ const HomePageNew = () => {
     const [walletTypeOpen, setWalletTypeOpen] = useState(false);
     const [amountOpen, setAmountOpen] = useState(false);
 
-    const [trigger, setTrigger] = useState("Hotness Score");
-    const [walletType, setWalletType] = useState("Any Label");
+    // const [trigger, setTrigger] = useState("Hotness Score");
+    // const [walletType, setWalletType] = useState("Any Label");
     const [amount, setAmount] = useState("$1K");
     const [customAmount, setCustomAmount] = useState("");
 
-    const closeAll = () => {
+    const closeAll = useCallback(() => {
         setTriggerOpen(false);
         setWalletTypeOpen(false);
         setAmountOpen(false);
-    };
+    }, []);
 
     useEffect(() => {
         document.addEventListener("click", closeAll);
         return () => document.removeEventListener("click", closeAll);
-    }, []);
+    }, [closeAll]);
 
 
-    const [walletTypes, setWalletTypes] = useState([]);
+    const [walletTypes, setWalletTypes] = useState<string[]>([]);
 
-    const toggleWalletType = (value) => {
+    const toggleWalletType = (value: string) => {
         setWalletTypes((prev) =>
             prev.includes(value)
                 ? prev.filter((item) => item !== value)
@@ -774,7 +834,11 @@ const HomePageNew = () => {
                 <div className="row">
                     {/* Right Sidebar - Shows first on mobile, second on desktop */}
                     <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
-                        <RightSidebarNew />
+                        <RightSidebarNew
+                            pageType="alpha"
+                            transactions={transactions}
+                            quickBuyAmount={quickBuyAmount}
+                        />
                     </div>
 
                     {/* Transactions Feed Column - Shows second on mobile, first on desktop */}
@@ -807,7 +871,7 @@ const HomePageNew = () => {
                                 </div>
                             </form> */}
 
-                            <div className="search-container flex-grow-1"  ref={searchRef}>
+                            <div className="search-container flex-grow-1" ref={searchRef}>
                                 <form className="custom-frm-bx mb-3" onSubmit={handleSearch}>
                                     <input
                                         type="text"
@@ -826,7 +890,15 @@ const HomePageNew = () => {
                                             <button
                                                 type="button"
                                                 className="clear-input-btn"
-                                                onClick={() => setSearchQuery("")}
+                                                onClick={() => {
+                                                    setSearchQuery("")
+                                                    // Clear search filter when X button is clicked
+                                                    setActiveFilters({
+                                                        ...activeFilters,
+                                                        searchQuery: "",
+                                                        searchType: null
+                                                    })
+                                                }}
                                             >
                                                 ×
                                             </button>
@@ -884,25 +956,40 @@ const HomePageNew = () => {
                                     onClick={() => quickBuyInputRef.current?.focus()}
                                 >
                                     <img src="/quick-btn.png" alt="" /> quick buy amount
-                                    {/* <input
+                                    <input
                                         ref={quickBuyInputRef}
                                         type="number"
                                         value={quickBuyAmount}
-                                        onChange={(e) => setQuickBuyAmount(e.target.value)}
+                                        onChange={handleQuickBuyAmountChange}
                                         onClick={(e) => e.stopPropagation()}
-                                        placeholder="100"
+                                        placeholder="0.5"
+                                        min="0"
+                                        step="0.1"
                                         style={{
                                             background: 'transparent',
-                                            border: 'none',
+                                            border: quickBuyAmountError ? '1px solid #ef4444' : 'none',
                                             color: '#fff',
-                                            width: '50px',
+                                            width: '60px',
                                             textAlign: 'right',
                                             outline: 'none',
-                                            fontSize: 'inherit',
-                                            marginLeft: 'auto'
+                                            fontSize: '14px',
+                                            borderRadius: '4px',
+                                            padding: '2px 4px'
                                         }}
-                                    /> */}
+                                        title={quickBuyAmountError || ''}
+                                    />
+                                    <span style={{ color: '#fff', fontSize: '14px' }}>SOL</span>
                                 </button>
+                                {quickBuyAmountError && (
+                                    <div style={{
+                                        color: '#ef4444',
+                                        fontSize: '11px',
+                                        marginTop: '4px',
+                                        paddingLeft: '8px'
+                                    }}>
+                                        {quickBuyAmountError}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -1080,9 +1167,9 @@ const HomePageNew = () => {
                                                                             min="0"
                                                                             max="10"
                                                                             value={hotness}
-                                                                            onChange={(e) => setHotness(e.target.value)}
+                                                                            onChange={(e) => setHotness(Number(e.target.value))}
                                                                             className="hotness-range"
-                                                                            style={{ "--range-progress": `${(hotness / 10) * 100}%` }}
+                                                                            style={{ "--range-progress": `${(hotness / 10) * 100}%` } as React.CSSProperties}
                                                                         />
 
                                                                     </div>
@@ -1297,34 +1384,78 @@ const HomePageNew = () => {
                                 </div>
                             </div>
 
-                            <div className="category-remove-filting">
-                                <ul>
-                                    <li>
-                                        <div className="category-filtering-add">
-                                            <div className="category-filter-items">
-                                                <h6>  Hotness Score : <span> &gt;3 </span>  </h6>
-                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li>
-                                        <div className="category-filtering-add">
-                                            <div className="category-filter-items">
-                                                <h6>  Amount : <span> &gt;$1,000 </span>  </h6>
-                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
-                                            </div>
-                                        </div>
-                                    </li>
-                                    <li>
-                                        <div className="category-filtering-add">
-                                            <div className="category-filter-items">
-                                                <h6>  Tags : <span> Sniper </span>  </h6>
-                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
-                                            </div>
-                                        </div>
-                                    </li>
-                                </ul>
-                            </div>
+                            {/* Active Filter Indicators - Only show when filters are active */}
+                            {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0) && (
+                                <div className="category-remove-filting">
+                                    <ul>
+                                        {/* Hotness Filter Indicator */}
+                                        {activeFilters.hotness && (
+                                            <li>
+                                                <div className="category-filtering-add">
+                                                    <div className="category-filter-items">
+                                                        <h6>
+                                                            Hotness Score: <span>{hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}</span>
+                                                        </h6>
+                                                        <span>
+                                                            <a
+                                                                href="javascript:void(0)"
+                                                                className="filter-remv-btn"
+                                                                onClick={() => handleFilterUpdate('hotness', null)}
+                                                            >
+                                                                <FontAwesomeIcon icon={faClose} />
+                                                            </a>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        )}
+
+                                        {/* Amount Filter Indicator */}
+                                        {activeFilters.amount && (
+                                            <li>
+                                                <div className="category-filtering-add">
+                                                    <div className="category-filter-items">
+                                                        <h6>
+                                                            Amount: <span>{amountOptions.find(o => o.value === activeFilters.amount)?.label}</span>
+                                                        </h6>
+                                                        <span>
+                                                            <a
+                                                                href="javascript:void(0)"
+                                                                className="filter-remv-btn"
+                                                                onClick={() => handleFilterUpdate('amount', null)}
+                                                            >
+                                                                <FontAwesomeIcon icon={faClose} />
+                                                            </a>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        )}
+
+                                        {/* Tags Filter Indicators - One for each active tag */}
+                                        {activeFilters.tags.map((tag: string, index: number) => (
+                                            <li key={`tag-${index}`}>
+                                                <div className="category-filtering-add">
+                                                    <div className="category-filter-items">
+                                                        <h6>
+                                                            Tags: <span>{tag}</span>
+                                                        </h6>
+                                                        <span>
+                                                            <a
+                                                                href="javascript:void(0)"
+                                                                className="filter-remv-btn"
+                                                                onClick={() => toggleTag(tag)}
+                                                            >
+                                                                <FontAwesomeIcon icon={faClose} />
+                                                            </a>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
 
                             {/* Transactions List */}
                             <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
@@ -1373,6 +1504,17 @@ const HomePageNew = () => {
                                                                 href="javascript:void(0)"
                                                                 className="quick-nw-btn"
                                                                 onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
+                                                                role="button"
+                                                                tabIndex={0}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                                        e.preventDefault()
+                                                                        e.stopPropagation()
+                                                                        handleQuickBuy(tx)
+                                                                    }
+                                                                }}
+                                                                aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
+                                                                title="Quick buy this token"
                                                             >
                                                                 quick buy
                                                             </a>
@@ -1416,10 +1558,10 @@ const HomePageNew = () => {
                                                     <img
                                                         src={tx.whaleTokenURL || DefaultTokenImage}
                                                         alt="whale"
-                                                        onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
+                                                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
                                                     />
                                                     <div className="whale-content flex-grow-1">
-                                                        <h4 className="username">{tx.whaleTokenSymbol} Whale (A4DC..) </h4>
+                                                        <h4 className="username">{tx.whaleTokenSymbol} Whale ({tx.whaleAddress?.slice(0, 4)}..) </h4>
                                                         <div className="tags">
                                                             {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                                                 <span key={i} className="tag-title">{tag}</span>
@@ -1429,7 +1571,7 @@ const HomePageNew = () => {
                                                             )}
                                                         </div>
                                                         <div className={`sold-out-title ${tx.type === 'buy' ? 'sold-title' : ''}`}>
-                                                            {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                            {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1458,7 +1600,7 @@ const HomePageNew = () => {
                                                         <img
                                                             src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
                                                             alt="token"
-                                                            onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
+                                                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
                                                         />
                                                     </div>
                                                 </div>
@@ -1530,11 +1672,19 @@ const HomePageNew = () => {
                     setIsSwapModalOpen(false)
                     setSwapTokenInfo(null)
                 }}
+                mode="quickBuy"
+                initialInputToken={{
+                    address: "So11111111111111111111111111111111111111112",
+                    symbol: "SOL",
+                    name: "Solana",
+                    decimals: 9,
+                    image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
+                }}
                 initialOutputToken={swapTokenInfo}
                 initialAmount={quickBuyAmount}
             />
 
-            <ToastContainer />
+
         </>
     )
 }

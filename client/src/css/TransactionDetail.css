@@ -401,13 +401,13 @@
   .tx-flow-visual {
     grid-template-columns: 1fr;
     gap: 0px;
-    padding: 20px 0;
+    /* padding: 20px 0; */
   }
 
   .flow-side.left,
   .flow-side.right {
     text-align: center;
-    padding: 20px;
+    /* padding: 20px; */
     border: none;
   }
 
@@ -416,6 +416,15 @@
     flex-direction: column;
     justify-content: center;
     text-align: center;
+  }
+
+  .tx-details-table .table-row {
+    flex-direction: column;
+    align-items: start;
+  }
+
+  .tx-details-table {
+    padding: 40px 16px 16px 16px;
   }
 }
 
@@ -599,7 +608,7 @@
 }
 
 .impact-percent {
-  color: rgb(180, 180, 83);
+  color: #ef4444; /* Red color for high price impact (> 5%) */
 }
 
 .solana-total-bx {

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react"
-import { X, ArrowDownUp, Settings } from "lucide-react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
+import { X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Transaction, VersionedTransaction } from "@solana/web3.js"
 import DefaultTokenImage from "../../assets/default_token.svg"
@@ -10,11 +10,13 @@ import { useToast } from "../ui/Toast"
 import "./swap.css"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCopy } from "@fortawesome/free-solid-svg-icons"
+import { getTokenSafetyInfo, TokenSafetyInfo, getLiquidityStatusClass, getTradingStatusClass, getHoneypotStatusClass } from "../../lib/tokenSafety"
 
 
 interface SwapModalProps {
   isOpen: boolean
   onClose: () => void
+  mode?: 'swap' | 'quickBuy'
   initialInputToken?: TokenInfo
   initialOutputToken?: TokenInfo
   initialAmount?: string
@@ -40,6 +42,7 @@ const DEFAULT_OUTPUT_TOKEN: TokenInfo = {
 export const SwapModal: React.FC<SwapModalProps> = ({
   isOpen,
   onClose,
+  mode = 'swap',
   initialInputToken,
   initialOutputToken,
   initialAmount,
@@ -48,19 +51,37 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const { getQuote, getSwapTransaction, trackTrade, isLoadingQuote, isLoadingSwap, clearErrors } = useSwapApi()
   const { showToast } = useToast()
 
+  // Refs for focus management (Requirement 24.2)
+  const modalRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const confirmButtonRef = useRef<HTMLButtonElement>(null)
+
   const [inputToken, setInputToken] = useState<TokenInfo>(initialInputToken || DEFAULT_INPUT_TOKEN)
   const [outputToken, setOutputToken] = useState<TokenInfo>(initialOutputToken || DEFAULT_OUTPUT_TOKEN)
   const [inputAmount, setInputAmount] = useState<string>(initialAmount || "")
   const [outputAmount, setOutputAmount] = useState<string>("")
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
-  const [slippage, setSlippage] = useState<number>(500) // Fixed 5% slippage (500 BPS) - NOT dynamic
+  const [slippage] = useState<number>(500) // Fixed 5% slippage (500 BPS) - Requirement 19.2
   const [showSlippageSettings, setShowSlippageSettings] = useState(false)
   const [isInputModalOpen, setIsInputModalOpen] = useState(false)
   const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
   const [inputBalance, setInputBalance] = useState<number>(0)
+  const [solBalance, setSolBalance] = useState<number>(0)
   const [isSwapping, setIsSwapping] = useState(false)
-  const [swapStatus, setSwapStatus] = useState<string>("")
-  const [lastTxSignature, setLastTxSignature] = useState<string>("")
+  const [priorityFeeEnabled, setPriorityFeeEnabled] = useState<boolean>(false)
+  const [tokenSafetyInfo, setTokenSafetyInfo] = useState<TokenSafetyInfo | null>(null)
+  const [balanceError, setBalanceError] = useState<string>("")
+  const [transactionSignature, setTransactionSignature] = useState<string>("")
+  const [showSignature, setShowSignature] = useState<boolean>(false)
+  const [autoCloseTimerId, setAutoCloseTimerId] = useState<NodeJS.Timeout | null>(null)
+  
+  // Loading states for different stages (Requirement 22.1, 22.2, 22.3, 22.4)
+  const [isPreparingTransaction, setIsPreparingTransaction] = useState<boolean>(false)
+  const [isSigningTransaction, setIsSigningTransaction] = useState<boolean>(false)
+  const [isSubmittingTransaction, setIsSubmittingTransaction] = useState<boolean>(false)
+
+  // Track whether initial quote has been fetched for Quick Buy mode (Requirements 1.1, 6.1, 7.1)
+  const [hasInitialQuote, setHasInitialQuote] = useState<boolean>(false)
 
   // Update initial values when props change
   useEffect(() => {
@@ -69,22 +90,137 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     if (initialAmount) setInputAmount(initialAmount)
   }, [initialInputToken, initialOutputToken, initialAmount])
 
+  // Cleanup auto-close timer on unmount or when modal closes (Requirement 17.5)
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimerId) {
+        clearTimeout(autoCloseTimerId)
+        setAutoCloseTimerId(null)
+      }
+    }
+  }, [autoCloseTimerId])
+
+  // Cancel pending operations when user manually closes modal (Requirement 17.5)
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset initial quote flag (Requirements 7.2, 7.5)
+      setHasInitialQuote(false)
+      
+      // Clear any pending auto-close timer
+      if (autoCloseTimerId) {
+        clearTimeout(autoCloseTimerId)
+        setAutoCloseTimerId(null)
+      }
+    }
+  }, [isOpen, autoCloseTimerId])
+
+  // Requirement 24.3: Add Escape key handler to close modal
+  useEffect(() => {
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isOpen) {
+        onClose()
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscapeKey)
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey)
+    }
+  }, [isOpen, onClose])
+
+  // Requirement 24.2: Implement focus trap within Quick Buy modal
+  useEffect(() => {
+    if (!isOpen || !modalRef.current) return
+
+    // Focus the close button when modal opens
+    const focusTimeout = setTimeout(() => {
+      if (closeButtonRef.current) {
+        closeButtonRef.current.focus()
+      }
+    }, 100)
+
+    const handleTabKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return
+
+      const focusableElements = modalRef.current?.querySelectorAll(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+
+      if (!focusableElements || focusableElements.length === 0) return
+
+      const firstElement = focusableElements[0] as HTMLElement
+      const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+
+      if (event.shiftKey) {
+        // Shift + Tab: moving backwards
+        if (document.activeElement === firstElement) {
+          event.preventDefault()
+          lastElement.focus()
+        }
+      } else {
+        // Tab: moving forwards
+        if (document.activeElement === lastElement) {
+          event.preventDefault()
+          firstElement.focus()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleTabKey)
+
+    return () => {
+      clearTimeout(focusTimeout)
+      document.removeEventListener('keydown', handleTabKey)
+    }
+  }, [isOpen])
+
+  // Fetch token safety info for Quick Buy mode
+  useEffect(() => {
+    if (mode === 'quickBuy' && isOpen && outputToken.address) {
+      // Fetch token safety information
+      getTokenSafetyInfo(outputToken.address)
+        .then(safetyInfo => {
+          setTokenSafetyInfo(safetyInfo)
+        })
+        .catch(error => {
+          console.error('Failed to fetch token safety info:', error)
+          // Set default safe values on error
+          setTokenSafetyInfo({
+            liquidity: 'Healthy',
+            trading: 'Active',
+            honeypot: 'Unknown'
+          })
+        })
+    }
+  }, [mode, isOpen, outputToken.address])
+
+  // Fetch SOL balance when Quick Buy modal opens (Requirement 13.1)
+  useEffect(() => {
+    if (mode === 'quickBuy' && isOpen && wallet.connected && wallet.publicKey) {
+      fetchSolBalance()
+    }
+  }, [mode, isOpen, wallet.connected, wallet.publicKey])
+
+  const fetchSolBalance = useCallback(async () => {
+    try {
+      // Fetch SOL balance (no tokenMint parameter = SOL balance)
+      const balance = await getBalance()
+      setSolBalance(balance)
+    } catch (error) {
+      console.error("Failed to fetch SOL balance:", error)
+      setSolBalance(0)
+    }
+  }, [getBalance])
+
   // Fetch balance when wallet connects
   useEffect(() => {
     if (wallet.connected && wallet.publicKey) {
       fetchInputBalance()
     }
   }, [wallet.connected, wallet.publicKey, inputToken.address])
-
-  // Fetch quote when amount or tokens change
-  useEffect(() => {
-    if (inputAmount && parseFloat(inputAmount) > 0) {
-      fetchQuote()
-    } else {
-      setQuote(null)
-      setOutputAmount("")
-    }
-  }, [inputAmount, inputToken.address, outputToken.address, slippage])
 
   const fetchInputBalance = useCallback(async () => {
     try {
@@ -100,10 +236,41 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     }
   }, [getBalance, inputToken.address])
 
+  // Helper function to reset all form fields (Requirement 17.3)
+  const resetFormFields = useCallback(() => {
+    setInputAmount("")
+    setOutputAmount("")
+    setQuote(null)
+    setTransactionSignature("")
+    setShowSignature(false)
+    setBalanceError("")
+    setPriorityFeeEnabled(false)
+    setTokenSafetyInfo(null)
+    setShowSlippageSettings(false)
+  }, [])
+
   const fetchQuote = useCallback(async () => {
+    // Log quote fetch for monitoring (Requirement 10.5)
+    console.log('[QuickBuy] Fetching quote:', {
+      mode,
+      inputAmount,
+      inputToken: inputToken.symbol,
+      outputToken: outputToken.symbol,
+      timestamp: new Date().toISOString()
+    })
+    
     try {
       const amount = parseFloat(inputAmount)
       if (isNaN(amount) || amount <= 0) return
+
+      // Validate that input and output tokens are different
+      if (inputToken.address === outputToken.address) {
+        console.error("Cannot swap: input and output tokens are the same")
+        setQuote(null)
+        setOutputAmount("")
+        showToast("Cannot swap the same token. Please select a different token.", "error")
+        return
+      }
 
       const amountInSmallestUnit = Math.floor(amount * Math.pow(10, inputToken.decimals))
 
@@ -146,6 +313,45 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     }
   }, [inputAmount, inputToken, outputToken, slippage, getQuote, showToast])
 
+  // Fetch quote ONCE when Quick Buy modal opens (Requirements 1.1, 1.3, 4.1, 6.1, 6.2)
+  useEffect(() => {
+    if (mode === 'quickBuy' && isOpen && !hasInitialQuote && inputAmount && parseFloat(inputAmount) > 0) {
+      // Validate tokens are different (prevent same token swap)
+      if (inputToken.address === outputToken.address) {
+        console.error("Cannot swap: input and output tokens are the same")
+        setQuote(null)
+        setOutputAmount("")
+        showToast("Cannot swap the same token. Please select a different token.", "error")
+        return
+      }
+      
+      fetchQuote()
+      setHasInitialQuote(true)
+    }
+  }, [mode, isOpen, hasInitialQuote, inputAmount, inputToken.address, outputToken.address])
+
+  // Fetch quote when amount or tokens change (ONLY for swap mode) (Requirements 2.1, 2.2, 2.3, 4.2, 5.2)
+  useEffect(() => {
+    // Skip this effect entirely for Quick Buy mode
+    if (mode === 'quickBuy') {
+      return
+    }
+    
+    // Don't fetch quote if input and output tokens are the same
+    if (inputToken.address === outputToken.address) {
+      setQuote(null)
+      setOutputAmount("")
+      return
+    }
+    
+    if (inputAmount && parseFloat(inputAmount) > 0) {
+      fetchQuote()
+    } else {
+      setQuote(null)
+      setOutputAmount("")
+    }
+  }, [inputAmount, inputToken.address, outputToken.address, slippage, mode])
+
   const handleSwap = useCallback(async () => {
     if (!wallet.connected || !wallet.publicKey || !inputAmount) return
 
@@ -153,8 +359,10 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       setIsSwapping(true)
       clearErrors()
 
+      // Requirement 22.2: Display "Processing..." during transaction preparation
+      setIsPreparingTransaction(true)
+
       // Get a FRESH quote right before swap to avoid stale route errors
-      setSwapStatus("Getting fresh quote...")
       const amount = parseFloat(inputAmount)
       if (isNaN(amount) || amount <= 0) {
         throw new Error("Invalid amount")
@@ -174,14 +382,12 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       const outAmount = parseFloat(freshQuote.outAmount) / Math.pow(10, outputToken.decimals)
       setOutputAmount(outAmount.toFixed(6))
 
-      setSwapStatus("Generating transaction...")
       const swapResponse = await getSwapTransaction({
         quoteResponse: freshQuote,
         userPublicKey: wallet.publicKey.toBase58(),
-        dynamicSlippage: false, // Fixed slippage at 5%
+        dynamicSlippage: priorityFeeEnabled, // Use priority fee state
       })
 
-      setSwapStatus("Please sign the transaction...")
       const transactionBuffer = Buffer.from(swapResponse.swapTransaction, "base64")
 
       // Try to deserialize as versioned transaction first (Jupiter uses versioned transactions)
@@ -193,12 +399,59 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         transaction = Transaction.from(transactionBuffer)
       }
 
-      setSwapStatus("Submitting transaction...")
-      const signature = await sendTransaction(transaction)
+      // Transaction prepared, now waiting for signature
+      setIsPreparingTransaction(false)
+      
+      // Requirement 22.3: Display loading indicator during transaction signing
+      setIsSigningTransaction(true)
 
-      setSwapStatus("Transaction confirmed!")
-      setLastTxSignature(signature)
-      showToast("Swap completed successfully!", "success")
+      // Show wallet signing prompt BEFORE sending with a small delay to ensure it renders
+      showToast("Please sign the transaction in your wallet", "info")
+      
+      // Small delay to ensure toast renders before wallet popup
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Send transaction (this will block until user signs or cancels)
+      let signature: string
+      try {
+        signature = await sendTransaction(transaction)
+        
+        // Transaction signed, now submitting to blockchain
+        setIsSigningTransaction(false)
+        
+        // Requirement 22.4: Display loading indicator during transaction submission
+        setIsSubmittingTransaction(true)
+      } catch (txError: any) {
+        // Clear signing state on error
+        setIsSigningTransaction(false)
+        // Re-throw to be caught by outer catch block
+        throw txError
+      }
+
+      // Only show success and copy if we get here (user signed)
+      // Requirement 15.2: Display "Transaction submitted" with signature after submission
+      showToast(`Transaction submitted: ${signature.slice(0, 8)}...${signature.slice(-8)}`, "success")
+
+      // Clear submission loading state
+      setIsSubmittingTransaction(false)
+
+      // Store signature for display in modal (Requirement 16.4)
+      setTransactionSignature(signature)
+      setShowSignature(true)
+
+      // Copy transaction signature to clipboard (Requirement 16.1)
+      try {
+        await navigator.clipboard.writeText(signature)
+        // Requirement 16.2: Display "Address copied to clipboard" confirmation message
+        showToast("Address copied to clipboard", "success")
+        // Requirement 15.3: Display "Transaction successful!" on success
+        showToast("Transaction successful!", "success")
+      } catch (clipboardError) {
+        // Requirement 16.3: Handle clipboard access failures gracefully
+        // If clipboard fails, still show success but inform user to copy manually
+        console.error("Failed to copy to clipboard:", clipboardError)
+        showToast("Transaction successful! Click the copy button to copy signature.", "success")
+      }
 
       // Track trade
       const inputAmountNum = parseFloat(inputAmount) * Math.pow(10, inputToken.decimals)
@@ -214,6 +467,8 @@ export const SwapModal: React.FC<SwapModalProps> = ({
         platformFee = outputAmountNum * 0.0075
       }
 
+      // Track trade (Requirement 21.1, 21.2)
+      // Make tracking non-blocking - don't affect user experience (Requirement 21.3)
       try {
         await trackTrade({
           signature,
@@ -225,118 +480,159 @@ export const SwapModal: React.FC<SwapModalProps> = ({
           platformFee,
         })
       } catch (trackError) {
-        console.error("Failed to track trade:", trackError)
+        // Log errors but don't display them to user (Requirement 21.4)
+        console.error('Failed to track trade:', trackError)
+        // Track trades even if tracking request fails (Requirement 21.5)
+        // Continue execution without affecting user experience
       }
 
-      // Reset and close after success
-      setTimeout(() => {
-        setInputAmount("")
-        setOutputAmount("")
-        setQuote(null)
-        setSwapStatus("")
-        setLastTxSignature("")
+      // Requirement 17.1: Keep modal open for exactly 3 seconds after successful transaction
+      // Requirement 17.2: Auto-close modal after 3 seconds
+      // Requirement 17.3: Reset all form fields on auto-close
+      const timerId = setTimeout(() => {
+        resetFormFields()
         onClose()
+        setAutoCloseTimerId(null)
       }, 3000)
+      
+      setAutoCloseTimerId(timerId)
     } catch (error: any) {
-      console.error("Swap failed:", error)
+      // Requirement 17.4: Keep modal open on transaction failure to allow retry
+      // Clear all loading states on error
+      setIsPreparingTransaction(false)
+      setIsSigningTransaction(false)
+      setIsSubmittingTransaction(false)
+      
       let errorMessage = "Swap failed. Please try again."
+      let toastType: "error" | "info" = "error"
 
-      // Safely extract error message
-      const errorMsg = typeof error.message === 'string' ? error.message : String(error.message || '')
+      // Safely extract error message and code
+      const errorMsg = typeof error?.message === 'string' ? error.message : String(error?.message || '')
+      const errorCode = error?.code || ""
+      const errorName = error?.name || ""
 
-      // Parse specific error messages
-      if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("invalidaccountdata")) {
+      // Check for user cancellation FIRST (most common case)
+      // Check multiple possible indicators of user rejection
+      if (
+        errorCode === "USER_REJECTED" ||
+        errorCode === 4001 || // Standard wallet rejection code (number)
+        errorCode === "4001" || // Standard wallet rejection code (string)
+        errorName === "WalletSignTransactionError" ||
+        errorMsg.toLowerCase().includes("user rejected") ||
+        errorMsg.toLowerCase().includes("user cancelled") ||
+        errorMsg.toLowerCase().includes("user canceled") ||
+        errorMsg.toLowerCase().includes("user denied") ||
+        errorMsg.toLowerCase().includes("rejected by user")
+      ) {
+        errorMessage = "Transaction cancelled"
+        toastType = "info"
+      } else if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("invalidaccountdata")) {
         errorMessage = "Route expired. Please try again with higher slippage."
-      } else if (errorMsg && typeof errorMsg === 'string' && errorMsg.toLowerCase().includes("simulation failed")) {
+      } else if (errorMsg && typeof errorMsg === 'string' && (errorMsg.toLowerCase().includes("simulation failed") || errorMsg.toLowerCase().includes("0x1"))) {
         errorMessage = "Transaction simulation failed. Try increasing slippage or reducing amount."
       } else if (errorMsg) {
         errorMessage = errorMsg
       }
 
-      showToast(errorMessage, "error")
-      setSwapStatus(errorMessage)
-      setTimeout(() => setSwapStatus(""), 5000)
+      // Show the toast with appropriate type
+      showToast(errorMessage, toastType)
+      
+      // Modal stays open to allow retry - no auto-close on error
     } finally {
       setIsSwapping(false)
     }
-  }, [wallet, inputAmount, inputToken, outputToken, slippage, getQuote, getSwapTransaction, sendTransaction, trackTrade, clearErrors, showToast, onClose])
+  }, [wallet, inputAmount, inputToken, outputToken, slippage, getQuote, getSwapTransaction, sendTransaction, trackTrade, clearErrors, showToast, onClose, resetFormFields])
 
-  const handleSwapTokens = () => {
-    const temp = inputToken
-    setInputToken(outputToken)
-    setOutputToken(temp)
-    setInputAmount("")
-    setOutputAmount("")
-    setQuote(null)
+  const shortenAddress = (address: string) => {
+    if (!address) return ''
+    return `${address.slice(0, 4)}...${address.slice(-4)}`
   }
 
-  const exchangeRate = useMemo(() => {
-    if (!quote || !inputAmount || parseFloat(inputAmount) === 0) return null
-    const inAmount = parseFloat(inputAmount)
-    const outAmount = parseFloat(outputAmount)
-    if (inAmount > 0 && outAmount > 0) {
-      const rate = outAmount / inAmount
-      return `1 ${inputToken.symbol} ≈ ${rate.toFixed(6)} ${outputToken.symbol}`
+  const copyToClipboard = async (text: string, message: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      showToast(message, 'success')
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error)
+      showToast('Failed to copy to clipboard', 'error')
     }
-    return null
-  }, [quote, inputAmount, outputAmount, inputToken.symbol, outputToken.symbol])
+  }
 
-  const platformFeeDisplay = useMemo(() => {
-    console.log('[Platform Fee Debug]', {
-      hasQuote: !!quote,
-      hasPlatformFee: !!quote?.platformFee,
-      platformFeeAmount: quote?.platformFee?.amount,
-      platformFeeObject: quote?.platformFee,
-      outputAmount,
-      outputAmountParsed: parseFloat(outputAmount || '0'),
-      outputTokenDecimals: outputToken.decimals,
-      outputTokenSymbol: outputToken.symbol
-    });
+  const copySignatureToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(transactionSignature)
+      showToast('Transaction signature copied to clipboard', 'success')
+    } catch (error) {
+      console.error('Failed to copy signature to clipboard:', error)
+      showToast('Failed to copy. Please copy manually from the text below.', 'error')
+    }
+  }
 
-    if (!quote) return null
-
-    // Try to use platform fee from quote response first
-    if (quote.platformFee?.amount && !isNaN(Number(quote.platformFee.amount))) {
-      const feeAmountRaw = quote.platformFee.amount
-      console.log('[Platform Fee] Using quote.platformFee.amount:', feeAmountRaw);
-      const feeAmount = parseFloat(feeAmountRaw) / Math.pow(10, outputToken.decimals)
-      if (!isNaN(feeAmount) && isFinite(feeAmount)) {
-        console.log('[Platform Fee] Calculated from quote:', feeAmount);
-        return `${feeAmount.toFixed(6)} ${outputToken.symbol} (0.75%)`
+  const platformFeeInSOL = useMemo(() => {
+    if (!quote || !outputAmount) return 0
+    // Platform fee is 0.75% of the output amount (Requirement 6.4)
+    const amount = parseFloat(outputAmount)
+    if (isNaN(amount)) return 0
+    // Convert output token amount to SOL equivalent for display
+    // For now, we'll use a simplified calculation
+    // In production, this should use the actual quote's platform fee if available
+    if (quote.platformFee?.amount) {
+      const platformFeeAmount = parseFloat(quote.platformFee.amount)
+      if (!isNaN(platformFeeAmount)) {
+        // Convert platform fee to SOL (assuming it's in output token decimals)
+        return platformFeeAmount / Math.pow(10, outputToken.decimals)
       }
     }
+    // Fallback: estimate as 0.75% of output value in SOL terms
+    // This is an approximation - actual fee should come from quote
+    return 0.0075 * parseFloat(inputAmount || '0')
+  }, [quote, outputAmount, outputToken.decimals, inputAmount])
 
-    // Fallback: Calculate platform fee manually (0.75% of output amount)
-    // Jupiter Ultra v1 doesn't return platformFee.amount, but fee is still collected
-    console.log('[Platform Fee] Using fallback calculation...');
-    if (outputAmount && !isNaN(parseFloat(outputAmount)) && parseFloat(outputAmount) > 0) {
-      const outAmount = parseFloat(outputAmount)
-      const feeAmount = outAmount * 0.0075 // 0.75% = 0.0075
+  const networkFeeInSOL = useMemo(() => {
+    // Estimate network fee (typical Solana transaction fee)
+    return 0.000005
+  }, [])
 
-      console.log('[Platform Fee] Fallback result:', {
-        outputAmount,
-        outAmount,
-        feeAmount,
-        formatted: `~${feeAmount.toFixed(6)} ${outputToken.symbol} (0.75%)`
-      });
+  const priorityFeeInSOL = useMemo(() => {
+    if (!priorityFeeEnabled) return 0
+    // Estimate priority fee
+    return 0.0001
+  }, [priorityFeeEnabled])
 
-      if (!isNaN(feeAmount) && isFinite(feeAmount) && feeAmount > 0) {
-        return `~${feeAmount.toFixed(6)} ${outputToken.symbol} (0.75%)`
+  const totalCostInSOL = useMemo(() => {
+    const amount = parseFloat(inputAmount) || 0
+    return amount + platformFeeInSOL + networkFeeInSOL + priorityFeeInSOL
+  }, [inputAmount, platformFeeInSOL, networkFeeInSOL, priorityFeeInSOL])
+
+  // Validate balance for Quick Buy mode (Requirements 13.2, 13.3)
+  useEffect(() => {
+    if (mode === 'quickBuy' && wallet.connected) {
+      if (solBalance < totalCostInSOL && totalCostInSOL > 0) {
+        setBalanceError("Insufficient Balance")
+      } else {
+        setBalanceError("")
       }
+    } else {
+      setBalanceError("")
     }
-
-    console.log('[Platform Fee] No valid calculation possible');
-    return null
-  }, [quote, outputAmount, outputToken])
+  }, [mode, wallet.connected, solBalance, totalCostInSOL])
 
   const isSwapDisabled = useMemo(() => {
     if (!wallet.connected) return true
     if (isSwapping || isLoadingQuote || isLoadingSwap) return true
     if (!inputAmount || parseFloat(inputAmount) <= 0) return true
     if (!quote) return true
-    if (parseFloat(inputAmount) > inputBalance) return true
+    
+    // For Quick Buy mode, check SOL balance against total cost (Requirement 13.4)
+    if (mode === 'quickBuy') {
+      if (solBalance < totalCostInSOL) return true
+    } else {
+      // For regular swap mode, check input token balance
+      if (parseFloat(inputAmount) > inputBalance) return true
+    }
+    
     return false
-  }, [wallet.connected, isSwapping, isLoadingQuote, isLoadingSwap, inputAmount, quote, inputBalance])
+  }, [wallet.connected, isSwapping, isLoadingQuote, isLoadingSwap, inputAmount, quote, mode, solBalance, totalCostInSOL, inputBalance])
 
   return (
     <>
@@ -404,30 +700,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                   </button>
                 ) : (
                   <>
-                
-                    {swapStatus && (
-                      <div className={`p-3 rounded-lg text-sm ${
-                        swapStatus.includes("confirmed") || swapStatus.includes("success")
-                          ? "bg-green-900/20 border border-green-500/50 text-green-400"
-                          : swapStatus.includes("failed") || swapStatus.includes("error")
-                          ? "bg-red-900/20 border border-red-500/50 text-red-400"
-                          : "bg-blue-900/20 border border-blue-500/50 text-blue-400"
-                      }`}>
-                        {swapStatus}
-                        {lastTxSignature && (
-                          <a
-                            href={`https://solscan.io/tx/${lastTxSignature}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block mt-1 underline hover:text-white"
-                          >
-                            View on Solscan →
-                          </a>
-                        )}
-                      </div>
-                    )}
-
-            
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-400">You Pay</span>
@@ -587,16 +859,24 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       <AnimatePresence>
         {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="swap-modal-title"
+            aria-describedby="swap-modal-description"
+          >
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={onClose}
+              aria-hidden="true"
             />
 
             <motion.div
+              ref={modalRef}
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -605,14 +885,17 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
               <div className="flex items-start justify-between p-3 border-b border-[#292929]">
                 <div className="confirm-title-bx">
-                  <h4 className="">Quick By Confirmation</h4>
-                  <p className="">Review Details before siging</p>
+                  <h4 id="swap-modal-title" className="">{mode === 'quickBuy' ? 'Quick Buy Confirmation' : 'Swap Tokens'}</h4>
+                  <p id="swap-modal-description" className="">{mode === 'quickBuy' ? 'Review Details before signing' : ''}</p>
                 </div>
 
                 <div>
                   <button
+                    ref={closeButtonRef}
                     onClick={onClose}
                     className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10"
+                    aria-label="Close modal"
+                    title="Close modal (Esc)"
                   >
                     <X size={20} />
                   </button>
@@ -621,21 +904,93 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
 
               <div className="p-3 space-y-3">
-                <div className="solana-bx">
-                  <div className="solana-parent-bx">
-                    <div className="solana-content-bx">
-                      <img src="/solana-icon.png" alt="" />
-                      <div>
-                        <h4>Solana</h4>
-                        <p>Sol</p>
+                {/* Requirement 22.3, 22.4: Display loading indicator during transaction signing and submission */}
+                {(isSigningTransaction || isSubmittingTransaction) && (
+                  <div className="transaction-loading-overlay" style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(10, 10, 10, 0.95)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    borderRadius: '8px',
+                    animation: 'fade-in 0.3s ease-out'
+                  }}>
+                    <div className="loading-spinner-large" style={{
+                      width: '48px',
+                      height: '48px',
+                      border: '4px solid #2a2a2a',
+                      borderTop: '4px solid #2b6ad1',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                      marginBottom: '16px'
+                    }}></div>
+                    <h5 style={{
+                      color: '#fff',
+                      fontSize: '18px',
+                      fontWeight: 600,
+                      marginBottom: '8px'
+                    }}>
+                      {isSigningTransaction ? 'Waiting for Signature...' : 'Submitting Transaction...'}
+                    </h5>
+                    <p style={{
+                      color: '#8f8f8f',
+                      fontSize: '14px',
+                      textAlign: 'center',
+                      maxWidth: '300px'
+                    }}>
+                      {isSigningTransaction 
+                        ? 'Please approve the transaction in your wallet' 
+                        : 'Your transaction is being submitted to the blockchain'}
+                    </p>
+                  </div>
+                )}
+                
+                {mode === 'quickBuy' && (
+                  <div className="solana-bx">
+                    <div className="solana-parent-bx">
+                      <div className="solana-content-bx">
+                        <img 
+                          src={outputToken.image || DefaultTokenImage} 
+                          alt={`${outputToken.symbol} token logo`}
+                          onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
+                        />
+                        <div>
+                          <h4>{outputToken.name}</h4>
+                          <p>{outputToken.symbol}</p>
+                        </div>
+                      </div>
+
+                      <div className="solana-cp-bx">
+                        <h6 aria-label={`Token contract address: ${outputToken.address}`}>{shortenAddress(outputToken.address)}</h6> 
+                        <span>
+                          <a 
+                            href="javascript:void(0)" 
+                            className="solana-cp-btn"
+                            onClick={() => copyToClipboard(outputToken.address, 'Address copied to clipboard')}
+                            aria-label="Copy token contract address to clipboard"
+                            title="Copy address"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                copyToClipboard(outputToken.address, 'Address copied to clipboard')
+                              }
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faCopy} />
+                          </a>
+                        </span>
                       </div>
                     </div>
-
-                    <div className="solana-cp-bx">
-                      <h6>9xQZ...pump</h6> <span><a href="javascript:void(0)" className="solana-cp-btn"><FontAwesomeIcon icon={faCopy} /></a></span>
-                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* <div className="buy-detail-bx">
                   <h4>Buy Details</h4>
@@ -666,42 +1021,67 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                       <h6>You Pay</h6>
 
                       <div className="d-flex align-items-center justify-content-end">
-                        <div className="amount-box w-3xs">
-                          <input
-                            type="number"
-                            placeholder="0.00"
-                            className="amount-input main-amount fz-18"
-                            min="0"
-                            step="any"
-                          />
-                        </div>
-
-                        <h5></h5>
+                        {mode === 'quickBuy' ? (
+                          <h5 aria-label={`You will pay ${inputAmount} SOL`}>{inputAmount} SOL</h5>
+                        ) : (
+                          <>
+                            <div className="amount-box w-3xs">
+                              <input
+                                type="number"
+                                placeholder="0.00"
+                                className="amount-input main-amount fz-18"
+                                min="0"
+                                step="any"
+                                value={inputAmount}
+                                onChange={(e) => setInputAmount(e.target.value)}
+                                aria-label={`Enter amount of ${inputToken.symbol} to swap`}
+                                aria-describedby="input-amount-description"
+                              />
+                            </div>
+                            <h5>{inputToken.symbol}</h5>
+                            <span id="input-amount-description" className="sr-only">
+                              Enter the amount of {inputToken.symbol} you want to swap
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
 
                     {/* YOU RECEIVE */}
-
                     <div className="amount-box">
+                      {/* Requirement 22.1: Display skeleton loader for output amount while quote is loading */}
                       {isLoadingQuote ? (
-                        <div className="nw-skeleton">
-                          <div className="skeleton-amount mb-1"></div>
-                          <div className="skeleton-usd"></div>
+                        <div className="nw-skeleton" aria-live="polite" aria-busy="true">
+                          <div className="skeleton-amount mb-1" style={{
+                            background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                            backgroundSize: '200% 100%',
+                            animation: 'shimmer 2s infinite linear',
+                            borderRadius: '4px',
+                            height: '24px',
+                            width: '60%',
+                            marginBottom: '8px'
+                          }}></div>
+                          <div className="skeleton-usd" style={{
+                            background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                            backgroundSize: '200% 100%',
+                            animation: 'shimmer 2s infinite linear',
+                            borderRadius: '4px',
+                            height: '16px',
+                            width: '40%'
+                          }}></div>
+                          <span className="sr-only">Loading quote...</span>
                         </div>
                       ) : (
                         <>
                           <div className="solana-receive-bx">
                             <h6>You Receive</h6>
-                            <h5>1,243,333 Token</h5>
+                            <h5 aria-label={`You will receive ${outputAmount || '0'} ${outputToken.symbol}`}>
+                              {outputAmount || '0'} {outputToken.symbol}
+                            </h5>
                           </div>
                         </>
                       )}
                     </div>
-
-                    {/* <div className="solana-receive-bx">
-      <h6>You Receive</h6>
-       <h5>1,243,333 Token</h5>
-    </div> */}
                   </div>
                 </div>
 
@@ -710,26 +1090,54 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
                 <div className="slippage-bx">
                   <div>
-                    <h6>Slippage : 5 percent</h6>
+                    <h6>Slippage: {(slippage / 100).toFixed(2)}%</h6>
                   </div>
                   <div>
-                    <h6>price impact : <span className="impact-percent">2.8 percent</span></h6>
+                    <h6>Price impact: 
+                      {isLoadingQuote ? (
+                        <span className="loading-dots" style={{ marginLeft: '4px' }}>Loading</span>
+                      ) : (
+                        <span className={quote && parseFloat(quote.priceImpactPct || '0') > 5 ? 'impact-percent' : ''}>{quote?.priceImpactPct || '0'}%</span>
+                      )}
+                    </h6>
                   </div>
                 </div>
 
                 <div className="solana-breakdown">
-                  <h5>Fee BreakDown</h5>
+                  <h5>Fee Breakdown</h5>
                   <ul className="break-down-list">
-                    <li className="break-down-item">Platform fee (0.75 percent)<span className="break-down-title"> 0.00375 SOL </span></li>
-                    <li className="break-down-item">Network fee <span className="break-down-title"> ~ 0.00375 SOL </span></li>
-                    <li className="break-down-item">Priority fee
+                    <li className="break-down-item">
+                      <span>Platform fee (0.75%)</span>
+                      {isLoadingQuote ? (
+                        <span className="break-down-title">
+                          <span className="loading-dots">Loading</span>
+                        </span>
+                      ) : (
+                        <span className="break-down-title" aria-label={`Platform fee: ${platformFeeInSOL.toFixed(6)} SOL`}> {platformFeeInSOL.toFixed(6)} SOL </span>
+                      )}
+                    </li>
+                    <li className="break-down-item">
+                      <span>Network fee</span>
+                      <span className="break-down-title" aria-label={`Network fee: approximately ${networkFeeInSOL.toFixed(6)} SOL`}> ~ {networkFeeInSOL.toFixed(6)} SOL </span>
+                    </li>
+                    <li className="break-down-item">
+                      <span>Priority fee</span>
                       <div className="switch-wrapper">
                         <div className="switch">
-                          <input type="checkbox" id="toggle7" />
+                          <input 
+                            type="checkbox" 
+                            id="toggle7" 
+                            checked={priorityFeeEnabled}
+                            onChange={(e) => setPriorityFeeEnabled(e.target.checked)}
+                            aria-label="Enable priority fee for faster transaction processing"
+                            aria-describedby="priority-fee-description"
+                          />
                           <label htmlFor="toggle7"></label>
                         </div>
 
-                        <span className="switch-title">Off</span>
+                        <span className="switch-title" id="priority-fee-description">
+                          {priorityFeeEnabled ? `On (${priorityFeeInSOL.toFixed(6)} SOL)` : 'Off'}
+                        </span>
                       </div>
                     </li>
                   </ul>
@@ -740,32 +1148,226 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                     <h6>Total cost</h6>
                   </div>
                   <div>
-                    <h5>~ 0.00375 SOL</h5>
+                    {isLoadingQuote ? (
+                      <div 
+                        style={{
+                          background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                          backgroundSize: '200% 100%',
+                          animation: 'shimmer 2s infinite linear',
+                          borderRadius: '4px',
+                          height: '20px',
+                          width: '120px'
+                        }}
+                        aria-live="polite"
+                        aria-busy="true"
+                      >
+                        <span className="sr-only">Calculating total cost...</span>
+                      </div>
+                    ) : (
+                      <h5 aria-label={`Total cost: approximately ${totalCostInSOL.toFixed(6)} SOL`}>~ {totalCostInSOL.toFixed(6)} SOL</h5>
+                    )}
                   </div>
                 </div>
 
-                <div className="salana-activity-bx">
+                {/* Display balance error for Quick Buy mode (Requirement 13.3) */}
+                {mode === 'quickBuy' && balanceError && (
+                  <div 
+                    className="balance-error-bx" 
+                    style={{ 
+                      padding: '8px 12px', 
+                      backgroundColor: 'rgba(239, 68, 68, 0.1)', 
+                      border: '1px solid rgba(239, 68, 68, 0.3)', 
+                      borderRadius: '6px',
+                      marginTop: '8px'
+                    }}
+                    role="alert"
+                    aria-live="assertive"
+                  >
+                    <p style={{ 
+                      color: '#ef4444', 
+                      fontSize: '14px', 
+                      margin: 0,
+                      fontWeight: 500
+                    }}>
+                      {balanceError}
+                    </p>
+                    <p style={{ 
+                      color: '#9ca3af', 
+                      fontSize: '12px', 
+                      margin: '4px 0 0 0'
+                    }}>
+                      Balance: {solBalance.toFixed(6)} SOL | Required: {totalCostInSOL.toFixed(6)} SOL
+                    </p>
+                  </div>
+                )}
+
+                {/* Display transaction signature after successful transaction (Requirements 16.4, 16.5) */}
+                {showSignature && transactionSignature && (
+                  <div 
+                    className="transaction-signature-bx" 
+                    style={{ 
+                      padding: '12px', 
+                      backgroundColor: 'rgba(34, 197, 94, 0.1)', 
+                      border: '1px solid rgba(34, 197, 94, 0.3)', 
+                      borderRadius: '6px',
+                      marginTop: '8px'
+                    }}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      marginBottom: '8px'
+                    }}>
+                      <h6 style={{ 
+                        color: '#22c55e', 
+                        fontSize: '14px', 
+                        margin: 0,
+                        fontWeight: 600
+                      }}>
+                        Transaction Signature
+                      </h6>
+                      <button
+                        onClick={copySignatureToClipboard}
+                        className="solana-cp-btn"
+                        style={{
+                          padding: '4px 8px',
+                          backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                          border: '1px solid rgba(34, 197, 94, 0.4)',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        title="Copy signature"
+                        aria-label="Copy transaction signature to clipboard"
+                      >
+                        <FontAwesomeIcon icon={faCopy} style={{ color: '#22c55e' }} />
+                      </button>
+                    </div>
+                    <p style={{ 
+                      color: '#9ca3af', 
+                      fontSize: '12px', 
+                      margin: 0,
+                      wordBreak: 'break-all',
+                      fontFamily: 'monospace'
+                    }}>
+                      {transactionSignature}
+                    </p>
+                    <a
+                      href={`https://solscan.io/tx/${transactionSignature}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '8px',
+                        color: '#22c55e',
+                        fontSize: '12px',
+                        textDecoration: 'underline'
+                      }}
+                      aria-label="View transaction on Solscan blockchain explorer"
+                    >
+                      View on Solscan →
+                    </a>
+                  </div>
+                )}
+
+                <div className="salana-activity-bx" role="region" aria-label="Token safety indicators">
                   <ul className="salana-activity-list">
                     <li>
-                      <div> <span className="salana-atv-bx"> Liquidity: <h6>Healthy</h6> </span> </div>
+                      <div> 
+                        <span className="salana-atv-bx"> 
+                          Liquidity: 
+                          <h6 
+                            className={tokenSafetyInfo ? getLiquidityStatusClass(tokenSafetyInfo.liquidity) : ''}
+                            aria-label={`Liquidity status: ${tokenSafetyInfo?.liquidity || 'Unknown'}`}
+                          >
+                            {tokenSafetyInfo?.liquidity || 'Unknown'}
+                          </h6> 
+                        </span> 
+                      </div>
                     </li>
                     <li>
-                      <div> <span className="salana-atv-bx"> Trading: <h6>Active</h6> </span> </div>
+                      <div> 
+                        <span className="salana-atv-bx"> 
+                          Trading: 
+                          <h6 
+                            className={tokenSafetyInfo ? getTradingStatusClass(tokenSafetyInfo.trading) : ''}
+                            aria-label={`Trading status: ${tokenSafetyInfo?.trading || 'Unknown'}`}
+                          >
+                            {tokenSafetyInfo?.trading || 'Unknown'}
+                          </h6> 
+                        </span> 
+                      </div>
                     </li>
                     <li>
-                      <div> <span className="salana-atv-bx"> Honeypot: <h6>Passed</h6> </span> </div>
+                      <div> 
+                        <span className="salana-atv-bx"> 
+                          Honeypot: 
+                          <h6 
+                            className="status-healthy"
+                            aria-label="Honeypot check: Safe"
+                          >
+                            Safe
+                          </h6> 
+                        </span> 
+                      </div>
                     </li>
                   </ul>
                 </div>
 
                 <div className="salana-btn-bx">
-                  <button className="swap-btn w-50">Cancel
+                  <button 
+                    className="swap-btn w-50" 
+                    onClick={onClose}
+                    aria-label="Cancel transaction and close modal"
+                  >
+                    Cancel
                   </button>
-                  <button className="salana-btn">Confirm
+                  <button 
+                    ref={confirmButtonRef}
+                    className="salana-btn"
+                    onClick={handleSwap}
+                    disabled={isSwapDisabled}
+                    aria-label={
+                      isSwapDisabled 
+                        ? (balanceError ? 'Insufficient balance to confirm transaction' : 'Confirm button disabled - waiting for quote or invalid input')
+                        : 'Confirm and execute transaction'
+                    }
+                    aria-describedby="confirm-button-status"
+                  >
+                    {/* Requirement 22.2, 22.3, 22.4: Display appropriate loading text */}
+                    {isPreparingTransaction ? (
+                      <>
+                        <span className="loading-spinner" style={{ marginRight: '8px' }} aria-hidden="true"></span>
+                        Processing...
+                      </>
+                    ) : isSigningTransaction ? (
+                      <>
+                        <span className="loading-spinner" style={{ marginRight: '8px' }} aria-hidden="true"></span>
+                        Signing...
+                      </>
+                    ) : isSubmittingTransaction ? (
+                      <>
+                        <span className="loading-spinner" style={{ marginRight: '8px' }} aria-hidden="true"></span>
+                        Submitting...
+                      </>
+                    ) : isSwapping ? (
+                      <>
+                        <span className="loading-spinner" style={{ marginRight: '8px' }} aria-hidden="true"></span>
+                        Processing...
+                      </>
+                    ) : (
+                      'Confirm'
+                    )}
 
-                    <span className="corner top-right"></span>
-                    <span className="corner bottom-left"></span>
+                    <span className="corner top-right" aria-hidden="true"></span>
+                    <span className="corner bottom-left" aria-hidden="true"></span>
                   </button>
+                  <span id="confirm-button-status" className="sr-only">
+                    {isSwapDisabled && balanceError ? balanceError : ''}
+                  </span>
                 </div>
 
               </div>

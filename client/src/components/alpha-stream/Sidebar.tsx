@@ -156,7 +156,7 @@ function Sidebar() {
                                 onClick={() => navigate("/top-kol-coins")}
                             >
                                 <FontAwesomeIcon icon={faCoins} />
-                                <span>Top KOL Coins</span>
+                                <span>Top Coins</span>
                             </a>
                         </li>
                     </ul>
