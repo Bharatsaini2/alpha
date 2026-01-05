@@ -4,8 +4,6 @@ import axios from "axios"
 import { useToast } from "../../components/ui/Toast"
 import TransactionDetailView from "../../components/transaction/TransactionDetailView"
 import SwapModal from "../../components/swap/SwapModal"
-import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { validateQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
 
 const TransactionDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -13,7 +11,6 @@ const TransactionDetail = () => {
   const [transactionData, setTransactionData] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const { showToast, ToastContainer } = useToast()
-  const { wallet } = useWalletConnection()
   const [transactionType, setTransactionType] = useState<string>("")
   const BASE_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:9090"
   const type: string | null = searchParams.get("type")
@@ -149,14 +146,14 @@ const TransactionDetail = () => {
       setTokenInAmountDisplay({
         value: isUSD ? parseFloat(transactionData.solAmount.sellSolAmount).toFixed(4) : parseFloat(transactionData.transaction.tokenIn.usdAmount).toLocaleString(),
         currency: isUSD ? "SOL" : "USD",
-        symbol: isUSD ? "" : "$",
+        symbol: isUSD ? "SOL" : "$",
       })
     } else {
       const isUSD = tokenOutAmountDisplay.currency === "USD"
       setTokenOutAmountDisplay({
         value: isUSD ? parseFloat(transactionData.solAmount.buySolAmount).toFixed(4) : parseFloat(transactionData.transaction.tokenOut.usdAmount).toLocaleString(),
         currency: isUSD ? "SOL" : "USD",
-        symbol: isUSD ? "" : "$",
+        symbol: isUSD ? "SOL" : "$",
       })
     }
   }
@@ -167,7 +164,7 @@ const TransactionDetail = () => {
     setDetailsAmountDisplay({
       value: isUSD ? parseFloat(transactionData.solAmount.buySolAmount).toFixed(4) : parseFloat(transactionData.transaction.tokenOut.usdAmount).toLocaleString(),
       currency: isUSD ? "SOL" : "USD",
-      symbol: isUSD ? "" : "$",
+      symbol: isUSD ? "SOL" : "$",
     })
   }
 
@@ -178,24 +175,7 @@ const TransactionDetail = () => {
 
   const handleQuickBuy = () => {
     if (!transactionData) return
-
-    // Load quick buy amount from storage
-    const quickBuyAmount = loadQuickBuyAmount() || "100"
-
-    // Validate quick buy amount
-    const validation = validateQuickBuyAmount(quickBuyAmount)
-    if (!validation.isValid) {
-      showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
-      return
-    }
-
-    // Validate wallet connection
-    if (!wallet.connected) {
-      showToast("Please connect your wallet to continue", "error")
-      return
-    }
-
-    // Extract token info from transaction data
+    
     const isBuy = transactionType === "buy"
     const tokenInfo = {
       symbol: isBuy ? transactionData.transaction.tokenOut.symbol : transactionData.transaction.tokenIn.symbol,
@@ -204,8 +184,7 @@ const TransactionDetail = () => {
       image: isBuy ? transactionData.transaction.tokenOut.imageUrl : transactionData.transaction.tokenIn.imageUrl,
       decimals: 9, // Default for most Solana tokens
     }
-
-    // Open SwapModal in 'quickBuy' mode with SOL as input token
+    
     setSwapTokenInfo(tokenInfo)
     setIsSwapModalOpen(true)
   }
@@ -243,25 +222,17 @@ const TransactionDetail = () => {
         onCopy={handleCopy}
         onQuickBuy={handleQuickBuy}
       />
-
+      
       <SwapModal
         isOpen={isSwapModalOpen}
         onClose={() => {
           setIsSwapModalOpen(false)
           setSwapTokenInfo(null)
         }}
-        mode="quickBuy"
-        initialInputToken={{
-          address: "So11111111111111111111111111111111111111112",
-          symbol: "SOL",
-          name: "Solana",
-          decimals: 9,
-          image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
-        }}
         initialOutputToken={swapTokenInfo}
-        initialAmount={loadQuickBuyAmount() || "100"}
+        initialAmount="100"
       />
-
+      
       <ToastContainer />
     </div>
   )
