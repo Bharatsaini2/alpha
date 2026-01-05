@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from "react"
-import { useAppKit, useAppKitAccount, useAppKitProvider } from "@reown/appkit/react"
+import { useState, useCallback, useEffect, useRef, useMemo } from "react"
+import { useAppKit, useAppKitAccount, useAppKitProvider, useDisconnect } from "@reown/appkit/react"
 import { useToast } from "../components/ui/Toast"
 import {
   PublicKey,
@@ -57,6 +57,7 @@ export const useWalletConnection = (): UseWalletConnection => {
   const { open } = useAppKit()
   const { address, isConnected, status } = useAppKitAccount()
   const { walletProvider } = useAppKitProvider<any>("solana")
+  const { disconnect: appKitDisconnect } = useDisconnect()
   const { showToast, removeToast } = useToast()
 
   const [isLoading, setIsLoading] = useState(false)
@@ -68,12 +69,14 @@ export const useWalletConnection = (): UseWalletConnection => {
   const connectingToastIdRef = useRef<string | null>(null)
 
   // Get RPC connection
-  const connection = new Connection(
+  const connection = useMemo(() => new Connection(
     import.meta.env.VITE_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com"
-  )
+  ), [])
 
   // Convert address to PublicKey
-  const publicKey = address ? new PublicKey(address) : null
+  const publicKey = useMemo(() =>
+    address ? new PublicKey(address) : null
+    , [address])
 
   const dismissConnectingToast = useCallback(() => {
     if (connectingToastIdRef.current) {
@@ -140,13 +143,13 @@ export const useWalletConnection = (): UseWalletConnection => {
       setError(null)
       dismissConnectingToast() // Safety cleanup
 
-      await open({ view: "Account" })
+      await appKitDisconnect()
     } catch (err: any) {
-      // ...
+      console.error("Disconnect error:", err)
     } finally {
       setIsLoading(false)
     }
-  }, [open, dismissConnectingToast])
+  }, [appKitDisconnect, dismissConnectingToast])
 
   /**
    * Send and confirm a transaction (supports both legacy and versioned transactions)

@@ -5,6 +5,7 @@ import fallbackImage from "../../assets/default_token.svg"
 import { POPULAR_TOKENS, TokenInfo } from "../../lib/tokenList"
 import { fetchJupiterTokens, searchJupiterTokens } from "../../lib/jupiterTokens"
 import { useJupiterSearch, JupiterTokenResult } from "../../hooks/useJupiterSearch"
+import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 import "./swap.css"
@@ -47,12 +48,23 @@ const TokenItem = memo<{
     return `$${mcap.toFixed(0)}`
   }
 
+  const truncateAddress = (addr: string) => {
+    if (!addr) return "..."
+    return `${addr.slice(0, 4)}...${addr.slice(-4)}`
+  }
+
+  const handleCopy = (e: React.MouseEvent, text: string) => {
+    e.stopPropagation()
+    navigator.clipboard.writeText(text)
+  }
+
+  const totalValue = (balance || 0) * (token.usdPrice || 0)
+
   return (
     <button
       onClick={() => onSelect(token)}
-      className={`w-full px-3 py-3 flex items-center gap-2 hover:bg-[#1A1A1A] transition-colors ${
-        isSelected ? "bg-[#1A1A1A]" : ""
-      }`}
+      className={`w-full px-3 py-3 flex items-center gap-2 hover:bg-[#1A1A1A] transition-colors ${isSelected ? "bg-[#1A1A1A]" : ""
+        }`}
     >
       {/* Token Image */}
       <div className="flex-shrink-0">
@@ -72,23 +84,26 @@ const TokenItem = memo<{
         <div className="flex items-center gap-1 dropdown-content">
           <h6 className="dropdown-title mb-0">{token.symbol}</h6>
           {token.isPopular && (
-            // <Star size={12} className="text-yellow-400 fill-current" />
-            <RiVerifiedBadgeFill  size={14} className="text-white fill-current" />
+            <RiVerifiedBadgeFill size={14} className="text-white fill-current" />
           )}
           {token.isVerified && (
-            <span className="text-xs text-green-400"> <RiVerifiedBadgeFill/> </span>
+            <span className="text-xs text-green-400"> <RiVerifiedBadgeFill /> </span>
           )}
         </div>
         <div >
           <p className="dropdown-desc">  {token.name} </p>
-         </div>
+        </div>
         <div className="dropdown-id">
           <span>CA: </span>
-            <span className="cpy-title ">CRCLhwcP1...t7</span>
-            <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
-              <FontAwesomeIcon icon={faCopy} />
-              </a>
-          </div>
+          <span className="cpy-title ">{truncateAddress(token.address)}</span>
+          <a
+            href="javascript:void(0)"
+            className="drop-cpy-btn ms-1"
+            onClick={(e) => handleCopy(e, token.address)}
+          >
+            <FontAwesomeIcon icon={faCopy} />
+          </a>
+        </div>
 
 
         {/* Show price and mcap if available from Jupiter Ultra */}
@@ -102,24 +117,26 @@ const TokenItem = memo<{
 
       {/* Balance */}
       {userWallet && (
-        <div className="text-right flex-shrink-0">
+        <div className="text-right flex-shrink-0 flex flex-col items-end">
           {isLoadingBalance ? (
             <div className="w-12 h-4 bg-gray-700 rounded animate-pulse" />
           ) : hasBalance ? (
-            <div className="text-sm text-white font-medium">
-              {formatBalance(balance!)}
-            </div>
+            <>
+              <div className="text-sm text-white font-medium">
+                <span className="text-gray-500 text-xs mr-1">Bal:</span>
+                {formatBalance(balance!)}
+              </div>
+              {totalValue > 0 && (
+                <div className="text-xs text-gray-400">
+                  ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
+            </>
           ) : (
             <div className="text-sm text-gray-500">0</div>
           )}
         </div>
       )}
-
-      <div>
-        <h6 className="text-xs" style={{fontSize : "12px", fontWeight : "400"}}>0.00 Sol</h6>
-      </div>
-
-
     </button>
   )
 })
@@ -172,7 +189,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
   const searchInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
-  
+
   // Use Jupiter Ultra search hook
   const { searchTokens: searchJupiterUltra, isSearching: isJupiterSearching, error: jupiterError } = useJupiterSearch()
 
@@ -187,7 +204,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
           const data = JSON.parse(cached)
           const now = Date.now()
           const CACHE_DURATION = 1000 * 60 * 60 // 1 hour
-          
+
           if (now - data.timestamp < CACHE_DURATION) {
             setAllTokens(data.tokens)
             console.log(`✅ Loaded ${data.tokens.length} tokens from cache`)
@@ -225,25 +242,39 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     }
   }, [isOpen])
 
+  // Use wallet connection hook for fetching balances
+  const { getAllTokenBalances, getBalance } = useWalletConnection()
+
   // Fetch user token balances when wallet is connected
   useEffect(() => {
-    // Mock function to fetch user balances - replace with actual implementation
     const fetchUserBalances = async () => {
       if (!userWallet) return
 
       setIsLoadingBalances(true)
       try {
-        // TODO: Implement actual balance fetching using Solana Web3.js
-        // This is a mock implementation
-        const mockBalances: Record<string, number> = {
-          "So11111111111111111111111111111111111111112": 2.5, // SOL
-          "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 100.0, // USDC
-          "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": 50.0, // USDT
+        const balances: Record<string, number> = {}
+
+        // 1. Fetch Native SOL Balance
+        try {
+          const solBalance = await getBalance()
+          // Native SOL address
+          balances["So11111111111111111111111111111111111111112"] = solBalance
+        } catch (err) {
+          console.error("Failed to fetch SOL balance:", err)
         }
-        
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500))
-        setUserBalances(mockBalances)
+
+        // 2. Fetch SPL Token Balances
+        try {
+          const tokenBalances = await getAllTokenBalances()
+          tokenBalances.forEach(token => {
+            // Use uiAmount for display
+            balances[token.mint] = token.uiAmount
+          })
+        } catch (err) {
+          console.error("Failed to fetch token balances:", err)
+        }
+
+        setUserBalances(balances)
       } catch (error) {
         console.error("Failed to fetch user balances:", error)
       } finally {
@@ -254,7 +285,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     if (isOpen && userWallet) {
       fetchUserBalances()
     }
-  }, [isOpen, userWallet])
+  }, [isOpen, userWallet, getAllTokenBalances, getBalance])
 
   // Search tokens - use Jupiter Ultra API for real-time data ONLY (no fallback)
   const searchTokens = useCallback(async (query: string): Promise<TokenInfo[]> => {
@@ -264,9 +295,9 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
     // Call Jupiter Ultra search API - no fallback, throw errors
     const jupiterResults = await searchJupiterUltra(query)
-    
+
     console.log(`✅ Found ${jupiterResults.length} tokens from Jupiter Ultra`)
-    
+
     // Convert Jupiter results to TokenInfo format
     const tokens: TokenInfo[] = jupiterResults.map((token: JupiterTokenResult) => ({
       address: token.id,
@@ -283,7 +314,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
       organicScore: token.organicScore || undefined,
       organicScoreLabel: token.organicScoreLabel || undefined,
     }))
-    
+
     return tokens
   }, [searchJupiterUltra])
 
@@ -345,13 +376,13 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     switch (e.key) {
       case "ArrowDown":
         e.preventDefault()
-        setSelectedIndex(prev => 
+        setSelectedIndex(prev =>
           prev < filteredTokens.length - 1 ? prev + 1 : 0
         )
         break
       case "ArrowUp":
         e.preventDefault()
-        setSelectedIndex(prev => 
+        setSelectedIndex(prev =>
           prev > 0 ? prev - 1 : filteredTokens.length - 1
         )
         break
@@ -386,15 +417,15 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     if (searchQuery) {
       return searchResults.filter(token => token.address !== excludeToken)
     }
-    
+
     // Show only popular tokens by default (no loading all tokens)
     const popular = POPULAR_TOKENS.filter(token => token.address !== excludeToken)
-    
-    const recent = recentTokens.filter(token => 
-      token.address !== excludeToken && 
+
+    const recent = recentTokens.filter(token =>
+      token.address !== excludeToken &&
       !popular.some(p => p.address === token.address)
     )
-    
+
     return [...popular, ...recent]
   }
 
@@ -425,26 +456,26 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             <div className=" gap-2 flex items-center justify-between px-3  py-2 border-b border-[#2B2B2D]">
               {/* <h4 className="text-md font-semibold text-white mb-0">{title}</h4> */}
               <div className="flex-grow-1">
-              <div className="relative custom-frm-bx mb-0">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Search by name, symbol, or address..."
-                  className="form-control "
-                  style={{paddingLeft : "35px"}}
-                />
-                {(isSearching || isJupiterSearching) && (
-                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  </div>
-                )}
-              </div>
-    
-              {/* {searchQuery && searchQuery.length >= 2 && (
+                <div className="relative custom-frm-bx mb-0">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Search by name, symbol, or address..."
+                    className="form-control "
+                    style={{ paddingLeft: "35px" }}
+                  />
+                  {(isSearching || isJupiterSearching) && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </div>
+
+                {/* {searchQuery && searchQuery.length >= 2 && (
                 <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
                   <span className="px-2 py-1 bg-blue-900/20 border border-blue-500/30 rounded text-blue-400 text-nowrap">
                     Jupiter Ultra
@@ -452,13 +483,13 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                   <span>Real-time token data with prices & verification</span>
                 </div>
               )} */}
-      
-              {jupiterError && (
-                <div className="mt-2 text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded px-2 py-1">
-                  ❌ {jupiterError}
-                </div>
-              )}
-            </div>
+
+                {jupiterError && (
+                  <div className="mt-2 text-xs text-red-400 bg-red-900/20 border border-red-500/30 rounded px-2 py-1">
+                    ❌ {jupiterError}
+                  </div>
+                )}
+              </div>
 
 
               <div className="flex items-center gap-2">
@@ -476,7 +507,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
               </div>
             </div>
 
-        
+
             {/* <div className="px-3 py-2 border-b border-[#2B2B2D]">
               <div className="relative custom-frm-bx">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -515,21 +546,21 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
             {/* Token List */}
 
-            
-              <div className="all-token-trans-bx px-3 py-2">
-                <button className="token-btn">
-                  <img src="/btn-icon.png" alt="" />
-                </button>
-                <button className="token-btn">
-                  <img src="/t-1.png" alt="" />
-                </button>
-                <button className="token-btn">
-                  <img src="/t-2.png" alt="" />
-                </button>
-                <button className="token-btn">
-                  <img src="/t-3.png" alt="" />
-                </button>
-              </div>
+
+            <div className="all-token-trans-bx px-3 py-2">
+              <button className="token-btn">
+                <img src="/btn-icon.png" alt="" />
+              </button>
+              <button className="token-btn">
+                <img src="/t-1.png" alt="" />
+              </button>
+              <button className="token-btn">
+                <img src="/t-2.png" alt="" />
+              </button>
+              <button className="token-btn">
+                <img src="/t-3.png" alt="" />
+              </button>
+            </div>
 
 
             <div className="flex-1 overflow-y-auto token-scrollbar">
@@ -542,7 +573,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
 
 
-             
+
               {/* {!searchQuery && (
                 <div className="px-3 py-2">
                   <div className="flex items-center gap-2 mb-0">
@@ -571,7 +602,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                     <p className="text-sm">Try searching with a different term</p>
                   </div>
                 )}
-                
+
                 {/* Show hint for short queries */}
                 {searchQuery && searchQuery.length < 2 && (
                   <div className="px-3 py-8 text-center text-gray-400">
@@ -592,7 +623,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                     onSelect={handleTokenSelect}
                   />
                 ))}
-                
+
                 {/* Show message if more tokens available */}
                 {displayTokens.length > 50 && (
                   <div className="px-4 py-3 text-center text-sm text-gray-400">
@@ -602,7 +633,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
               </div>
             </div>
 
-          
+
             {/* <div className="px-3 py-2 border-t border-[#2B2B2D]">
               <p className="fz-14 lh-1 text-white text-center mb-0">
                 {searchQuery && searchQuery.length >= 2 
