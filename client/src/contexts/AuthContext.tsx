@@ -6,7 +6,7 @@ import React, {
   ReactNode,
 } from "react"
 import axios from "axios"
-import axios from "axios"
+
 
 const API_BASE =
   import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
-import { X } from "lucide-react"
+import { X, AlertCircle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Transaction, VersionedTransaction } from "@solana/web3.js"
 import DefaultTokenImage from "../../assets/default_token.svg"
@@ -313,35 +313,10 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     }
   }, [inputAmount, inputToken, outputToken, slippage, getQuote, showToast])
 
-  // Fetch quote ONCE when Quick Buy modal opens (Requirements 1.1, 1.3, 4.1, 6.1, 6.2)
-  useEffect(() => {
-    if (mode === 'quickBuy' && isOpen && !hasInitialQuote && inputAmount && parseFloat(inputAmount) > 0) {
-      // Ensure state has synced with props before running validation
-      if (initialOutputToken && outputToken.address !== initialOutputToken.address) {
-        return;
-      }
 
-      // Validate tokens are different (prevent same token swap)
-      if (inputToken.address === outputToken.address) {
-        console.error("Cannot swap: input and output tokens are the same")
-        setQuote(null)
-        setOutputAmount("")
-        showToast("Cannot swap the same token. Please select a different token.", "error")
-        return
-      }
-
-      fetchQuote()
-      setHasInitialQuote(true)
-    }
-  }, [mode, isOpen, hasInitialQuote, inputAmount, inputToken.address, outputToken.address, initialOutputToken])
 
   // Fetch quote when amount or tokens change (ONLY for swap mode) (Requirements 2.1, 2.2, 2.3, 4.2, 5.2)
   useEffect(() => {
-    // Skip this effect entirely for Quick Buy mode
-    if (mode === 'quickBuy') {
-      return
-    }
-
     // Don't fetch quote if input and output tokens are the same
     if (inputToken.address === outputToken.address) {
       setQuote(null)
@@ -1025,67 +1000,64 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                     <div className="solana-you-pay">
                       <h6>You Pay</h6>
 
-                      <div className="d-flex align-items-center justify-content-end">
-                        {mode === 'quickBuy' ? (
-                          <h5 aria-label={`You will pay ${inputAmount} SOL`}>{inputAmount} SOL</h5>
-                        ) : (
-                          <>
-                            <div className="amount-box w-3xs">
-                              <input
-                                type="number"
-                                placeholder="0.00"
-                                className="amount-input main-amount fz-18"
-                                min="0"
-                                step="any"
-                                value={inputAmount}
-                                onChange={(e) => setInputAmount(e.target.value)}
-                                aria-label={`Enter amount of ${inputToken.symbol} to swap`}
-                                aria-describedby="input-amount-description"
-                              />
-                            </div>
-                            <h5>{inputToken.symbol}</h5>
-                            <span id="input-amount-description" className="sr-only">
-                              Enter the amount of {inputToken.symbol} you want to swap
-                            </span>
-                          </>
-                        )}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                        <div className="amount-box" style={{ width: '100%', maxWidth: '200px' }}>
+                          <input
+                            type="number"
+                            placeholder="0.00"
+                            className="amount-input main-amount"
+                            min="0"
+                            step="any"
+                            value={inputAmount}
+                            onChange={(e) => setInputAmount(e.target.value)}
+                            aria-label={`Enter amount of ${inputToken.symbol} to swap`}
+                            aria-describedby="input-amount-description"
+                            style={{
+                              textAlign: 'right',
+                              fontSize: '24px',
+                              background: 'transparent',
+                              border: 'none',
+                              outline: 'none',
+                              color: '#ebebeb',
+                              width: '100%',
+                              padding: '0',
+                              margin: '0',
+                              height: '32px',
+                              lineHeight: '32px'
+                            }}
+                          />
+                        </div>
+                        <h5 style={{ margin: 0, fontSize: '24px', lineHeight: '32px' }}>{inputToken.symbol}</h5>
+                        <span id="input-amount-description" className="sr-only">
+                          Enter the amount of {inputToken.symbol} you want to swap
+                        </span>
                       </div>
                     </div>
 
                     {/* YOU RECEIVE */}
                     <div className="amount-box">
                       {/* Requirement 22.1: Display skeleton loader for output amount while quote is loading */}
-                      {isLoadingQuote ? (
-                        <div className="nw-skeleton" aria-live="polite" aria-busy="true">
-                          <div className="skeleton-amount mb-1" style={{
-                            background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                            backgroundSize: '200% 100%',
-                            animation: 'shimmer 2s infinite linear',
-                            borderRadius: '4px',
-                            height: '24px',
-                            width: '60%',
-                            marginBottom: '8px'
-                          }}></div>
-                          <div className="skeleton-usd" style={{
-                            background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                            backgroundSize: '200% 100%',
-                            animation: 'shimmer 2s infinite linear',
-                            borderRadius: '4px',
-                            height: '16px',
-                            width: '40%'
-                          }}></div>
-                          <span className="sr-only">Loading quote...</span>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="solana-receive-bx">
-                            <h6>You Receive</h6>
-                            <h5 aria-label={`You will receive ${outputAmount || '0'} ${outputToken.symbol}`}>
-                              {outputAmount || '0'} {outputToken.symbol}
-                            </h5>
-                          </div>
-                        </>
-                      )}
+                      <div className="solana-receive-bx">
+                        <h6>You Receive</h6>
+                        {isLoadingQuote ? (
+                          <div
+                            style={{
+                              background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                              backgroundSize: '200% 100%',
+                              animation: 'shimmer 2s infinite linear',
+                              borderRadius: '4px',
+                              height: '24px',
+                              width: '120px',
+                              marginLeft: 'auto'
+                            }}
+                            aria-hidden="true"
+                          ></div>
+                        ) : (
+                          <h5 aria-label={`You will receive ${outputAmount || '0'} ${outputToken.symbol}`}>
+                            {outputAmount || '0'} {outputToken.symbol}
+                          </h5>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1093,20 +1065,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
 
 
-                <div className="slippage-bx">
-                  <div>
-                    <h6>Slippage: {(slippage / 100).toFixed(2)}%</h6>
-                  </div>
-                  <div>
-                    <h6>Price impact:
-                      {isLoadingQuote ? (
-                        <span className="loading-dots" style={{ marginLeft: '4px' }}>Loading</span>
-                      ) : (
-                        <span className={quote && parseFloat(quote.priceImpactPct || '0') > 5 ? 'impact-percent' : ''}>{quote?.priceImpactPct || '0'}%</span>
-                      )}
-                    </h6>
-                  </div>
-                </div>
+
 
                 <div className="solana-breakdown">
                   <h5>Fee Breakdown</h5>
@@ -1180,9 +1139,9 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                     className="balance-error-bx"
                     style={{
                       padding: '8px 12px',
-                      backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                      border: '1px solid rgba(239, 68, 68, 0.3)',
-                      borderRadius: '6px',
+                      backgroundColor: 'transparent',
+                      border: '1px solid #292929',
+                      borderRadius: '0',
                       marginTop: '8px'
                     }}
                     role="alert"
@@ -1192,8 +1151,13 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                       color: '#ef4444',
                       fontSize: '14px',
                       margin: 0,
-                      fontWeight: 500
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
                     }}>
+                      <AlertCircle size={16} />
                       {balanceError}
                     </p>
                     <p style={{

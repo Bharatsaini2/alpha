@@ -693,40 +693,40 @@ const HomePageNew = () => {
 
 
 
-    const options = [
-        {
-            id: "0xA1B2C3",
-            titles: "Nobody Token",
-            descriptions: "This is a demo token description",
-            images: "/pic.png"
-        },
-        {
-            id: "0xD4E5F6",
-            titles: "Something Coin",
-            descriptions: "Another sample token detail",
-            images: "/pic.png"
-        },
-        {
-            id: "0xZ9Y8X7",
-            titles: "Anything Token",
-            descriptions: "ERC20 utility token",
-            images: "/pic.png"
-        },
-        {
-            id: "0xZ9Y8X8",
-            titles: "Same Token",
-            descriptions: "ERC20 utility token",
-            images: "/pic.png"
-        },
-        {
-            id: "0xZ9Y8X9",
-            titles: "Aura Token",
-            descriptions: "ERC20 utility token",
-            images: "/pic.png"
-        }
-    ];
+    // Extract unique tokens from transactions for autocomplete
+    const uniqueTokenOptions = React.useMemo(() => {
+        const uniqueTokens = new Map();
 
-    // const [searchQuery, setSearchQuery] = useState("");
+        transactions.forEach(tx => {
+            // Check both tokenIn (sell) and tokenOut (buy)
+            if (tx.transaction?.tokenIn) {
+                const address = tx.tokenInAddress;
+                if (address && !uniqueTokens.has(address)) {
+                    uniqueTokens.set(address, {
+                        id: address,
+                        titles: tx.transaction.tokenIn.symbol,
+                        descriptions: tx.transaction.tokenIn.name || "Unknown Token",
+                        images: tx.inTokenURL || DefaultTokenImage
+                    });
+                }
+            }
+
+            if (tx.transaction?.tokenOut) {
+                const address = tx.tokenOutAddress;
+                if (address && !uniqueTokens.has(address)) {
+                    uniqueTokens.set(address, {
+                        id: address,
+                        titles: tx.transaction.tokenOut.symbol,
+                        descriptions: tx.transaction.tokenOut.name || "Unknown Token",
+                        images: tx.outTokenURL || DefaultTokenImage
+                    });
+                }
+            }
+        });
+
+        return Array.from(uniqueTokens.values());
+    }, [transactions]);
+
     const [filteredOptions, setFilteredOptions] = useState<any[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
@@ -742,6 +742,9 @@ const HomePageNew = () => {
                 searchType: 'all'
             });
 
+            // Clear the input field after searching
+            setSearchQuery("");
+
             // Close dropdown
             setShowDropdown(false);
         }
@@ -754,36 +757,33 @@ const HomePageNew = () => {
         if (value.trim() === "") {
             setFilteredOptions([]);
             setShowDropdown(false);
-
-            // Clear search filter when input is empty
-            if (activeFilters.searchQuery) {
-                setActiveFilters({
-                    ...activeFilters,
-                    searchQuery: "",
-                    searchType: null
-                });
-            }
             return;
         }
 
-        const filtered = options.filter((option) =>
-            option.titles?.toLowerCase()?.includes(value?.toLowerCase())
-        );
+        const filtered = uniqueTokenOptions.filter((option) =>
+            option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
+            option.id?.toLowerCase()?.includes(value?.toLowerCase())
+        ).slice(0, 10); // Limit to 10 results
+
         setFilteredOptions(filtered);
         setShowDropdown(filtered.length > 0);
     };
 
     const handleSelect = (option: any) => {
-        // Set the search query to the selected option's title
-        setSearchQuery(option.titles);
-
-        // Apply the search filter
+        // Apply the selected option as a search filter
         setActiveFilters({
             ...activeFilters,
             searchQuery: option.titles,
             searchType: 'all'
         });
 
+        // Clear input and close dropdown
+        setSearchQuery("");
+        setShowDropdown(false);
+    };
+
+    const handleClearInput = () => {
+        setSearchQuery("");
         setShowDropdown(false);
     };
 
@@ -868,12 +868,12 @@ const HomePageNew = () => {
 
             // Handle wallet labels - if "Any Label" is selected or no labels, send all valid labels
             let labelsToSend = walletTypes.length > 0 ? walletTypes.filter(label => label !== "Any Label") : ["Smart Money"]
-            
+
             // If "Any Label" was selected, send all valid labels
             if (walletTypes.includes("Any Label")) {
                 labelsToSend = ["Smart Money", "Whale", "Insider", "Sniper", "Heavy Accumulator"]
             }
-            
+
             // If no labels selected after filtering, default to Smart Money
             if (labelsToSend.length === 0) {
                 labelsToSend = ["Smart Money"]
@@ -971,15 +971,7 @@ const HomePageNew = () => {
                                             <button
                                                 type="button"
                                                 className="clear-input-btn"
-                                                onClick={() => {
-                                                    setSearchQuery("")
-                                                    // Clear search filter when X button is clicked
-                                                    setActiveFilters({
-                                                        ...activeFilters,
-                                                        searchQuery: "",
-                                                        searchType: null
-                                                    })
-                                                }}
+                                                onClick={handleClearInput}
                                             >
                                                 ×
                                             </button>
@@ -1214,14 +1206,14 @@ const HomePageNew = () => {
                                                             </div>
 
                                                             <div>
-                                                                <button 
+                                                                <button
                                                                     className="paper-plan-connect-btn"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         // This button is just for show - displays connection status
                                                                     }}
                                                                     disabled
-                                                                > 
+                                                                >
                                                                     <FontAwesomeIcon icon={faPaperPlane} /> {user?.telegramChatId ? 'Connected' : 'Connect'}
                                                                 </button>
                                                             </div>
@@ -1478,9 +1470,31 @@ const HomePageNew = () => {
                             </div>
 
                             {/* Active Filter Indicators - Only show when filters are active */}
-                            {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0) && (
+                            {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery) && (
                                 <div className="category-remove-filting">
                                     <ul>
+                                        {/* Search Filter Indicator */}
+                                        {activeFilters.searchQuery && (
+                                            <li>
+                                                <div className="category-filtering-add">
+                                                    <div className="category-filter-items">
+                                                        <h6>
+                                                            Search: <span>{activeFilters.searchQuery}</span>
+                                                        </h6>
+                                                        <span>
+                                                            <a
+                                                                href="javascript:void(0)"
+                                                                className="filter-remv-btn"
+                                                                onClick={() => handleFilterUpdate('searchQuery', "")}
+                                                            >
+                                                                <FontAwesomeIcon icon={faClose} />
+                                                            </a>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        )}
+
                                         {/* Hotness Filter Indicator */}
                                         {activeFilters.hotness && (
                                             <li>

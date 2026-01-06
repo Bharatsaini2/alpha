@@ -124,7 +124,12 @@ export const useWalletConnection = (): UseWalletConnection => {
       // Clear any existing toast first
       dismissConnectingToast()
 
-      const id = showToast("Connecting wallet...", "info", "processing") || null
+      const id = showToast(
+        "Please approve the connection request in your wallet",
+        "info",
+        "wallet",
+        { title: "Connecting Wallet" }
+      ) || null
       connectingToastIdRef.current = id
 
       await open()

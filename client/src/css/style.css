@@ -2258,22 +2258,23 @@ font-size: 16px;
 .coppied-address {
   background-color: #141414;
   border: 1px solid #525252;
-  padding: 8px 16px;
+  padding: 11px 21px;
 }
 
 .coppied-icon {
   color: #14904d;
+  font-size: 21px;
 }
 
 .coppied-content {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 11px;
 }
 
 .coppied-content p {
   font-weight: 500;
-  font-size: 12px;
+  font-size: 16px;
   line-height: 140%;
   text-transform: uppercase;
   color: #ffffff;
@@ -2284,8 +2285,8 @@ font-size: 16px;
   display: inline-block;
   background-color: #141414;
   border: 1px solid #3d3d3d;
-  padding: 4px 8px;
-  font-size: 8px;
+  padding: 6px 11px;
+  font-size: 11px;
   font-weight: 500;
   color: #8f8f8f;
 }

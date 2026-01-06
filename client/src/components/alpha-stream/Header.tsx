@@ -4,8 +4,7 @@ import { HiChevronUpDown } from "react-icons/hi2"
 import { User, LogOut } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
-import { faChevronDown, faChevronUp, faClose } from "@fortawesome/free-solid-svg-icons"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+
 import { PiPlugsConnected } from "react-icons/pi";
 import { FaRegUserCircle } from "react-icons/fa";
 import { RiTelegram2Fill } from "react-icons/ri";
@@ -37,7 +36,7 @@ function Header() {
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { user, isAuthenticated, logout, openLoginModal } = useAuth()
+  const { user, isAuthenticated, logout } = useAuth()
   const { wallet, connect, disconnect } = useWalletConnection()
   const { showToast } = useToast()
 
@@ -313,7 +312,7 @@ function Header() {
                   </div>
                   <div className="user-dropdown-divider" />
 
-                  <div 
+                  <div
                     className="user-dropdown-item"
                     onClick={(e) => {
                       // Check if user has wallet connected
@@ -326,17 +325,17 @@ function Header() {
                       }
                     }}
                   >
-                    <Link 
-                      to="/telegram-subscription" 
+                    <Link
+                      to="/telegram-subscription"
                       className="profile-navlink"
                       onClick={(e) => {
                         if (!user?.walletAddress && !wallet.address) {
                           e.preventDefault();
                         }
                       }}
-                    > 
+                    >
                       <RiTelegram2Fill size={14} />
-                      Telegram Subscription  
+                      Telegram Subscription
                     </Link>
                   </div>
                   <div className="user-dropdown-divider" />
@@ -370,10 +369,7 @@ function Header() {
               )}
             </div>
           ) : (
-            <button className="connect-btn" onClick={() => {
-              openLoginModal()
-              connect()
-            }}>
+            <button className="connect-btn" onClick={() => connect()}>
               CONNECT
             </button>
           )}

@@ -20,7 +20,7 @@ import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
 import { IoWalletOutline } from "react-icons/io5"
 import SwapModal from "../../components/swap/SwapModal"
-import { useAuth } from "../../contexts/AuthContext"
+
 
 // import { MdOutlineCheckBox } from "react-icons/md";
 
@@ -58,7 +58,7 @@ const RightSidebarNew = ({
   transactions = [] // Default to empty array
 }: RightSidebarNewProps) => {
   // Auth hook for login modal
-  const { openLoginModal } = useAuth()
+
 
   // Wallet connection hook
   const {
@@ -379,9 +379,8 @@ const RightSidebarNew = ({
 
   // Handle wallet connection - opens login modal which handles wallet connection
   const handleConnectWallet = useCallback(() => {
-    // Open the login modal (it will handle wallet connection internally)
-    openLoginModal()
-  }, [openLoginModal])
+    connect()
+  }, [connect])
 
   // Handle token selection
   const handleInputTokenSelect = useCallback(
@@ -863,12 +862,12 @@ const RightSidebarNew = ({
       if (token.usdPrice && token.usdPrice > 0 && token.usdPrice < 100000) {
         return token.usdPrice
       }
-      
+
       // Log suspicious prices for debugging
       if (token.usdPrice && token.usdPrice >= 100000) {
         console.warn(`⚠️ Suspicious price for ${token.symbol}: $${token.usdPrice.toLocaleString()} - ignoring`)
       }
-      
+
       // Fallback for stablecoins
       if (['USDC', 'USDT', 'USDH', 'USDS', 'DAI'].includes(token.symbol.toUpperCase())) return 1
       return 0
@@ -992,7 +991,7 @@ const RightSidebarNew = ({
 
       const coin = coinData.get(coinAddress)!
       coin.transactions.push(tx)
-      
+
       // Track whale buys with hotness > 7
       if (hotnessScore > 7 && whaleAddress) {
         coin.uniqueWhales.add(whaleAddress)
@@ -1030,7 +1029,7 @@ const RightSidebarNew = ({
 
         // Entry: All conditions must be met
         const meetsEntry = hasMarketCap && hasMinWhales && hasMinBuyAmount && hasRecentActivity
-        
+
         // Stay: Must have recent hot buy in last 30 minutes
         const shouldStay = hasRecentHotBuy
 
