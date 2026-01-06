@@ -83,6 +83,30 @@ export class TelegramService {
       // Initialize bot with polling enabled to receive commands
       this.bot = new TelegramBot(this.TELEGRAM_BOT_TOKEN, { polling: true })
 
+      // Handle polling errors (e.g., duplicate instances)
+      this.bot.on('polling_error', (error: any) => {
+        if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
+          logger.error({
+            component: 'TelegramService',
+            operation: 'polling_error',
+            message: 'CRITICAL: Another bot instance is already running! Only one backend instance should be active.',
+            error: error.message,
+          })
+          console.error('\n❌ TELEGRAM BOT ERROR: Another instance is already running!')
+          console.error('   This means you have multiple backend servers running.')
+          console.error('   Please kill all other backend processes and restart.\n')
+        } else {
+          logger.error({
+            component: 'TelegramService',
+            operation: 'polling_error',
+            error: {
+              message: error.message,
+              code: error.code,
+            },
+          })
+        }
+      })
+
       // Test the bot token by getting bot info
       const botInfo = await this.bot.getMe()
       logger.info({
@@ -303,7 +327,12 @@ export class TelegramService {
   /**
    * Handle /start command for account linking
    */
-  async handleStartCommand(chatId: string, token: string): Promise<void> {
+  async handleStartCommand(
+    chatId: string,
+    token: string,
+    username?: string,
+    firstName?: string,
+  ): Promise<void> {
     try {
       // Find user with matching token
       const user = await User.findOne({
@@ -330,8 +359,10 @@ export class TelegramService {
         return
       }
 
-      // Link the account atomically
+      // Link the account atomically with Telegram user info
       user.telegramChatId = chatId
+      user.telegramUsername = username
+      user.telegramFirstName = firstName
       user.telegramLinkToken = undefined
       user.telegramLinkTokenExpiry = undefined
       await user.save()
@@ -346,6 +377,8 @@ export class TelegramService {
         operation: 'handleStartCommand',
         userId: user._id.toString(),
         chatId,
+        username,
+        firstName,
         message: 'Account linked successfully',
       })
     } catch (error) {
@@ -378,6 +411,8 @@ export class TelegramService {
     this.bot.onText(/\/start (.+)/, async (msg, match) => {
       const chatId = msg.chat.id.toString()
       const token = match?.[1]
+      const username = msg.from?.username
+      const firstName = msg.from?.first_name
 
       if (!token) {
         await this.sendMessage(
@@ -387,7 +422,7 @@ export class TelegramService {
         return
       }
 
-      await this.handleStartCommand(chatId, token)
+      await this.handleStartCommand(chatId, token, username, firstName)
     })
 
     // Handle /start without parameters
@@ -404,6 +439,134 @@ export class TelegramService {
       operation: 'setupCommandHandlers',
       message: 'Command handlers registered successfully',
     })
+  }
+
+  /**
+   * Send a confirmation message to user when they create/update an alert
+   */
+  async sendAlertConfirmation(
+    userId: string,
+    alertType: AlertType,
+    config: any,
+    isUpdate: boolean = false,
+  ): Promise<boolean> {
+    try {
+      // Get user's Telegram chat ID
+      const user = await User.findById(userId).select('telegramChatId displayName').lean()
+      if (!user || !user.telegramChatId) {
+        logger.debug({
+          component: 'TelegramService',
+          operation: 'sendAlertConfirmation',
+          userId,
+          message: 'User has no linked Telegram chat ID',
+        })
+        return false
+      }
+
+      // Format the confirmation message based on alert type
+      let message = ''
+      
+      if (alertType === AlertType.ALPHA_STREAM) {
+        const action = isUpdate ? 'updated' : 'created'
+        message = `✅ *Whale Alert ${action.charAt(0).toUpperCase() + action.slice(1)}*\n\n`
+        message += `Your whale alert subscription has been ${action} successfully\\!\n\n`
+        message += `*Configuration:*\n`
+        
+        if (config.hotnessScoreThreshold !== undefined) {
+          message += `🔥 Hotness Score: ${config.hotnessScoreThreshold}/10\n`
+        }
+        
+        if (config.minBuyAmountUSD !== undefined) {
+          const formattedAmount = config.minBuyAmountUSD.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })
+          message += `💰 Min Buy Amount: ${formattedAmount}\n`
+        }
+        
+        if (config.walletLabels && config.walletLabels.length > 0) {
+          message += `🏷️ Wallet Labels: ${config.walletLabels.join(', ')}\n`
+        }
+        
+        message += `\nYou'll receive alerts here when matching transactions are detected\\!`
+      } else {
+        // Generic confirmation for other alert types
+        const action = isUpdate ? 'updated' : 'created'
+        message = `✅ *Alert ${action.charAt(0).toUpperCase() + action.slice(1)}*\n\n`
+        message += `Your ${alertType} alert has been ${action} successfully\\!`
+      }
+
+      // Send the message directly (bypass queue for confirmations)
+      await this.sendMessage(user.telegramChatId, message)
+
+      logger.info({
+        component: 'TelegramService',
+        operation: 'sendAlertConfirmation',
+        userId,
+        alertType,
+        isUpdate,
+        message: 'Confirmation message sent successfully',
+      })
+
+      return true
+    } catch (error) {
+      logger.error({
+        component: 'TelegramService',
+        operation: 'sendAlertConfirmation',
+        userId,
+        alertType,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+      return false
+    }
+  }
+
+  /**
+   * Send a deletion confirmation message to user
+   */
+  async sendAlertDeletionConfirmation(
+    userId: string,
+    alertType: AlertType,
+  ): Promise<boolean> {
+    try {
+      // Get user's Telegram chat ID
+      const user = await User.findById(userId).select('telegramChatId').lean()
+      if (!user || !user.telegramChatId) {
+        return false
+      }
+
+      const message = `🗑️ *Alert Deleted*\n\nYour ${alertType === AlertType.ALPHA_STREAM ? 'Whale Alert' : alertType} subscription has been deleted\\.\n\nYou will no longer receive these alerts\\.`
+
+      // Send the message directly
+      await this.sendMessage(user.telegramChatId, message)
+
+      logger.info({
+        component: 'TelegramService',
+        operation: 'sendAlertDeletionConfirmation',
+        userId,
+        alertType,
+        message: 'Deletion confirmation sent successfully',
+      })
+
+      return true
+    } catch (error) {
+      logger.error({
+        component: 'TelegramService',
+        operation: 'sendAlertDeletionConfirmation',
+        userId,
+        alertType,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+      return false
+    }
   }
 
   /**

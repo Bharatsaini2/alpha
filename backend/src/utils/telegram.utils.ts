@@ -235,3 +235,113 @@ export function formatKOLAlert(
 [View Transaction](${txLink})
 [View Token](${tokenLink})`
 }
+
+/**
+ * Whale transaction data for alert formatting
+ */
+export interface WhaleTransactionData {
+  txHash: string
+  tokenAddress: string
+  tokenSymbol: string
+  tokenName: string
+  buyAmountUSD: number
+  hotnessScore: number
+  walletAddress: string
+  walletLabels: string[]
+  timestamp: number
+}
+
+/**
+ * Generates a Quick Buy deep link for the AlphaBlock swap interface
+ * @param tokenAddress - The token contract address
+ * @returns Quick Buy URL
+ */
+export function generateQuickBuyLink(tokenAddress: string): string {
+  return `https://alphablock.ai/swap?token=${tokenAddress}`
+}
+
+/**
+ * Formats a whale buy alert message for Telegram with hotness score and wallet labels
+ * This is specifically for the ALPHA_STREAM whale alert system
+ * @param tx - The whale transaction data
+ * @returns Formatted MarkdownV2 message
+ */
+export function formatWhaleAlertMessage(tx: WhaleTransactionData): string {
+  try {
+    // Escape all text fields for MarkdownV2
+    const tokenNameEscaped = escapeMarkdownV2(tx.tokenName)
+    const tokenSymbolEscaped = escapeMarkdownV2(tx.tokenSymbol)
+    const contractAddressEscaped = escapeMarkdownV2(tx.tokenAddress)
+    
+    // Format buy amount with proper currency formatting
+    const formattedBuyAmount = formatLargeNumber(tx.buyAmountUSD)
+    const buyAmountEscaped = escapeMarkdownV2(`$${formattedBuyAmount}`)
+    
+    // Format hotness score (0-10 scale with 1 decimal)
+    const hotnessScoreFormatted = tx.hotnessScore.toFixed(1)
+    const hotnessScoreEscaped = escapeMarkdownV2(hotnessScoreFormatted)
+    
+    // Format wallet labels (join with comma if multiple)
+    const walletLabelsText = tx.walletLabels.length > 0 
+      ? tx.walletLabels.join(', ') 
+      : 'Unknown'
+    const walletLabelsEscaped = escapeMarkdownV2(walletLabelsText)
+    
+    // Format timestamp to HH:MM UTC
+    const date = new Date(tx.timestamp)
+    const hours = date.getUTCHours().toString().padStart(2, '0')
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0')
+    const timeFormatted = `${hours}:${minutes} UTC`
+    const timeEscaped = escapeMarkdownV2(timeFormatted)
+    
+    // Generate links
+    const txLink = generateTransactionLink(tx.txHash)
+    const quickBuyLink = generateQuickBuyLink(tx.tokenAddress)
+    
+    // Build the message with MarkdownV2 formatting
+    return `🐋 *Whale Buy Alert*
+
+*Token:* ${tokenNameEscaped} \\(${tokenSymbolEscaped}\\)
+*Chain:* Solana
+*CA:* \`${contractAddressEscaped}\`
+
+💰 *Buy Amount:* ${buyAmountEscaped}
+🔥 *Hotness Score:* ${hotnessScoreEscaped}/10
+🏷️ *Wallet Label:* ${walletLabelsEscaped}
+
+⏰ *Time:* ${timeEscaped}
+
+🔗 [View Transaction](${txLink})
+⚡ [Quick Buy](${quickBuyLink})`
+  } catch (error) {
+    // If MarkdownV2 formatting fails, fall back to plain text
+    const formattedBuyAmount = formatLargeNumber(tx.buyAmountUSD)
+    const hotnessScoreFormatted = tx.hotnessScore.toFixed(1)
+    const walletLabelsText = tx.walletLabels.length > 0 
+      ? tx.walletLabels.join(', ') 
+      : 'Unknown'
+    
+    const date = new Date(tx.timestamp)
+    const hours = date.getUTCHours().toString().padStart(2, '0')
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0')
+    const timeFormatted = `${hours}:${minutes} UTC`
+    
+    const txLink = generateTransactionLink(tx.txHash)
+    const quickBuyLink = generateQuickBuyLink(tx.tokenAddress)
+    
+    return `🐋 Whale Buy Alert
+
+Token: ${tx.tokenName} (${tx.tokenSymbol})
+Chain: Solana
+CA: ${tx.tokenAddress}
+
+💰 Buy Amount: $${formattedBuyAmount}
+🔥 Hotness Score: ${hotnessScoreFormatted}/10
+🏷️ Wallet Label: ${walletLabelsText}
+
+⏰ Time: ${timeFormatted}
+
+🔗 View Transaction: ${txLink}
+⚡ Quick Buy: ${quickBuyLink}`
+  }
+}

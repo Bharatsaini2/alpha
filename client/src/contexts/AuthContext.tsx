@@ -19,6 +19,9 @@ interface User {
   displayName?: string
   avatar?: string
   lastLogin?: string
+  telegramChatId?: string
+  telegramUsername?: string
+  telegramFirstName?: string
 }
 
 interface AuthContextType {

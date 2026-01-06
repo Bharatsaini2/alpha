@@ -223,7 +223,7 @@ export async function getTokenCreationInfo(tokenAddress: string) {
     const cached = await redisClient.get(cacheKey)
     if (cached) {
       console.log('✅ Cache HIT (creation):', tokenAddress)
-      return cached
+      return cached === 'UNKNOWN' ? null : cached
     }
   } catch (error) {
     logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
@@ -244,12 +244,12 @@ export async function getTokenCreationInfo(tokenAddress: string) {
     const creationTime = response.data.data.blockHumanTime
     
     // Cache for 7 days (token creation time never changes)
-    if (creationTime) {
-      try {
-        await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, creationTime)
-      } catch (error) {
-        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
-      }
+    // Cache even if null to prevent repeated API calls for tokens without creation time
+    const cacheValue = creationTime || 'UNKNOWN'
+    try {
+      await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, cacheValue)
+    } catch (error) {
+      logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
     }
     
     return creationTime
@@ -262,7 +262,7 @@ export async function getTokenCreationInfo(tokenAddress: string) {
 export async function getTokenMarketCapAndPriceUsingBirdEye(
   tokenAddress: string,
 ) {
-  // Check Redis cache first (cache for 1 minute since price changes frequently)
+  // Check Redis cache first (cache for 5 minutes to reduce API calls)
   const cacheKey = `token:market:${tokenAddress}`
   
   try {
@@ -289,10 +289,10 @@ export async function getTokenMarketCapAndPriceUsingBirdEye(
     
     const data = response.data.data
     
-    // Cache for 1 minute (price data changes frequently)
+    // Cache for 5 minutes (reduces API calls while keeping data reasonably fresh)
     if (data) {
       try {
-        await redisClient.setex(cacheKey, 60, JSON.stringify(data))
+        await redisClient.setex(cacheKey, 300, JSON.stringify(data))
       } catch (error) {
         logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
       }

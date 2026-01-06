@@ -269,21 +269,32 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     console.log(`✅ Found ${jupiterResults.length} tokens from Jupiter Ultra`)
 
     // Convert Jupiter results to TokenInfo format
-    const tokens: TokenInfo[] = jupiterResults.map((token: JupiterTokenResult) => ({
-      address: token.id,
-      symbol: token.symbol,
-      name: token.name,
-      decimals: token.decimals,
-      image: token.icon || undefined,
-      usdPrice: token.usdPrice || undefined,
-      mcap: token.mcap || undefined,
-      fdv: token.fdv || undefined,
-      liquidity: token.liquidity || undefined,
-      isVerified: token.isVerified || false,
-      tags: token.tags || undefined,
-      organicScore: token.organicScore || undefined,
-      organicScoreLabel: token.organicScoreLabel || undefined,
-    }))
+    const tokens: TokenInfo[] = jupiterResults.map((token: JupiterTokenResult) => {
+      // Validate usdPrice - if it's suspiciously high, it might be mcap instead of price
+      let validatedPrice = token.usdPrice || undefined
+      
+      // If usdPrice is greater than $100k, it's probably market cap or wrong data
+      if (validatedPrice && validatedPrice > 100000) {
+        console.warn(`⚠️ Suspicious usdPrice for ${token.symbol}: $${validatedPrice.toLocaleString()} - clearing to fetch correct price`)
+        validatedPrice = undefined // Clear it so it gets fetched properly later
+      }
+      
+      return {
+        address: token.id,
+        symbol: token.symbol,
+        name: token.name,
+        decimals: token.decimals,
+        image: token.icon || undefined,
+        usdPrice: validatedPrice,
+        mcap: token.mcap || undefined,
+        fdv: token.fdv || undefined,
+        liquidity: token.liquidity || undefined,
+        isVerified: token.isVerified || false,
+        tags: token.tags || undefined,
+        organicScore: token.organicScore || undefined,
+        organicScoreLabel: token.organicScoreLabel || undefined,
+      }
+    })
 
     return tokens
   }, [searchJupiterUltra])

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import Phantom from "../../assets/phantom.svg"
 import { useAppKit, useAppKitAccount } from "@reown/appkit/react"
@@ -18,11 +18,13 @@ const LoginModal: React.FC<LoginModalProps> = ({
 }) => {
   const { open } = useAppKit()
   const { address, isConnected: walletConnected } = useAppKitAccount()
-  const { login } = useAuth()
+  const { login, refreshUser } = useAuth()
 
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [message, setMessage] = useState("")
+  const loginInProgressRef = useRef(false)
+  const processedAddressRef = useRef<string | null>(null)
 
   // Reset form when modal opens
   useEffect(() => {
@@ -30,12 +32,14 @@ const LoginModal: React.FC<LoginModalProps> = ({
       setErrors({})
       setMessage("")
       setIsLoading(false)
+      loginInProgressRef.current = false
+      processedAddressRef.current = null
     }
   }, [isOpen])
 
   // Handle wallet connection
   useEffect(() => {
-    if (walletConnected && address && isOpen) {
+    if (walletConnected && address && isOpen && !loginInProgressRef.current && processedAddressRef.current !== address) {
       handleWalletLogin(address)
     }
   }, [walletConnected, address, isOpen])
@@ -48,7 +52,15 @@ const LoginModal: React.FC<LoginModalProps> = ({
   }
 
   const handleWalletLogin = async (walletAddress: string) => {
+    // Prevent duplicate login attempts
+    if (loginInProgressRef.current || processedAddressRef.current === walletAddress) {
+      console.log("Login already in progress or address already processed, skipping...")
+      return
+    }
+
     try {
+      loginInProgressRef.current = true
+      processedAddressRef.current = walletAddress
       setIsLoading(true)
       setErrors({})
 
@@ -77,6 +89,16 @@ const LoginModal: React.FC<LoginModalProps> = ({
             verifyResponse.data.data.accessToken,
             verifyResponse.data.data.refreshToken
           )
+          
+          // Refresh user data to get latest Telegram connection status
+          try {
+            await refreshUser()
+          } catch (refreshError) {
+            console.error("Failed to refresh user data after login:", refreshError)
+            // Don't block login flow, user can manually refresh page
+            setMessage("Login successful! Please refresh page to see latest connection status.")
+          }
+          
           onClose()
         } else {
           setErrors({ phantom: verifyResponse.data.message })
@@ -91,6 +113,7 @@ const LoginModal: React.FC<LoginModalProps> = ({
       })
     } finally {
       setIsLoading(false)
+      loginInProgressRef.current = false
     }
   }
 

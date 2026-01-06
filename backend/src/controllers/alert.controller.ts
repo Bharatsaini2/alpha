@@ -6,7 +6,462 @@ import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import { alertMatcherService } from '../services/alertMatcher.service'
 import { telegramService } from '../services/telegram.service'
 import { AlertType, Priority } from '../types/alert.types'
+import { validateSOLBalance } from '../middlewares/premiumGate.middleware'
 import logger from '../utils/logger'
+
+/**
+ * GET /api/v1/alerts/premium-access
+ * Check if user has premium access based on SOL balance
+ * Query params: refresh=true to bypass cache
+ */
+export const checkPremiumAccessStatus = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+    const bypassCache = req.query.refresh === 'true'
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    try {
+      // Get user's wallet address
+      const user = await User.findById(userId)
+
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'Wallet address not found. Please connect your wallet.',
+        })
+      }
+
+      // Use walletAddressOriginal if available (correct case), otherwise use walletAddress
+      // For users with lowercase legacy addresses, this will gracefully return no access
+      const walletForCheck = user.walletAddressOriginal || user.walletAddress
+
+      // Validate SOL balance (with optional cache bypass)
+      const result = await validateSOLBalance(walletForCheck, bypassCache)
+
+      logger.info({
+        component: 'AlertController',
+        operation: 'checkPremiumAccessStatus',
+        userId,
+        walletAddress: user.walletAddress,
+        hasAccess: result.hasAccess,
+        currentBalance: result.currentBalance,
+        bypassCache,
+        message: 'Premium access check completed',
+      })
+
+      res.status(200).json({
+        success: true,
+        data: {
+          hasAccess: result.hasAccess,
+          currentBalance: result.currentBalance,
+          requiredBalance: result.requiredBalance,
+          difference: result.difference,
+        },
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'checkPremiumAccessStatus',
+        userId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(503).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unable to verify balance. Please try again.',
+      })
+    }
+  },
+)
+
+/**
+ * POST /api/v1/alerts/whale-alert
+ * Create or update whale alert subscription
+ */
+export const createWhaleAlert = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    const { hotnessScoreThreshold, walletLabels, minBuyAmountUSD } = req.body
+
+    // Validate input parameters
+    if (hotnessScoreThreshold === undefined || hotnessScoreThreshold === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hotness score threshold is required',
+      })
+    }
+
+    if (hotnessScoreThreshold < 0 || hotnessScoreThreshold > 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hotness score must be between 0 and 10',
+      })
+    }
+
+    if (minBuyAmountUSD === undefined || minBuyAmountUSD === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum buy amount is required',
+      })
+    }
+
+    if (minBuyAmountUSD <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum buy amount must be positive',
+      })
+    }
+
+    if (!walletLabels || !Array.isArray(walletLabels) || walletLabels.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one wallet label must be selected',
+      })
+    }
+
+    // Validate wallet labels
+    const validLabels = ['Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator', 'Whale']
+    const invalidLabels = walletLabels.filter(label => !validLabels.includes(label))
+    if (invalidLabels.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid wallet labels: ${invalidLabels.join(', ')}. Must be one of: ${validLabels.join(', ')}`,
+      })
+    }
+
+    try {
+      // Get user to verify wallet address and Telegram connection
+      const user = await User.findById(userId)
+
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'Wallet address not found. Please connect your wallet.',
+        })
+      }
+
+      // Check if Telegram is connected
+      if (!user.telegramChatId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Telegram account not connected. Please connect your Telegram account first.',
+        })
+      }
+
+      // Use walletAddressOriginal if available (correct case), otherwise use walletAddress
+      const walletForCheck = user.walletAddressOriginal || user.walletAddress
+
+      // Check premium access
+      const premiumResult = await validateSOLBalance(walletForCheck)
+
+      if (!premiumResult.hasAccess) {
+        return res.status(403).json({
+          success: false,
+          message: `Premium access required. Minimum balance: ${premiumResult.requiredBalance} SOL`,
+          data: {
+            currentBalance: premiumResult.currentBalance,
+            requiredBalance: premiumResult.requiredBalance,
+            difference: premiumResult.difference,
+          },
+        })
+      }
+
+      // Create or update whale alert subscription
+      const config = {
+        hotnessScoreThreshold,
+        walletLabels: walletLabels.sort(), // Sort for consistent comparison
+        minBuyAmountUSD,
+      }
+
+      // Check if an alert with the exact same config already exists
+      const existingAlert = await UserAlert.findOne({
+        userId,
+        type: AlertType.ALPHA_STREAM,
+        enabled: true,
+        'config.hotnessScoreThreshold': hotnessScoreThreshold,
+        'config.minBuyAmountUSD': minBuyAmountUSD,
+      })
+
+      let alert
+
+      // If exact match exists, update it
+      if (existingAlert) {
+        // Check if wallet labels also match
+        const existingLabels = (existingAlert.config as any).walletLabels?.sort() || []
+        const newLabels = walletLabels.sort()
+        const labelsMatch = JSON.stringify(existingLabels) === JSON.stringify(newLabels)
+
+        if (labelsMatch) {
+          // Exact match - update the existing alert
+          alert = await UserAlert.findByIdAndUpdate(
+            existingAlert._id,
+            {
+              updatedAt: new Date(),
+            },
+            { new: true }
+          )
+        } else {
+          // Different labels - create new alert
+          alert = await UserAlert.create({
+            userId,
+            type: AlertType.ALPHA_STREAM,
+            priority: Priority.LOW,
+            enabled: true,
+            config,
+          })
+        }
+      } else {
+        // No match - create new alert
+        alert = await UserAlert.create({
+          userId,
+          type: AlertType.ALPHA_STREAM,
+          priority: Priority.LOW,
+          enabled: true,
+          config,
+        })
+      }
+
+      // Invalidate cache to pick up new subscription
+      alertMatcherService.invalidateUserSubscriptions(userId)
+
+      // Send confirmation message to Telegram
+      const isUpdate = !!existingAlert
+      telegramService.sendAlertConfirmation(
+        userId,
+        AlertType.ALPHA_STREAM,
+        config,
+        isUpdate,
+      ).catch((error) => {
+        // Don't fail the request if confirmation fails
+        logger.warn({
+          component: 'AlertController',
+          operation: 'createWhaleAlert',
+          userId,
+          error: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          message: 'Failed to send Telegram confirmation, but alert was created',
+        })
+      })
+
+      if (!alert) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create or update alert',
+        })
+      }
+
+      logger.info({
+        component: 'AlertController',
+        operation: 'createWhaleAlert',
+        userId,
+        alertId: alert._id,
+        config,
+        message: 'Whale alert subscription created/updated successfully',
+      })
+
+      res.status(200).json({
+        success: true,
+        data: {
+          alertId: alert._id,
+          type: alert.type,
+          config: alert.config,
+          createdAt: alert.createdAt,
+          updatedAt: alert.updatedAt,
+        },
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'createWhaleAlert',
+        userId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create whale alert subscription',
+      })
+    }
+  },
+)
+
+/**
+ * GET /api/v1/alerts/whale-alerts
+ * Get user's whale alert subscriptions
+ */
+export const getWhaleAlerts = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    try {
+      // Query whale alert subscriptions (ALPHA_STREAM type)
+      // Get all alerts (hard delete removes them completely, so no need to filter by enabled)
+      const alerts = await UserAlert.find({
+        userId,
+        type: AlertType.ALPHA_STREAM,
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+
+      logger.debug({
+        component: 'AlertController',
+        operation: 'getWhaleAlerts',
+        userId,
+        alertCount: alerts.length,
+        message: 'Retrieved whale alert subscriptions',
+      })
+
+      res.status(200).json({
+        success: true,
+        data: {
+          alerts: alerts.map((alert) => ({
+            _id: alert._id,
+            type: alert.type,
+            priority: alert.priority,
+            enabled: alert.enabled,
+            config: alert.config,
+            createdAt: alert.createdAt,
+            updatedAt: alert.updatedAt,
+          })),
+        },
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'getWhaleAlerts',
+        userId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve whale alert subscriptions',
+      })
+    }
+  },
+)
+
+/**
+ * DELETE /api/v1/alerts/whale-alert/:alertId
+ * Delete whale alert subscription (soft delete)
+ */
+export const deleteWhaleAlert = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+    const { alertId } = req.params
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    if (!alertId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Alert ID is required',
+      })
+    }
+
+    try {
+      // Hard delete - permanently remove from database
+      // Verify ownership by including userId in query
+      const alert = await UserAlert.findOneAndDelete({
+        _id: alertId,
+        userId,
+        type: AlertType.ALPHA_STREAM,
+      })
+
+      if (!alert) {
+        return res.status(404).json({
+          success: false,
+          message: 'Whale alert subscription not found',
+        })
+      }
+
+      // Trigger immediate cache invalidation
+      alertMatcherService.invalidateUserSubscriptions(userId)
+
+      // Send deletion confirmation to Telegram
+      telegramService.sendAlertDeletionConfirmation(
+        userId,
+        AlertType.ALPHA_STREAM,
+      ).catch((error) => {
+        // Don't fail the request if confirmation fails
+        logger.warn({
+          component: 'AlertController',
+          operation: 'deleteWhaleAlert',
+          userId,
+          error: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          message: 'Failed to send Telegram deletion confirmation',
+        })
+      })
+
+      logger.info({
+        component: 'AlertController',
+        operation: 'deleteWhaleAlert',
+        userId,
+        alertId,
+        message: 'Whale alert subscription permanently deleted',
+      })
+
+      res.status(200).json({
+        success: true,
+        message: 'Whale alert subscription deleted successfully',
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'deleteWhaleAlert',
+        userId,
+        alertId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete whale alert subscription',
+      })
+    }
+  },
+)
 
 /**
  * POST /api/v1/alerts/link
@@ -77,6 +532,84 @@ export const generateLinkToken = catchAsyncErrors(
       res.status(500).json({
         success: false,
         message: 'Failed to generate link token',
+      })
+    }
+  },
+)
+
+/**
+ * POST /api/v1/alerts/unlink-telegram
+ * Disconnect Telegram account and delete all alerts
+ */
+export const unlinkTelegram = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    try {
+      // Delete all user alerts (hard delete)
+      const deleteResult = await UserAlert.deleteMany({ userId })
+
+      // Update user to remove Telegram connection
+      const user = await User.findByIdAndUpdate(
+        userId,
+        {
+          $unset: {
+            telegramChatId: 1,
+            telegramUsername: 1,
+            telegramFirstName: 1,
+            telegramLinkToken: 1,
+            telegramLinkTokenExpiry: 1,
+          },
+        },
+        { new: true },
+      )
+
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found',
+        })
+      }
+
+      // Invalidate cache to remove user subscriptions
+      alertMatcherService.invalidateUserSubscriptions(userId)
+
+      logger.info({
+        component: 'AlertController',
+        operation: 'unlinkTelegram',
+        userId,
+        alertsDeleted: deleteResult.deletedCount,
+        message: 'Telegram account disconnected and alerts deleted successfully',
+      })
+
+      res.status(200).json({
+        success: true,
+        message: 'Telegram account disconnected successfully',
+        data: {
+          alertsDeleted: deleteResult.deletedCount,
+        },
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'unlinkTelegram',
+        userId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to disconnect Telegram account',
       })
     }
   },
@@ -260,7 +793,7 @@ export const getMyAlerts = catchAsyncErrors(
 
 /**
  * DELETE /api/v1/alerts/:alertId
- * Delete alert subscription (soft delete)
+ * Delete alert subscription (hard delete - permanently removes from database)
  */
 export const deleteAlert = catchAsyncErrors(
   async (req: Request, res: Response) => {
@@ -282,12 +815,11 @@ export const deleteAlert = catchAsyncErrors(
     }
 
     try {
-      // Soft delete by setting enabled to false
-      const alert = await UserAlert.findOneAndUpdate(
-        { _id: alertId, userId },
-        { enabled: false },
-        { new: true },
-      )
+      // Hard delete - permanently remove from database
+      const alert = await UserAlert.findOneAndDelete({
+        _id: alertId,
+        userId,
+      })
 
       if (!alert) {
         return res.status(404).json({
@@ -304,7 +836,7 @@ export const deleteAlert = catchAsyncErrors(
         operation: 'deleteAlert',
         userId,
         alertId,
-        message: 'Alert deleted successfully',
+        message: 'Alert permanently deleted',
       })
 
       res.status(200).json({

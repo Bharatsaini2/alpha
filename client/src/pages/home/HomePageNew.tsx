@@ -21,6 +21,7 @@ import { RiFileCopyLine } from "react-icons/ri";
 import SwapModal from "../../components/swap/SwapModal"
 import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
+import { useAuth } from "../../contexts/AuthContext"
 
 
 
@@ -258,6 +259,7 @@ const HomePageNew = () => {
     const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
     const { showToast } = useToast()
     const { wallet } = useWalletConnection()
+    const { user } = useAuth()
     const navigate = useNavigate()
 
     const [transactions, setTransactions] = useState<any[]>([])
@@ -827,6 +829,85 @@ const HomePageNew = () => {
 
     const [hotness, setHotness] = useState(10);
 
+    // Handle whale alert subscription
+    const handleWhaleAlertConnect = async () => {
+        try {
+            const token = localStorage.getItem("accessToken")
+            if (!token) {
+                showToast("Please log in to connect Telegram alerts", "error")
+                return
+            }
+
+            // Check if Telegram is connected
+            if (!user?.telegramChatId) {
+                showToast("Please connect your Telegram account first from the Telegram Subscription page", "error")
+                return
+            }
+
+            // Check premium access
+            const premiumResponse = await axios.get(
+                `${import.meta.env.VITE_SERVER_URL}/alerts/premium-access`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            if (!premiumResponse.data.success || !premiumResponse.data.data.hasAccess) {
+                const difference = premiumResponse.data.data.difference || 0
+                showToast(
+                    `Insufficient balance. You need ${difference.toFixed(4)} more SOL to access this feature.`,
+                    "error"
+                )
+                return
+            }
+
+            // Convert amount string to number
+            const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
+
+            // Handle wallet labels - if "Any Label" is selected or no labels, send all valid labels
+            let labelsToSend = walletTypes.length > 0 ? walletTypes.filter(label => label !== "Any Label") : ["Smart Money"]
+            
+            // If "Any Label" was selected, send all valid labels
+            if (walletTypes.includes("Any Label")) {
+                labelsToSend = ["Smart Money", "Whale", "Insider", "Sniper", "Heavy Accumulator"]
+            }
+            
+            // If no labels selected after filtering, default to Smart Money
+            if (labelsToSend.length === 0) {
+                labelsToSend = ["Smart Money"]
+            }
+
+            // Create whale alert subscription
+            const response = await axios.post(
+                `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,
+                {
+                    hotnessScoreThreshold: hotness,
+                    walletLabels: labelsToSend,
+                    minBuyAmountUSD: minBuyAmount,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            if (response.data.success) {
+                setIsSaved(true)
+                showToast("Whale alert subscription created successfully!", "success")
+                setTimeout(() => setIsSaved(false), 3000)
+            }
+        } catch (error: any) {
+            console.error("Whale alert subscription error:", error)
+            showToast(
+                error.response?.data?.message || "Failed to create whale alert subscription",
+                "error"
+            )
+        }
+    }
+
 
     return (
         <>
@@ -1133,7 +1214,16 @@ const HomePageNew = () => {
                                                             </div>
 
                                                             <div>
-                                                                <button className="paper-plan-connect-btn"> <FontAwesomeIcon icon={faPaperPlane} /> Connect</button>
+                                                                <button 
+                                                                    className="paper-plan-connect-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        // This button is just for show - displays connection status
+                                                                    }}
+                                                                    disabled
+                                                                > 
+                                                                    <FontAwesomeIcon icon={faPaperPlane} /> {user?.telegramChatId ? 'Connected' : 'Connect'}
+                                                                </button>
                                                             </div>
                                                         </div>
 
@@ -1309,9 +1399,12 @@ const HomePageNew = () => {
 
                                                         <button
                                                             className="connect-wallet-btn"
-                                                            onClick={() => setIsSaved(true)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleWhaleAlertConnect();
+                                                            }}
                                                         >
-                                                            Connect
+                                                            {user?.telegramChatId ? 'Create' : 'Connect'}
                                                         </button>
 
                                                     </div>

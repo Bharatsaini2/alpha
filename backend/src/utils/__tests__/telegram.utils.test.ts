@@ -9,6 +9,8 @@ import {
   formatWhaleAlert,
   formatClusterAlert,
   formatKOLAlert,
+  generateQuickBuyLink,
+  formatWhaleAlertMessage,
 } from '../telegram.utils'
 import { IWhaleAllTransactionsV2 } from '../../models/whaleAllTransactionsV2.model'
 import { IInfluencerWhaleTransactionsV2 } from '../../models/influencerWhaleTransactionsV2.model'
@@ -449,6 +451,241 @@ describe('Telegram Utilities', () => {
       expect(message).toContain('CryptoInfluencer')
       expect(message).toContain('BONK')
       expect(message).toContain('BUY')
+    })
+  })
+
+  describe('generateQuickBuyLink', () => {
+    it('should generate valid Quick Buy URLs', () => {
+      fc.assert(
+        fc.property(
+          fc.string({ minLength: 1, maxLength: 44 }),
+          (tokenAddress) => {
+            const link = generateQuickBuyLink(tokenAddress)
+            
+            // Must be a valid URL format
+            expect(link).toMatch(/^https:\/\/alphablock\.ai\/swap\?token=/)
+            
+            // Must contain the token address
+            expect(link).toBe(`https://alphablock.ai/swap?token=${tokenAddress}`)
+            
+            return true
+          }
+        ),
+        { numRuns: 100 }
+      )
+    })
+
+    it('should handle typical Solana token addresses', () => {
+      const typicalAddress = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+      const link = generateQuickBuyLink(typicalAddress)
+      expect(link).toBe(`https://alphablock.ai/swap?token=${typicalAddress}`)
+    })
+  })
+
+  describe('formatWhaleAlertMessage', () => {
+    // **Feature: telegram-whale-alerts, Property 7: Message formatting escapes special characters**
+    it('should escape all MarkdownV2 special characters in whale alert messages', () => {
+      fc.assert(
+        fc.property(
+          fc.record({
+            txHash: fc.string({ minLength: 32, maxLength: 88 }),
+            tokenAddress: fc.string({ minLength: 32, maxLength: 44 }),
+            tokenSymbol: fc.string({ minLength: 1, maxLength: 10 }),
+            tokenName: fc.string({ minLength: 1, maxLength: 50 }),
+            buyAmountUSD: fc.double({ min: 100, max: 1000000 }),
+            hotnessScore: fc.double({ min: 0, max: 10 }),
+            walletAddress: fc.string({ minLength: 32, maxLength: 44 }),
+            walletLabels: fc.array(
+              fc.constantFrom('Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator'),
+              { minLength: 1, maxLength: 4 }
+            ),
+            timestamp: fc.integer({ min: 1600000000000, max: 2000000000000 }),
+          }),
+          (tx) => {
+            const message = formatWhaleAlertMessage(tx)
+            
+            // Special characters that must be escaped: _ * [ ] ( ) ~ > # + - = | { } . !
+            const specialChars = ['_', '*', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+            
+            // Check that special characters in the token name are escaped
+            for (const char of specialChars) {
+              if (tx.tokenName.includes(char)) {
+                // The escaped version should have a backslash before the character
+                const escapedChar = `\\${char}`
+                expect(message).toContain(escapedChar)
+              }
+            }
+            
+            // Check that special characters in the token symbol are escaped
+            for (const char of specialChars) {
+              if (tx.tokenSymbol.includes(char)) {
+                const escapedChar = `\\${char}`
+                expect(message).toContain(escapedChar)
+              }
+            }
+            
+            return true
+          }
+        ),
+        { numRuns: 100 }
+      )
+    })
+
+    // **Feature: telegram-whale-alerts, Property 7: Message formatting escapes special characters**
+    it('should include all required fields in whale alert messages', () => {
+      fc.assert(
+        fc.property(
+          fc.record({
+            txHash: fc.string({ minLength: 32, maxLength: 88 }),
+            tokenAddress: fc.string({ minLength: 32, maxLength: 44 }),
+            tokenSymbol: fc.stringMatching(/^[A-Z0-9]+$/), // Alphanumeric only for simpler testing
+            tokenName: fc.stringMatching(/^[a-zA-Z0-9\s]+$/), // Alphanumeric and spaces
+            buyAmountUSD: fc.double({ min: 100, max: 1000000 }),
+            hotnessScore: fc.double({ min: 0, max: 10 }),
+            walletAddress: fc.string({ minLength: 32, maxLength: 44 }),
+            walletLabels: fc.array(
+              fc.constantFrom('Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator'),
+              { minLength: 1, maxLength: 4 }
+            ),
+            timestamp: fc.integer({ min: 1600000000000, max: 2000000000000 }),
+          }),
+          (tx) => {
+            const message = formatWhaleAlertMessage(tx)
+            
+            // Must contain whale buy alert header
+            expect(message).toContain('🐋')
+            expect(message).toContain('Whale Buy Alert')
+            
+            // Must contain token name and symbol
+            expect(message).toMatch(/Token:/)
+            expect(message).toContain(tx.tokenSymbol)
+            
+            // Must contain chain
+            expect(message).toContain('Solana')
+            
+            // Must contain contract address
+            expect(message).toMatch(/CA:/)
+            expect(message).toContain(tx.tokenAddress)
+            
+            // Must contain buy amount
+            expect(message).toMatch(/Buy Amount:/)
+            expect(message).toMatch(/\$/)
+            
+            // Must contain hotness score
+            expect(message).toMatch(/Hotness Score:/)
+            expect(message).toMatch(/\/10/)
+            
+            // Must contain wallet label
+            expect(message).toMatch(/Wallet Label:/)
+            
+            // Must contain time
+            expect(message).toMatch(/Time:/)
+            expect(message).toMatch(/UTC/)
+            
+            // Must contain transaction link
+            expect(message).toContain('View Transaction')
+            expect(message).toContain('https://solscan.io/tx/')
+            expect(message).toContain(tx.txHash)
+            
+            // Must contain Quick Buy link
+            expect(message).toContain('Quick Buy')
+            expect(message).toContain('https://alphablock.ai/swap?token=')
+            expect(message).toContain(tx.tokenAddress)
+            
+            return true
+          }
+        ),
+        { numRuns: 100 }
+      )
+    })
+
+    it('should format a typical whale alert message', () => {
+      const tx = {
+        txHash: '5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt',
+        tokenAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        tokenSymbol: 'USDC',
+        tokenName: 'USD Coin',
+        buyAmountUSD: 50000,
+        hotnessScore: 8.5,
+        walletAddress: 'So11111111111111111111111111111111111111112',
+        walletLabels: ['Smart Money', 'Heavy Accumulator'],
+        timestamp: 1704067200000, // 2024-01-01 00:00:00 UTC
+      }
+
+      const message = formatWhaleAlertMessage(tx)
+      
+      expect(message).toContain('🐋 *Whale Buy Alert*')
+      expect(message).toContain('USD Coin')
+      expect(message).toContain('USDC')
+      expect(message).toContain('Solana')
+      expect(message).toContain('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
+      expect(message).toContain('$50\\.00K') // Escaped period
+      expect(message).toContain('8\\.5/10') // Escaped period
+      expect(message).toContain('Smart Money, Heavy Accumulator')
+      expect(message).toContain('00:00 UTC')
+      expect(message).toContain('https://solscan.io/tx/5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt')
+      expect(message).toContain('https://alphablock.ai/swap?token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
+    })
+
+    it('should handle empty wallet labels', () => {
+      const tx = {
+        txHash: '5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt',
+        tokenAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        tokenSymbol: 'USDC',
+        tokenName: 'USD Coin',
+        buyAmountUSD: 50000,
+        hotnessScore: 8.5,
+        walletAddress: 'So11111111111111111111111111111111111111112',
+        walletLabels: [],
+        timestamp: 1704067200000,
+      }
+
+      const message = formatWhaleAlertMessage(tx)
+      
+      expect(message).toContain('Unknown')
+    })
+
+    it('should handle special characters in token name and symbol', () => {
+      const tx = {
+        txHash: '5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt',
+        tokenAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        tokenSymbol: 'TEST-TOKEN',
+        tokenName: 'Test_Token (v2.0)',
+        buyAmountUSD: 50000,
+        hotnessScore: 8.5,
+        walletAddress: 'So11111111111111111111111111111111111111112',
+        walletLabels: ['Smart Money'],
+        timestamp: 1704067200000,
+      }
+
+      const message = formatWhaleAlertMessage(tx)
+      
+      // Special characters should be escaped
+      expect(message).toContain('Test\\_Token \\(v2\\.0\\)')
+      expect(message).toContain('TEST\\-TOKEN')
+    })
+
+    it('should fall back to plain text on formatting errors', () => {
+      // Create a transaction that might cause formatting issues
+      const tx = {
+        txHash: '5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt',
+        tokenAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        tokenSymbol: 'USDC',
+        tokenName: 'USD Coin',
+        buyAmountUSD: 50000,
+        hotnessScore: 8.5,
+        walletAddress: 'So11111111111111111111111111111111111111112',
+        walletLabels: ['Smart Money'],
+        timestamp: 1704067200000,
+      }
+
+      const message = formatWhaleAlertMessage(tx)
+      
+      // Should still contain essential information
+      expect(message).toContain('Whale Buy Alert')
+      expect(message).toContain('USD Coin')
+      expect(message).toContain('USDC')
+      expect(message).toContain('Solana')
     })
   })
 })

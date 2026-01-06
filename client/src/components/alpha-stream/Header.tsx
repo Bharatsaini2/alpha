@@ -11,6 +11,7 @@ import { FaRegUserCircle } from "react-icons/fa";
 import { RiTelegram2Fill } from "react-icons/ri";
 import { Link } from "react-router-dom"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
+import { useToast } from "../ui/Toast"
 
 
 
@@ -36,8 +37,9 @@ function Header() {
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { user, isAuthenticated, logout } = useAuth()
+  const { user, isAuthenticated, logout, openLoginModal } = useAuth()
   const { wallet, connect, disconnect } = useWalletConnection()
+  const { showToast } = useToast()
 
   useEffect(() => {
     fetchTrendingTokens()
@@ -311,9 +313,31 @@ function Header() {
                   </div>
                   <div className="user-dropdown-divider" />
 
-                  <div className="user-dropdown-item" >
-                    <Link to="/telegram-subscription" className="profile-navlink"> <RiTelegram2Fill size={14} />
-                      Telegram Subscription  </Link>
+                  <div 
+                    className="user-dropdown-item"
+                    onClick={(e) => {
+                      // Check if user has wallet connected
+                      if (!user?.walletAddress && !wallet.address) {
+                        e.preventDefault();
+                        setShowDropdown(false);
+                        showToast('Please connect your wallet to access Telegram Subscription', 'error');
+                      } else {
+                        setShowDropdown(false);
+                      }
+                    }}
+                  >
+                    <Link 
+                      to="/telegram-subscription" 
+                      className="profile-navlink"
+                      onClick={(e) => {
+                        if (!user?.walletAddress && !wallet.address) {
+                          e.preventDefault();
+                        }
+                      }}
+                    > 
+                      <RiTelegram2Fill size={14} />
+                      Telegram Subscription  
+                    </Link>
                   </div>
                   <div className="user-dropdown-divider" />
 
@@ -346,7 +370,10 @@ function Header() {
               )}
             </div>
           ) : (
-            <button className="connect-btn" onClick={() => connect()}>
+            <button className="connect-btn" onClick={() => {
+              openLoginModal()
+              connect()
+            }}>
               CONNECT
             </button>
           )}

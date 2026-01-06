@@ -97,11 +97,10 @@ async function upsertMarketToRedis(tokenAddress: string): Promise<boolean> {
     console.log('🔄 Fetching market data for: ', tokenAddress)
 
     const data = await getTokenMarketCapAndPriceUsingBirdEye(tokenAddress)
-    // const data = await getTokenMarketCapAndPriceUsingBirdEye(tokenAddress);
 
     const price = Number(data?.price) || 0
-
     const marketCap = Number(data?.market_cap) || 0
+    
     const payload: Record<string, string> = {
       price: String(price),
       marketCap: String(marketCap),
@@ -141,7 +140,9 @@ async function refreshMarketCache() {
   const started = Date.now()
   console.log('🔄 Top Market Data Cache: collecting tokens (7d)...')
   const tokens = await collectUniqueTokenAddresses()
-  console.log(`📦 Unique tokens: ${tokens.length}`)
+  console.log(`📦 Unique tokens collected: ${tokens.length}`)
+  console.log(`📊 Estimated CU usage for this run: ${tokens.length * 15} CUs`)
+  console.log(`📊 Estimated Birdeye API calls: ${tokens.length}`)
 
   const { success, failure } = await processInBatches(tokens)
   const ms = Date.now() - started
@@ -150,9 +151,10 @@ async function refreshMarketCache() {
       `✅ Market cache updated: success=${success} failure=${failure} in ${ms}ms`,
     ),
   )
+  console.log(`📊 Actual API calls made: ${success + failure}`)
 }
 
-// Schedule
+// Schedule - Every 3 hours (as per original architecture)
 const cronJob = cron.schedule(
   CRON_SCHEDULE,
   async () => {

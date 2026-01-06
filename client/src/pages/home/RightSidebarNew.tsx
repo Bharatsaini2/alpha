@@ -20,6 +20,7 @@ import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
 import { IoWalletOutline } from "react-icons/io5"
 import SwapModal from "../../components/swap/SwapModal"
+import { useAuth } from "../../contexts/AuthContext"
 
 // import { MdOutlineCheckBox } from "react-icons/md";
 
@@ -56,6 +57,9 @@ const RightSidebarNew = ({
   pageType = 'alpha', // Default to 'alpha' for Alpha Streams page
   transactions = [] // Default to empty array
 }: RightSidebarNewProps) => {
+  // Auth hook for login modal
+  const { openLoginModal } = useAuth()
+
   // Wallet connection hook
   const {
     wallet,
@@ -373,11 +377,11 @@ const RightSidebarNew = ({
     return () => { isMounted = false }
   }, [inputToken.address, outputToken.address])
 
-  // Handle wallet connection - opens standard wallet modal
-  const handleConnectWallet = useCallback(async () => {
-    // Open the standard wallet modal
-    await connect()
-  }, [connect])
+  // Handle wallet connection - opens login modal which handles wallet connection
+  const handleConnectWallet = useCallback(() => {
+    // Open the login modal (it will handle wallet connection internally)
+    openLoginModal()
+  }, [openLoginModal])
 
   // Handle token selection
   const handleInputTokenSelect = useCallback(
@@ -855,8 +859,16 @@ const RightSidebarNew = ({
   // Calculate USD values with robust fallbacks
   const { inputUsdValue, outputUsdValue } = useMemo(() => {
     const getPrice = (token: TokenInfo) => {
-      // Use existing price if available
-      if (token.usdPrice && token.usdPrice > 0) return token.usdPrice
+      // Validate price - if it's suspiciously high (>$100k), it's probably wrong
+      if (token.usdPrice && token.usdPrice > 0 && token.usdPrice < 100000) {
+        return token.usdPrice
+      }
+      
+      // Log suspicious prices for debugging
+      if (token.usdPrice && token.usdPrice >= 100000) {
+        console.warn(`⚠️ Suspicious price for ${token.symbol}: $${token.usdPrice.toLocaleString()} - ignoring`)
+      }
+      
       // Fallback for stablecoins
       if (['USDC', 'USDT', 'USDH', 'USDS', 'DAI'].includes(token.symbol.toUpperCase())) return 1
       return 0
@@ -871,15 +883,42 @@ const RightSidebarNew = ({
     let inVal = inAmt * inPrice
     let outVal = outAmt * outPrice
 
-    // If one is missing but we have a quote/valid conversion, derive from the other
-    // We infer value parity (minus fees, but close enough for display)
-    if (inVal === 0 && outVal > 0) inVal = outVal
-    if (outVal === 0 && inVal > 0) outVal = inVal
+    // IMPROVED: Better fallback logic for swaps
+    if (quote && inAmt > 0 && outAmt > 0) {
+      // If input has price but output doesn't, derive output value from input
+      if (inVal > 0 && outVal === 0) {
+        outVal = inVal * 0.9925 // Account for ~0.75% fee
+        console.log(`💡 Derived output value from input: $${outVal.toFixed(2)}`)
+      }
+      // If output has price but input doesn't, derive input value from output
+      else if (outVal > 0 && inVal === 0) {
+        inVal = outVal / 0.9925 // Account for ~0.75% fee
+        console.log(`💡 Derived input value from output: $${inVal.toFixed(2)}`)
+      }
+      // If both have prices but values are way off (>10% difference), something is wrong
+      else if (inVal > 0 && outVal > 0) {
+        const ratio = Math.abs(inVal - outVal) / Math.max(inVal, outVal)
+        if (ratio > 0.10) {
+          console.warn(`⚠️ USD values differ by ${(ratio * 100).toFixed(1)}%:`, {
+            input: `${inputToken.symbol} = $${inVal.toFixed(2)}`,
+            output: `${outputToken.symbol} = $${outVal.toFixed(2)}`
+          })
+          // Use the input value as source of truth and derive output
+          outVal = inVal * 0.9925
+          console.log(`✅ Fixed: Using input value, output now = $${outVal.toFixed(2)}`)
+        }
+      }
+    }
+    // Original fallback logic for when no quote exists
+    else {
+      if (inVal === 0 && outVal > 0) inVal = outVal
+      if (outVal === 0 && inVal > 0) outVal = inVal
+    }
 
     return { inputUsdValue: inVal, outputUsdValue: outVal }
-  }, [inputAmount, outputAmount, inputToken, outputToken])
+  }, [inputAmount, outputAmount, inputToken, outputToken, quote])
 
-  // Calculate hot coins based on transactions with new logic
+  // Calculate hot coins based on new requirements
   const hotCoins = useMemo(() => {
     console.log('Hot Coins Calculation - Total transactions:', transactions?.length)
 
@@ -888,106 +927,133 @@ const RightSidebarNew = ({
       return []
     }
 
-    // New logic: Start with threshold 7, cascade down to 6, 5, 4 if no coins meet criteria
-    const thresholds = [7, 6, 5, 4]
-    let finalCoins: any[] = []
+    const now = Date.now()
+    const oneHourAgo = now - (60 * 60 * 1000) // 1 hour
+    const thirtyMinutesAgo = now - (30 * 60 * 1000) // 30 minutes
 
-    for (const threshold of thresholds) {
-      // Filter transactions with current hotness threshold
-      const hotTransactions = transactions.filter((tx: any) => {
-        const score = tx.hotnessScore || tx.hotness_score || 0
-        return score >= threshold
-      })
+    // Group transactions by token address
+    const coinData = new Map<string, {
+      symbol: string
+      address: string
+      image: string
+      name: string
+      marketCap: number
+      uniqueWhales: Set<string>
+      totalBuyAmount: number
+      transactions: any[]
+      lastHotBuyTime: number
+    }>()
 
-      console.log(`Threshold ${threshold}: ${hotTransactions.length} hot transactions`)
+    // Process all transactions
+    transactions.forEach((tx: any) => {
+      const coinSymbol = tx.tokenOutSymbol ||
+        tx.transaction?.tokenOut?.symbol ||
+        tx.outTokenSymbol ||
+        tx.token_out_symbol
 
-      // Count occurrences of each coin (using tokenOut for buy transactions)
-      const coinFrequency = new Map<string, { count: number; data: any; maxScore: number }>()
+      const coinAddress = tx.transaction?.tokenOut?.address ||
+        tx.outTokenAddress ||
+        tx.token_out_address
 
-      hotTransactions.forEach((tx: any) => {
-        // Try multiple possible data structures
-        const coinSymbol = tx.tokenOutSymbol ||
-          tx.transaction?.tokenOut?.symbol ||
-          tx.outTokenSymbol ||
-          tx.token_out_symbol
+      const coinImage = tx.transaction?.tokenOut?.imageUrl ||
+        tx.outTokenURL ||
+        tx.token_out_image
 
-        const coinAddress = tx.transaction?.tokenOut?.address ||
-          tx.outTokenAddress ||
-          tx.token_out_address
+      const coinName = tx.transaction?.tokenOut?.name ||
+        tx.outTokenName ||
+        tx.token_out_name ||
+        coinSymbol
 
-        const coinImage = tx.transaction?.tokenOut?.imageUrl ||
-          tx.outTokenURL ||
-          tx.token_out_image
+      const marketCap = parseFloat(tx.transaction?.tokenOut?.marketCap ||
+        tx.outTokenMarketCap ||
+        tx.token_out_market_cap ||
+        '0')
 
-        const coinName = tx.transaction?.tokenOut?.name ||
-          tx.outTokenName ||
-          tx.token_out_name ||
-          coinSymbol
+      const whaleAddress = tx.whaleAddress || tx.whale_address
+      const buyAmount = parseFloat(tx.transaction?.amountInUSD || tx.amount_in_usd || '0')
+      const hotnessScore = tx.hotnessScore || tx.hotness_score || 0
+      const txTimestamp = new Date(tx.timestamp || tx.createdAt).getTime()
 
-        const marketCap = tx.transaction?.tokenOut?.marketCap ||
-          tx.outTokenMarketCap ||
-          tx.token_out_market_cap ||
-          '0'
+      if (!coinSymbol || !coinAddress) return
 
-        const currentScore = tx.hotnessScore || tx.hotness_score || 0
-
-        if (coinSymbol && coinAddress) {
-          const existing = coinFrequency.get(coinAddress)
-          if (existing) {
-            existing.count++
-            // Track the highest hotness score for this coin
-            existing.maxScore = Math.max(existing.maxScore, currentScore)
-          } else {
-            coinFrequency.set(coinAddress, {
-              count: 1,
-              maxScore: currentScore,
-              data: {
-                symbol: coinSymbol,
-                address: coinAddress,
-                image: coinImage,
-                name: coinName,
-                marketCap: marketCap,
-                hotnessScore: currentScore
-              }
-            })
-          }
-        }
-      })
-
-      console.log(`Threshold ${threshold}: ${coinFrequency.size} unique coins`)
-
-      // NEW LOGIC: Only show coins appearing 2+ times
-      const eligibleCoins = Array.from(coinFrequency.values())
-        .filter(coin => coin.count >= 2)
-        .sort((a, b) => {
-          // Primary sort: by hotness score (descending)
-          if (b.maxScore !== a.maxScore) {
-            return b.maxScore - a.maxScore
-          }
-          // Secondary sort: by frequency (descending)
-          return b.count - a.count
+      if (!coinData.has(coinAddress)) {
+        coinData.set(coinAddress, {
+          symbol: coinSymbol,
+          address: coinAddress,
+          image: coinImage,
+          name: coinName,
+          marketCap: marketCap,
+          uniqueWhales: new Set(),
+          totalBuyAmount: 0,
+          transactions: [],
+          lastHotBuyTime: 0
         })
-        .map(coin => ({
-          ...coin.data,
-          hotnessScore: coin.maxScore, // Use the highest score
-          count: coin.count
-        }))
-
-      console.log(`Threshold ${threshold}: ${eligibleCoins.length} eligible coins (appearing 2+ times)`)
-
-      // If we have any coins at this threshold, use them
-      if (eligibleCoins.length > 0) {
-        finalCoins = eligibleCoins.slice(0, 5) // Show top 5
-        console.log(`Using threshold ${threshold} - found ${eligibleCoins.length} coins, showing top ${finalCoins.length}`)
-        break
       }
 
-      // Continue to next threshold if no coins found
-      console.log(`No coins found at threshold ${threshold}, trying next threshold...`)
-    }
+      const coin = coinData.get(coinAddress)!
+      coin.transactions.push(tx)
+      
+      // Track whale buys with hotness > 7
+      if (hotnessScore > 7 && whaleAddress) {
+        coin.uniqueWhales.add(whaleAddress)
+        coin.totalBuyAmount += buyAmount
+        coin.lastHotBuyTime = Math.max(coin.lastHotBuyTime, txTimestamp)
+      }
+    })
 
-    console.log('Final hot coins:', finalCoins)
-    return finalCoins
+    // Filter coins based on entry criteria
+    const eligibleCoins = Array.from(coinData.values())
+      .filter(coin => {
+        // Entry criteria (last 1 hour)
+        const recentHotBuys = coin.transactions.filter(tx => {
+          const txTime = new Date(tx.timestamp || tx.createdAt).getTime()
+          const hotnessScore = tx.hotnessScore || tx.hotness_score || 0
+          return txTime >= oneHourAgo && hotnessScore > 7
+        })
+
+        // Check all entry conditions
+        const hasMarketCap = coin.marketCap >= 100000
+        const hasMinWhales = coin.uniqueWhales.size >= 2
+        const hasMinBuyAmount = coin.totalBuyAmount >= 3000
+        const hasRecentActivity = recentHotBuys.length > 0
+
+        // Removal criteria (last 30 minutes)
+        const hasRecentHotBuy = coin.lastHotBuyTime >= thirtyMinutesAgo
+
+        console.log(`Coin ${coin.symbol}:`, {
+          marketCap: coin.marketCap,
+          uniqueWhales: coin.uniqueWhales.size,
+          totalBuyAmount: coin.totalBuyAmount,
+          hasRecentHotBuy,
+          meetsEntry: hasMarketCap && hasMinWhales && hasMinBuyAmount && hasRecentActivity
+        })
+
+        // Entry: All conditions must be met
+        const meetsEntry = hasMarketCap && hasMinWhales && hasMinBuyAmount && hasRecentActivity
+        
+        // Stay: Must have recent hot buy in last 30 minutes
+        const shouldStay = hasRecentHotBuy
+
+        return meetsEntry && shouldStay
+      })
+      .sort((a, b) => {
+        // Sort by total buy amount (descending)
+        return b.totalBuyAmount - a.totalBuyAmount
+      })
+      .slice(0, 5) // Show top 5
+      .map(coin => ({
+        symbol: coin.symbol,
+        address: coin.address,
+        image: coin.image,
+        name: coin.name,
+        marketCap: coin.marketCap.toString(),
+        hotnessScore: Math.max(...coin.transactions.map(tx => tx.hotnessScore || tx.hotness_score || 0)),
+        count: coin.uniqueWhales.size,
+        totalBuyAmount: coin.totalBuyAmount
+      }))
+
+    console.log('Final hot coins:', eligibleCoins)
+    return eligibleCoins
   }, [transactions])
 
   return (
