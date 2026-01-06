@@ -1364,7 +1364,7 @@ const HomePageNew = () => {
                                                     <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
                                                 </div>
                                                 <div>
-                                                    <ul className="quick-list">
+                                                    {/* <ul className="quick-list">
                                                         {tx.hotnessScore > 0 && (
                                                             <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
                                                         )}
@@ -1387,7 +1387,7 @@ const HomePageNew = () => {
                                                                     handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
                                                                 }}
                                                             >
-                                                                {/* <FontAwesomeIcon icon={faCopy} /> */}
+                                                                
 
 
                                                                 <RiFileCopyLine />
@@ -1402,7 +1402,72 @@ const HomePageNew = () => {
                                                                 <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
                                                             </a>
                                                         </li>
-                                                    </ul>
+                                                    </ul> */}
+
+                                                    <div className="quick-list">
+                                                        {tx.hotnessScore > 0 && (
+                                                            <div>
+                                                                <span className="hotness-title">
+                                                                    Hotness score: {tx.hotnessScore}/10
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                          
+                                                            <div className="all-new-quick-bx">
+                                                                 <div className="quick-item">
+                                                                <a
+                                                                    href="javascript:void(0)"
+                                                                    className="quick-nw-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleQuickBuy(tx);
+                                                                    }}
+                                                                >
+                                                                    quick buy
+                                                                </a>
+                                                            </div>
+
+                                                            <div className="quick-item">
+                                                                    <a
+                                                                        href="javascript:void(0)"
+                                                                        className="quick-nw-btn quick-copy-btn"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleCopyTokenAddress(
+                                                                                tx.type === "sell"
+                                                                                    ? tx.tokenInAddress
+                                                                                    : tx.tokenOutAddress,
+                                                                                tx.signature
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <RiFileCopyLine />
+                                                                    </a>
+                                                            </div>
+
+                                                            <div className="quick-item">
+                                                                <a
+                                                                    href="javascript:void(0)"
+                                                                    className="quick-nw-btn quick-arrow-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleTransactionInfoNewTab(tx.signature, tx.type);
+                                                                    }}
+                                                                >
+                                                                    <FontAwesomeIcon
+                                                                        icon={faArrowRight}
+                                                                        className="nw-arrow-tp"
+                                                                    />
+                                                                </a>
+                                                            </div>
+                                                            </div>
+                                                           
+
+                                                            </div>
+
+
+
                                                 </div>
                                             </div>
 

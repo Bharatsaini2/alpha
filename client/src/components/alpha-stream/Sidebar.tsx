@@ -3,8 +3,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { useState } from "react"
 import { BsLayoutSidebar } from "react-icons/bs"
 import { useNavigate, useLocation } from "react-router-dom"
+import { HiChevronUpDown } from "react-icons/hi2";
 
-function Sidebar() {
+function Sidebar({mobileSidebar, setMobileSidebar}) {
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -14,6 +15,7 @@ function Sidebar() {
 
     const [collapsed, setCollapsed] = useState(false);
 
+    console.log(mobileSidebar , "hee")
     return (
 
         <>
@@ -118,7 +120,21 @@ function Sidebar() {
             </div>
              </aside> */}
 
-            <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}>
+            {/* <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}> */}
+            <aside
+  className={`sidebar ${
+    collapsed ? "sidebar-collapsed" : ""
+  } ${mobileSidebar ? "sidebar-mobile-open" : ""}`}
+>
+
+    <button
+  className="mobile-sidebar-close"
+  onClick={() => setMobileSidebar(false)}
+>
+  <BsLayoutSidebar />
+</button>
+
+
                 <div className="left-sidebar-logo">
                     <div className="logo-box">
                         <img src="/logos.png" alt="logo" />
@@ -227,6 +243,24 @@ function Sidebar() {
                 </nav>
 
                 <div className="nav-btm-item">
+
+                    <div className="mobile-new-connect-bx">
+                         <div>
+                            <button className="connect-btn">
+                            CONNECT
+                            </button>
+                         </div>
+
+                         <div>
+                        <button className="connect-btn">
+                            <span className="change-color"></span> BLissful design <HiChevronUpDown />
+                        </button>
+                         </div>
+
+
+
+                    </div>
+
                     <ul className="nav-btm-list">
                         <li><a className="nav-btm-link" href="https://t.me/alphablock" target="_blank" rel="noopener noreferrer">telegram</a></li>
                         <li><span className="nw-slash">/</span></li>

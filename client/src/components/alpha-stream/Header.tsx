@@ -10,6 +10,8 @@ import { PiPlugsConnected } from "react-icons/pi";
 import { FaRegUserCircle } from "react-icons/fa";
 import { RiTelegram2Fill } from "react-icons/ri";
 import { Link } from "react-router-dom"
+import { FaBars } from "react-icons/fa";
+
 
 
 
@@ -30,7 +32,7 @@ interface TrendingToken {
   marketcap: number
 }
 
-function Header() {
+function Header({setMobileSidebar}) {
   const [trendingTokens, setTrendingTokens] = useState<TrendingToken[]>([])
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
@@ -244,6 +246,7 @@ function Header() {
         <div className="tp-header-bx" style={{ flexShrink: 0 }}>
           {/* <button className="connect-btn " onClick={() => setShowModal(true)}>Connect</button> */}
 
+
           {isAuthenticated && user ? (
             <div ref={dropdownRef} style={{ position: "relative" }}>
               <button
@@ -345,6 +348,16 @@ function Header() {
             </button>
           )}
         </div>
+        
+           <button
+        className="mobile-sidebar-btn text-white"
+        onClick={() =>{
+          console.log("first")
+           setMobileSidebar(true)}}
+      >
+        <FaBars />
+      </button>
+
       </header>
 
       {showModal && (
