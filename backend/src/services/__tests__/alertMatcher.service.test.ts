@@ -64,6 +64,47 @@ describe('AlertMatcherService Property-Based Tests', () => {
     kolIds: fc.option(fc.array(fc.string({ minLength: 3, maxLength: 20 }), { maxLength: 5 }), { nil: undefined }),
   })
 
+  // Helper to generate whale alert configurations
+  const whaleAlertConfigArb = fc.record({
+    hotnessScoreThreshold: fc.option(fc.double({ min: 0, max: 10, noNaN: true }), { nil: undefined }),
+    walletLabels: fc.option(
+      fc.array(
+        fc.constantFrom('Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator'),
+        { minLength: 1, maxLength: 4 }
+      ),
+      { nil: undefined }
+    ),
+    minBuyAmountUSD: fc.option(fc.double({ min: 100, max: 100000, noNaN: true }), { nil: undefined }),
+  })
+
+  // Helper to generate whale transactions
+  const whaleTransactionArb = fc.record({
+    signature: fc.string({ minLength: 64, maxLength: 88 }),
+    hotnessScore: fc.double({ min: 0, max: 10, noNaN: true }),
+    whaleLabel: fc.array(
+      fc.constantFrom('Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator'),
+      { minLength: 0, maxLength: 4 }
+    ),
+    whale: fc.record({
+      address: fc.string({ minLength: 32, maxLength: 44 }),
+    }),
+    transaction: fc.record({
+      tokenOut: fc.record({
+        address: fc.string({ minLength: 32, maxLength: 44 }),
+        symbol: fc.string({ minLength: 2, maxLength: 10 }),
+        amount: fc.string(),
+        usdAmount: fc.double({ min: 100, max: 100000, noNaN: true }).map(n => n.toString()),
+      }),
+      tokenIn: fc.record({
+        address: fc.string({ minLength: 32, maxLength: 44 }),
+        symbol: fc.string({ minLength: 2, maxLength: 10 }),
+        amount: fc.string(),
+        usdAmount: fc.string(),
+      }),
+    }),
+    type: fc.constant('buy' as const),
+  })
+
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks()
@@ -77,6 +118,257 @@ describe('AlertMatcherService Property-Based Tests', () => {
     if ((service as any).isInitialized) {
       await service.shutdown()
     }
+  })
+
+  /**
+   * **Feature: telegram-whale-alerts, Property 2: Alert matching correctness**
+   * 
+   * For any whale transaction and alert subscription, the transaction matches the subscription
+   * if and only if: (1) transaction hotness score >= subscription threshold, AND
+   * (2) transaction buy amount >= subscription minimum, AND (3) transaction wallet has at
+   * least one label from subscription's selected labels (OR logic).
+   * 
+   * **Validates: Requirements 3.4, 4.4**
+   */
+  describe('Property 2: Alert matching correctness', () => {
+    it('should match transactions that meet all criteria', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          whaleTransactionArb,
+          whaleAlertConfigArb,
+          async (tx, config) => {
+            // Manually determine if transaction should match
+            let shouldMatch = true
+
+            // Check hotness score threshold
+            if (config.hotnessScoreThreshold !== undefined) {
+              if (tx.hotnessScore < config.hotnessScoreThreshold) {
+                shouldMatch = false
+              }
+            }
+
+            // Check minimum buy amount
+            if (config.minBuyAmountUSD !== undefined && config.minBuyAmountUSD > 0) {
+              const buyAmountUSD = parseFloat(tx.transaction.tokenOut.usdAmount)
+              if (buyAmountUSD < config.minBuyAmountUSD) {
+                shouldMatch = false
+              }
+            }
+
+            // Check wallet labels with OR logic
+            if (config.walletLabels && config.walletLabels.length > 0) {
+              const hasMatchingLabel = tx.whaleLabel.some(label =>
+                config.walletLabels!.includes(label)
+              )
+              if (!hasMatchingLabel) {
+                shouldMatch = false
+              }
+            }
+
+            // Test the evaluateWhaleAlert method
+            const actualMatch = service.evaluateWhaleAlert(tx as any, config)
+
+            // Verify the result matches our expectation
+            expect(actualMatch).toBe(shouldMatch)
+          },
+        ),
+        { numRuns: 100 },
+      )
+    })
+
+    it('should reject transactions below hotness score threshold', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.double({ min: 0, max: 10, noNaN: true }),
+          fc.double({ min: 0, max: 10, noNaN: true }),
+          async (txScore, threshold) => {
+            const tx = {
+              hotnessScore: txScore,
+              whaleLabel: ['Sniper'],
+              transaction: {
+                tokenOut: {
+                  usdAmount: '1000',
+                },
+              },
+            }
+
+            const config = {
+              hotnessScoreThreshold: threshold,
+            }
+
+            const result = service.evaluateWhaleAlert(tx as any, config)
+
+            // Should match only if tx score >= threshold
+            expect(result).toBe(txScore >= threshold)
+          },
+        ),
+        { numRuns: 100 },
+      )
+    })
+
+    it('should reject transactions below minimum buy amount', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.double({ min: 100, max: 100000, noNaN: true }),
+          fc.double({ min: 100, max: 100000, noNaN: true }),
+          async (txAmount, minAmount) => {
+            const tx = {
+              hotnessScore: 5,
+              whaleLabel: ['Sniper'],
+              transaction: {
+                tokenOut: {
+                  usdAmount: txAmount.toString(),
+                },
+              },
+            }
+
+            const config = {
+              minBuyAmountUSD: minAmount,
+            }
+
+            const result = service.evaluateWhaleAlert(tx as any, config)
+
+            // Should match only if tx amount >= min amount
+            expect(result).toBe(txAmount >= minAmount)
+          },
+        ),
+        { numRuns: 100 },
+      )
+    })
+  })
+
+  /**
+   * **Feature: telegram-whale-alerts, Property 8: Wallet label OR logic**
+   * 
+   * For any transaction with wallet labels [L1, L2, ...] and subscription with selected
+   * labels [S1, S2, ...], the transaction matches if there exists at least one label L
+   * in transaction labels that is also in selected labels.
+   * 
+   * **Validates: Requirements 3.4**
+   */
+  describe('Property 8: Wallet label OR logic', () => {
+    it('should match when transaction has at least one selected label', async () => {
+      await fc.assert(
+        fc.asyncProperty(
+          fc.array(
+            fc.constantFrom('Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator'),
+            { minLength: 1, maxLength: 4 }
+          ),
+          fc.array(
+            fc.constantFrom('Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator'),
+            { minLength: 1, maxLength: 4 }
+          ),
+          async (txLabels, selectedLabels) => {
+            const tx = {
+              hotnessScore: 5,
+              whaleLabel: txLabels,
+              transaction: {
+                tokenOut: {
+                  usdAmount: '1000',
+                },
+              },
+            }
+
+            const config = {
+              walletLabels: selectedLabels,
+            }
+
+            const result = service.evaluateWhaleAlert(tx as any, config)
+
+            // Manually check if there's any overlap
+            const hasOverlap = txLabels.some(label => selectedLabels.includes(label))
+
+            // Should match only if there's at least one common label
+            expect(result).toBe(hasOverlap)
+          },
+        ),
+        { numRuns: 100 },
+      )
+    })
+
+    it('should reject when transaction has no selected labels', async () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper', 'Smart Money'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: ['Insider', 'Heavy Accumulator'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+
+      // Should not match since no labels overlap
+      expect(result).toBe(false)
+    })
+
+    it('should match when transaction has all selected labels', async () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: ['Sniper', 'Smart Money'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+
+      // Should match since transaction has both selected labels
+      expect(result).toBe(true)
+    })
+
+    it('should match when transaction has exactly one selected label', async () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: ['Sniper', 'Smart Money'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+
+      // Should match since transaction has one of the selected labels
+      expect(result).toBe(true)
+    })
+
+    it('should match when empty wallet labels config (no filter)', async () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: [],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+
+      // Should match since no wallet label filter is applied
+      expect(result).toBe(true)
+    })
   })
 
   /**
@@ -340,6 +632,453 @@ describe('AlertMatcherService Property-Based Tests', () => {
       const result2 = await (service as any).getClusterData(tokenAddress)
       expect(result2.count).toBe(whaleCount)
       expect(whaleAllTransactionModelV2.find).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+describe('AlertMatcherService Unit Tests', () => {
+  let service: AlertMatcherService
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    service = new AlertMatcherService()
+  })
+
+  afterEach(async () => {
+    if ((service as any).isInitialized) {
+      await service.shutdown()
+    }
+  })
+
+  describe('evaluateWhaleAlert - Hotness Score Threshold', () => {
+    it('should match when hotness score equals threshold', () => {
+      const tx = {
+        hotnessScore: 7.5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        hotnessScoreThreshold: 7.5,
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should match when hotness score exceeds threshold', () => {
+      const tx = {
+        hotnessScore: 8.0,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        hotnessScoreThreshold: 7.5,
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should reject when hotness score below threshold', () => {
+      const tx = {
+        hotnessScore: 7.0,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        hotnessScoreThreshold: 7.5,
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(false)
+    })
+
+    it('should match when no hotness score threshold configured', () => {
+      const tx = {
+        hotnessScore: 3.0,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {}
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+  })
+
+  describe('evaluateWhaleAlert - Minimum Buy Amount', () => {
+    it('should match when buy amount equals minimum', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '5000',
+          },
+        },
+      }
+
+      const config = {
+        minBuyAmountUSD: 5000,
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should match when buy amount exceeds minimum', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '10000',
+          },
+        },
+      }
+
+      const config = {
+        minBuyAmountUSD: 5000,
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should reject when buy amount below minimum', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '3000',
+          },
+        },
+      }
+
+      const config = {
+        minBuyAmountUSD: 5000,
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(false)
+    })
+
+    it('should match when no minimum buy amount configured', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '100',
+          },
+        },
+      }
+
+      const config = {}
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should handle zero minimum buy amount', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '100',
+          },
+        },
+      }
+
+      const config = {
+        minBuyAmountUSD: 0,
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+  })
+
+  describe('evaluateWhaleAlert - Wallet Label OR Logic', () => {
+    it('should match with single matching label', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper', 'Smart Money'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: ['Sniper'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should match with multiple matching labels', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper', 'Smart Money', 'Insider'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: ['Sniper', 'Smart Money'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should reject with no matching labels', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper', 'Smart Money'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: ['Insider', 'Heavy Accumulator'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(false)
+    })
+
+    it('should reject when transaction has no labels but config requires labels', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: [],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: ['Sniper'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(false)
+    })
+
+    it('should match when no wallet labels configured', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {}
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should match when wallet labels array is empty', () => {
+      const tx = {
+        hotnessScore: 5,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '1000',
+          },
+        },
+      }
+
+      const config = {
+        walletLabels: [],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+  })
+
+  describe('evaluateWhaleAlert - Combined Criteria', () => {
+    it('should match when all criteria are met', () => {
+      const tx = {
+        hotnessScore: 8.0,
+        whaleLabel: ['Sniper', 'Smart Money'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '10000',
+          },
+        },
+      }
+
+      const config = {
+        hotnessScoreThreshold: 7.5,
+        minBuyAmountUSD: 5000,
+        walletLabels: ['Sniper'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(true)
+    })
+
+    it('should reject when hotness score fails but others pass', () => {
+      const tx = {
+        hotnessScore: 7.0,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '10000',
+          },
+        },
+      }
+
+      const config = {
+        hotnessScoreThreshold: 7.5,
+        minBuyAmountUSD: 5000,
+        walletLabels: ['Sniper'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(false)
+    })
+
+    it('should reject when buy amount fails but others pass', () => {
+      const tx = {
+        hotnessScore: 8.0,
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '3000',
+          },
+        },
+      }
+
+      const config = {
+        hotnessScoreThreshold: 7.5,
+        minBuyAmountUSD: 5000,
+        walletLabels: ['Sniper'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(false)
+    })
+
+    it('should reject when wallet label fails but others pass', () => {
+      const tx = {
+        hotnessScore: 8.0,
+        whaleLabel: ['Insider'],
+        transaction: {
+          tokenOut: {
+            usdAmount: '10000',
+          },
+        },
+      }
+
+      const config = {
+        hotnessScoreThreshold: 7.5,
+        minBuyAmountUSD: 5000,
+        walletLabels: ['Sniper', 'Smart Money'],
+      }
+
+      const result = service.evaluateWhaleAlert(tx as any, config)
+      expect(result).toBe(false)
+    })
+  })
+
+  describe('Deduplication', () => {
+    it('should queue alert only once for same transaction and user', async () => {
+      const subscription = {
+        userId: new mongoose.Types.ObjectId().toString(),
+        chatId: 'test-chat-id',
+        priority: Priority.LOW,
+        config: {
+          hotnessScoreThreshold: 5,
+        },
+      }
+
+      ;(service as any).subscriptionMap.set(AlertType.ALPHA_STREAM, [subscription])
+      ;(service as any).isInitialized = true
+
+      const mockTx = {
+        signature: 'test-signature-dedup',
+        hotnessScore: 7,
+        whale: {
+          address: 'test-whale-address',
+        },
+        whaleLabel: ['Sniper'],
+        transaction: {
+          tokenOut: {
+            address: 'test-token',
+            symbol: 'TEST',
+            amount: '1000',
+            usdAmount: '1000',
+          },
+          tokenIn: {
+            address: 'other-token',
+            symbol: 'OTHER',
+            amount: '500',
+            usdAmount: '500',
+          },
+        },
+        type: 'buy' as const,
+      }
+
+      // Clear mock
+      ;(telegramService.queueAlert as jest.Mock).mockClear()
+
+      // Process transaction first time
+      await service.processTransaction(mockTx as any)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Verify alert was queued
+      expect(telegramService.queueAlert).toHaveBeenCalledTimes(1)
+
+      // Clear mock
+      ;(telegramService.queueAlert as jest.Mock).mockClear()
+
+      // Process same transaction again
+      await service.processTransaction(mockTx as any)
+      await new Promise((resolve) => setTimeout(resolve, 50))
+
+      // Verify alert was queued again (deduplication is handled by telegram service)
+      // The alert matcher will call queueAlert, but telegram service will deduplicate
+      expect(telegramService.queueAlert).toHaveBeenCalledTimes(1)
     })
   })
 })

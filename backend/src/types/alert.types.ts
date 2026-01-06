@@ -25,6 +25,10 @@ export interface AlertConfig {
   wallets?: string[]
   minClusterSize?: number
   kolIds?: string[]
+  // Whale alert specific config
+  hotnessScoreThreshold?: number
+  walletLabels?: string[]
+  minBuyAmountUSD?: number
 }
 
 /**

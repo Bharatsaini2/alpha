@@ -285,14 +285,27 @@ export class AlertMatcherService {
     
     for (const sub of subscriptions) {
       try {
-        // Check filters
-        if (!this.matchesAlphaStreamFilters(tx, sub.config)) {
+        // Determine if this is a whale alert subscription (has whale-specific config)
+        const isWhaleAlert = sub.config.hotnessScoreThreshold !== undefined ||
+                            sub.config.walletLabels !== undefined ||
+                            sub.config.minBuyAmountUSD !== undefined
+
+        // Use appropriate matching logic
+        let matches = false
+        if (isWhaleAlert) {
+          matches = this.evaluateWhaleAlert(tx, sub.config)
+        } else {
+          matches = this.matchesAlphaStreamFilters(tx, sub.config)
+        }
+
+        if (!matches) {
           logger.debug({
             component: 'AlertMatcherService',
             operation: 'matchAlphaStream',
             correlationId,
             userId: sub.userId,
             alertType: AlertType.ALPHA_STREAM,
+            isWhaleAlert,
             txHash: tx.signature,
             matchResult: false,
             message: 'Filters did not match',
@@ -327,6 +340,7 @@ export class AlertMatcherService {
             correlationId,
             userId: sub.userId,
             alertType: AlertType.ALPHA_STREAM,
+            isWhaleAlert,
             txHash: tx.signature,
             matchResult: true,
             message: 'ALPHA_STREAM alert matched and queued',
@@ -558,6 +572,46 @@ export class AlertMatcherService {
     // Check wallet filter
     if (config.wallets && config.wallets.length > 0) {
       if (!config.wallets.includes(tx.whale.address)) {
+        return false
+      }
+    }
+
+    return true
+  }
+
+  /**
+   * Evaluate if a transaction matches whale alert subscription criteria
+   * This method implements the whale alert matching logic for ALPHA_STREAM alerts
+   * with hotness score, minimum buy amount, and wallet label filters
+   * 
+   * @param tx - The whale transaction to evaluate
+   * @param config - The alert subscription configuration
+   * @returns true if transaction matches all criteria, false otherwise
+   */
+  evaluateWhaleAlert(tx: IWhaleAllTransactionsV2, config: AlertConfig): boolean {
+    // Check hotness score threshold
+    if (config.hotnessScoreThreshold !== undefined) {
+      if (tx.hotnessScore < config.hotnessScoreThreshold) {
+        return false
+      }
+    }
+
+    // Check minimum buy amount
+    if (config.minBuyAmountUSD !== undefined && config.minBuyAmountUSD > 0) {
+      const buyAmountUSD = parseFloat(tx.transaction.tokenOut.usdAmount || '0')
+      if (buyAmountUSD < config.minBuyAmountUSD) {
+        return false
+      }
+    }
+
+    // Check wallet labels with OR logic
+    // If wallet labels are specified, the transaction must have at least one matching label
+    if (config.walletLabels && config.walletLabels.length > 0) {
+      const txLabels = tx.whaleLabel || []
+      const hasMatchingLabel = txLabels.some(label => 
+        config.walletLabels!.includes(label)
+      )
+      if (!hasMatchingLabel) {
         return false
       }
     }

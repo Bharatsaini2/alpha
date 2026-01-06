@@ -384,7 +384,10 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 const redisClient = createClient({
-  socket: { host: 'localhost', port: 6379 },
+  socket: { 
+    host: process.env.REDIS_HOST || 'localhost', 
+    port: parseInt(process.env.REDIS_PORT || '6379') 
+  },
 })
 
 let server: any

@@ -190,16 +190,20 @@ export const verifyPhantomSignature = catchAsyncErrors(
     // For now, we'll assume the signature is valid if provided
 
     // Find or create user
-    let user = await User.findOne({ walletAddress })
+    let user = await User.findOne({ walletAddress: walletAddress.toLowerCase() })
 
     if (!user) {
       user = new User({
-        walletAddress,
+        walletAddress: walletAddress.toLowerCase(), // Lowercase for lookups
+        walletAddressOriginal: walletAddress, // Original case for Solana operations
       })
       await user.save()
     } else {
-      // Update last login
+      // Update last login and save original wallet address if not already saved
       user.lastLogin = new Date()
+      if (!user.walletAddressOriginal) {
+        user.walletAddressOriginal = walletAddress
+      }
       await user.save()
     }
 
@@ -410,6 +414,7 @@ export const getCurrentUser = catchAsyncErrors(
           displayName: user.displayName,
           avatar: user.avatar,
           lastLogin: user.lastLogin,
+          telegramChatId: user.telegramChatId,
         },
         authMethods: authMethods.map((method) => ({
           type: method.authType,

@@ -4,7 +4,8 @@ export interface IUser extends Document {
   _id: string
   email?: string
   emailVerified: boolean
-  walletAddress?: string
+  walletAddress?: string // Legacy: lowercase for backward compatibility
+  walletAddressOriginal?: string // New: stores original case for Solana operations
   displayName?: string
   avatar?: string
   createdAt: Date
@@ -13,6 +14,8 @@ export interface IUser extends Document {
   isActive: boolean
   // Telegram fields
   telegramChatId?: string
+  telegramUsername?: string // Telegram @username
+  telegramFirstName?: string // Telegram first name
   telegramLinkToken?: string
   telegramLinkTokenExpiry?: Date
 }
@@ -34,8 +37,14 @@ const UserSchema = new Schema<IUser>(
       type: String,
       unique: true,
       sparse: true, // Allows multiple null values
-      lowercase: true,
+      lowercase: true, // Keep for backward compatibility and lookups
       trim: true,
+    },
+    walletAddressOriginal: {
+      type: String,
+      sparse: true, // Allows multiple null values
+      trim: true,
+      // Stores the original case-sensitive wallet address for Solana operations
     },
     displayName: {
       type: String,
@@ -57,6 +66,14 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       sparse: true, // Critical: prevents null collision for existing users
       index: true,
+    },
+    telegramUsername: {
+      type: String,
+      sparse: true,
+    },
+    telegramFirstName: {
+      type: String,
+      sparse: true,
     },
     telegramLinkToken: {
       type: String,
