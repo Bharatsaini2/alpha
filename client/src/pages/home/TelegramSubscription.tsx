@@ -5,6 +5,172 @@ import { PiPlugs, PiTelegramLogoDuotone } from "react-icons/pi";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
 
 function TelegramSubscription() {
+    const navigate = useNavigate();
+    const { showToast } = useToast();
+    const { user, isAuthenticated } = useAuth();
+    const [openId, setOpenId] = useState<string | null>(null);
+    const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+    const [deleting, setDeleting] = useState(false);
+    const [linkToken, setLinkToken] = useState<string | null>(null);
+    const [generatingLink, setGeneratingLink] = useState(false);
+    const [checkingBalance, setCheckingBalance] = useState(false);
+    const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+
+    const toggleAccordion = (id: string) => {
+        setOpenId(openId === id ? null : id);
+    };
+
+    const checkPremiumAccess = async (showToastOnError = false, forceRefresh = false) => {
+        try {
+            setCheckingBalance(true);
+            const url = forceRefresh 
+                ? '/alerts/premium-access?refresh=true' 
+                : '/alerts/premium-access';
+            const response = await api.get(url);
+            
+            if (response.data.success) {
+                setHasAccess(response.data.data.hasAccess);
+                if (!response.data.data.hasAccess && showToastOnError) {
+                    const difference = response.data.data.difference || 0;
+                    showToast(
+                        `Premium access required. You need ${difference.toFixed(4)} more SOL.`,
+                        'error'
+                    );
+                }
+            }
+        } catch (err: any) {
+            console.error('Error checking premium access:', err);
+            setHasAccess(false);
+        } finally {
+            setCheckingBalance(false);
+        }
+    };
+
+    // Check authentication on mount
+    useEffect(() => {
+        if (!isAuthenticated) {
+            showToast('Please log in to view your subscriptions', 'error');
+            setTimeout(() => navigate('/'), 2000);
+            return;
+        }
+        fetchSubscriptions();
+        checkPremiumAccess(false); // Don't show toast on initial load
+    }, [isAuthenticated, navigate, showToast]);
+
+    const fetchSubscriptions = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get('/alerts/whale-alerts');
+            
+            console.log('Fetched subscriptions:', response.data);
+            
+            if (response.data.success) {
+                const alerts = response.data.data.alerts || [];
+                console.log('Setting subscriptions:', alerts);
+                setSubscriptions(alerts);
+            } else {
+                setError('Failed to load subscriptions');
+            }
+        } catch (err: any) {
+            console.error('Error fetching subscriptions:', err);
+            setError(err.response?.data?.message || 'Failed to load subscriptions');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteClick = (alertId: string) => {
+        setDeleteConfirmId(alertId);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!deleteConfirmId) return;
+
+        console.log('Deleting subscription with ID:', deleteConfirmId);
+
+        try {
+            setDeleting(true);
+            const response = await api.delete(`/alerts/whale-alert/${deleteConfirmId}`);
+            
+            console.log('Delete response:', response.data);
+            
+            if (response.data.success) {
+                // Show success toast
+                showToast('Subscription deleted successfully', 'success');
+                
+                // Reset delete confirmation state
+                setDeleteConfirmId(null);
+                
+                // Refetch subscriptions to get updated list from server
+                console.log('Refetching subscriptions...');
+                await fetchSubscriptions();
+                console.log('Subscriptions refetched');
+            } else {
+                setError('Failed to delete subscription');
+                showToast('Failed to delete subscription', 'error');
+            }
+        } catch (err: any) {
+            console.error('Error deleting subscription:', err);
+            const errorMessage = err.response?.data?.message || 'Failed to delete subscription';
+            setError(errorMessage);
+            showToast(errorMessage, 'error');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setDeleteConfirmId(null);
+    };
+
+    const handleGenerateLinkToken = async () => {
+        // Force refresh balance check and show toast if insufficient
+        await checkPremiumAccess(true, true);
+        
+        // Wait for state update
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (hasAccess === false) {
+            return;
+        }
+
+        try {
+            setGeneratingLink(true);
+            const response = await api.post('/alerts/link');
+            
+            if (response.data.success) {
+                setLinkToken(response.data.data.token);
+                // Store the full response for the deep link
+                localStorage.setItem('telegramLinkResponse', JSON.stringify(response.data));
+                showToast('Link token generated! Click the link below to connect Telegram', 'success');
+            } else {
+                showToast('Failed to generate link token', 'error');
+            }
+        } catch (err: any) {
+            console.error('Error generating link token:', err);
+            const errorMsg = err.response?.data?.message || 'Failed to generate link token';
+            // Only show toast if it's not a duplicate premium access error
+            if (!errorMsg.includes('Premium access required')) {
+                showToast(errorMsg, 'error');
+            }
+        } finally {
+            setGeneratingLink(false);
+        }
+    };
+
+    const getTelegramDeepLink = () => {
+        if (!linkToken) return '';
+        // Use the deepLink from the API response if available, otherwise fallback to dev bot
+        const response = JSON.parse(localStorage.getItem('telegramLinkResponse') || '{}');
+        if (response.data?.deepLink) {
+            return response.data.deepLink;
+        }
+        return `https://t.me/alphabotdevbot?start=${linkToken}`;
+    };
 
     const [openId, setOpenId] = useState(null);
 

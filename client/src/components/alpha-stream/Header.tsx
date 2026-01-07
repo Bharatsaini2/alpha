@@ -38,6 +38,8 @@ function Header({ setMobileSidebar }) {
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user, isAuthenticated, logout, openLoginModal } = useAuth()
+  const { wallet, disconnect } = useWalletConnection()
+  const { showToast } = useToast()
 
   useEffect(() => {
     fetchTrendingTokens()
@@ -319,13 +321,19 @@ function Header({ setMobileSidebar }) {
                   </div>
                   <div className="user-dropdown-divider" />
 
-                  <div
-                    className="user-dropdown-item"
-                    onClick={() => setShowModal(true)}
-                  >
-                    <PiPlugsConnected size={14} />
-                    Connect
-                  </div>
+                  {/* Only show Connect option if wallet is NOT connected but user IS logged in (e.g. email) */}
+                  {!wallet.connected && (
+                    <>
+                      <div
+                        className="user-dropdown-item"
+                        onClick={() => openLoginModal()}
+                      >
+                        <PiPlugsConnected size={14} />
+                        Connect Wallet
+                      </div>
+                      <div className="user-dropdown-divider" />
+                    </>
+                  )}
 
                   <div className="user-dropdown-divider" />
                   <div
@@ -342,7 +350,7 @@ function Header({ setMobileSidebar }) {
               )}
             </div>
           ) : (
-            <button className="connect-btn" onClick={openLoginModal}>
+            <button className="connect-btn" onClick={() => openLoginModal()}>
               CONNECT
             </button>
           )}

@@ -17,6 +17,7 @@ import {
   TokenInfo,
 } from "../../components/swap/TokenSelectionModal"
 import { useToast } from "../../components/ui/Toast"
+import { useAuth } from "../../contexts/AuthContext"
 import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
 import { RiArrowUpDownFill } from "react-icons/ri"
@@ -52,10 +53,12 @@ const RightSidebarNew = ({
   selectedToken,
   quickBuyAmount,
 }: RightSidebarNewProps) => {
+  // Auth hook for login modal
+  const { openLoginModal } = useAuth()
+
   // Wallet connection hook
   const {
     wallet,
-    connect,
     sendTransaction,
     getBalance,
     isLoading: isWalletLoading,
@@ -241,7 +244,16 @@ const RightSidebarNew = ({
     }finally{
 setISConnect(false)
     }
-  }, [connect, showToast])
+
+    fetchLivePrices()
+
+    return () => { isMounted = false }
+  }, [inputToken.address, outputToken.address])
+
+  // Handle wallet connection - opens login modal which handles wallet connection
+  const handleConnectWallet = useCallback(() => {
+    openLoginModal()
+  }, [openLoginModal])
 
   // Handle token selection
   const handleInputTokenSelect = useCallback(

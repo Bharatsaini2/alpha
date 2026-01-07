@@ -767,6 +767,87 @@ const HomePageNew = () => {
 
     const [hotness, setHotness] = useState(10);
 
+    // Handle whale alert subscription
+    const handleWhaleAlertConnect = async () => {
+        try {
+            const token = localStorage.getItem("accessToken")
+            if (!token) {
+                showToast("Please log in to connect Telegram alerts", "error")
+                return
+            }
+
+            // Check if Telegram is connected
+            if (!user?.telegramChatId) {
+                showToast("Please connect your Telegram account first from the Telegram Subscription page", "error")
+                return
+            }
+
+            // Check premium access
+            const premiumResponse = await axios.get(
+                `${import.meta.env.VITE_SERVER_URL}/alerts/premium-access`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            if (!premiumResponse.data.success || !premiumResponse.data.data.hasAccess) {
+                const difference = premiumResponse.data.data.difference || 0
+                showToast(
+                    `Insufficient balance. You need ${difference.toFixed(4)} more SOL to access this feature.`,
+                    "error"
+                )
+                return
+            }
+
+            // Convert amount string to number
+            const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
+
+            // Handle wallet labels
+            // If "All" is selected, send empty array to indicate "accept all transactions"
+            let labelsToSend: string[] = []
+
+            if (walletTypes.includes("All")) {
+                // "All" selected = accept ALL transactions (with or without labels)
+                labelsToSend = []
+            } else if (walletTypes.length > 0) {
+                // Specific labels selected = filter by those labels
+                labelsToSend = walletTypes.filter(label => label !== "All")
+            } else {
+                // No labels selected = default to empty (accept all)
+                labelsToSend = []
+            }
+
+            // Create whale alert subscription
+            const response = await axios.post(
+                `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,
+                {
+                    hotnessScoreThreshold: hotness,
+                    walletLabels: labelsToSend,
+                    minBuyAmountUSD: minBuyAmount,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            if (response.data.success) {
+                setIsSaved(true)
+                showToast("Whale alert subscription created successfully!", "success")
+                setTimeout(() => setIsSaved(false), 3000)
+            }
+        } catch (error: any) {
+            console.error("Whale alert subscription error:", error)
+            showToast(
+                error.response?.data?.message || "Failed to create whale alert subscription",
+                "error"
+            )
+        }
+    }
+
 
     return (
         <>
@@ -1108,7 +1189,7 @@ const HomePageNew = () => {
 
                                                             {walletTypeOpen && (
                                                                 <ul className="subscription-dropdown-menu show w-100">
-                                                                    {["Any Label", "Smart Money", "Whale", "Insider"].map((item) => (
+                                                                    {["All", "SMART MONEY", "HEAVY ACCUMULATOR", "SNIPER", "FLIPPER", "COORDINATED GROUP", "DORMANT WHALE"].map((item) => (
                                                                         <li
                                                                             key={item}
                                                                             className={`nw-subs-items ${walletTypes.includes(item) ? "active" : ""
