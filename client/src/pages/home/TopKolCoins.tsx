@@ -9,6 +9,7 @@ import { IoChevronBack, IoChevronDown, IoChevronForward } from "react-icons/io5"
 import { TfiReload } from "react-icons/tfi"
 import ReactApexChart from "react-apexcharts"
 import { useToast } from "../../components/ui/Toast"
+import Chart from "react-apexcharts";
 
 function TopKolCoins() {
   const [openRows, setOpenRows] = useState<Record<string, boolean>>({})
@@ -56,6 +57,19 @@ function TopKolCoins() {
     }
   }
 
+  // const series: ApexOptions["series"] = [
+  //   {
+  //     name: "Net Inflow",
+  //     type: "column",
+  //     data: [80, 200, 100, 30, 400],
+  //   },
+  //   {
+  //     name: "Whale Count",
+  //     type: "line",
+  //     data: [3, 1, 4, 2, 1],
+  //   },
+  // ]
+
   const series: ApexOptions["series"] = [
     {
       name: "Net Inflow",
@@ -67,7 +81,8 @@ function TopKolCoins() {
       type: "line",
       data: [3, 1, 4, 2, 1],
     },
-  ]
+  ];
+
 
   const newSeries: ApexOptions["series"] = [
     {
@@ -84,63 +99,161 @@ function TopKolCoins() {
 
   /* ===================== OPTIONS ===================== */
 
+  // const options: ApexOptions = {
+  //   chart: {
+  //     height: 420,
+  //     type: "line",
+  //     background: "transparent",
+  //     toolbar: { show: false },
+  //   },
+  //   theme: { mode: "dark" },
+  //   stroke: { width: [0, 2], curve: "straight" },
+  //   plotOptions: {
+  //     bar: { columnWidth: "40%", borderRadius: 0 },
+  //   },
+  //   markers: {
+  //     size: 6,
+  //     colors: ["#ffffff"],
+  //     strokeColors: "#ffffff",
+  //     hover: { size: 7 },
+  //   },
+  //   colors: ["#14904D", "#ffffff"],
+  //   dataLabels: { enabled: false },
+  //   xaxis: {
+  //     categories: ["FWOG ", "TETSUO", "LMAO!", "QST", "SPSC"],
+  //     labels: {
+  //       style: { colors: "#FBFAF9", fontSize: "14px", fontWeight: 300 },
+  //     },
+  //     axisBorder: { color: "#333" },
+  //     axisTicks: { color: "#333" },
+  //   },
+  //   yaxis: [
+  //     {
+  //       title: {
+  //         text: "NET INFLOW (THOUSANDS USD)",
+  //         style: { color: "#cbd5e1", fontWeight: 500 },
+  //       },
+  //       labels: {
+  //         formatter: (val: number) => `${val}K ($)`,
+  //         style: { colors: "#cbd5e1" },
+  //       },
+  //     },
+  //     {
+  //       opposite: true,
+  //       title: {
+  //         text: "WHALE COUNT",
+  //         style: { color: "#cbd5e1", fontWeight: 500 },
+  //       },
+  //       labels: { style: { colors: "#cbd5e1" } },
+  //     },
+  //   ],
+  //   grid: { borderColor: "#333", strokeDashArray: 4 },
+  //   legend: {
+  //     position: "top",
+  //     horizontalAlign: "center",
+  //     labels: { colors: "#e5e7eb" },
+  //   },
+
+  //   tooltip: { theme: "dark" },
+  // }
+
   const options: ApexOptions = {
     chart: {
-      height: 420,
       type: "line",
       background: "transparent",
       toolbar: { show: false },
+      height: 420,
     },
+
     theme: { mode: "dark" },
-    stroke: { width: [0, 2], curve: "straight" },
-    plotOptions: {
-      bar: { columnWidth: "40%", borderRadius: 0 },
+
+    stroke: {
+      width: [0, 2],
+      curve: "straight",
     },
+
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: "40%",
+      },
+    },
+
     markers: {
       size: 6,
       colors: ["#ffffff"],
       strokeColors: "#ffffff",
-      hover: { size: 7 },
     },
+
     colors: ["#14904D", "#ffffff"],
     dataLabels: { enabled: false },
+
     xaxis: {
-      categories: ["FWOG ", "TETSUO", "LMAO!", "QST", "SPSC"],
+      categories: ["FWOG", "TETSUO", "LMAO!", "QST", "SPSC"],
       labels: {
-        style: { colors: "#FBFAF9", fontSize: "14px", fontWeight: 300 },
+        style: { colors: "#FBFAF9", fontSize: "13px" },
       },
-      axisBorder: { color: "#333" },
-      axisTicks: { color: "#333" },
     },
+
     yaxis: [
       {
-        title: {
-          text: "NET INFLOW (THOUSANDS USD)",
-          style: { color: "#cbd5e1", fontWeight: 500 },
-        },
         labels: {
-          formatter: (val: number) => `${val}K ($)`,
+          formatter: (val) => `$${val}K`,
           style: { colors: "#cbd5e1" },
         },
       },
       {
         opposite: true,
-        title: {
-          text: "WHALE COUNT",
-          style: { color: "#cbd5e1", fontWeight: 500 },
-        },
         labels: { style: { colors: "#cbd5e1" } },
       },
     ],
-    grid: { borderColor: "#333", strokeDashArray: 4 },
+
     legend: {
       position: "top",
-      horizontalAlign: "center",
       labels: { colors: "#e5e7eb" },
     },
 
+    grid: { borderColor: "#333" },
+
     tooltip: { theme: "dark" },
-  }
+
+    /* 🔥 MOBILE RESPONSIVE */
+    responsive: [
+      {
+        breakpoint: 768,
+        options: {
+          chart: {
+            height: 600,
+          },
+
+          plotOptions: {
+            bar: {
+              horizontal: true,   // 👈 main change
+              barHeight: "45%",
+            },
+          },
+
+          stroke: {
+            width: [0, 1.5],
+          },
+
+          xaxis: {
+            labels: {
+              style: {
+                fontSize: "12px",
+              },
+            },
+          },
+
+          legend: {
+            position: "top",
+            fontSize: "12px",
+          },
+        },
+      },
+    ],
+  };
+
 
 
 
@@ -181,6 +294,25 @@ function TopKolCoins() {
   }
 
   const [show, setShow] = useState(0);
+
+
+  const data = [
+    { name: "FWOG", inflow: 80, whales: 3, inflowPercent: 25, whalePos: 70 },
+    { name: "TETSUO", inflow: 200, whales: 1, inflowPercent: 60, whalePos: 35 },
+    { name: "LMAO!", inflow: 100, whales: 4, inflowPercent: 40, whalePos: 80 },
+    { name: "QST", inflow: 30, whales: 2, inflowPercent: 15, whalePos: 45 },
+    { name: "SPSC", inflow: 400, whales: 1, inflowPercent: 90, whalePos: 30 },
+  ];
+
+  const dataOutFlow = [
+    { name: "FWOG", inflow: 80, whales: 3, inflowPercent: 25, whalePos: 70 },
+    { name: "TETSUO", inflow: 200, whales: 1, inflowPercent: 60, whalePos: 35 },
+    { name: "LMAO!", inflow: 100, whales: 4, inflowPercent: 40, whalePos: 80 },
+    { name: "QST", inflow: 30, whales: 2, inflowPercent: 15, whalePos: 45 },
+    { name: "SPSC", inflow: 400, whales: 1, inflowPercent: 90, whalePos: 30 },
+  ];
+
+
 
 
 
@@ -3505,7 +3637,7 @@ function TopKolCoins() {
                         </div>
                       </div>
                     </div>
-                    {show == 1  && (
+                    {show == 1 && (
                       <div className="crypto-dropdown">
                         <div>
                           <div className="mobile-tp-title">
@@ -3815,7 +3947,7 @@ function TopKolCoins() {
                             </span>
                           </div> */}
 
-                           <div className="position-relative crypto-right crypto-asset">
+                          <div className="position-relative crypto-right crypto-asset">
                             <div
                               className="crypto-right crypto-asset"
                               role="button"
@@ -4614,10 +4746,11 @@ function TopKolCoins() {
             <div className="chart-tab-content mt-3">
               {activeView === "chart" && activeChartTab === "inflow" && (
                 <div>
-                  <div className="inflow-title">
+                  <div className="desktop-chart">
+                    <div className="inflow-title">
                     <h4>Whale Net Inflow with Whale Count</h4>
                   </div>
-                  <div className="chart-container">
+                  <div className="chart-container ">
                     <span className="corner top-right"></span>
                     <span className="corner bottom-left"></span>
 
@@ -4628,12 +4761,52 @@ function TopKolCoins() {
                       height={420}
                     />
                   </div>
+                  </div>
+
+                  <div className="chart-container p-2">
+                    <span className="corner top-right"></span>
+                    <span className="corner bottom-left"></span>
+                    <div className="whale-list">
+                      <div className="inflow-title">
+                    <h4>Whale Net Inflow with Whale Count</h4>
+                  </div>
+                      {data.map((item) => (
+                        <div className="whale-row" key={item.name}>
+                          <div className="whale-title">{item.name} <a href="javascript:void(0)" className="mobile-chrt-cpy-btn"> <FaRegCopy /></a> </div>
+                          <div className="whale-bar-wrap">
+                            <span className="whale-full-line"></span>
+                            <div
+                              className="whale-bar-fill"
+                              style={{ width: `${item.inflowPercent}%` }}
+                            />
+                            <div
+                              className="whale-line"
+                              style={{ width: `${item.whalePos}%` }}
+                            />
+                            <div
+                              className="whale-dot"
+                              style={{ left: `${item.whalePos}%` }}
+                            />
+                          </div>
+                          <div className="whale-meta">
+                            <div>
+                              <div className="whale-net-inflow"><h6>net Inflow <span className="whale-usd-title">${item.inflow}K USD</span> </h6></div>
+                              <div className="whale-net-inflow"><h6>WHALE COUNT<span className="whale-usd-title">{item.whales}</span> </h6></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+
                 </div>
               )}
 
               {activeView === "chart" && activeChartTab === "outflow" && (
                 <div>
-                  <div className="inflow-title">
+                  <div className="desktop-chart">
+                    <div className="inflow-title">
                     <h4>Whale Net outflow with Whale Count</h4>
                   </div>
                   <div className="chart-container">
@@ -4646,6 +4819,44 @@ function TopKolCoins() {
                       type="line"
                       height={420}
                     />
+                  </div>
+
+                  </div>
+                  <div className="chart-container p-2">
+                    <span className="corner top-right"></span>
+                    <span className="corner bottom-left"></span>
+
+                    <div className="outflow-whale-list">
+                      <div className="inflow-title">
+                    <h4>Whale Net outflow with Whale Count</h4>
+                  </div>
+                      {dataOutFlow.map((item) => (
+                        <div className="outflow-whale-row" key={item.name}>
+                          <div className="outflow-whale-title">{item.name} <a href="javascript:void(0)" className="mobile-chrt-cpy-btn"> <FaRegCopy /></a> </div>
+                          <div className="outflow-whale-bar-wrap">
+                            <span className="outflow-whale-full-line"></span>
+                            <div
+                              className="outflow-whale-bar-fill"
+                              style={{ width: `${item.inflowPercent}%` }}
+                            />
+                            <div
+                              className="outflow-whale-line"
+                              style={{ width: `${item.whalePos}%` }}
+                            />
+                            <div
+                              className="outflow-whale-dot"
+                              style={{ left: `${item.whalePos}%` }}
+                            />
+                          </div>
+                          <div className="whale-meta">
+                            <div>
+                              <div className="outflow-whale-net-inflow"><h6>net Inflow <span className="outflow-whale-usd-title">${item.inflow}K USD</span> </h6></div>
+                              <div className="outflow-whale-net-inflow"><h6>WHALE COUNT<span className="outflow-whale-usd-title">{item.whales}</span> </h6></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

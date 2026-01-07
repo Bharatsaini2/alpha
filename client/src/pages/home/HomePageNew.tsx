@@ -909,7 +909,7 @@ const HomePageNew = () => {
                         {/* Filters */}
                         <div>
                             <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
-                                <div>
+                                <div className="home-mobile-tab-bx">
                                     <ul className="nav nav-tabs custom-tabs" role="tablist">
                                         <li className="nav-item" role="presentation">
                                             <a
@@ -940,7 +940,7 @@ const HomePageNew = () => {
                                         </li>
                                     </ul>
                                 </div>
-                                <div>
+                                <div className="mobile-mode-filter">
                                     <ul className="plan-btn-list">
                                         <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
@@ -951,7 +951,7 @@ const HomePageNew = () => {
                                                     : 'hotness'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'hotness' && (
-                                                <div className="filter-dropdown-menu">
+                                                <div className="filter-dropdown-menu filter-mobile-hotness">
                                                     <div className="filter-dropdown-header">Hotness Score</div>
                                                     {hotnessOptions.map(opt => (
                                                         <button
@@ -974,7 +974,7 @@ const HomePageNew = () => {
                                                     : 'amount'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'amount' && (
-                                                <div className="filter-dropdown-menu">
+                                                <div className="filter-dropdown-menu filter-mobile-amount">
                                                     <div className="filter-dropdown-header">Min Amount</div>
                                                     {amountOptions.map(opt => (
                                                         <button
@@ -1007,7 +1007,7 @@ const HomePageNew = () => {
                                                     : 'tAGS'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'tags' && (
-                                                <div className="filter-dropdown-menu">
+                                                <div className="filter-dropdown-menu filter-mobile-tag">
                                                     <div className="filter-dropdown-header">Whale Tags</div>
                                                     <button
                                                         className={`filter-dropdown-item ${activeFilters.tags.length === 0 ? 'active' : ''}`}
@@ -1037,7 +1037,7 @@ const HomePageNew = () => {
                                                     : 'Subscription'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'subs' && (
-                                                <div className="filter-dropdown-menu w-sm">
+                                                <div className="filter-dropdown-menu w-sm filter-mobile-subscription">
                                                     <div className="parent-dropdown-content">
                                                         <div className="sub-drop-header">
                                                             <div className="sub-drop-content">

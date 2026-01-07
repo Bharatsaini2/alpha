@@ -15,7 +15,7 @@ function Sidebar({mobileSidebar, setMobileSidebar}) {
 
     const [collapsed, setCollapsed] = useState(false);
 
-    console.log(mobileSidebar , "hee")
+
     return (
 
         <>

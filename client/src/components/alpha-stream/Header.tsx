@@ -4,17 +4,17 @@ import { HiChevronUpDown } from "react-icons/hi2"
 import { User, LogOut } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
-import { faChevronDown, faChevronUp, faClose } from "@fortawesome/free-solid-svg-icons"
+import {
+  faChevronDown,
+  faChevronUp,
+  faClose,
+} from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import { PiPlugsConnected } from "react-icons/pi";
-import { FaRegUserCircle } from "react-icons/fa";
-import { RiTelegram2Fill } from "react-icons/ri";
+import { PiPlugsConnected } from "react-icons/pi"
+import { FaRegUserCircle } from "react-icons/fa"
+import { RiTelegram2Fill } from "react-icons/ri"
 import { Link } from "react-router-dom"
-import { FaBars } from "react-icons/fa";
-
-
-
-
+import { FaBars } from "react-icons/fa"
 
 const BASE_URL =
   import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"
@@ -32,7 +32,7 @@ interface TrendingToken {
   marketcap: number
 }
 
-function Header({setMobileSidebar}) {
+function Header({ setMobileSidebar }) {
   const [trendingTokens, setTrendingTokens] = useState<TrendingToken[]>([])
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
@@ -148,9 +148,8 @@ function Header({setMobileSidebar}) {
     </div>
   )
 
-  const [showMore, setShowMore] = useState(false);
-   const [showModal, setShowModal] = useState(false);
-
+  const [showMore, setShowMore] = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
   return (
     <>
@@ -246,7 +245,6 @@ function Header({setMobileSidebar}) {
         <div className="tp-header-bx" style={{ flexShrink: 0 }}>
           {/* <button className="connect-btn " onClick={() => setShowModal(true)}>Connect</button> */}
 
-
           {isAuthenticated && user ? (
             <div ref={dropdownRef} style={{ position: "relative" }}>
               <button
@@ -301,28 +299,33 @@ function Header({setMobileSidebar}) {
                   <div className="user-dropdown-divider" />
 
                   <div className="user-dropdown-item">
-
-                    <Link to="/profile-page" className="profile-navlink"> <FaRegUserCircle   size={14} />
-                    Profile  </Link>
-
-                    
+                    <Link to="/profile-page" className="profile-navlink">
+                      {" "}
+                      <FaRegUserCircle size={14} />
+                      Profile{" "}
+                    </Link>
                   </div>
                   <div className="user-dropdown-divider" />
 
-                  <div className="user-dropdown-item" >
-                    <Link to="/telegram-subscription" className="profile-navlink"> <RiTelegram2Fill   size={14} />
-                    Telegram Subscription  </Link>
+                  <div className="user-dropdown-item">
+                    <Link
+                      to="/telegram-subscription"
+                      className="profile-navlink"
+                    >
+                      {" "}
+                      <RiTelegram2Fill size={14} />
+                      Telegram Subscription{" "}
+                    </Link>
                   </div>
                   <div className="user-dropdown-divider" />
 
                   <div
                     className="user-dropdown-item"
-                   onClick={() => setShowModal(true)}
+                    onClick={() => setShowModal(true)}
                   >
-                    <PiPlugsConnected  size={14} />
+                    <PiPlugsConnected size={14} />
                     Connect
                   </div>
-
 
                   <div className="user-dropdown-divider" />
                   <div
@@ -339,33 +342,26 @@ function Header({setMobileSidebar}) {
               )}
             </div>
           ) : (
-            
-
-          
-
             <button className="connect-btn" onClick={openLoginModal}>
               CONNECT
             </button>
           )}
         </div>
-        
-           <button
-        className="mobile-sidebar-btn text-white"
-        onClick={() =>{
-          console.log("first")
-           setMobileSidebar(true)}}
-      >
-        <FaBars />
-      </button>
 
+        <button
+          className="mobile-sidebar-btn text-white"
+          onClick={() => {
+            setMobileSidebar(true)
+          }}
+        >
+          <FaBars />
+        </button>
       </header>
 
       {showModal && (
         <div className="modal fade show d-block" tabIndex={-1}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content nw-sign-frm p-0">
-
-             
               <button
                 type="button"
                 className="modal-close-btn"
@@ -378,7 +374,6 @@ function Header({setMobileSidebar}) {
                 <div className="row">
                   <div className="col-lg-12">
                     <div className="login-frm-bx">
-
                       <div className="text-center d-flex flex-column justify-content-center align-items-center">
                         <img src="/logos.png" alt="" />
                         <h6>Connect your wallet</h6>
@@ -391,7 +386,6 @@ function Header({setMobileSidebar}) {
                         </button>
                       </div>
 
-         
                       <div className="mt-3">
                         <div className="mb-3 text-center">
                           <a
@@ -432,7 +426,8 @@ function Header({setMobileSidebar}) {
 
                             <div className="mb-2">
                               <button className="nw-connect-wallet-btn">
-                                <img src="/coinbase.svg" alt="" /> Coinbase Wallet
+                                <img src="/coinbase.svg" alt="" /> Coinbase
+                                Wallet
                                 <span className="nw-corner nw-top-right"></span>
                                 <span className="nw-corner nw-bottom-left"></span>
                               </button>
@@ -440,7 +435,8 @@ function Header({setMobileSidebar}) {
 
                             <div className="mb-2">
                               <button className="nw-connect-wallet-btn">
-                                <img src="/magic.svg" alt="" /> Magic Eden Wallet
+                                <img src="/magic.svg" alt="" /> Magic Eden
+                                Wallet
                                 <span className="nw-corner nw-top-right"></span>
                                 <span className="nw-corner nw-bottom-left"></span>
                               </button>
@@ -448,7 +444,6 @@ function Header({setMobileSidebar}) {
                           </>
                         )}
                       </div>
-
                     </div>
                   </div>
                 </div>
@@ -459,12 +454,7 @@ function Header({setMobileSidebar}) {
       )}
 
       {showModal && <div className="modal-backdrop fade show"></div>}
-      
-      
     </>
-
-
-  
   )
 }
 

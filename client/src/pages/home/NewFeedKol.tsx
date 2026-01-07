@@ -18,6 +18,7 @@ import RightSidebarNew from "./RightSidebarNew"
 import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { RiFileCopyLine } from "react-icons/ri";
 
+import { FaXTwitter } from "react-icons/fa6"
 import SwapModal from "../../components/swap/SwapModal"
 
 
@@ -1421,14 +1422,18 @@ const NewFeedKol = () => {
                                                     />
                                                     <div className="whale-content flex-grow-1">
                                                         <h4 className="username">{tx.whaleTokenSymbol} Whale (A4DC..) </h4>
-                                                        <div className="tags">
+                                                        <button className="new-twiiter-btn">
+                                                            <FaXTwitter style={{ color: "#EBEBEB" }} /> @crypt
+                                                        </button>
+
+                                                        {/* <div className="tags">
                                                             {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                                                 <span key={i} className="tag-title">{tag}</span>
                                                             ))}
                                                             {(tx.whaleLabel || []).length > 2 && (
                                                                 <span className="tag-title">+{(tx.whaleLabel || []).length - 2}</span>
                                                             )}
-                                                        </div>
+                                                        </div> */}
                                                         <div className={`sold-out-title ${tx.type === 'buy' ? 'sold-title' : ''}`}>
                                                             {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                         </div>

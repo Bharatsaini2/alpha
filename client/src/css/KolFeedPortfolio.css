@@ -69,6 +69,22 @@
   background-color: #3d3d3d;
 }
 
+.new-twiiter-btn {
+  text-transform: uppercase;
+  color: #8f8f8f;
+  background-color: #292929;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 400;
+  display: flex;
+}
+
+.new-twiiter-btn:hover {
+  background-color: #3d3d3d;
+}
+
 .nw-user-info-bx {
   align-items: center;
   gap: 30px;

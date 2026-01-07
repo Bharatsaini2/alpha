@@ -182,6 +182,21 @@ function TopCoin() {
 
   const [show, setShow] = useState(0);
 
+  const data = [
+    { name: "FWOG", inflow: 80, whales: 3, inflowPercent: 25, whalePos: 70 },
+    { name: "TETSUO", inflow: 200, whales: 1, inflowPercent: 60, whalePos: 35 },
+    { name: "LMAO!", inflow: 100, whales: 4, inflowPercent: 40, whalePos: 80 },
+    { name: "QST", inflow: 30, whales: 2, inflowPercent: 15, whalePos: 45 },
+    { name: "SPSC", inflow: 400, whales: 1, inflowPercent: 90, whalePos: 30 },
+  ];
+
+  const dataOutFlow = [
+    { name: "FWOG", inflow: 80, whales: 3, inflowPercent: 25, whalePos: 70 },
+    { name: "TETSUO", inflow: 200, whales: 1, inflowPercent: 60, whalePos: 35 },
+    { name: "LMAO!", inflow: 100, whales: 4, inflowPercent: 40, whalePos: 80 },
+    { name: "QST", inflow: 30, whales: 2, inflowPercent: 15, whalePos: 45 },
+    { name: "SPSC", inflow: 400, whales: 1, inflowPercent: 90, whalePos: 30 },
+  ];
 
 
   return (
@@ -3505,7 +3520,7 @@ function TopCoin() {
                         </div>
                       </div>
                     </div>
-                    {show == 1  && (
+                    {show == 1 && (
                       <div className="crypto-dropdown">
                         <div>
                           <div className="mobile-tp-title">
@@ -3815,7 +3830,7 @@ function TopCoin() {
                             </span>
                           </div> */}
 
-                           <div className="position-relative crypto-right crypto-asset">
+                          <div className="position-relative crypto-right crypto-asset">
                             <div
                               className="crypto-right crypto-asset"
                               role="button"
@@ -4614,39 +4629,117 @@ function TopCoin() {
             <div className="chart-tab-content mt-3">
               {activeView === "chart" && activeChartTab === "inflow" && (
                 <div>
-                  <div className="inflow-title">
-                    <h4>Whale Net Inflow with Whale Count</h4>
+                  <div className="desktop-chart">
+                    <div className="inflow-title">
+                      <h4>Whale Net Inflow with Whale Count</h4>
+                    </div>
+                    <div className="chart-container  desktop-chart">
+                      <span className="corner top-right"></span>
+                      <span className="corner bottom-left"></span>
+                      <ReactApexChart
+                        options={options}
+                        series={series}
+                        type="line"
+                        height={420}
+                      />
+                    </div>
                   </div>
-                  <div className="chart-container">
+
+                  <div className="chart-container p-2">
                     <span className="corner top-right"></span>
                     <span className="corner bottom-left"></span>
-
-                    <ReactApexChart
-                      options={options}
-                      series={series}
-                      type="line"
-                      height={420}
-                    />
+                    <div className="whale-list">
+                      <div className="inflow-title">
+                        <h4>Whale Net Inflow with Whale Count</h4>
+                      </div>
+                      {data.map((item) => (
+                        <div className="whale-row" key={item.name}>
+                          <div className="whale-title">{item.name} <a href="javascript:void(0)" className="mobile-chrt-cpy-btn"> <FaRegCopy /></a> </div>
+                          <div className="whale-bar-wrap">
+                            <span className="whale-full-line"></span>
+                            <div
+                              className="whale-bar-fill"
+                              style={{ width: `${item.inflowPercent}%` }}
+                            />
+                            <div
+                              className="whale-line"
+                              style={{ width: `${item.whalePos}%` }}
+                            />
+                            <div
+                              className="whale-dot"
+                              style={{ left: `${item.whalePos}%` }}
+                            />
+                          </div>
+                          <div className="whale-meta">
+                            <div>
+                              <div className="whale-net-inflow"><h6>net Inflow <span className="whale-usd-title">${item.inflow}K USD</span> </h6></div>
+                              <div className="whale-net-inflow"><h6>WHALE COUNT<span className="whale-usd-title">{item.whales}</span> </h6></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+
                 </div>
               )}
 
               {activeView === "chart" && activeChartTab === "outflow" && (
                 <div>
-                  <div className="inflow-title">
-                    <h4>Whale Net outflow with Whale Count</h4>
+                  <div className="desktop-chart">
+                    <div className="inflow-title">
+                      <h4>Whale Net outflow with Whale Count</h4>
+                    </div>
+                    <div className="chart-container  ">
+                      <span className="corner top-right"></span>
+                      <span className="corner bottom-left"></span>
+
+                      <ReactApexChart
+                        options={newOptions}
+                        series={newSeries}
+                        type="line"
+                        height={420}
+                      />
+                    </div>
+
                   </div>
-                  <div className="chart-container">
+                  <div className="chart-container p-2">
                     <span className="corner top-right"></span>
                     <span className="corner bottom-left"></span>
 
-                    <ReactApexChart
-                      options={newOptions}
-                      series={newSeries}
-                      type="line"
-                      height={420}
-                    />
+                    <div className="outflow-whale-list">
+                      <div className="inflow-title">
+                        <h4>Whale Net outflow with Whale Count</h4>
+                      </div>
+                      {dataOutFlow.map((item) => (
+                        <div className="outflow-whale-row" key={item.name}>
+                          <div className="outflow-whale-title">{item.name} <a href="javascript:void(0)" className="mobile-chrt-cpy-btn"> <FaRegCopy /></a> </div>
+                          <div className="outflow-whale-bar-wrap">
+                            <span className="outflow-whale-full-line"></span>
+                            <div
+                              className="outflow-whale-bar-fill"
+                              style={{ width: `${item.inflowPercent}%` }}
+                            />
+                            <div
+                              className="outflow-whale-line"
+                              style={{ width: `${item.whalePos}%` }}
+                            />
+                            <div
+                              className="outflow-whale-dot"
+                              style={{ left: `${item.whalePos}%` }}
+                            />
+                          </div>
+                          <div className="whale-meta">
+                            <div>
+                              <div className="outflow-whale-net-inflow"><h6>net Inflow <span className="outflow-whale-usd-title">${item.inflow}K USD</span> </h6></div>
+                              <div className="outflow-whale-net-inflow"><h6>WHALE COUNT<span className="outflow-whale-usd-title">{item.whales}</span> </h6></div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+
                 </div>
               )}
             </div>

@@ -679,6 +679,57 @@ body {
   }
 
   /* mobile resposnive sidebar */
+
+  .home-mobile-tab-bx {
+    width: 100%;
+  }
+
+  .home-mobile-tab-bx .custom-tabs {
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .home-mobile-tab-bx .nav-item {
+    width: 33.33%;
+  }
+
+  .mobile-mode-filter {
+    width: 100%;
+  }
+  .mobile-mode-filter .plan-btn-list {
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .filter-dropdown-menu {
+  }
+  .filter-mobile-hotness {
+    right: -85px;
+  }
+
+  .filter-mobile-amount {
+    right: -125px;
+  }
+
+  .filter-mobile-tag {
+    right: -120px;
+  }
+
+  .filter-mobile-subscription {
+    width: 340px;
+  }
+
+  .desktop-chart {
+    display: none;
+  }
+
+  .whale-row {
+    display: block !important;
+  }
+
+  .outflow-whale-row {
+    display: block !important;
+  }
 }
 
 @media (max-width: 768px) {

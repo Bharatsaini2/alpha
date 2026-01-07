@@ -3522,6 +3522,182 @@ font-size: 16px;
   z-index: 10;
 }
 
-.mobile-new-connect-bx{
+.mobile-new-connect-bx {
   display: none;
+}
+
+.whale-row {
+  margin-bottom: 16px;
+  display: none;
+}
+
+.whale-title {
+  font-weight: 300;
+  font-size: 12px;
+  line-height: 140%;
+  text-align: start;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: #fbfaf9;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.whale-net-inflow h6 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 140%;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: #8f8f8f;
+  margin-bottom: 0;
+}
+
+.whale-usd-title {
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 10px;
+  line-height: 140%;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: #ebebeb;
+}
+
+.whale-bar-wrap {
+  position: relative;
+  height: 59px;
+  margin-bottom: 5px;
+}
+
+.whale-full-line {
+  display: none;
+}
+
+.whale-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  background: #ffffff;
+  transform: translateY(-50%);
+  opacity: 0.9;
+  z-index: 99;
+}
+
+.whale-bar-fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 59px;
+  background: #14904d;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.whale-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.mobile-chrt-cpy-btn {
+  color: #8f8f8f;
+}
+
+.outflow-whale-row {
+  margin-bottom: 16px;
+  display: none;
+}
+
+.outflow-whale-title {
+  font-weight: 300;
+  font-size: 12px;
+  line-height: 140%;
+  text-align: start;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: #fbfaf9;
+  margin-bottom: 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.outflow-whale-net-inflow h6 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 500;
+  font-size: 10px;
+  line-height: 140%;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: #8f8f8f;
+  margin-bottom: 0;
+}
+
+.outflow-whale-usd-title {
+  font-weight: 500;
+  font-style: Medium;
+  font-size: 10px;
+  line-height: 140%;
+  vertical-align: middle;
+  text-transform: uppercase;
+  color: #ebebeb;
+}
+
+.outflow-whale-bar-wrap {
+  position: relative;
+  height: 59px;
+  margin-bottom: 5px;
+}
+
+.outflow-whale-full-line {
+  display: none;
+}
+
+.outflow-whale-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 2px;
+  background: #ffffff;
+  transform: translateY(-50%);
+  opacity: 0.9;
+  z-index: 99;
+}
+
+.outflow-whale-bar-fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 59px;
+  background: #df2a4e;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.outflow-whale-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+}
+
+.mobile-chrt-cpy-btn {
+  color: #8f8f8f;
 }
