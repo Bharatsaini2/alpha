@@ -36,8 +36,8 @@ function Header() {
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { user, isAuthenticated, logout } = useAuth()
-  const { wallet, connect, disconnect } = useWalletConnection()
+  const { user, isAuthenticated, logout, openLoginModal } = useAuth()
+  const { wallet, disconnect } = useWalletConnection()
   const { showToast } = useToast()
 
   useEffect(() => {
@@ -345,7 +345,7 @@ function Header() {
                     <>
                       <div
                         className="user-dropdown-item"
-                        onClick={() => connect()}
+                        onClick={() => openLoginModal()}
                       >
                         <PiPlugsConnected size={14} />
                         Connect Wallet
@@ -369,7 +369,7 @@ function Header() {
               )}
             </div>
           ) : (
-            <button className="connect-btn" onClick={() => connect()}>
+            <button className="connect-btn" onClick={() => openLoginModal()}>
               CONNECT
             </button>
           )}

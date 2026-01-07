@@ -16,6 +16,7 @@ import {
   TokenInfo,
 } from "../../components/swap/TokenSelectionModal"
 import { useToast } from "../../components/ui/Toast"
+import { useAuth } from "../../contexts/AuthContext"
 import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
 import { IoWalletOutline } from "react-icons/io5"
@@ -58,12 +59,11 @@ const RightSidebarNew = ({
   transactions = [] // Default to empty array
 }: RightSidebarNewProps) => {
   // Auth hook for login modal
-
+  const { openLoginModal } = useAuth()
 
   // Wallet connection hook
   const {
     wallet,
-    connect,
     sendTransaction,
     getBalance,
     isLoading: isWalletLoading,
@@ -379,8 +379,8 @@ const RightSidebarNew = ({
 
   // Handle wallet connection - opens login modal which handles wallet connection
   const handleConnectWallet = useCallback(() => {
-    connect()
-  }, [connect])
+    openLoginModal()
+  }, [openLoginModal])
 
   // Handle token selection
   const handleInputTokenSelect = useCallback(

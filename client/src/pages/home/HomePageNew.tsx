@@ -866,17 +866,19 @@ const HomePageNew = () => {
             // Convert amount string to number
             const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
 
-            // Handle wallet labels - if "Any Label" is selected or no labels, send all valid labels
-            let labelsToSend = walletTypes.length > 0 ? walletTypes.filter(label => label !== "Any Label") : ["Smart Money"]
+            // Handle wallet labels
+            // If "All" is selected, send empty array to indicate "accept all transactions"
+            let labelsToSend: string[] = []
 
-            // If "Any Label" was selected, send all valid labels
-            if (walletTypes.includes("Any Label")) {
-                labelsToSend = ["Smart Money", "Whale", "Insider", "Sniper", "Heavy Accumulator"]
-            }
-
-            // If no labels selected after filtering, default to Smart Money
-            if (labelsToSend.length === 0) {
-                labelsToSend = ["Smart Money"]
+            if (walletTypes.includes("All")) {
+                // "All" selected = accept ALL transactions (with or without labels)
+                labelsToSend = []
+            } else if (walletTypes.length > 0) {
+                // Specific labels selected = filter by those labels
+                labelsToSend = walletTypes.filter(label => label !== "All")
+            } else {
+                // No labels selected = default to empty (accept all)
+                labelsToSend = []
             }
 
             // Create whale alert subscription
@@ -1277,7 +1279,7 @@ const HomePageNew = () => {
 
                                                             {walletTypeOpen && (
                                                                 <ul className="subscription-dropdown-menu show w-100">
-                                                                    {["Any Label", "Smart Money", "Whale", "Insider"].map((item) => (
+                                                                    {["All", "SMART MONEY", "HEAVY ACCUMULATOR", "SNIPER", "FLIPPER", "COORDINATED GROUP", "DORMANT WHALE"].map((item) => (
                                                                         <li
                                                                             key={item}
                                                                             className={`nw-subs-items ${walletTypes.includes(item) ? "active" : ""

@@ -165,6 +165,8 @@ function TelegramSubscription() {
             
             if (response.data.success) {
                 setLinkToken(response.data.data.token);
+                // Store the full response for the deep link
+                localStorage.setItem('telegramLinkResponse', JSON.stringify(response.data));
                 showToast('Link token generated! Click the link below to connect Telegram', 'success');
             } else {
                 showToast('Failed to generate link token', 'error');
@@ -183,7 +185,12 @@ function TelegramSubscription() {
 
     const getTelegramDeepLink = () => {
         if (!linkToken) return '';
-        return `https://t.me/AlphaBlockAIbot?start=${linkToken}`;
+        // Use the deepLink from the API response if available, otherwise fallback to dev bot
+        const response = JSON.parse(localStorage.getItem('telegramLinkResponse') || '{}');
+        if (response.data?.deepLink) {
+            return response.data.deepLink;
+        }
+        return `https://t.me/alphabotdevbot?start=${linkToken}`;
     };
 
     const formatConfig = (config: AlertConfig): string => {

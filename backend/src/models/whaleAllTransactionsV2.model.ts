@@ -62,6 +62,7 @@ export interface IWhaleAllTransactionsV2 extends Document {
   whale: {
     address: string
     imageUrl: string
+    labels?: string[]
     symbol?: string
     name?: string
     marketCap?: string
