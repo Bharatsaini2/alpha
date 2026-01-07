@@ -132,17 +132,17 @@ function saveToCache(tokens: TokenInfo[]): void {
     const popularTokens = tokens.filter(t => t.isPopular)
     const otherTokens = tokens.filter(t => !t.isPopular).slice(0, 2000)
     const tokensToCache = [...popularTokens, ...otherTokens]
-
+    
     const data: TokenCache = {
       tokens: tokensToCache,
       timestamp: Date.now(),
     }
-
+    
     const jsonString = JSON.stringify(data)
     const sizeInMB = (jsonString.length / 1024 / 1024).toFixed(2)
-
+    
     console.log(`💾 Attempting to cache ${tokensToCache.length} tokens (${sizeInMB}MB)`)
-
+    
     localStorage.setItem(CACHE_KEY, jsonString)
     console.log(`✅ Successfully cached ${tokensToCache.length} tokens`)
   } catch (error: any) {
@@ -190,10 +190,10 @@ export async function fetchJupiterTokens(
     for (const url of JUPITER_API_ENDPOINTS) {
       try {
         console.log(`Trying: ${url}`)
-
+        
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
-
+        
         const response = await fetch(url, {
           method: 'GET',
           headers: {
@@ -210,7 +210,7 @@ export async function fetchJupiterTokens(
         }
 
         const data = await response.json()
-
+        
         // Handle different response formats
         let jupiterTokens: JupiterToken[] = []
         if (Array.isArray(data)) {
@@ -254,17 +254,17 @@ export async function fetchJupiterTokens(
     // All endpoints failed, use fallback
     console.warn("⚠️ All Jupiter endpoints failed, using local token list")
     throw new Error("All Jupiter API endpoints failed")
-
+    
   } catch (error) {
     console.error("❌ Failed to fetch Jupiter tokens, using fallback")
-
+    
     // Return extended token list as fallback
     const fallbackTokens = [...EXTENDED_TOKEN_LIST]
     markPopularTokens(fallbackTokens)
-
+    
     // Cache the fallback list
     saveToCache(fallbackTokens)
-
+    
     return fallbackTokens
   }
 }
@@ -346,12 +346,12 @@ export async function searchJupiterUltra(query: string): Promise<TokenInfo[]> {
 
   try {
     console.log(`🔍 Searching Jupiter Ultra for: "${query}"`)
-
+    
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout
-
+    
     const url = `${JUPITER_ULTRA_SEARCH_URL}?query=${encodeURIComponent(query)}`
-
+    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -368,7 +368,7 @@ export async function searchJupiterUltra(query: string): Promise<TokenInfo[]> {
     }
 
     const data: JupiterUltraToken[] = await response.json()
-
+    
     if (!Array.isArray(data)) {
       console.warn("❌ Unexpected response format from Jupiter Ultra Search")
       throw new Error("Invalid response format")
@@ -378,7 +378,7 @@ export async function searchJupiterUltra(query: string): Promise<TokenInfo[]> {
 
     // Convert to our format
     const tokens = data.map(convertUltraToken)
-
+    
     // Mark popular tokens
     markPopularTokens(tokens)
 
@@ -389,7 +389,7 @@ export async function searchJupiterUltra(query: string): Promise<TokenInfo[]> {
     } else {
       console.warn("❌ Jupiter Ultra Search error:", error.message)
     }
-
+    
     // Return empty array - caller should fallback to local search
     return []
   }
@@ -405,38 +405,4 @@ export async function refreshJupiterTokens(
 ): Promise<TokenInfo[]> {
   clearTokenCache()
   return fetchJupiterTokens(useStrictList)
-}
-
-/**
- * Fetches token prices from Jupiter Price API v2
- * @param mints - Array of mint addresses
- * @returns Map of mint address to price
- */
-export async function fetchTokenPrices(mints: string[]): Promise<Record<string, number>> {
-  if (!mints.length) return {}
-
-  try {
-    const ids = mints.join(',')
-    const url = `https://api.jup.ag/price/v2?ids=${ids}`
-
-    const response = await fetch(url)
-    if (!response.ok) throw new Error('Failed to fetch prices')
-
-    const data = await response.json()
-    const prices: Record<string, number> = {}
-
-    if (data.data) {
-      Object.keys(data.data).forEach(mint => {
-        const priceData = data.data[mint]
-        if (priceData && priceData.price) {
-          prices[mint] = parseFloat(priceData.price)
-        }
-      })
-    }
-
-    return prices
-  } catch (error) {
-    console.error("Failed to fetch token prices:", error)
-    return {}
-  }
 }

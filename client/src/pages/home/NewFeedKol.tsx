@@ -18,6 +18,7 @@ import RightSidebarNew from "./RightSidebarNew"
 import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { RiFileCopyLine } from "react-icons/ri";
 
+import { FaXTwitter } from "react-icons/fa6"
 import SwapModal from "../../components/swap/SwapModal"
 
 
@@ -252,7 +253,7 @@ const expandTransactions = (
     return expandedTransactions
 }
 
-const HomePageNew = () => {
+const NewFeedKol = () => {
     const [activeFilter, setActiveFilter] = useState("all")
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
     const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set())
@@ -767,87 +768,6 @@ const HomePageNew = () => {
 
     const [hotness, setHotness] = useState(10);
 
-    // Handle whale alert subscription
-    const handleWhaleAlertConnect = async () => {
-        try {
-            const token = localStorage.getItem("accessToken")
-            if (!token) {
-                showToast("Please log in to connect Telegram alerts", "error")
-                return
-            }
-
-            // Check if Telegram is connected
-            if (!user?.telegramChatId) {
-                showToast("Please connect your Telegram account first from the Telegram Subscription page", "error")
-                return
-            }
-
-            // Check premium access
-            const premiumResponse = await axios.get(
-                `${import.meta.env.VITE_SERVER_URL}/alerts/premium-access`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            )
-
-            if (!premiumResponse.data.success || !premiumResponse.data.data.hasAccess) {
-                const difference = premiumResponse.data.data.difference || 0
-                showToast(
-                    `Insufficient balance. You need ${difference.toFixed(4)} more SOL to access this feature.`,
-                    "error"
-                )
-                return
-            }
-
-            // Convert amount string to number
-            const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
-
-            // Handle wallet labels
-            // If "All" is selected, send empty array to indicate "accept all transactions"
-            let labelsToSend: string[] = []
-
-            if (walletTypes.includes("All")) {
-                // "All" selected = accept ALL transactions (with or without labels)
-                labelsToSend = []
-            } else if (walletTypes.length > 0) {
-                // Specific labels selected = filter by those labels
-                labelsToSend = walletTypes.filter(label => label !== "All")
-            } else {
-                // No labels selected = default to empty (accept all)
-                labelsToSend = []
-            }
-
-            // Create whale alert subscription
-            const response = await axios.post(
-                `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,
-                {
-                    hotnessScoreThreshold: hotness,
-                    walletLabels: labelsToSend,
-                    minBuyAmountUSD: minBuyAmount,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            )
-
-            if (response.data.success) {
-                setIsSaved(true)
-                showToast("Whale alert subscription created successfully!", "success")
-                setTimeout(() => setIsSaved(false), 3000)
-            }
-        } catch (error: any) {
-            console.error("Whale alert subscription error:", error)
-            showToast(
-                error.response?.data?.message || "Failed to create whale alert subscription",
-                "error"
-            )
-        }
-    }
-
 
     return (
         <>
@@ -990,7 +910,7 @@ const HomePageNew = () => {
                         {/* Filters */}
                         <div>
                             <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
-                                <div className="home-mobile-tab-bx">
+                                <div>
                                     <ul className="nav nav-tabs custom-tabs" role="tablist">
                                         <li className="nav-item" role="presentation">
                                             <a
@@ -1021,7 +941,7 @@ const HomePageNew = () => {
                                         </li>
                                     </ul>
                                 </div>
-                                <div className="mobile-mode-filter">
+                                <div>
                                     <ul className="plan-btn-list">
                                         <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
@@ -1032,7 +952,7 @@ const HomePageNew = () => {
                                                     : 'hotness'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'hotness' && (
-                                                <div className="filter-dropdown-menu filter-mobile-hotness">
+                                                <div className="filter-dropdown-menu">
                                                     <div className="filter-dropdown-header">Hotness Score</div>
                                                     {hotnessOptions.map(opt => (
                                                         <button
@@ -1055,7 +975,7 @@ const HomePageNew = () => {
                                                     : 'amount'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'amount' && (
-                                                <div className="filter-dropdown-menu filter-mobile-amount">
+                                                <div className="filter-dropdown-menu">
                                                     <div className="filter-dropdown-header">Min Amount</div>
                                                     {amountOptions.map(opt => (
                                                         <button
@@ -1079,7 +999,8 @@ const HomePageNew = () => {
                                                 </div>
                                             )}
                                         </li>
-                                        <li onClick={(e) => e.stopPropagation()}>
+
+                                        {/* <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
                                                 className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
                                                 onClick={() => setOpenDropdown(openDropdown === 'tags' ? null : 'tags')}>
@@ -1088,7 +1009,7 @@ const HomePageNew = () => {
                                                     : 'tAGS'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'tags' && (
-                                                <div className="filter-dropdown-menu filter-mobile-tag">
+                                                <div className="filter-dropdown-menu">
                                                     <div className="filter-dropdown-header">Whale Tags</div>
                                                     <button
                                                         className={`filter-dropdown-item ${activeFilters.tags.length === 0 ? 'active' : ''}`}
@@ -1107,7 +1028,7 @@ const HomePageNew = () => {
                                                     ))}
                                                 </div>
                                             )}
-                                        </li>
+                                        </li> */}
 
                                         <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
@@ -1118,7 +1039,7 @@ const HomePageNew = () => {
                                                     : 'Subscription'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'subs' && (
-                                                <div className="filter-dropdown-menu w-sm filter-mobile-subscription">
+                                                <div className="filter-dropdown-menu w-sm">
                                                     <div className="parent-dropdown-content">
                                                         <div className="sub-drop-header">
                                                             <div className="sub-drop-content">
@@ -1189,7 +1110,7 @@ const HomePageNew = () => {
 
                                                             {walletTypeOpen && (
                                                                 <ul className="subscription-dropdown-menu show w-100">
-                                                                    {["All", "SMART MONEY", "HEAVY ACCUMULATOR", "SNIPER", "FLIPPER", "COORDINATED GROUP", "DORMANT WHALE"].map((item) => (
+                                                                    {["Any Label", "Smart Money", "Whale", "Insider"].map((item) => (
                                                                         <li
                                                                             key={item}
                                                                             className={`nw-subs-items ${walletTypes.includes(item) ? "active" : ""
@@ -1445,7 +1366,7 @@ const HomePageNew = () => {
                                                     <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
                                                 </div>
                                                 <div>
-                                                    {/* <ul className="quick-list">
+                                                    <ul className="quick-list">
                                                         {tx.hotnessScore > 0 && (
                                                             <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
                                                         )}
@@ -1468,7 +1389,7 @@ const HomePageNew = () => {
                                                                     handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
                                                                 }}
                                                             >
-                                                                
+                                                                {/* <FontAwesomeIcon icon={faCopy} /> */}
 
 
                                                                 <RiFileCopyLine />
@@ -1483,72 +1404,7 @@ const HomePageNew = () => {
                                                                 <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
                                                             </a>
                                                         </li>
-                                                    </ul> */}
-
-                                                    <div className="quick-list">
-                                                        {tx.hotnessScore > 0 && (
-                                                            <div>
-                                                                <span className="hotness-title">
-                                                                    Hotness score: {tx.hotnessScore}/10
-                                                                </span>
-                                                            </div>
-                                                        )}
-
-                                                          
-                                                            <div className="all-new-quick-bx">
-                                                                 <div className="quick-item">
-                                                                <a
-                                                                    href="javascript:void(0)"
-                                                                    className="quick-nw-btn"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleQuickBuy(tx);
-                                                                    }}
-                                                                >
-                                                                    quick buy
-                                                                </a>
-                                                            </div>
-
-                                                            <div className="quick-item">
-                                                                    <a
-                                                                        href="javascript:void(0)"
-                                                                        className="quick-nw-btn quick-copy-btn"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            handleCopyTokenAddress(
-                                                                                tx.type === "sell"
-                                                                                    ? tx.tokenInAddress
-                                                                                    : tx.tokenOutAddress,
-                                                                                tx.signature
-                                                                            );
-                                                                        }}
-                                                                    >
-                                                                        <RiFileCopyLine />
-                                                                    </a>
-                                                            </div>
-
-                                                            <div className="quick-item">
-                                                                <a
-                                                                    href="javascript:void(0)"
-                                                                    className="quick-nw-btn quick-arrow-btn"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleTransactionInfoNewTab(tx.signature, tx.type);
-                                                                    }}
-                                                                >
-                                                                    <FontAwesomeIcon
-                                                                        icon={faArrowRight}
-                                                                        className="nw-arrow-tp"
-                                                                    />
-                                                                </a>
-                                                            </div>
-                                                            </div>
-                                                           
-
-                                                            </div>
-
-
-
+                                                    </ul>
                                                 </div>
                                             </div>
 
@@ -1566,14 +1422,18 @@ const HomePageNew = () => {
                                                     />
                                                     <div className="whale-content flex-grow-1">
                                                         <h4 className="username">{tx.whaleTokenSymbol} Whale (A4DC..) </h4>
-                                                        <div className="tags">
+                                                        <button className="new-twiiter-btn">
+                                                            <FaXTwitter style={{ color: "#EBEBEB" }} /> @crypt
+                                                        </button>
+
+                                                        {/* <div className="tags">
                                                             {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                                                 <span key={i} className="tag-title">{tag}</span>
                                                             ))}
                                                             {(tx.whaleLabel || []).length > 2 && (
                                                                 <span className="tag-title">+{(tx.whaleLabel || []).length - 2}</span>
                                                             )}
-                                                        </div>
+                                                        </div> */}
                                                         <div className={`sold-out-title ${tx.type === 'buy' ? 'sold-title' : ''}`}>
                                                             {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                         </div>
@@ -1685,4 +1545,4 @@ const HomePageNew = () => {
     )
 }
 
-export default HomePageNew
+export default NewFeedKol

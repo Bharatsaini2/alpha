@@ -8,7 +8,7 @@ import { faCircleXmark } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { TfiReload } from "react-icons/tfi"
 
-import { FaArrowRightLong } from "react-icons/fa6"
+import {FaArrowRightLong } from "react-icons/fa6"
 
 interface PriceDisplay {
     value: string
@@ -245,7 +245,7 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                         size={12}
                                         className="clickable"
                                         onClick={() => onTogglePrice("in")}
-                                        style={{ cursor: "pointer" }}
+                                         style={{cursor : "pointer"}}
 
                                     />
 
@@ -281,10 +281,10 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                 {isBuy ? "BOUGHT" : "SOLD"}
                             </div>
                             <div className="center-usd-toggle" onClick={() => onToggleAmount(isBuy ? "out" : "in")}>
-                                {isBuy ? tokenOutAmountDisplay.currency : tokenInAmountDisplay.currency} <TfiReload size={10} />
+                                {isBuy ? tokenOutAmountDisplay.currency : tokenInAmountDisplay.currency} <TfiReload size={10}/>
                             </div>
                             <div className={`center-amount ${isBuy ? "bought" : "sold"}`}>
-                                {isBuy ? tokenOutAmountDisplay.symbol : tokenInAmountDisplay.symbol}{isBuy ? tokenOutAmountDisplay.value : tokenInAmountDisplay.value}
+                                ${isBuy ? tokenOutAmountDisplay.value : tokenInAmountDisplay.value}
                             </div>
                         </div>
                     </div>
@@ -339,7 +339,7 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                         size={12}
                                         className="clickable "
                                         onClick={() => onTogglePrice("out")}
-                                        style={{ cursor: "pointer" }}
+                                        style={{cursor : "pointer"}}
 
 
                                     />
@@ -375,15 +375,15 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     <div className="table-row">
                         <span className="row-label">AMOUNT</span>
                         <div className="row-value">
-                            {detailsAmountDisplay.symbol}{detailsAmountDisplay.value}
+                            ${detailsAmountDisplay.value}
                             <span className="amount-unit nw-usd-btn">
                                 {detailsAmountDisplay.currency}
                                 <TfiReload
-                                    className="clickable-icon"
-                                    onClick={onToggleDetailsAmount}
-                                />
+                                className="clickable-icon"
+                                onClick={onToggleDetailsAmount}
+                            />
                             </span>
-
+                            
                         </div>
                     </div>
 
@@ -436,14 +436,8 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                         <div className="row-value">
                             {data.transaction.platform}
                             {/* <ExternalLink className="clickable-icon" /> */}
-
-                            <span
-                                className="nws-arrow-tp"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => window.open(`https://solscan.io/tx/${data.signature}`, '_blank', 'noopener,noreferrer')}
-                            >
-                                <FaArrowRightLong className="nw-icon-tp" />
-                            </span>
+                       
+                        <span className="nws-arrow-tp "><FaArrowRightLong className="nw-icon-tp"/></span>
 
                         </div>
 

@@ -16,6 +16,11 @@ import KolFeedProfile from "../pages/home/KolFeedProfile"
 import ProfilePage from "../pages/home/ProfilePage"
 import TelegramSubscription from "../pages/home/TelegramSubscription"
 import Notification from "../pages/home/Notification"
+import TopCoin from "../pages/home/TopCoin"
+import NewFeedKol from "../pages/home/NewFeedKol"
+import TopKolCoins from "../pages/home/TopKolCoins"
+
+
 
 
 const AppRoutes = () => {
@@ -53,6 +58,10 @@ const AppRoutes = () => {
          <Route path="profile-page" element={<ProfilePage />} />
          <Route path="telegram-subscription" element={<TelegramSubscription />} />
          <Route path="notification" element={<Notification />} />
+         <Route path="top-coin" element={<TopCoin />} />
+         <Route path="new-feed-kol" element={<NewFeedKol />} />
+         <Route path="kol-top-coin" element={<TopKolCoins />} />
+        
         
       </Route>
 

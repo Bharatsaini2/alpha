@@ -34,8 +34,10 @@ const AuthManager: React.FC = () => {
     closeAuthModals()
   }
 
-  // Show login modal only if explicitly in auth flow
-  const shouldShowLogin = isAuthFlowActive && showLoginModal
+  // Show login modal if user is not authenticated and we're not loading
+  // Also show if explicitly in auth flow
+  const shouldShowLogin =
+    (!isAuthenticated && !isLoading) || (isAuthFlowActive && showLoginModal)
 
   if (!shouldShowLogin && !showOTP) return null
 

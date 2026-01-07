@@ -14,7 +14,7 @@ function KolFeedProfile() {
     <>
       <section>
         <div className="row">
-          <div className="col-lg-5 col-md-5 col-sm-12">
+          <div className="col-lg-5 col-md-5 col-sm-12 new-mobile-spacing">
             <div className="alpha-profile-card nw-portfolio-card mb-3">
               <div className="alpha-profile-title-bx portfolio-tp-bx">
                 <div>
@@ -60,8 +60,8 @@ function KolFeedProfile() {
               </div>
             </div>
           </div>
-          <div className="col-lg-7 col-md-7 col-sm-12">
-            <div className="alpha-total-value-bx nw-portfolio-card ">
+          <div className="col-lg-7 col-md-7 col-sm-12 new-mobile-spacing">
+            <div className="alpha-total-value-bx nw-portfolio-card mobile-portfolio-tatol-crd">
               <div className="total-value-content">
                 <h6>Total Value</h6>
 
@@ -72,7 +72,7 @@ function KolFeedProfile() {
         </div>
 
         <div className="row">
-          <div className="col-lg-12">
+          <div className="col-lg-12 new-mobile-spacing">
             {/* Tabs */}
             <div className="d-flex portfolio-tab-container">
               <ul className="nav nav-tabs custom-tabs">
@@ -97,9 +97,10 @@ function KolFeedProfile() {
             </div>
 
             {/* Content */}
-            <div className="tab-content custom-tab-content mt-3">
+            <div className="tab-content custom-tab-content mt-lg-3 mt-sm-0">
               {activeTab === "portfolio" && (
-                <div className="tab-pane active">
+                <>
+                <div className="tab-pane active desktop-tab-panel">
                   <div className="table-responsive crypto-table-responsive">
                     <table className="table crypto-table align-middle mb-0">
                       <thead>
@@ -245,10 +246,163 @@ function KolFeedProfile() {
                     </div>
                   </div>
                 </div>
+
+               <div>
+                 <div className="mobile-new-table">
+                  <div className="crypto-box">
+                  <div className="crypto-row crypto-head">
+                    <div className="crypto-left">
+                      <span className="crypto-title">ASSET</span>
+                    </div>
+
+                    <div className="crypto-right crypto-asset">
+                      <img src="solana-icon.png" className="crypto-logo" alt="Solana" />
+                      <span className="crypto-name">SOLANA</span>
+                      <span className="crypto-copy"> <button className="kol-cp-btn"> <FaRegCopy /> </button></span>
+                    </div>
+                  </div>
+
+
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">PRICE</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">$800</span>
+                    </div>
+                  </div>
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">HOLDING</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">10</span>
+                    </div>
+                  </div>
+
+              
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">VALUE</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-profit">+ $2,000 (+12%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+                <div className="mobile-new-table">
+                  <div className="crypto-box">
+                  <div className="crypto-row crypto-head">
+                    <div className="crypto-left">
+                      <span className="crypto-title">ASSET</span>
+                    </div>
+
+                    <div className="crypto-right crypto-asset">
+                      <img src="/t-3.png" className="crypto-logo" alt="Solana" />
+                      <span className="crypto-name">Filecoin</span>
+                      <span className="crypto-copy"> <button className="kol-cp-btn"> <FaRegCopy /> </button></span>
+                    </div>
+                  </div>
+
+
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">PRICE</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">$1.2</span>
+                    </div>
+                  </div>
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">HOLDING</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">25</span>
+                    </div>
+                  </div>
+
+              
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">VALUE</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="value-down-title">+ $2,200 (+5%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mobile-new-table">
+                  <div className="crypto-box">
+                  <div className="crypto-row crypto-head">
+                    <div className="crypto-left">
+                      <span className="crypto-title">ASSET</span>
+                    </div>
+
+                    <div className="crypto-right crypto-asset">
+                      <img src="/t-6.png" className="crypto-logo" alt="Solana" />
+                      <span className="crypto-name">ethereum</span>
+                      <span className="crypto-copy"> <button className="kol-cp-btn"> <FaRegCopy /> </button></span>
+                    </div>
+                  </div>
+
+
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">PRICE</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">$1,800</span>
+                    </div>
+                  </div>
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">HOLDING</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">125</span>
+                    </div>
+                  </div>
+
+              
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">VALUE</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-profit">+ $2,500 (+6%)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+             <div className="mobile-block">
+                      <p>powered by alpha blocks ai</p>
+                </div>
+               </div>
+
+
+                </>
+
+
               )}
 
               {activeTab === "trades" && (
-                <div className="tab-pane active">
+
+                <>
+                 <div className="tab-pane active desktop-tab-panel">
                   <div className="table-responsive crypto-table-responsive">
                                         <table className="table crypto-table align-middle mb-0">
                                             <thead>
@@ -403,8 +557,185 @@ function KolFeedProfile() {
                                         <div className="alpha-powered-by-table">
                                             <p>powered by alpha blocks ai</p>
                                         </div>
-                                    </div>
+                    </div>
                 </div>
+
+                <div>
+                 <div className="mobile-new-table">
+                  <div className="crypto-box">
+
+                     <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">type</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="up-trade">BUY</span>
+                    </div>
+                  </div>
+
+
+                  <div className="crypto-row crypto-head">
+                    <div className="crypto-left">
+                      <span className="crypto-title">token</span>
+                    </div>
+
+                    <div className="crypto-right crypto-asset">
+                      <img src="solana-icon.png" className="crypto-logo" alt="Solana" />
+                      <span className="crypto-name">SOLANA</span>
+                      <span className="crypto-copy"> <button className="kol-cp-btn"> <FaRegCopy /> </button></span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title d-flex gap-1">market cap <a href="javascript:void(0)" className=" usd-reload-btn"><TfiReload /></a></span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">$1.5B</span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">amount</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">10</span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title d-flex gap-1">total  <a href="javascript:void(0)" className=" usd-reload-btn"> usd <TfiReload /></a></span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">$100</span>
+                    </div>
+                  </div>
+
+              
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">pnl</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-profit">+ $2,000 (+12%)</span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">age</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="age-ago-data">1h ago</span>
+                    </div>
+                  </div>
+
+                  
+
+                </div>
+                  </div>
+
+
+                 <div className="mobile-new-table">
+                  <div className="crypto-box">
+
+                     <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">type</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="down-trade">BUY</span>
+                    </div>
+                  </div>
+
+
+                  <div className="crypto-row crypto-head">
+                    <div className="crypto-left">
+                      <span className="crypto-title">token</span>
+                    </div>
+
+                    <div className="crypto-right crypto-asset">
+                      <img src="solana-icon.png" className="crypto-logo" alt="Solana" />
+                      <span className="crypto-name">ethereum</span>
+                      <span className="crypto-copy"> <button className="kol-cp-btn"> <FaRegCopy /> </button></span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title d-flex gap-1">market cap <a href="javascript:void(0)" className=" usd-reload-btn"><TfiReload /></a></span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">$1.5B</span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">amount</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">10</span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title d-flex gap-1">total  <a href="javascript:void(0)" className=" usd-reload-btn"> usd <TfiReload /></a></span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="crypto-data">$100</span>
+                    </div>
+                  </div>
+
+              
+                  <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">pnl</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="value-down-title">+ $2,000 (+12%)</span>
+                    </div>
+                  </div>
+
+                   <div className="crypto-row">
+                    <div className="crypto-left">
+                      <span className="crypto-title">age</span>
+                    </div>
+
+                    <div className="crypto-right">
+                      <span className="age-ago-data">1h ago</span>
+                    </div>
+                  </div>
+
+                  
+
+                </div>
+                </div>
+
+               
+              <div className="mobile-block">
+                      <p>powered by alpha blocks ai</p>
+                </div>
+               </div>
+
+                </>
+
+
+               
               )}
             </div>
           </div>
