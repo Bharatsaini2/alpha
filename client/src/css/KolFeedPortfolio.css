@@ -3,7 +3,7 @@
 }
 
 .alpha-profile-card {
-  background-color: #0a0a0a;
+  /* background-color: #0a0a0a; */
   border: 1px solid #292929;
 }
 
@@ -32,7 +32,7 @@
 
 .alpha-user-details {
   align-items: start;
-  gap: 15px;
+  gap: 16px;
   display: flex;
 }
 
@@ -69,10 +69,26 @@
   background-color: #3d3d3d;
 }
 
+.new-twiiter-btn {
+  text-transform: uppercase;
+  color: #8f8f8f;
+  background-color: #292929;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  font-size: 10px;
+  font-weight: 400;
+  display: flex;
+}
+
+.new-twiiter-btn:hover {
+  background-color: #3d3d3d;
+}
+
 .nw-user-info-bx {
   align-items: center;
   gap: 30px;
-  padding-top: 25px;
+  padding-top: 24px;
   display: flex;
 }
 
@@ -179,7 +195,7 @@
   text-wrap-mode: nowrap;
   background: #141414;
   border-right: 1px solid #292929;
-  padding: 8px 16px;
+  padding: 8px 12px;
   font-size: 14px;
   font-weight: 500;
 }
@@ -188,12 +204,17 @@
   text-transform: uppercase;
   color: #ccc;
   background-color: #000;
-  border: 0.5px solid #292929;
-  padding: 8px 16px;
+  border-bottom: 0.5px solid #292929;
+  border-right: 0.5px solid #292929;
+  padding: 8px 12px;
   font-size: 12px;
   font-weight: 500;
   line-height: 140%;
   text-align: start;
+}
+
+.crypto-table td:last-child {
+  border-right: 0px;
 }
 
 .coin-cell {
@@ -365,8 +386,12 @@
 .subscripton-bx .accordion-button {
   color: #fff;
   box-shadow: none;
-  background-color: #0f0f0f;
+  background-color: #000;
   padding: 0 10px 0 0;
+}
+
+.subscripton-bx .accordion-button:hover {
+  background-color: #0f0f0f !important;
 }
 
 .share-profile {

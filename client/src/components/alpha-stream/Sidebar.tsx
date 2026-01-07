@@ -3,8 +3,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { useState } from "react"
 import { BsLayoutSidebar } from "react-icons/bs"
 import { useNavigate, useLocation } from "react-router-dom"
+import { HiChevronUpDown } from "react-icons/hi2";
 
-function Sidebar() {
+function Sidebar({mobileSidebar, setMobileSidebar}) {
     const navigate = useNavigate()
     const location = useLocation()
 
@@ -13,6 +14,7 @@ function Sidebar() {
     }
 
     const [collapsed, setCollapsed] = useState(false);
+
 
     return (
 
@@ -118,7 +120,21 @@ function Sidebar() {
             </div>
              </aside> */}
 
-            <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}>
+            {/* <aside className={`sidebar ${collapsed ? "sidebar-collapsed" : ""}`}> */}
+            <aside
+  className={`sidebar ${
+    collapsed ? "sidebar-collapsed" : ""
+  } ${mobileSidebar ? "sidebar-mobile-open" : ""}`}
+>
+
+    <button
+  className="mobile-sidebar-close"
+  onClick={() => setMobileSidebar(false)}
+>
+  <BsLayoutSidebar />
+</button>
+
+
                 <div className="left-sidebar-logo">
                     <div className="logo-box">
                         <img src="/logos.png" alt="logo" />
@@ -153,10 +169,10 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/top-kol-coins") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/top-kol-coins")}
                             >
                                 <FontAwesomeIcon icon={faCoins} />
-                                <span>Top KOL Coins</span>
+                                <span>Top Coins</span>
                             </a>
                         </li>
                     </ul>
@@ -168,7 +184,7 @@ function Sidebar() {
                         <li className="nav-item-bar">
                             <a
                                 className={`nav-link-item ${isActive("/kol") ? "nav-active" : ""}`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/kol")}
                             >
                                 <FontAwesomeIcon icon={faRss} />
                                 <span>KOL FEED</span>
@@ -179,7 +195,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/all-kol-coins") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/all-kol-coins")}
                             >
                                 <FontAwesomeIcon icon={faRankingStar} />
                                 <span>TOP KOL COINS</span>
@@ -195,7 +211,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/whale-leaderboard") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/whale-leaderboard")}
                             >
                                 <FontAwesomeIcon icon={faCrown} />
                                 <span>WHALES LEADERBOARD</span>
@@ -206,7 +222,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/signal-engine") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/signal-engine")}
                             >
                                 <FontAwesomeIcon icon={faSatelliteDish} />
                                 <span>SIGNAL ENGINE</span>
@@ -217,7 +233,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/subscription") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/subscription")}
                             >
                                 <FontAwesomeIcon icon={faStar} />
                                 <span>SUBSCRIPTION</span>
@@ -227,6 +243,24 @@ function Sidebar() {
                 </nav>
 
                 <div className="nav-btm-item">
+
+                    <div className="mobile-new-connect-bx">
+                         <div>
+                            <button className="connect-btn">
+                            CONNECT
+                            </button>
+                         </div>
+
+                         <div>
+                        <button className="connect-btn">
+                            <span className="change-color"></span> BLissful design <HiChevronUpDown />
+                        </button>
+                         </div>
+
+
+
+                    </div>
+
                     <ul className="nav-btm-list">
                         <li><a className="nav-btm-link" href="https://t.me/alphablock" target="_blank" rel="noopener noreferrer">telegram</a></li>
                         <li><span className="nw-slash">/</span></li>

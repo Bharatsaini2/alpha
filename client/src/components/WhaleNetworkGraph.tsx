@@ -138,7 +138,7 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           <img
             src={
               (data.symbol as string) === "SOL" ||
-              (data.symbol as string) === "WSOL"
+                (data.symbol as string) === "WSOL"
                 ? solanalogo
                 : (data.imageUrl as string) || DefaultTokenImage
             }
@@ -952,12 +952,12 @@ const WhaleNetworkGraph: React.FC<{
         const old = prevMap.get(n.id)
         return old
           ? {
-              ...old,
-              data: n.data,
-              style: n.style,
-              type: n.type,
-              // keep old.position/width/height to avoid geometry shift
-            }
+            ...old,
+            data: n.data,
+            style: n.style,
+            type: n.type,
+            // keep old.position/width/height to avoid geometry shift
+          }
           : n
       })
     })
@@ -967,12 +967,12 @@ const WhaleNetworkGraph: React.FC<{
         const old = prevMap.get(e.id)
         return old
           ? {
-              ...old,
-              data: e.data,
-              animated: e.animated,
-              type: e.type,
-              // keep any internal geometry React Flow manages
-            }
+            ...old,
+            data: e.data,
+            animated: e.animated,
+            type: e.type,
+            // keep any internal geometry React Flow manages
+          }
           : e
       })
     })
@@ -1180,9 +1180,8 @@ const WhaleNetworkGraph: React.FC<{
           {/* Mobile Timeframe */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
-                dropdown === "timeframe" ? "text-white" : "text-gray-400"
-              } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
+                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "timeframe" ? null : "timeframe")
               }
@@ -1217,9 +1216,8 @@ const WhaleNetworkGraph: React.FC<{
           {/* Mobile Whales */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
-                dropdown === "whales" ? "text-white" : "text-gray-400"
-              } ${dropdown === "whales" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "whales" ? "text-white" : "text-gray-400"
+                } ${dropdown === "whales" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "whales" ? null : "whales")
               }
@@ -1280,9 +1278,8 @@ const WhaleNetworkGraph: React.FC<{
           {/* Mobile Volume */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
-                dropdown === "volume" ? "text-white" : "text-gray-400"
-              } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer transition-colors`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "volume" ? "text-white" : "text-gray-400"
+                } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer transition-colors`}
               onClick={() =>
                 setDropdown(dropdown === "volume" ? null : "volume")
               }
@@ -1346,18 +1343,16 @@ const WhaleNetworkGraph: React.FC<{
           {/* Timeframe */}
           <div className="relative w-40">
             <button
-              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${
-                dropdown === "timeframe" ? "text-white" : "text-gray-400"
-              } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
+                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "timeframe" ? null : "timeframe")
               }
             >
               {touched.timeframe ? filters.timeframe : "Timeframe"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "timeframe" ? "rotate-180" : ""} ${
-                  dropdown === "timeframe" ? "text-white" : "text-gray-400"
-                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "timeframe" ? "rotate-180" : ""} ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
+                  } ${dropdown === "timeframe" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "timeframe" && (
@@ -1385,18 +1380,16 @@ const WhaleNetworkGraph: React.FC<{
           {/* No. of Whales */}
           <div className="relative w-40">
             <button
-              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl cursor-pointer  transition-colors ${
-                dropdown === "whales" ? "text-white" : "text-gray-400"
-              } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
+              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl cursor-pointer  transition-colors ${dropdown === "whales" ? "text-white" : "text-gray-400"
+                } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
               onClick={() =>
                 setDropdown(dropdown === "whales" ? null : "whales")
               }
             >
               {touched.whales ? `${filters.whales}W` : "No.Whales"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "whales" ? "rotate-180" : ""} ${
-                  dropdown === "whales" ? "text-white" : "text-gray-400"
-                } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "whales" ? "rotate-180" : ""} ${dropdown === "whales" ? "text-white" : "text-gray-400"
+                  } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "whales" && (
@@ -1451,18 +1444,16 @@ const WhaleNetworkGraph: React.FC<{
           {/* Volume */}
           <div className="relative w-40">
             <button
-              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${
-                dropdown === "volume" ? "text-white" : "text-gray-400"
-              } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer  transition-colors`}
+              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${dropdown === "volume" ? "text-white" : "text-gray-400"
+                } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer  transition-colors`}
               onClick={() =>
                 setDropdown(dropdown === "volume" ? null : "volume")
               }
             >
               {touched.volume ? filters.volume : "Volume"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "volume" ? "rotate-180" : ""} ${
-                  dropdown === "volume" ? "text-white" : "text-gray-400"
-                } ${dropdown === "volume" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "volume" ? "rotate-180" : ""} ${dropdown === "volume" ? "text-white" : "text-gray-400"
+                  } ${dropdown === "volume" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "volume" && (
@@ -1517,7 +1508,6 @@ const WhaleNetworkGraph: React.FC<{
 
         {/* Graph Container */}
         <div className="w-full h-96 rounded-xl overflow-hidden bg-black relative">
-          {/* Subtle refresh overlay */}
           {isRefreshing && (
             <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] rounded-xl z-10 flex items-center justify-center">
               <div className="flex items-center space-x-2 text-sm text-white/80">
@@ -1607,7 +1597,7 @@ const WhaleNetworkGraph: React.FC<{
           )}
         </div>
         <div className="flex items-center justify-start gap-1">
-          <img src="/AppIcon.png" className="h-[10px] md:h-[18px]" style={{width : "25px"}} />
+          <img src="/AppIcon.png" className="h-[10px] md:h-[18px]" style={{ width: "25px" }} />
           <div
             className="color-[#B4B4B4] text-[10px] md:text-[16px]"
             style={{ color: "#B4B4B4" }}

@@ -25,26 +25,21 @@ const MainLayout = () => {
     return () => document.removeEventListener("keydown", handleEscape)
   }, [])
 
+  const [mobileSidebar, setMobileSidebar] = useState(false);
+  
 
 
   return (
     <>
     <div className="app">
-     
-      <Sidebar />
-
-      
+      <Sidebar  mobileSidebar={mobileSidebar}
+  setMobileSidebar={setMobileSidebar}/>
       <div className="main">
-       
-        <Header />
-
-        
+        <Header setMobileSidebar={setMobileSidebar}/>
         <section className="content">
           <Outlet />
         </section>
       </div>
-
-     
       <AuthManager />
     </div>
     </>

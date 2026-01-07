@@ -264,6 +264,7 @@ const TopKOLCoinsPage = () => {
             <div className="text-white text-xs font-medium text-center">
               {payload.value}
             </div>
+            
             <button
               onClick={handleCopyAddress}
               className="w-3 h-3 text-gray-400 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
