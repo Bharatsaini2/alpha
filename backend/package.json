@@ -4,9 +4,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/app.ts",
-    "start": "node --max-old-space-size=4096 --expose-gc dist/app.js",
+    "start": "node --max-old-space-size=4096 --expose-gc dist/src/app.js",
     "build": "tsc",
-    "prod": "node --max-old-space-size=8192 --expose-gc dist/app.js",
+    "prod": "node --max-old-space-size=8192 --expose-gc dist/src/app.js",
     "test": "jest --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

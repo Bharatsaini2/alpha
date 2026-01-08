@@ -857,7 +857,7 @@ const HomePageNew = () => {
             if (!premiumResponse.data.success || !premiumResponse.data.data.hasAccess) {
                 const difference = premiumResponse.data.data.difference || 0
                 showToast(
-                    `Insufficient balance. You need ${difference.toFixed(4)} more SOL to access this feature.`,
+                    `Insufficient balance. You need ${difference.toFixed(0)} more ALPHA tokens to access this feature.`,
                     "error"
                 )
                 return

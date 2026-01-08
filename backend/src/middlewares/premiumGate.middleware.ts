@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
-import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { PublicKey } from '@solana/web3.js'
+import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { solConnection } from '../config/solana-config'
 import { redisClient } from '../config/redis'
 import { User } from '../models/user.model'
@@ -16,9 +17,14 @@ export interface PremiumAccessResult {
 }
 
 /**
- * Minimum SOL balance required for premium access (0.0006 SOL)
+ * ALPHA token mint address
  */
-export const PREMIUM_BALANCE_THRESHOLD = 0.0006
+export const ALPHA_TOKEN_MINT = '3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump'
+
+/**
+ * Minimum ALPHA token balance required for premium access (1000 ALPHA)
+ */
+export const PREMIUM_BALANCE_THRESHOLD = 1000
 
 /**
  * Cache TTL for balance checks (5 minutes in seconds)
@@ -61,7 +67,7 @@ export const invalidatePremiumBalanceCache = async (
 }
 
 /**
- * Validate SOL balance for premium access
+ * Validate ALPHA token balance for premium access
  * @param walletAddress - Solana wallet address to check
  * @param bypassCache - If true, skip cache and query blockchain directly
  * @returns Premium access result with balance details
@@ -80,7 +86,7 @@ export async function validateSOLBalance(
       // Invalid wallet address (likely lowercase legacy data)
       logger.warn({
         component: 'PremiumGate',
-        operation: 'validateSOLBalance',
+        operation: 'validateAlphaBalance',
         message: 'Invalid wallet address format (possibly lowercase legacy data)',
         walletAddress,
       })
@@ -96,67 +102,90 @@ export async function validateSOLBalance(
 
     // Check cache first (unless bypassed)
     const cacheKey = getBalanceCacheKey(walletAddress)
-    let balanceInSOL: number
+    let balanceInAlpha: number
 
     if (!bypassCache) {
       const cachedBalance = await redisClient.get(cacheKey)
       if (cachedBalance !== null) {
         // Use cached balance
-        balanceInSOL = parseFloat(cachedBalance)
+        balanceInAlpha = parseFloat(cachedBalance)
         logger.debug({
           component: 'PremiumGate',
-          operation: 'validateSOLBalance',
-          message: 'Using cached balance',
+          operation: 'validateAlphaBalance',
+          message: 'Using cached ALPHA balance',
           walletAddress,
-          balance: balanceInSOL,
+          balance: balanceInAlpha,
         })
         
-        const hasAccess = balanceInSOL >= PREMIUM_BALANCE_THRESHOLD
+        const hasAccess = balanceInAlpha >= PREMIUM_BALANCE_THRESHOLD
         const result: PremiumAccessResult = {
           hasAccess,
-          currentBalance: balanceInSOL,
+          currentBalance: balanceInAlpha,
           requiredBalance: PREMIUM_BALANCE_THRESHOLD,
         }
 
         if (!hasAccess) {
-          result.difference = PREMIUM_BALANCE_THRESHOLD - balanceInSOL
+          result.difference = PREMIUM_BALANCE_THRESHOLD - balanceInAlpha
         }
 
         return result
       }
     }
 
-    // Query blockchain for balance
-    const balanceInLamports = await solConnection.getBalance(publicKey)
-    balanceInSOL = balanceInLamports / LAMPORTS_PER_SOL
+    // Get ALPHA token account address
+    const alphaTokenMint = new PublicKey(ALPHA_TOKEN_MINT)
+    const tokenAccount = await getAssociatedTokenAddress(
+      alphaTokenMint,
+      publicKey
+    )
+
+    // Query blockchain for ALPHA token balance
+    balanceInAlpha = 0
+    try {
+      const tokenAccountInfo = await solConnection.getTokenAccountBalance(tokenAccount)
+      if (tokenAccountInfo.value) {
+        // Convert from token units to actual tokens (assuming 6 decimals for ALPHA)
+        balanceInAlpha = parseFloat(tokenAccountInfo.value.amount) / Math.pow(10, tokenAccountInfo.value.decimals)
+      }
+    } catch (error) {
+      // Token account doesn't exist or other error - balance is 0
+      logger.debug({
+        component: 'PremiumGate',
+        operation: 'validateAlphaBalance',
+        message: 'ALPHA token account not found or error fetching balance',
+        walletAddress,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+      balanceInAlpha = 0
+    }
 
     // Cache the balance
-    await redisClient.setex(cacheKey, BALANCE_CACHE_TTL, balanceInSOL.toString())
+    await redisClient.setex(cacheKey, BALANCE_CACHE_TTL, balanceInAlpha.toString())
 
     logger.debug({
       component: 'PremiumGate',
-      operation: 'validateSOLBalance',
-      message: bypassCache ? 'Bypassed cache and queried blockchain' : 'Queried blockchain for balance',
+      operation: 'validateAlphaBalance',
+      message: bypassCache ? 'Bypassed cache and queried blockchain for ALPHA balance' : 'Queried blockchain for ALPHA balance',
       walletAddress,
-      balance: balanceInSOL,
+      balance: balanceInAlpha,
     })
 
-    const hasAccess = balanceInSOL >= PREMIUM_BALANCE_THRESHOLD
+    const hasAccess = balanceInAlpha >= PREMIUM_BALANCE_THRESHOLD
     const result: PremiumAccessResult = {
       hasAccess,
-      currentBalance: balanceInSOL,
+      currentBalance: balanceInAlpha,
       requiredBalance: PREMIUM_BALANCE_THRESHOLD,
     }
 
     if (!hasAccess) {
-      result.difference = PREMIUM_BALANCE_THRESHOLD - balanceInSOL
+      result.difference = PREMIUM_BALANCE_THRESHOLD - balanceInAlpha
     }
 
     return result
   } catch (error) {
     logger.error({
       component: 'PremiumGate',
-      operation: 'validateSOLBalance',
+      operation: 'validateAlphaBalance',
       error: {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
@@ -164,13 +193,13 @@ export async function validateSOLBalance(
       walletAddress,
     })
 
-    throw new Error('Unable to verify balance. Please try again.')
+    throw new Error('Unable to verify ALPHA token balance. Please try again.')
   }
 }
 
 /**
  * Premium gate middleware
- * Validates user SOL balance before allowing access to premium features
+ * Validates user ALPHA token balance before allowing access to premium features
  */
 export const checkPremiumAccess = async (
   req: Request,
@@ -189,13 +218,13 @@ export const checkPremiumAccess = async (
       return
     }
 
-    // Validate SOL balance
+    // Validate ALPHA token balance
     const result = await validateSOLBalance(walletAddress as string)
 
     if (!result.hasAccess) {
       res.status(403).json({
         success: false,
-        message: `Premium access required. Minimum balance: ${PREMIUM_BALANCE_THRESHOLD} SOL`,
+        message: `Premium access required. Minimum balance: ${PREMIUM_BALANCE_THRESHOLD} ALPHA tokens`,
         data: {
           currentBalance: result.currentBalance,
           requiredBalance: result.requiredBalance,
@@ -221,14 +250,14 @@ export const checkPremiumAccess = async (
 
     res.status(503).json({
       success: false,
-      message: 'Unable to verify balance. Please try again.',
+      message: 'Unable to verify ALPHA token balance. Please try again.',
     })
   }
 }
 
 /**
  * Premium gate middleware for authenticated routes
- * Fetches user's wallet address from database and validates SOL balance
+ * Fetches user's wallet address from database and validates ALPHA token balance
  * Must be used after authenticate middleware
  */
 export const premiumGate = async (
@@ -262,13 +291,13 @@ export const premiumGate = async (
     // Use walletAddressOriginal if available (correct case), otherwise use walletAddress
     const walletForCheck = user.walletAddressOriginal || user.walletAddress
 
-    // Validate SOL balance
+    // Validate ALPHA token balance
     const result = await validateSOLBalance(walletForCheck)
 
     if (!result.hasAccess) {
       res.status(403).json({
         success: false,
-        message: `Premium access required. Minimum balance: ${PREMIUM_BALANCE_THRESHOLD} SOL`,
+        message: `Premium access required. Minimum balance: ${PREMIUM_BALANCE_THRESHOLD} ALPHA tokens`,
         data: {
           currentBalance: result.currentBalance,
           requiredBalance: result.requiredBalance,
@@ -287,7 +316,7 @@ export const premiumGate = async (
       userId,
       walletAddress: user.walletAddress,
       hasAccess: result.hasAccess,
-      message: 'Premium access validated',
+      message: 'Premium access validated with ALPHA tokens',
     })
 
     next()
@@ -303,7 +332,7 @@ export const premiumGate = async (
 
     res.status(503).json({
       success: false,
-      message: 'Unable to verify balance. Please try again.',
+      message: 'Unable to verify ALPHA token balance. Please try again.',
     })
   }
 }

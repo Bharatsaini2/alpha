@@ -1,120 +1,81 @@
-/**
- * Script to disconnect Telegram account from database
- * Run this with: node disconnect-telegram.js YOUR_EMAIL_OR_WALLET_ADDRESS
- */
-
-require('dotenv').config();
 const mongoose = require('mongoose');
+require('dotenv').config();
 
 // Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('✅ Connected to MongoDB');
-  } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
-  }
-};
+mongoose.connect(process.env.MONGO_URI);
 
-// User schema (simplified)
+// User model (simplified)
 const userSchema = new mongoose.Schema({
-  email: String,
   walletAddress: String,
+  walletAddressOriginal: String,
   telegramChatId: String,
-  telegramLinkToken: String,
-  telegramLinkTokenExpiry: Date,
-}, { collection: 'users', strict: false }); // Allow extra fields
+  email: String,
+  createdAt: Date,
+}, { collection: 'users' });
 
 const User = mongoose.model('User', userSchema);
 
-// Main function
-const disconnectTelegram = async (identifier) => {
+async function disconnectTelegram() {
   try {
-    await connectDB();
-
-    console.log('🔍 Searching for user with:', identifier);
-
-    // Find user by email first
-    let user = await User.findOne({ email: identifier });
-
-    // If not found by email, try wallet address (case insensitive)
-    if (!user) {
-      user = await User.findOne({ 
-        walletAddress: { $regex: new RegExp(`^${identifier}$`, 'i') }
-      });
-    }
-
-    // If still not found, try any field that might contain the identifier
-    if (!user) {
-      user = await User.findOne({
-        $or: [
-          { email: { $regex: new RegExp(identifier, 'i') } },
-          { walletAddress: { $regex: new RegExp(identifier, 'i') } }
-        ]
-      });
-    }
-
-    if (!user) {
-      console.log('❌ User not found with identifier:', identifier);
-      console.log('\n💡 Let me search by email instead...');
-      
-      // Try to find any user with telegram connected to debug
-      const anyUser = await User.findOne({ email: { $exists: true } }).limit(1);
-      if (anyUser) {
-        console.log('📋 Sample user structure:', {
-          email: anyUser.email,
-          walletAddress: anyUser.walletAddress,
-          hasWallet: !!anyUser.walletAddress,
-          walletType: typeof anyUser.walletAddress
-        });
-      }
-      
-      process.exit(1);
-    }
-
-    console.log('📋 Found user:', {
-      _id: user._id,
-      email: user.email,
-      walletAddress: user.walletAddress,
-      telegramChatId: user.telegramChatId ? '✅ Connected' : '❌ Not connected'
-    });
-
-    if (!user.telegramChatId) {
-      console.log('ℹ️  Telegram is already disconnected');
-      process.exit(0);
-    }
-
-    // Clear Telegram fields
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $unset: {
-          telegramChatId: 1,
-          telegramLinkToken: 1,
-          telegramLinkTokenExpiry: 1
-        }
-      }
-    );
-
-    console.log('✅ Telegram account disconnected successfully!');
-    console.log('ℹ️  You can now reconnect with a fresh link');
+    console.log('🔍 Disconnecting Telegram from email account...\n');
     
-    process.exit(0);
+    // Find the user with the email account
+    const targetEmail = 'test@alphablock.ai';
+    const targetChatId = '1831671028';
+    
+    const user = await User.findOne({ 
+      email: targetEmail,
+      telegramChatId: targetChatId
+    });
+    
+    if (user) {
+      console.log('✅ Found email account with Telegram connection:');
+      console.log('📧 Email:', user.email);
+      console.log('💰 Wallet:', user.walletAddress || 'Not set');
+      console.log('📱 Telegram Chat ID:', user.telegramChatId);
+      
+      // Remove the telegram connection
+      const result = await User.updateOne(
+        { _id: user._id },
+        { 
+          $unset: { 
+            telegramChatId: 1 
+          } 
+        }
+      );
+      
+      if (result.modifiedCount > 0) {
+        console.log('✅ Successfully disconnected Telegram from email account!');
+        console.log('🎉 Your Telegram is now free to connect to a new wallet');
+        console.log('\n📝 Next steps:');
+        console.log('1. Go to your website');
+        console.log('2. Connect your new wallet');
+        console.log('3. Click "Connect Telegram" to link to new wallet');
+      } else {
+        console.log('❌ Failed to disconnect Telegram');
+      }
+    } else {
+      console.log('❌ Email account with Telegram connection not found');
+      
+      // Let's check what we have
+      const emailUser = await User.findOne({ email: targetEmail });
+      const chatUser = await User.findOne({ telegramChatId: targetChatId });
+      
+      if (emailUser) {
+        console.log('📧 Found email account but no Telegram connection');
+      }
+      if (chatUser) {
+        console.log('📱 Found Telegram chat ID but different account');
+        console.log('   Email:', chatUser.email || 'Not set');
+        console.log('   Wallet:', chatUser.walletAddress || 'Not set');
+      }
+    }
+    
   } catch (error) {
-    console.error('❌ Error:', error);
-    process.exit(1);
+    console.error('❌ Error:', error.message);
+  } finally {
+    mongoose.connection.close();
   }
-};
-
-// Get identifier from command line
-const identifier = process.argv[2];
-
-if (!identifier) {
-  console.log('❌ Usage: node disconnect-telegram.js YOUR_EMAIL_OR_WALLET_ADDRESS');
-  console.log('Example: node disconnect-telegram.js user@example.com');
-  console.log('Example: node disconnect-telegram.js 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU');
-  process.exit(1);
 }
 
-disconnectTelegram(identifier);
+disconnectTelegram();

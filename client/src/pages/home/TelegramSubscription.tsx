@@ -40,10 +40,60 @@ function TelegramSubscription() {
     const [generatingLink, setGeneratingLink] = useState(false);
     const [checkingBalance, setCheckingBalance] = useState(false);
     const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+    const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
 
     const toggleAccordion = (id: string) => {
         setOpenId(openId === id ? null : id);
     };
+
+    // Check for Telegram connection status updates
+    const checkTelegramConnection = async () => {
+        try {
+            const response = await api.get('/auth/me');
+            if (response.data.success && response.data.user) {
+                const updatedUser = response.data.user;
+                // If user now has telegramChatId but didn't before, update the auth context
+                if (updatedUser.telegramChatId && !user?.telegramChatId) {
+                    // Force a refresh of user data in auth context
+                    window.location.reload();
+                }
+            }
+        } catch (error) {
+            console.error('Error checking Telegram connection:', error);
+        }
+    };
+
+    // Start polling for connection status when link token is generated
+    useEffect(() => {
+        if (linkToken && !user?.telegramChatId) {
+            // Start checking every 3 seconds for connection
+            const interval = setInterval(checkTelegramConnection, 3000);
+            setConnectionCheckInterval(interval);
+            
+            // Stop checking after 10 minutes (when token expires)
+            setTimeout(() => {
+                if (interval) {
+                    clearInterval(interval);
+                    setConnectionCheckInterval(null);
+                }
+            }, 10 * 60 * 1000);
+            
+            return () => {
+                if (interval) {
+                    clearInterval(interval);
+                }
+            };
+        }
+    }, [linkToken, user?.telegramChatId]);
+
+    // Cleanup interval on unmount
+    useEffect(() => {
+        return () => {
+            if (connectionCheckInterval) {
+                clearInterval(connectionCheckInterval);
+            }
+        };
+    }, [connectionCheckInterval]);
 
     const checkPremiumAccess = async (showToastOnError = false, forceRefresh = false) => {
         try {
@@ -58,7 +108,7 @@ function TelegramSubscription() {
                 if (!response.data.data.hasAccess && showToastOnError) {
                     const difference = response.data.data.difference || 0;
                     showToast(
-                        `Premium access required. You need ${difference.toFixed(4)} more SOL.`,
+                        `Premium access required. You need ${difference.toFixed(2)} more ALPHA tokens.`,
                         'error'
                     );
                 }
@@ -186,12 +236,12 @@ function TelegramSubscription() {
 
     const getTelegramDeepLink = () => {
         if (!linkToken) return '';
-        // Use the deepLink from the API response if available, otherwise fallback to dev bot
+        // Use the deepLink from the API response if available, otherwise fallback to production bot
         const response = JSON.parse(localStorage.getItem('telegramLinkResponse') || '{}');
         if (response.data?.deepLink) {
             return response.data.deepLink;
         }
-        return `https://t.me/alphabotdevbot?start=${linkToken}`;
+        return `https://t.me/AlphaBlockAIbot?start=${linkToken}`;
     };
 
     const formatConfig = (config: AlertConfig): string => {
