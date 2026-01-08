@@ -1,22 +1,52 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useCallback, useRef } from "react"
-import { Filter, ChevronDown, X, ArrowRight, ExternalLink } from "lucide-react"
 import { io } from "socket.io-client"
 import { useNavigate } from "react-router-dom"
-
-import GridLoader from "../../utils/GridLoader"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { IoMdTrendingUp } from "react-icons/io"
+import { HiChevronUpDown } from "react-icons/hi2"
+import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch } from "@fortawesome/free-solid-svg-icons"
+import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import { useToast } from "../../components/ui/Toast"
-
 import DefaultTokenImage from "../../assets/default_token.svg"
-import Twitter from "../../assets/twitter.svg"
-// import TwitterVerified from "../../assets/twitter_verified.svg"
-import TwitterVerified from "../../assets/Twitter_Verified_Badge.svg"
 import axios from "axios"
-import KolFilterModal from "../../components/KolFilterModal"
-import TokenizedSearchInputKol from "../../components/TokenizedSearchInputKol"
+import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
+import RightSidebarNew from "../home/RightSidebarNew"
+import { faCopy } from "@fortawesome/free-regular-svg-icons";
+import { RiFileCopyLine } from "react-icons/ri";
+
+import SwapModal from "../../components/swap/SwapModal"
+import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
+import { useWalletConnection } from "../../hooks/useWalletConnection"
+import { useAuth } from "../../contexts/AuthContext"
+
+const hotnessOptions = [
+  { label: "All", value: null },
+  { label: "High (8-10)", value: "high" },
+  { label: "Medium (5-7)", value: "medium" },
+  { label: "Low (1-4)", value: "low" }
+]
+
+const amountOptions = [
+  { label: "All", value: null },
+  { label: ">$1,000", value: "1000" },
+  { label: ">$2,500", value: "2500" },
+  { label: ">$5,000", value: "5000" },
+  { label: ">$10,000", value: "10000" }
+]
+
+const tagOptions = [
+  "SMART MONEY",
+  "HEAVY ACCUMULATOR",
+  "SNIPER",
+  "FLIPPER",
+  "COORDINATED GROUP",
+  "DORMANT WHALE",
+  "KOL",
+]
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:9090", {
   transports: ["websocket"],
@@ -41,29 +71,13 @@ const getTimeAgo = (timestamp: string) => {
   }
 }
 
-const TimeAgo = ({ timestamp }: { timestamp: string }) => {
-  const [timeAgo, setTimeAgo] = useState(getTimeAgo(timestamp))
-
-  useEffect(() => {
-    setTimeAgo(getTimeAgo(timestamp))
-
-    const interval = setInterval(() => {
-      setTimeAgo(getTimeAgo(timestamp))
-    }, 60000) // Updates every 1 minute
-
-    return () => clearInterval(interval)
-  }, [timestamp])
-
-  return <span className="text-[#06DF73]">{timeAgo}</span>
-}
-
-// Updated fetch function to use your actual API with server-side filtering
+// Updated fetch function to use KOL/Influencer API
 const fetchPaginatedWhaleTransactions = async (
   page: number,
   limit: number,
   filters: {
     searchQuery?: string
-    searchType?: "kol" | "coin" | "all" // New parameter for search type
+    searchType?: "kol" | "coin" | "all" | null
     hotness?: string | null
     transactionType?: string | null
     tags?: string[]
@@ -80,12 +94,8 @@ const fetchPaginatedWhaleTransactions = async (
       limit: limit.toString(),
     })
 
-    // Add filters to query params for server-side filtering
     if (filters.searchQuery && filters.searchQuery.trim()) {
-      // Send the search query as-is to backend, backend will handle @ symbol
       queryParams.append("search", filters.searchQuery.trim())
-
-      // Send search type if specified
       if (filters.searchType) {
         queryParams.append("searchType", filters.searchType)
       }
@@ -102,8 +112,6 @@ const fetchPaginatedWhaleTransactions = async (
     if (filters.tags && filters.tags.length > 0) {
       queryParams.append("tags", filters.tags.join(","))
     }
-
-    // NEW FILTERS - Age and Market Cap
     if (filters.ageMin) {
       queryParams.append("ageMin", filters.ageMin)
     }
@@ -117,6 +125,7 @@ const fetchPaginatedWhaleTransactions = async (
       queryParams.append("marketCapMax", filters.marketCapMax)
     }
 
+    // Updated endpoint for KOL Feed
     const response = await axios.get(
       `${BASE_URL}/influencer/influencer-whale-transactions?${queryParams}`
     )
@@ -126,7 +135,6 @@ const fetchPaginatedWhaleTransactions = async (
 
     const data = response.data
 
-    // Transform the response to match expected format
     const transformedData = {
       transactions: expandTransactions(data.transactions || [], filters.amount),
       totalCount: data.total || 0,
@@ -134,7 +142,7 @@ const fetchPaginatedWhaleTransactions = async (
       currentPage: data.page || page,
       hasNextPage: data.page < data.totalPages,
       hasPrevPage: data.page > 1,
-      queryTime: data.queryTime || 0, // Add query time for monitoring
+      queryTime: data.queryTime || 0,
     }
 
     return transformedData
@@ -160,11 +168,7 @@ const expandTransactions = (
   const expandedTransactions: any[] = []
 
   transactions.forEach((tx) => {
-    // Calculate correct token age based on transaction type
     const getCorrectTokenAge = (transaction: any) => {
-      // For buy transactions, use tokenOutAge (token being bought)
-      // For sell transactions, use tokenInAge (token being sold)
-      // For both transactions, we'll use tokenOutAge for buy and tokenInAge for sell
       if (transaction.type === "buy") {
         return transaction.tokenOutAge !== null &&
           transaction.tokenOutAge !== undefined
@@ -176,7 +180,6 @@ const expandTransactions = (
           ? formatAge(transaction.tokenInAge)
           : "Unknown"
       } else {
-        // Fallback to original age for backward compatibility
         return transaction.age !== null && transaction.age !== undefined
           ? formatAge(transaction.age)
           : "Unknown"
@@ -189,14 +192,11 @@ const expandTransactions = (
     if (tx.type === "both" && tx.bothType?.[0]) {
       const bothType = tx.bothType[0]
 
-      // Add buy transaction if it exists and meets amount threshold
       if (bothType.buyType) {
         const buyAmount = parseFloat(tx.amount?.buyAmount || "0")
         const threshold = amountThreshold ? parseFloat(amountThreshold) : 0
 
-        // Only add if no threshold is set or amount meets threshold
         if (!amountThreshold || buyAmount >= threshold) {
-          // For buy part of "both" transaction, use tokenOutAge
           const buyAge =
             tx.tokenOutAge !== null && tx.tokenOutAge !== undefined
               ? formatAge(tx.tokenOutAge)
@@ -205,21 +205,18 @@ const expandTransactions = (
           expandedTransactions.push({
             ...tx,
             type: "buy",
-            _id: `${tx._id}_buy`, // Unique ID for buy transaction
-            age: buyAge, // Use correct token age for buy
+            _id: `${tx._id}_buy`,
+            age: buyAge,
             timestamp,
           })
         }
       }
 
-      // Add sell transaction if it exists and meets amount threshold
       if (bothType.sellType) {
         const sellAmount = parseFloat(tx.amount?.sellAmount || "0")
         const threshold = amountThreshold ? parseFloat(amountThreshold) : 0
 
-        // Only add if no threshold is set or amount meets threshold
         if (!amountThreshold || sellAmount >= threshold) {
-          // For sell part of "both" transaction, use tokenInAge
           const sellAge =
             tx.tokenInAge !== null && tx.tokenInAge !== undefined
               ? formatAge(tx.tokenInAge)
@@ -228,17 +225,16 @@ const expandTransactions = (
           expandedTransactions.push({
             ...tx,
             type: "sell",
-            _id: `${tx._id}_sell`, // Unique ID for sell transaction
-            age: sellAge, // Use correct token age for sell
+            _id: `${tx._id}_sell`,
+            age: sellAge,
             timestamp,
           })
         }
       }
     } else {
-      // Regular buy or sell transaction
       expandedTransactions.push({
         ...tx,
-        age, // Add calculated age
+        age,
         timestamp,
       })
     }
@@ -249,91 +245,18 @@ const expandTransactions = (
 
 const KOLFeedPage = () => {
   const [activeFilter, setActiveFilter] = useState("all")
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
-  const [hotnessOpen, setHotnessOpen] = useState(false)
-  const [amountOpen, setAmountOpen] = useState(false)
-  const [customAmount, setCustomAmount] = useState("")
-  const [showCustomAmountInput, setShowCustomAmountInput] = useState(false)
-  const [isOpen, setIsOpen] = useState(false)
-
-  const [filtersPopupOpen, setFiltersPopupOpen] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set())
-  const { showToast, ToastContainer } = useToast()
+  const [isOpen, setIsOpen] = useState(false)
+  const [quickBuyAmount, setQuickBuyAmount] = useState(() => loadQuickBuyAmount() || "0")
+  const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
+  const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
+  const { showToast } = useToast()
+  const { wallet } = useWalletConnection()
+  const { user } = useAuth()
   const navigate = useNavigate()
-  const [clearSearchTrigger, setClearSearchTrigger] = useState(0)
-
-  const filters = [
-    { id: "all", label: "All" },
-    { id: "buy", label: "Buy" },
-    { id: "sell", label: "Sell" },
-  ]
-
-  const hotnessOptions = ["High (8-10)", "Medium (5-7)", "Low (1-4)"]
-
-  const amountOptions = [">$1,000", ">$2,500", ">$5,000", ">$10,000"]
-
-  // Handle tokenized search (for TokenizedSearchInputKol)
-  const handleUnifiedSearch = (searchData: {
-    searchQuery: string
-    searchType: "coin" | "kol" | "all"
-    tokens: Array<{ value: string; type: string }>
-    displayQuery?: string
-  }) => {
-    const newFilters = {
-      ...activeFilters,
-      searchQuery: searchData.searchQuery, // Use address/username for backend search
-      searchType: searchData.searchType,
-      displayQuery: searchData.displayQuery || searchData.searchQuery, // Use symbol/name for display
-    }
-
-    handleFilterChange(newFilters)
-
-    // Reset pagination and fetch new data
-    setCurrentPage(1)
-    setTransactions([])
-    fetchTransactions(1, itemsPerPage, newFilters, false)
-  }
-
-  const handleTransactionInfoAll = (
-    signature: string,
-    transactionType: string
-  ) => {
-    navigate(
-      `/transaction/${signature}?type=kol&transaction=${transactionType}`
-    )
-  }
-
-  const handleCopyTokenAddress = async (
-    tokenAddress: string,
-    _transactionId: string
-  ) => {
-    try {
-      // Try modern clipboard API first
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(tokenAddress)
-      } else {
-        // Fallback for older browsers or mobile devices
-        const textArea = document.createElement("textarea")
-        textArea.value = tokenAddress
-        textArea.style.position = "fixed"
-        textArea.style.left = "-999999px"
-        textArea.style.top = "-999999px"
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        document.execCommand("copy")
-        document.body.removeChild(textArea)
-      }
-
-      showToast("Address copied to clipboard!", "success")
-
-      // Reset the copied state after 2 seconds
-      setTimeout(() => { }, 2000)
-    } catch (error) {
-      console.error("Failed to copy token address:", error)
-      showToast("Failed to copy address", "error")
-    }
-  }
 
   const [transactions, setTransactions] = useState<any[]>([])
   const [isAllTxLoading, setIsAllTxLoading] = useState(false)
@@ -345,15 +268,11 @@ const KOLFeedPage = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // WebSocket state
-  const [newTransactionsCount, setNewTransactionsCount] = useState(0)
-  const [hasNewTransactions, setHasNewTransactions] = useState(false)
+  const [, setNewTransactionsCount] = useState(0)
+  const [, setHasNewTransactions] = useState(false)
+  const [_pendingLiveTransactions, setPendingLiveTransactions] = useState<any[]>([])
 
-  // Separate state for live transactions that don't match current filters
-  const [pendingLiveTransactions, setPendingLiveTransactions] = useState<any[]>(
-    []
-  )
-
-  // Load filters from localStorage on mount
+  // Filters state - using KOL specific key
   const [activeFilters, setActiveFilters] = useState(() => {
     const savedFilters = localStorage.getItem("kolHomePageFilters")
     if (savedFilters) {
@@ -388,7 +307,6 @@ const KOLFeedPage = () => {
     }
   })
 
-  // Save filters to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem("kolHomePageFilters", JSON.stringify(activeFilters))
   }, [activeFilters])
@@ -396,56 +314,53 @@ const KOLFeedPage = () => {
   const activeFiltersRef = useRef(activeFilters)
   activeFiltersRef.current = activeFilters
 
-  // Client-side filter matching function that mirrors backend logic for KOL transactions
+  // Client-side filter matching function - Updated for KOL
   const doesTransactionMatchFilters = useCallback(
     (transaction: any, filters: any) => {
-      // Search query filter
       if (filters.searchQuery && filters.searchQuery.trim()) {
-        const searchQuery = filters.searchQuery.trim().toLowerCase()
+        const query = filters.searchQuery.trim().toLowerCase()
         const tokenInSymbol = transaction.tokenInSymbol?.toLowerCase() || ""
         const tokenOutSymbol = transaction.tokenOutSymbol?.toLowerCase() || ""
         const tokenInAddress = transaction.tokenInAddress?.toLowerCase() || ""
         const tokenOutAddress = transaction.tokenOutAddress?.toLowerCase() || ""
+
+        // Added influencer checks
         const influencerName = transaction.influencerName?.toLowerCase() || ""
-        const influencerUsername =
-          transaction.influencerUsername?.toLowerCase() || ""
+        const influencerUsername = transaction.influencerUsername?.toLowerCase() || ""
 
         if (
-          !tokenInSymbol.includes(searchQuery) &&
-          !tokenOutSymbol.includes(searchQuery) &&
-          !tokenInAddress.includes(searchQuery) &&
-          !tokenOutAddress.includes(searchQuery) &&
-          !influencerName.includes(searchQuery) &&
-          !influencerUsername.includes(searchQuery)
+          !tokenInSymbol.includes(query) &&
+          !tokenOutSymbol.includes(query) &&
+          !tokenInAddress.includes(query) &&
+          !tokenOutAddress.includes(query) &&
+          !influencerName.includes(query) &&
+          !influencerUsername.includes(query)
         ) {
           return false
         }
       }
 
-      // Transaction type filter
       if (filters.transactionType && filters.transactionType !== "all") {
         if (transaction.type !== filters.transactionType) {
           return false
         }
       }
 
-      // Hotness score filter
       if (filters.hotness) {
         const hotnessScore = transaction.hotnessScore || 0
         switch (filters.hotness) {
-          case "High (8-10)":
+          case "high":
             if (hotnessScore < 8 || hotnessScore > 10) return false
             break
-          case "Medium (5-7)":
+          case "medium":
             if (hotnessScore < 5 || hotnessScore > 7) return false
             break
-          case "Low (1-4)":
+          case "low":
             if (hotnessScore < 1 || hotnessScore > 4) return false
             break
         }
       }
 
-      // Tags filter
       if (filters.tags && filters.tags.length > 0) {
         const transactionTags = transaction.whaleLabel || []
         const hasMatchingTag = filters.tags.some((tag: string) =>
@@ -456,41 +371,10 @@ const KOLFeedPage = () => {
         if (!hasMatchingTag) return false
       }
 
-      // Amount filter
       if (filters.amount) {
         const amount = parseFloat(filters.amount.replace(/[>$,\s]/g, ""))
         const transactionAmount = getTransactionAmount(transaction)
         if (transactionAmount < amount) return false
-      }
-
-      // Age filter
-      if (filters.ageMin || filters.ageMax) {
-        const now = new Date()
-        const transactionTime = new Date(transaction.timestamp)
-        const ageInMinutes =
-          (now.getTime() - transactionTime.getTime()) / (1000 * 60)
-
-        if (filters.ageMin && ageInMinutes < parseFloat(filters.ageMin))
-          return false
-        if (filters.ageMax && ageInMinutes > parseFloat(filters.ageMax))
-          return false
-      }
-
-      // Market cap filter
-      if (filters.marketCapMin || filters.marketCapMax) {
-        const marketCap = getMarketCap(transaction)
-        const marketCapInK = marketCap / 1000
-
-        if (
-          filters.marketCapMin &&
-          marketCapInK < parseFloat(filters.marketCapMin)
-        )
-          return false
-        if (
-          filters.marketCapMax &&
-          marketCapInK > parseFloat(filters.marketCapMax)
-        )
-          return false
       }
 
       return true
@@ -498,51 +382,7 @@ const KOLFeedPage = () => {
     []
   )
 
-  // Reset notification state when filters change
-  useEffect(() => {
-    setNewTransactionsCount(0)
-    setHasNewTransactions(false)
-
-    // Check if any pending live transactions now match the new filters
-    if (pendingLiveTransactions.length > 0) {
-      const matchingTransactions = pendingLiveTransactions.filter((tx) =>
-        doesTransactionMatchFilters(tx, activeFilters)
-      )
-
-      if (matchingTransactions.length > 0) {
-        // Add matching transactions to the current list if on page 1
-        if (currentPage === 1) {
-          const expandedTransactions = expandTransactions(
-            matchingTransactions,
-            activeFilters.amount || "10"
-          )
-          setTransactions((prev: any[]) => {
-            const updated = [...expandedTransactions, ...prev]
-            return updated.slice(0, itemsPerPage)
-          })
-          setNewTxIds((prev) => {
-            const updated = new Set(prev)
-            expandedTransactions.forEach((tx: any) => updated.add(tx.id))
-            return updated
-          })
-        }
-
-        // Remove matched transactions from pending list
-        setPendingLiveTransactions((prev) =>
-          prev.filter((tx) => !doesTransactionMatchFilters(tx, activeFilters))
-        )
-      }
-      setNewTransactionsCount((prev) => prev + pendingLiveTransactions.length)
-      setHasNewTransactions(true)
-    }
-  }, [
-    activeFilters,
-    pendingLiveTransactions,
-    currentPage,
-    itemsPerPage,
-    doesTransactionMatchFilters,
-  ])
-
+  // Fetch transactions for infinite scroll
   const fetchTransactions = useCallback(
     async (
       page: number,
@@ -560,14 +400,11 @@ const KOLFeedPage = () => {
         const data = await fetchPaginatedWhaleTransactions(page, limit, filters)
 
         if (isLoadMore) {
-          // Append new transactions for infinite scroll
           setTransactions((prev) => [...prev, ...(data.transactions || [])])
         } else {
-          // Replace transactions for new filters or first load
           setTransactions(data.transactions || [])
         }
 
-        // Calculate hasMore based on total count and current page
         const hasMoreData = page * limit < data.totalCount
         setHasMore(hasMoreData)
         setCurrentPage(page)
@@ -588,54 +425,22 @@ const KOLFeedPage = () => {
     []
   )
 
-  // Initial load of transactions (only on mount)
+  // Initial load
   useEffect(() => {
     fetchTransactions(1, itemsPerPage, activeFilters, false)
-  }, []) // Only run once on mount
-
-  // Cleanup observer on unmount
-  useEffect(() => {
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect()
-      }
-    }
   }, [])
 
+  // Re-fetch when filters change
   useEffect(() => {
-    // Reset infinite scroll state for new filters
     setCurrentPage(1)
     setHasMore(true)
-    // Clear existing transactions to show loading state
     setTransactions([])
-    // Use a small delay to ensure state updates are processed
     const timer = setTimeout(() => {
       fetchTransactions(1, itemsPerPage, activeFiltersRef.current, false)
     }, 100)
 
     return () => clearTimeout(timer)
-  }, [activeFilters, fetchTransactions, itemsPerPage]) // Add dependencies back
-
-  // Memoize the filter change handler
-  const handleFilterChange = useCallback(
-    (filters: {
-      searchQuery: string
-      searchType: "kol" | "coin" | "all" | null
-      hotness: string | null
-      transactionType: string | null
-      tags: string[]
-      amount: string | null
-      // NEW FILTERS
-      ageMin: string | null
-      ageMax: string | null
-      marketCapMin: string | null
-      marketCapMax: string | null
-    }) => {
-      setActiveFilters(filters)
-      // The useEffect will handle resetting state and fetching new data
-    },
-    []
-  )
+  }, [activeFilters, fetchTransactions, itemsPerPage])
 
   // Infinite scroll observer
   const observer = useRef<IntersectionObserver | null>(null)
@@ -658,41 +463,26 @@ const KOLFeedPage = () => {
 
       if (node) observer.current.observe(node)
     },
-    [
-      isLoadingMore,
-      hasMore,
-      currentPage,
-      itemsPerPage,
-      fetchTransactions,
-      isAllTxLoading,
-    ]
+    [isLoadingMore, hasMore, currentPage, itemsPerPage, fetchTransactions, isAllTxLoading]
   )
 
-  // WebSocket event handlers
+  // WebSocket event handlers - Updated for KOL
   useEffect(() => {
     const handleNewTransaction = async (eventData: any) => {
       if (eventData.type === "allInfluencerWhaleTransactions") {
         const transaction = eventData.data
         if (!transaction) return
 
-        // Check if the transaction matches current filters
         const matchesFilters = doesTransactionMatchFilters(
           transaction,
           activeFilters
         )
 
         if (matchesFilters) {
-          // Transaction matches current filters
           if (currentPage === 1) {
-            // Add to filtered list if on page 1
-            const expandedTransactions = expandTransactions(
-              [transaction],
-              activeFilters.amount || "10"
-            )
-
+            const expandedTransactions = expandTransactions([transaction], "200")
             setTransactions((prev: any[]) => {
               const updated = [...expandedTransactions, ...prev]
-              // Keep only the number of items per page
               return updated.slice(0, itemsPerPage)
             })
             setNewTxIds((prev) => {
@@ -701,30 +491,21 @@ const KOLFeedPage = () => {
               return updated
             })
           } else {
-            // Show notification if on other pages
             setNewTransactionsCount((prev) => prev + 1)
             setHasNewTransactions(true)
           }
         } else {
-          // Transaction doesn't match current filters
-          // Add to pending live transactions for potential future matching
           setPendingLiveTransactions((prev) => {
-            // Avoid duplicates
-            const exists = prev.some(
-              (tx) => tx.signature === transaction.signature
-            )
+            const exists = prev.some((tx) => tx.signature === transaction.signature)
             if (exists) return prev
-            return [transaction, ...prev].slice(0, 50) // Keep last 50 pending transactions
+            return [transaction, ...prev].slice(0, 50)
           })
-
-          // Show notification that new transactions are available
           setNewTransactionsCount((prev) => prev + 1)
           setHasNewTransactions(true)
         }
       }
     }
 
-    // Setup WebSocket listeners
     socket.on("newInfluencerWhaleTransaction", handleNewTransaction)
 
     return () => {
@@ -732,51 +513,7 @@ const KOLFeedPage = () => {
     }
   }, [currentPage, itemsPerPage, activeFilters, doesTransactionMatchFilters])
 
-  // Get hotness badge
-  const getHotnessBadge = (score: number) => {
-    return (
-      <div className="flex items-center justify-end space-x-1 md:space-x-2 mb-1 md:mb-2">
-        <span className="text-white opacity-70 text-[6px] md:text-sm font-medium">
-          Hotness Score:
-        </span>
-        <span className="text-white opacity-70 text-[6px] md:text-sm  font-medium">
-          {score}/10
-        </span>
-      </div>
-    )
-  }
-
-  // Add function to handle "Go to latest" button
-  const goToLatestTransactions = () => {
-    setCurrentPage(1)
-    setNewTransactionsCount(0)
-    setHasNewTransactions(false)
-
-    // Clear pending live transactions since we're going to show all transactions
-    setPendingLiveTransactions([])
-
-    const clearedFilters = {
-      searchQuery: "",
-      searchType: null,
-      hotness: null,
-      transactionType: null,
-      tags: [],
-      amount: null,
-      ageMin: null,
-      ageMax: null,
-      marketCapMin: null,
-      marketCapMax: null,
-    }
-    handleFilterChange(clearedFilters)
-    setActiveFilter("all")
-    setShowAdvancedFilters(false)
-    setHotnessOpen(false)
-    setAmountOpen(false)
-    setFiltersPopupOpen(false)
-    setClearSearchTrigger((prev) => prev + 1)
-  }
-
-  // Helper function to get transaction amount
+  // Helper functions
   const getTransactionAmount = (tx: any) => {
     if (tx.type === "buy" && tx.amount?.buyAmount) {
       return tx.amount.buyAmount
@@ -786,7 +523,6 @@ const KOLFeedPage = () => {
     return 0
   }
 
-  // Helper function to get market cap
   const getMarketCap = (tx: any) => {
     if (tx.type === "buy" && tx.marketCap?.buyMarketCap) {
       return tx.marketCap.buyMarketCap
@@ -798,2059 +534,1154 @@ const KOLFeedPage = () => {
     return 0
   }
 
+  const handleTransactionInfoAll = (signature: string, transactiontype: string) => {
+    navigate(`/transaction/${signature}?type=whale&transaction=${transactiontype}`)
+  }
+
+  const handleTransactionInfoNewTab = (signature: string, transactiontype: string) => {
+    const url = `/transaction/${signature}?type=whale&transaction=${transactiontype}`
+    window.open(url, "_blank", "noopener,noreferrer")
+  }
+
+  const handleCopyTokenAddress = async (tokenAddress: string, _transactionId: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(tokenAddress)
+      } else {
+        const textArea = document.createElement("textarea")
+        textArea.value = tokenAddress
+        textArea.style.position = "fixed"
+        textArea.style.left = "-999999px"
+        textArea.style.top = "-999999px"
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textArea)
+      }
+
+      showToast("Address copied to clipboard!", "success")
+    } catch (error) {
+      console.error("Failed to copy token address:", error)
+      showToast("Failed to copy address", "error")
+    }
+  }
+
+  const handleQuickBuy = (tx: any) => {
+    // Validate quick buy amount
+    const validation = validateQuickBuyAmount(quickBuyAmount)
+    if (!validation.isValid) {
+      showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
+      return
+    }
+
+    // Validate wallet connection
+    if (!wallet.connected) {
+      showToast("Please connect your wallet to continue", "error")
+      return
+    }
+
+    // Extract token info from clicked item
+    const tokenInfo = {
+      symbol: tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol,
+      name: tx.type === 'sell' ? tx.transaction.tokenIn.name : tx.transaction.tokenOut.name,
+      address: tx.type === 'sell' ? tx.tokenInAddress : tx.tokenOutAddress,
+      image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
+      decimals: 9, // Default for most Solana tokens
+    }
+
+    // Open SwapModal in 'quickBuy' mode with SOL as input token
+    setSwapTokenInfo(tokenInfo)
+    setIsSwapModalOpen(true)
+  }
+
+  const handleQuickBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setQuickBuyAmount(value)
+
+    // Validate and show error if invalid
+    const validation = validateQuickBuyAmount(value)
+    if (!validation.isValid && value !== '') {
+      setQuickBuyAmountError(validation.error || '')
+    } else {
+      setQuickBuyAmountError('')
+    }
+
+    // Save to session storage if valid
+    if (validation.isValid) {
+      saveQuickBuyAmount(value)
+    }
+  }
+
+  const handleFilterTabChange = (filterType: string) => {
+    setActiveFilter(filterType)
+    const newFilters = {
+      ...activeFilters,
+      transactionType: filterType === "all" ? null : filterType
+    }
+    setActiveFilters(newFilters)
+  }
+
+  const handleFilterUpdate = (key: string, value: any) => {
+    const newFilters = {
+      ...activeFilters,
+      [key]: value
+    }
+    setActiveFilters(newFilters)
+    setOpenDropdown(null)
+  }
+
+  const toggleTag = (tag: string) => {
+    const currentTags = activeFilters.tags || []
+    const newTags = currentTags.includes(tag)
+      ? currentTags.filter((t: string) => t !== tag)
+      : [...currentTags, tag]
+
+    handleFilterUpdate('tags', newTags)
+  }
+
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
+  const quickBuyInputRef = useRef<HTMLInputElement>(null)
+
+  // Extract unique tokens from transactions for autocomplete
+  const uniqueTokenOptions = React.useMemo(() => {
+    const uniqueTokens = new Map();
+
+    transactions.forEach(tx => {
+      // Check both tokenIn (sell) and tokenOut (buy)
+      if (tx.transaction?.tokenIn) {
+        const address = tx.tokenInAddress;
+        if (address && !uniqueTokens.has(address)) {
+          uniqueTokens.set(address, {
+            id: address,
+            titles: tx.transaction.tokenIn.symbol,
+            descriptions: tx.transaction.tokenIn.name || "Unknown Token",
+            images: tx.inTokenURL || DefaultTokenImage
+          });
+        }
+      }
+
+      if (tx.transaction?.tokenOut) {
+        const address = tx.tokenOutAddress;
+        if (address && !uniqueTokens.has(address)) {
+          uniqueTokens.set(address, {
+            id: address,
+            titles: tx.transaction.tokenOut.symbol,
+            descriptions: tx.transaction.tokenOut.name || "Unknown Token",
+            images: tx.outTokenURL || DefaultTokenImage
+          });
+        }
+      }
+    });
+
+    return Array.from(uniqueTokens.values());
+  }, [transactions]);
+
+  const [filteredOptions, setFilteredOptions] = useState<any[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // If there's a search query, apply it as a filter
+    if (searchQuery.trim()) {
+      // Update active filters with the search query
+      setActiveFilters({
+        ...activeFilters,
+        searchQuery: searchQuery.trim(),
+        searchType: 'all'
+      });
+
+      // Clear the input field after searching
+      setSearchQuery("");
+
+      // Close dropdown
+      setShowDropdown(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+
+    if (value.trim() === "") {
+      setFilteredOptions([]);
+      setShowDropdown(false);
+      return;
+    }
+
+    const filtered = uniqueTokenOptions.filter((option) =>
+      option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
+      option.id?.toLowerCase()?.includes(value?.toLowerCase())
+    ).slice(0, 10); // Limit to 10 results
+
+    setFilteredOptions(filtered);
+    setShowDropdown(filtered.length > 0);
+  };
+
+  const handleSelect = (option: any) => {
+    // Apply the selected option as a search filter
+    setActiveFilters({
+      ...activeFilters,
+      searchQuery: option.titles,
+      searchType: 'all'
+    });
+
+    // Clear input and close dropdown
+    setSearchQuery("");
+    setShowDropdown(false);
+  };
+
+  const handleClearInput = () => {
+    setSearchQuery("");
+    setShowDropdown(false);
+  };
+
+  const [triggerOpen, setTriggerOpen] = useState(false);
+  const [walletTypeOpen, setWalletTypeOpen] = useState(false);
+  const [amountOpen, setAmountOpen] = useState(false);
+
+  // const [trigger, setTrigger] = useState("Hotness Score");
+  // const [walletType, setWalletType] = useState("Any Label");
+  const [amount, setAmount] = useState("$1K");
+  const [customAmount, setCustomAmount] = useState("");
+
+  const closeAll = useCallback(() => {
+    setTriggerOpen(false);
+    setWalletTypeOpen(false);
+    setAmountOpen(false);
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("click", closeAll);
+    return () => document.removeEventListener("click", closeAll);
+  }, [closeAll]);
+
+
+  const [walletTypes, setWalletTypes] = useState<string[]>([]);
+
+  const toggleWalletType = (value: string) => {
+    setWalletTypes((prev) =>
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
+    );
+  };
+
+  const [isSaved, setIsSaved] = useState(false);
+
+
+  const [hotness, setHotness] = useState(10);
+
+  // Handle whale alert subscription
+  const handleWhaleAlertConnect = async () => {
+    try {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        showToast("Please log in to connect Telegram alerts", "error")
+        return
+      }
+
+      // Check if Telegram is connected
+      if (!user?.telegramChatId) {
+        showToast("Please connect your Telegram account first from the Telegram Subscription page", "error")
+        return
+      }
+
+      // Check premium access
+      const premiumResponse = await axios.get(
+        `${import.meta.env.VITE_SERVER_URL}/alerts/premium-access`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (!premiumResponse.data.success || !premiumResponse.data.data.hasAccess) {
+        const difference = premiumResponse.data.data.difference || 0
+        showToast(
+          `Insufficient balance. You need ${difference.toFixed(0)} more ALPHA tokens to access this feature.`,
+          "error"
+        )
+        return
+      }
+
+      // Convert amount string to number
+      const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
+
+      // Handle wallet labels
+      // If "All" is selected, send empty array to indicate "accept all transactions"
+      let labelsToSend: string[] = []
+
+      if (walletTypes.includes("All")) {
+        // "All" selected = accept ALL transactions (with or without labels)
+        labelsToSend = []
+      } else if (walletTypes.length > 0) {
+        // Specific labels selected = filter by those labels
+        labelsToSend = walletTypes.filter(label => label !== "All")
+      } else {
+        // No labels selected = default to empty (accept all)
+        labelsToSend = []
+      }
+
+      // Create whale alert subscription
+      const response = await axios.post(
+        `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,
+        {
+          hotnessScoreThreshold: hotness,
+          walletLabels: labelsToSend,
+          minBuyAmountUSD: minBuyAmount,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (response.data.success) {
+        setIsSaved(true)
+        showToast("Whale alert subscription created successfully!", "success")
+        setTimeout(() => setIsSaved(false), 3000)
+      }
+    } catch (error: any) {
+      console.error("Whale alert subscription error:", error)
+      showToast(
+        error.response?.data?.message || "Failed to create whale alert subscription",
+        "error"
+      )
+    }
+  }
+
+
   return (
     <>
-      <div className="space-y-6">
-        {/* Top Section with Trending Coins, Search, and Visualize */}
-
-        <div className="flex items-center justify-between">
-          {/* Tokenized Search Bar */}
-          <div className="flex-1">
-            <TokenizedSearchInputKol
-              key={clearSearchTrigger}
-              onSearch={handleUnifiedSearch}
-              placeholder="Search by KOL name, username, coin name, or contract address."
-              className=""
-              page="kol-feed"
+      <section className="">
+        <div className="row">
+          {/* Right Sidebar - Shows first on mobile, second on desktop */}
+          <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
+            <RightSidebarNew
+              pageType="kol"
+              transactions={transactions}
             />
           </div>
 
-          {/* Visualize Button */}
-          <div className="hidden md:block sparkle-button ml-3 md:ml-4 lg:ml-6">
-            <button
-              className="px-3 md:px-4 lg:px-6 py-2 md:py-3 text-sm md:text-base"
-              onClick={() => setIsOpen(true)}
-            >
-              <span className="spark"></span>
-              <span className="backdrop"></span>
-              <svg
-                className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6"
-                viewBox="0 0 19 19"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                xmlnsXlink="http://www.w3.org/1999/xlink"
-              >
-                <rect
-                  width="19"
-                  height="19"
-                  fill="url(#pattern0_210_2073)"
-                  fillOpacity="0.7"
-                />
-                <defs>
-                  <pattern
-                    id="pattern0_210_2073"
-                    patternContentUnits="objectBoundingBox"
-                    width="1"
-                    height="1"
-                  >
-                    <use xlinkHref="#image0_210_2073" transform="scale(0.02)" />
-                  </pattern>
-                  <image
-                    id="image0_210_2073"
-                    width="50"
-                    height="50"
-                    preserveAspectRatio="none"
-                    xlinkHref="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAEtElEQVR4nNWZa4xdUxTHr6lXRpC2iMcN86EJQqP0A200IUqGSEqEIimTlqEznY5WU/GqR/hG+CCEhKQhCBOhDVNBxKvqA9WkKZpiPCIe4QsqM8z8ZHX+Zyx7zp577p1zzp1Zyc29d++1917/s557nUplChBweWW6E3AI8CswqzKdCehglDoq05mAdwXk1cpUI+BoYP8MfHOAEQEZBGZWphIBxwOfAddOBAi4j/9TR419DwauA44rRPDIoc9IuN3AMmBGMN8CfCuepyYyL+BI4C7gJ+D10kDo8NOc2SANXWUANH+BAzobGArNCzgJeBzY6/Y5q1QgEmQL42mn5Q3gef2/TbyvJeYFnANsBoaDtc0JCMB5EuBn4Ebgq0Cwf4BqEIb/cvP2+2X9Nu3ObwoQCfixBDEnPUDfAxrb4vhmyrSMfgDukG88qLGXmgZCAl7pfCTxjwOloYsC3oeAa2xe/4+Vf5iJzW0WhkS4GcAegVlS59pHte654iTMDuJcYKsEer+OtW3O1M4sVtK48Obkjynue/ocOAa4GHgb+ALYmDi8J+Bht26v+BZViiQ5seWFJ4BfUsLt3cCp4r2f8fQbsDBlz0st5Cq64XxtHXBU3iBOAbanCGdjp0dKkr+BTuBE4BWN/WG1V+SMKrDBRTtkdi8CF4ZVw2TAWLlxvjllkAfsST9igIB7NGZPd2lgik9rbmNkfzPHlcBbwcOyaPYecFkuQIJDZwE9wKcpWjIQV0e0arTDjZ0ArLEAEWR40+abQJeF59wBREDNB750T29ZhO9W8WxyY4mWkJY3KfvPLkX4QMA7HYjUEl0mMyKeRW58ntYOlVq2pwh4uwOxIsLTJRAjAtQSzCc+saY0wSOmYgJ2Rni6AxBHqKhcBRwkHss3Rl9nuXHmDWKtA9Ed4el0IPbxyLETskR6C9AK7NJYeS0jJSokYE+Ep8dduLa7cUucRt+MwYHvgQ/0e2vZmjD6MLR38ax2mhjSt93vF2rdd2ZClhcsFDOeFhQN4gZ3WJIQn/RgAhDmE33iW+vu7Pc6/v1Uovh89EKRIJYrMpmAvcDZwO8ejMbHQGjdUvHsUHlie7Sl7G+ALgE+UTJsKwLECgdipRv3YLaFIFyr9E/3tMdui5GzDNASu3iVAiIAk5hZjMeKvoTKb2TXAiGe3olAiMe6KUlzYt/1tjRS86AWiKTsiIZh8bXKPx4oVOgcQNyUxhPwW3/r5EpZBFxfJ4jejPvOqTFfTbsK5+ET3RmApoIADgWuqPPsDVZFNyp7rC6alCbE91EdZ7foejuQVikUCWL1BHstUBcFrWnNcH67C8/tTQWhyPRsSt1kpfm8GjL0Of6+RmunkTxCbKMa4b8G3bA+g3WVJ0GIzeLYUXOK3Ai31fCJxVYcui6jvW7od82LN5RI4xctNZbr0cSqrCC09jBramfsWw0LwBn69AfdlAGtqZYKogbAfIAw2qutB0SqyeUAqEWRqs+ZVr8zrUHNtaeGY/eue12zQOTi7IxWn0aH1wDRVaTwkw6/7v3F+qkCoqGEqAZ0IvB6vc+7uZbfFE00UqK4/OEp1+jUCNFI0ajo9Q7wo7rgiwuTMLtM1dzK+OlA/wKR9JJKpURKbAAAAABJRU5ErkJggg=="
-                  />
-                </defs>
-              </svg>
-              <span className="text">Visualize</span>
-            </button>
-            <span aria-hidden="true" className="particle-pen">
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <svg
-                className="particle"
-                viewBox="0 0 15 15"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M6.937 3.846L6.937 3.846Z"
-                  fill="black"
-                  stroke="black"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-          </div>
-        </div>
-
-        {hasNewTransactions && (
-          <div className="bg-[#16171C] border border-white/70 rounded-lg p-3 flex items-center justify-between">
-            <span className="text-white/70 text-sm">
-              {newTransactionsCount} new transaction
-              {newTransactionsCount !== 1 ? "s" : ""} available
-            </span>
-            <button
-              onClick={goToLatestTransactions}
-              className="px-3 py-1 bg-white/70 text-black rounded text-sm hover:bg-white/60 transition-colors cursor-pointer"
-            >
-              View Latest
-            </button>
-          </div>
-        )}
-
-        {/* Filter Section */}
-        <div className="mt-4 md:mt-6">
-          <div className="flex flex-col space-y-3 mb-4">
-            {/* Mobile & Tablet Layout */}
-            <div className="lg:hidden">
-              {/* First Row - Main Filters (All, Buy, Sell) */}
-              <div className="flex items-center space-x-2 md:space-x-3 mb-3">
-                <div className="glass-radio-group">
-                  {filters.map((filter) => (
-                    <React.Fragment key={filter.id}>
-                      <input
-                        type="radio"
-                        name="transactionTypeMobile"
-                        id={`glass-${filter.id}`}
-                        checked={activeFilter === filter.id}
-                        onChange={() => {
-                          setActiveFilter(filter.id)
-                          const newFilters = { ...activeFilters }
-                          if (filter.id === "all") {
-                            newFilters.transactionType = null
-                          } else {
-                            newFilters.transactionType = filter.id
-                          }
-                          handleFilterChange(newFilters)
-                          setCurrentPage(1)
-                          setTransactions([])
-                          setHasMore(true)
-                        }}
-                      />
-                      <label
-                        htmlFor={`glass-${filter.id}`}
-                        className="font-semibold"
-                      >
-                        {filter.label}
-                      </label>
-                    </React.Fragment>
-                  ))}
-                  <div
-                    className="glass-glider"
-                    style={{
-                      transform:
-                        activeFilter === "all"
-                          ? "translateX(0%)"
-                          : activeFilter === "buy"
-                            ? "translateX(100%)"
-                            : activeFilter === "sell"
-                              ? "translateX(200%)"
-                              : "translateX(0%)",
-                      background:
-                        activeFilter === "all"
-                          ? "white opacity-60"
-                          : activeFilter === "buy"
-                            ? "#22c55e"
-                            : activeFilter === "sell"
-                              ? "#ef4444"
-                              : "white opacity-60",
-                    }}
-                  ></div>
-                </div>
-                <div className="sparkle-button ml-3 md:ml-4 lg:ml-6">
-                  <button
-                    className="px-3 md:px-4 lg:px-6 py-2 md:py-3 text-sm md:text-base"
-                    onClick={() => setIsOpen(true)}
-                  >
-                    <span className="spark"></span>
-                    <span className="backdrop"></span>
-                    <svg
-                      className="w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6"
-                      viewBox="0 0 19 19"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      xmlnsXlink="http://www.w3.org/1999/xlink"
-                    >
-                      <rect
-                        width="19"
-                        height="19"
-                        fill="url(#pattern0_210_2073_mobile_kol)"
-                        fillOpacity="0.7"
-                      />
-                      <defs>
-                        <pattern
-                          id="pattern0_210_2073_mobile_kol"
-                          patternContentUnits="objectBoundingBox"
-                          width="1"
-                          height="1"
-                        >
-                          <use
-                            xlinkHref="#image0_210_2073_mobile_kol"
-                            transform="scale(0.02)"
-                          />
-                        </pattern>
-                        <image
-                          id="image0_210_2073_mobile_kol"
-                          width="50"
-                          height="50"
-                          preserveAspectRatio="none"
-                          xlinkHref="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAAEtElEQVR4nNWZa4xdUxTHr6lXRpC2iMcN86EJQqP0A200IUqGSEqEIimTlqEznY5WU/GqR/hG+CCEhKQhCBOhDVNBxKvqA9WkKZpiPCIe4QsqM8z8ZHX+Zyx7zp577p1zzp1Zyc29d++1917/s557nUplChBweWW6E3AI8CswqzKdCehglDoq05mAdwXk1cpUI+BoYP8MfHOAEQEZBGZWphIBxwOfAddOBAi4j/9TR419DwauA44rRPDIoc9IuN3AMmBGMN8CfCuepyYyL+BI4C7gJ+D10kDo8NOc2SANXWUANH+BAzobGArNCzgJeBzY6/Y5q1QgEmQL42mn5Q3gef2/TbyvJeYFnANsBoaDtc0JCMB5EuBn4Ebgq0Cwf4BqEIb/cvP2+2X9Nu3ObwoQCfixBDEnPUDfAxrb4vhmyrSMfgDukG88qLGXmgZCAl7pfCTxjwOloYsC3oeAa2xe/4+Vf5iJzW0WhkS4GcAegVlS59pHte654iTMDuJcYKsEer+OtW3O1M4sVtK48Obkjynue/ocOAa4GHgb+ALYmDi8J+Bht26v+BZViiQ5seWFJ4BfUsLt3cCp4r2f8fQbsDBlz0st5Cq64XxtHXBU3iBOAbanCGdjp0dKkr+BTuBE4BWN/WG1V+SMKrDBRTtkdi8CF4ZVw2TAWLlxvjllkAfsST9igIB7NGZPd2lgik9rbmNkfzPHlcBbwcOyaPYecFkuQIJDZwE9wKcpWjIQV0e0arTDjZ0ArLEAEWR40+abQJeF59wBREDNB750T29ZhO9W8WxyY4mWkJY3KfvPLkX4QMA7HYjUEl0mMyKeRW58ntYOlVq2pwh4uwOxIsLTJRAjAtQSzCc+saY0wSOmYgJ2Rni6AxBHqKhcBRwkHss3Rl9nuXHmDWKtA9Ed4el0IPbxyLETskR6C9AK7NJYeS0jJSokYE+Ep8dduLa7cUucRt+MwYHvgQ/0e2vZmjD6MLR38ax2mhjSt93vF2rdd2ZClhcsFDOeFhQN4gZ3WJIQn/RgAhDmE33iW+vu7Pc6/v1Uovh89EKRIJYrMpmAvcDZwO8ejMbHQGjdUvHsUHlie7Sl7G+ALgE+UTJsKwLECgdipRv3YLaFIFyr9E/3tMdui5GzDNASu3iVAiIAk5hZjMeKvoTKb2TXAiGe3olAiMe6KUlzYt/1tjRS86AWiKTsiIZh8bXKPx4oVOgcQNyUxhPwW3/r5EpZBFxfJ4jejPvOqTFfTbsK5+ET3RmApoIADgWuqPPsDVZFNyp7rC6alCbE91EdZ7foejuQVikUCWL1BHstUBcFrWnNcH67C8/tTQWhyPRsSt1kpfm8GjL0Of6+RmunkTxCbKMa4b8G3bA+g3WVJ0GIzeLYUXOK3Ai31fCJxVYcui6jvW7od82LN5RI4xctNZbr0cSqrCC09jBramfsWw0LwBn69AfdlAGtqZYKogbAfIAw2qutB0SqyeUAqEWRqs+ZVr8zrUHNtaeGY/eue12zQOTi7IxWn0aH1wDRVaTwkw6/7v3F+qkCoqGEqAZ0IvB6vc+7uZbfFE00UqK4/OEp1+jUCNFI0ajo9Q7wo7rgiwuTMLtM1dzK+OlA/wKR9JJKpURKbAAAAABJRU5ErkJggg=="
-                        />
-                      </defs>
-                    </svg>
-                    <span className="text">Visualize</span>
-                  </button>
-                  <span aria-hidden="true" className="particle-pen">
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L7.75 1L8.563 3.846C8.77313 4.58114 9.1671 5.25062 9.70774 5.79126C10.2484 6.3319 10.9179 6.72587 11.653 6.936L14.5 7.75L11.654 8.563C10.9189 8.77313 10.2494 9.1671 9.70874 9.70774C9.1681 10.2484 8.77413 10.9179 8.564 11.653L7.75 14.5L6.937 11.654C6.72687 10.9189 6.3329 10.2494 5.79226 9.70874C5.25162 9.1681 4.58214 8.77413 3.847 8.564L1 7.75L3.846 6.937C4.58114 6.72687 5.25062 6.3329 5.79126 5.79226C6.3319 5.25162 6.72587 4.58214 6.936 3.847L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <svg
-                      className="particle"
-                      viewBox="0 0 15 15"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        d="M6.937 3.846L6.937 3.846Z"
-                        fill="black"
-                        stroke="black"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                </div>
+          {/* Transactions Feed Column - Shows second on mobile, first on desktop */}
+          <div className="col-lg-8 order-2 order-lg-1 nw-main-bx">
+            <div className="d-flex align-items-center justify-content-between mb-3 ">
+              <div>
+                <span className="trading-icon-title">Recent transactions</span>
               </div>
+              <div>
+                <a href="javascript:void(0)" className="visualize-btn" onClick={() => setIsOpen(true)}>
+                  VISUALIZE <PiMagicWand />
+                </a>
+              </div>
+            </div>
 
-              {/* Second Row - Dropdown Filters + Filter Icon */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 md:space-x-3">
-                  {/* Hotness Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setHotnessOpen(!hotnessOpen)}
-                      className="flex items-center space-x-2 px-3 md:px-5 py-3 md:py-4 text-white cursor-pointer border border-[#2B2B2D]  rounded-xl transition-all h-12"
-                    >
-                      <span
-                        className={`text-xs md:text-sm font-medium ${hotnessOpen ? "text-white" : "text-gray-400"
-                          } ${hotnessOpen ? "font-bold" : "font-normal"}`}
-                      >
-                        Hotness
-                      </span>
-                      <ChevronDown
-                        className={`w-3 h-3 md:w-4 md:h-4 transition-transform ${hotnessOpen ? "rotate-180" : ""} ${hotnessOpen ? "text-white" : "text-gray-400"
-                          } ${hotnessOpen ? "font-bold" : "font-normal"}`}
-                      />
+            {/* Search and Quick Buy */}
+            <div className="d-flex align-items-center gap-1 mobile-searching-bx">
+              <div className="search-container flex-grow-1" ref={searchRef}>
+                <form className="custom-frm-bx mb-3" onSubmit={handleSearch}>
+                  <input
+                    type="text"
+                    className="form-control pe-5"
+                    placeholder="Search by token name or address..."
+                    value={searchQuery}
+                    onChange={handleChange}
+                    onFocus={() => setShowDropdown(filteredOptions.length > 0)}
+                  />
+
+                  <div className="searching-bx">
+                    <button className="search-btn" type="submit">
+                      <FontAwesomeIcon icon={faSearch} />
                     </button>
-
-                    {hotnessOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-32 md:w-40 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-10">
-                        <div className="text-left text-sm md:text-sm px-3 py-2 text-white">
-                          Filter by Score
-                        </div>
-                        {hotnessOptions.map((option) => (
-                          <button
-                            key={option}
-                            className="w-full px-3 md:px-4 py-2 text-left text-sm md:text-sm text-white hover:text-white/70  transition-all cursor-pointer"
-                            onClick={() => {
-                              setHotnessOpen(false)
-                              const hotnessValue = option.includes("High")
-                                ? "high"
-                                : option.includes("Medium")
-                                  ? "medium"
-                                  : "low"
-                              const newFilters = {
-                                ...activeFilters,
-                                hotness: hotnessValue,
-                              }
-                              handleFilterChange(newFilters)
-                            }}
-                          >
-                            {option}
-                          </button>
-                        ))}
-                      </div>
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        className="clear-input-btn"
+                        onClick={handleClearInput}
+                      >
+                        ×
+                      </button>
                     )}
                   </div>
+                </form>
 
-                  {/* Amount Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setAmountOpen(!amountOpen)}
-                      className="flex items-center space-x-2 px-3 md:px-5 py-3 md:py-4 text-white cursor-pointer border border-[#2B2B2D]  rounded-xl transition-all h-12"
-                    >
-                      <span
-                        className={`text-xs md:text-sm font-medium ${amountOpen ? "text-white" : "text-gray-400"
-                          } ${amountOpen ? "font-bold" : "font-normal"}`}
+                {showDropdown && (
+                  <div className="dropdown-options">
+                    <div className="dropdown-header text-end all-data-clear">
+                      <button className="quick-nw-btn">Clear All</button>
+                    </div>
+                    <ul className="dropdown-scroll">
+                      {filteredOptions.map((item, index) => (
+                        <li
+                          key={index}
+                          className="dropdown-item d-flex align-items-start"
+                          onClick={() => handleSelect(item)}
+                        >
+                          <img src={item?.images} alt="" className="dropdown-img" />
+
+                          <div className="dropdown-content flex-grow-1">
+                            <h6 className="dropdown-title">{item?.titles}</h6>
+                            <p className="dropdown-desc">{item?.descriptions}</p>
+                            <span className="dropdown-id">
+                              <span className="cpy-title">CA:</span>{item?.id}
+                              <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
+                                <FontAwesomeIcon icon={faCopy} />
+                              </a>
+                            </span>
+                          </div>
+
+                          <button
+                            className="dropdown-close"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowDropdown(false);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+
+                  </div>
+
+                )}
+              </div>
+
+              <div className="custom-frm-bx nw-quick-bx mb-3">
+                <button
+                  className="quick-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%' }}
+                  onClick={() => quickBuyInputRef.current?.focus()}
+                >
+                  <img src="/quick-btn.png" alt="" /> quick buy amount
+                  <input
+                    ref={quickBuyInputRef}
+                    type="number"
+                    value={quickBuyAmount}
+                    onChange={handleQuickBuyAmountChange}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="0.5"
+                    min="0"
+                    step="0.1"
+                    style={{
+                      background: 'transparent',
+                      border: quickBuyAmountError ? '1px solid #ef4444' : 'none',
+                      color: '#fff',
+                      width: '60px',
+                      textAlign: 'right',
+                      outline: 'none',
+                      fontSize: '14px',
+                      borderRadius: '4px',
+                      padding: '2px 4px'
+                    }}
+                    title={quickBuyAmountError || ''}
+                  />
+                  <span style={{ color: '#fff', fontSize: '14px' }}>SOL</span>
+                </button>
+                {quickBuyAmountError && (
+                  <div style={{
+                    color: '#ef4444',
+                    fontSize: '11px',
+                    marginTop: '4px',
+                    paddingLeft: '8px'
+                  }}>
+                    {quickBuyAmountError}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div>
+              <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
+                <div>
+                  <ul className="nav nav-tabs custom-tabs" role="tablist">
+                    <li className="nav-item" role="presentation">
+                      <a
+                        className={`nav-link ${activeFilter === 'all' ? 'active' : ''}`}
+                        onClick={() => handleFilterTabChange('all')}
+                        style={{ cursor: 'pointer' }}
                       >
-                        Amount
-                      </span>
-                      <ChevronDown
-                        className={`w-3 h-3 md:w-4 md:h-4 transition-transform ${amountOpen ? "rotate-180" : ""} ${amountOpen ? "text-white" : "text-gray-400"
-                          } ${amountOpen ? "font-bold" : "font-normal"}`}
-                      />
-                    </button>
-
-                    {amountOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-36 md:w-44 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-10">
-                        <div className="text-left text-sm md:text-sm px-3 py-2 text-white">
-                          Filter by Amount
+                        ALL
+                      </a>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <a
+                        className={`nav-link ${activeFilter === 'buy' ? 'active' : ''}`}
+                        onClick={() => handleFilterTabChange('buy')}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        BUY
+                      </a>
+                    </li>
+                    <li className="nav-item" role="presentation">
+                      <a
+                        className={`nav-link ${activeFilter === 'sell' ? 'active' : ''}`}
+                        onClick={() => handleFilterTabChange('sell')}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        SELL
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <ul className="plan-btn-list">
+                    <li onClick={(e) => e.stopPropagation()}>
+                      <a href="javascript:void(0)"
+                        className={`plan-btn ${activeFilters.hotness ? 'active' : ''}`}
+                        onClick={() => setOpenDropdown(openDropdown === 'hotness' ? null : 'hotness')}>
+                        {activeFilters.hotness
+                          ? `HOTNESS: ${hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}`
+                          : 'hotness'} <HiChevronUpDown />
+                      </a>
+                      {openDropdown === 'hotness' && (
+                        <div className="filter-dropdown-menu">
+                          <div className="filter-dropdown-header">Hotness Score</div>
+                          {hotnessOptions.map(opt => (
+                            <button
+                              key={opt.label}
+                              className={`filter-dropdown-item ${activeFilters.hotness === opt.value ? 'active' : ''}`}
+                              onClick={() => handleFilterUpdate('hotness', opt.value)}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
                         </div>
-                        {amountOptions.map((option) => (
+                      )}
+                    </li>
+                    <li onClick={(e) => e.stopPropagation()}>
+                      <a href="javascript:void(0)"
+                        className={`plan-btn ${activeFilters.amount ? 'active' : ''}`}
+                        onClick={() => setOpenDropdown(openDropdown === 'amount' ? null : 'amount')}>
+                        {activeFilters.amount
+                          ? `AMOUNT: ${amountOptions.find(o => o.value === activeFilters.amount)?.label}`
+                          : 'amount'} <HiChevronUpDown />
+                      </a>
+                      {openDropdown === 'amount' && (
+                        <div className="filter-dropdown-menu">
+                          <div className="filter-dropdown-header">Min Amount</div>
+                          {amountOptions.map(opt => (
+                            <button
+                              key={opt.label}
+                              className={`filter-dropdown-item ${activeFilters.amount === opt.value ? 'active' : ''}`}
+                              onClick={() => handleFilterUpdate('amount', opt.value)}
+                            >
+                              {opt.label}
+
+                            </button>
+
+
+                          ))}
+                          <div className="custm-input-filed">
+                            <input type="text" className="custom-amount-frm" placeholder="Custom..." />
+                          </div>
+
+                          <div className="quick-nw-btn">
+                            <button>Submit</button>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                    <li onClick={(e) => e.stopPropagation()}>
+                      <a href="javascript:void(0)"
+                        className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                        onClick={() => setOpenDropdown(openDropdown === 'tags' ? null : 'tags')}>
+                        {activeFilters.tags.length > 0
+                          ? `TAGS: ${activeFilters.tags.length}`
+                          : 'tAGS'} <HiChevronUpDown />
+                      </a>
+                      {openDropdown === 'tags' && (
+                        <div className="filter-dropdown-menu">
+                          <div className="filter-dropdown-header">Whale Tags</div>
                           <button
-                            key={option}
-                            className="w-full px-3 md:px-4 py-2 text-left text-sm md:text-sm text-white hover:text-white/70  transition-all cursor-pointer"
-                            onClick={() => {
-                              setAmountOpen(false)
-                              const amountValue = option
-                                .replace(">", "")
-                                .replace("$", "")
-                                .replace(",", "")
-                              const newFilters = {
-                                ...activeFilters,
-                                amount: amountValue,
-                              }
-                              handleFilterChange(newFilters)
-                            }}
+                            className={`filter-dropdown-item ${activeFilters.tags.length === 0 ? 'active' : ''}`}
+                            onClick={() => handleFilterUpdate('tags', [])}
                           >
-                            {option}
+                            All
                           </button>
-                        ))}
-                        <div className="border-t border-[#2B2B2D]">
-                          <button
-                            className="w-full px-3 md:px-4 py-2 text-left text-sm md:text-sm text-white hover:text-white/70 transition-all cursor-pointer"
-                            onClick={() => {
-                              setShowCustomAmountInput(!showCustomAmountInput)
-                            }}
-                          >
-                            Custom Amount
-                          </button>
-                          {showCustomAmountInput && (
-                            <div className="px-3 py-2">
-                              <input
-                                type="number"
-                                placeholder="Enter amount"
-                                value={customAmount}
-                                onChange={(e) =>
-                                  setCustomAmount(e.target.value)
-                                }
-                                className="w-full px-2 py-1 bg-[#16171C] border border-[#2B2B2D] rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:border-white"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && customAmount) {
-                                    const newFilters = {
-                                      ...activeFilters,
-                                      amount: customAmount,
-                                    }
-                                    handleFilterChange(newFilters)
-                                    setAmountOpen(false)
-                                    setShowCustomAmountInput(false)
-                                    setCustomAmount("")
-                                  }
-                                }}
-                              />
-                              <button
-                                className="w-full mt-2 px-2 py-1 bg-white/10 text-white text-xs rounded hover:bg-white/20 transition-all"
-                                onClick={() => {
-                                  if (customAmount) {
-                                    const newFilters = {
-                                      ...activeFilters,
-                                      amount: customAmount,
-                                    }
-                                    handleFilterChange(newFilters)
-                                    setAmountOpen(false)
-                                    setShowCustomAmountInput(false)
-                                    setCustomAmount("")
-                                  }
+                          {tagOptions.map(tag => (
+                            <button
+                              key={tag}
+                              className={`filter-dropdown-item ${activeFilters.tags.includes(tag) ? 'active' : ''}`}
+                              onClick={() => toggleTag(tag)}
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </li>
+
+                    <li onClick={(e) => e.stopPropagation()}>
+                      <a href="javascript:void(0)"
+                        className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                        onClick={() => setOpenDropdown(openDropdown === 'subs' ? null : 'subs')}>
+                        {activeFilters.tags.length > 0
+                          ? `Subscription: ${activeFilters.tags.length}`
+                          : 'Subscription'} <HiChevronUpDown />
+                      </a>
+                      {openDropdown === 'subs' && (
+                        <div className="filter-dropdown-menu w-sm">
+                          <div className="parent-dropdown-content">
+                            <div className="sub-drop-header">
+                              <div className="sub-drop-content">
+                                <h6>System Config</h6>
+                                <h4>Whale Feed Alerts</h4>
+                              </div>
+
+                              <div>
+                                <button
+                                  className="paper-plan-connect-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    // This button is just for show - displays connection status
+                                  }}
+                                  disabled
+                                >
+                                  <FontAwesomeIcon icon={faPaperPlane} /> {user?.telegramChatId ? 'Connected' : 'Connect'}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="custom-frm-bx position-relative">
+                              <label className="nw-label">Trigger Condition</label>
+                              <div
+                                className="form-select cursor-pointer text-start"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setTriggerOpen(!triggerOpen);
                                 }}
                               >
-                                Apply
-                              </button>
+                                Hotness Score ({hotness})
+                              </div>
+
+                              {triggerOpen && (
+                                <div
+                                  className="subscription-dropdown-menu show w-100 p-3" onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className=" text-center mt-2">
+                                    <div>
+                                      <span className="range-value">{hotness}</span>
+                                    </div>
+
+                                    <div className="range-title">
+                                      <h6 className="mb-0 text-sm">Sensitivity TheresHold</h6>
+                                    </div>
+
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="10"
+                                      value={hotness}
+                                      onChange={(e) => setHotness(Number(e.target.value))}
+                                      className="hotness-range"
+                                      style={{ "--range-progress": `${(hotness / 10) * 100}%` } as React.CSSProperties}
+                                    />
+
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
-                {/* Right Filter Button */}
-                <div className="relative">
-                  <button
-                    onClick={() => setFiltersPopupOpen(!filtersPopupOpen)}
-                    className="p-3 md:p-4 bg-[#1A1A1E] hover:bg-[#2A2A2E] border border-[#3B3B3D] rounded-xl transition-all cursor-pointer"
-                  >
-                    <Filter className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
-                  </button>
 
-                  {filtersPopupOpen && (
-                    <div className="absolute top-full right-0 mt-2 w-80 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-10 p-4">
-                      <div className="space-y-4">
-                        {/* Age Filter */}
-                        <div>
-                          <label className="block text-white text-xs font-medium mb-2">
-                            Age (minutes)
-                          </label>
-                          <div className="flex space-x-2">
-                            <div className="flex-1 relative">
-                              <input
-                                type="number"
-                                placeholder="Min"
-                                value={activeFilters.ageMin || ""}
-                                onChange={(e) => {
-                                  const newFilters = {
-                                    ...activeFilters,
-                                    ageMin: e.target.value,
-                                  }
-                                  handleFilterChange(newFilters)
+
+
+                            <div className="custom-frm-bx position-relative">
+                              <label className="nw-label">Wallet Filter</label>
+
+                              <div
+                                className="form-select cursor-pointer text-start"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setWalletTypeOpen(!walletTypeOpen);
                                 }}
-                                className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400  text-xs"
-                              />
-                              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                                (m)
-                              </span>
+                              >
+                                {walletTypes.length > 0 ? walletTypes.join(", ") : "Select Wallet Type"}
+                              </div>
+
+                              {walletTypeOpen && (
+                                <ul className="subscription-dropdown-menu show w-100">
+                                  {["All", "SMART MONEY", "HEAVY ACCUMULATOR", "SNIPER", "FLIPPER", "COORDINATED GROUP", "DORMANT WHALE"].map((item) => (
+                                    <li
+                                      key={item}
+                                      className={`nw-subs-items ${walletTypes.includes(item) ? "active" : ""
+                                        }`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleWalletType(item);
+                                      }}
+                                    >
+                                      {item}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
-                            <div className="flex-1 relative">
-                              <input
-                                type="number"
-                                placeholder="Max"
-                                value={activeFilters.ageMax || ""}
-                                onChange={(e) => {
-                                  const newFilters = {
-                                    ...activeFilters,
-                                    ageMax: e.target.value,
-                                  }
-                                  handleFilterChange(newFilters)
+
+                            <div className="custom-frm-bx position-relative">
+                              <label className="nw-label">Wallet Amount</label>
+                              <div
+                                className="form-select cursor-pointer text-start"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setAmountOpen(!amountOpen);
                                 }}
-                                className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400   text-xs"
-                              />
-                              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                                (m)
-                              </span>
+                              >
+                                {amount}
+                              </div>
+
+                              {amountOpen && (
+                                <div
+                                  className="subscription-dropdown-menu show w-100 p-2"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div
+                                    className="subs-items"
+                                    onClick={() => {
+                                      setAmount("$1K");
+                                      setAmountOpen(false);
+                                    }}
+                                  >
+                                    $1K
+                                  </div>
+                                  <div
+                                    className="subs-items"
+                                    onClick={() => {
+                                      setAmount("$5K");
+                                      setAmountOpen(false);
+                                    }}
+                                  >
+                                    $5K
+                                  </div>
+
+                                  <input
+                                    type="text"
+                                    className="form-control mt-2"
+                                    placeholder="Custom amount"
+                                    value={customAmount}
+                                    onChange={(e) => {
+                                      setCustomAmount(e.target.value);
+                                      setAmount(e.target.value);
+                                    }}
+                                  />
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        </div>
 
-                        {/* Market Cap Filter */}
-                        <div>
-                          <label className="block text-white text-xs font-medium mb-2">
-                            Market Cap (K)
-                          </label>
-                          <div className="flex space-x-2">
-                            <div className="flex-1 relative">
-                              <input
-                                type="number"
-                                placeholder="Min"
-                                value={activeFilters.marketCapMin || ""}
-                                onChange={(e) => {
-                                  const newFilters = {
-                                    ...activeFilters,
-                                    marketCapMin: e.target.value,
-                                  }
-                                  handleFilterChange(newFilters)
-                                }}
-                                className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400   text-xs"
-                              />
-                              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                                (k)
-                              </span>
-                            </div>
-                            <div className="flex-1 relative">
-                              <input
-                                type="number"
-                                placeholder="Max"
-                                value={activeFilters.marketCapMax || ""}
-                                onChange={(e) => {
-                                  const newFilters = {
-                                    ...activeFilters,
-                                    marketCapMax: e.target.value,
-                                  }
-                                  handleFilterChange(newFilters)
-                                }}
-                                className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400   text-xs"
-                              />
-                              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                                (k)
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+                            {isSaved && (
+                              <div className="config-overlay">
+                                <div className="config-modal">
+                                  <h3 className="config-title">CONFIGURATION SAVED</h3>
 
-            {/* Desktop Layout - All Filters in One Row */}
-            <div className="hidden lg:flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {/* Transaction Type Filters */}
-                <div className="glass-radio-group">
-                  {filters.map((filter) => (
-                    <React.Fragment key={filter.id}>
-                      <input
-                        type="radio"
-                        name="transactionTypeDesktop"
-                        id={`glass-desktop-${filter.id}`}
-                        checked={activeFilter === filter.id}
-                        onChange={() => {
-                          setActiveFilter(filter.id)
-                          const newFilters = { ...activeFilters }
-                          if (filter.id === "all") {
-                            newFilters.transactionType = null
-                          } else {
-                            newFilters.transactionType = filter.id
-                          }
-                          handleFilterChange(newFilters)
-                          setCurrentPage(1)
-                          setTransactions([])
-                          setHasMore(true)
-                        }}
-                      />
-                      <label
-                        htmlFor={`glass-desktop-${filter.id}`}
-                        className="font-semibold"
-                      >
-                        {filter.label}
-                      </label>
-                    </React.Fragment>
-                  ))}
-                  <div
-                    className="glass-glider"
-                    style={{
-                      transform:
-                        activeFilter === "all"
-                          ? "translateX(0%)"
-                          : activeFilter === "buy"
-                            ? "translateX(100%)"
-                            : activeFilter === "sell"
-                              ? "translateX(200%)"
-                              : "translateX(0%)",
-                      background:
-                        activeFilter === "all"
-                          ? "#ffffff opacity-60"
-                          : activeFilter === "buy"
-                            ? "#22c55e opacity-60"
-                            : activeFilter === "sell"
-                              ? "#ef4444"
-                              : "#ffffff opacity-60",
-                    }}
-                  ></div>
-                </div>
-                {/* Hotness Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setHotnessOpen(!hotnessOpen)}
-                    className="flex items-center space-x-2 px-4 py-3 text-white cursor-pointer border border-[#2B2B2D]  rounded-xl transition-all h-12"
-                  >
-                    <span
-                      className={`text-sm font-medium ${hotnessOpen ? "text-white" : "text-gray-400"
-                        } ${hotnessOpen ? "font-bold" : "font-normal"}`}
-                    >
-                      Hotness
-                    </span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${hotnessOpen ? "rotate-180" : ""} ${hotnessOpen ? "text-white" : "text-gray-400"
-                        } ${hotnessOpen ? "font-bold" : "font-normal"}`}
-                    />
-                  </button>
+                                  <div className="config-box">
+                                    <div className="config-row">
+                                      <span>Feed Type</span>
+                                      <span>Whale Alerts</span>
+                                    </div>
 
-                  {hotnessOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-40 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-10">
-                      <div className="text-left text-sm md:text-sm px-3 py-2">
-                        Filter by Score
-                      </div>
-                      {hotnessOptions.map((option) => (
-                        <button
-                          key={option}
-                          className="w-full px-4 py-2 text-left text-sm text-white hover:text-white/70  transition-all cursor-pointer"
-                          onClick={() => {
-                            setHotnessOpen(false)
-                            const hotnessValue = option.includes("High")
-                              ? "high"
-                              : option.includes("Medium")
-                                ? "medium"
-                                : "low"
-                            const newFilters = {
-                              ...activeFilters,
-                              hotness: hotnessValue,
-                            }
-                            handleFilterChange(newFilters)
-                          }}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                                    <div className="config-row">
+                                      <span>Min Score</span>
+                                      <span className="green">{hotness}</span>
+                                    </div>
 
-                {/* Amount Dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setAmountOpen(!amountOpen)}
-                    className="flex items-center space-x-2 px-4 py-3 text-white cursor-pointer border border-[#2B2B2D]  rounded-xl transition-all h-12"
-                  >
-                    <span
-                      className={`text-sm font-medium ${amountOpen ? "text-white" : "text-gray-400"
-                        } ${amountOpen ? "font-bold" : "font-normal"}`}
-                    >
-                      Amount
-                    </span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${amountOpen ? "rotate-180" : ""} ${amountOpen ? "text-white" : "text-gray-400"
-                        } ${amountOpen ? "font-bold" : "font-normal"}`}
-                    />
-                  </button>
+                                    <div className="config-row">
+                                      <span>Labels</span>
+                                      <span>{walletTypes.join(", ") || "Any Label"}</span>
+                                    </div>
 
-                  {amountOpen && (
-                    <div className="absolute top-full left-0 mt-2 w-44 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-10">
-                      <div className="text-left text-sm md:text-sm px-3 py-2">
-                        Filter by Amount
-                      </div>
-                      {amountOptions.map((option) => (
-                        <button
-                          key={option}
-                          className="w-full px-4 py-2 text-left text-sm text-white hover:text-white/70 transition-all cursor-pointer"
-                          onClick={() => {
-                            setAmountOpen(false)
-                            const amountValue = option
-                              .replace(">", "")
-                              .replace("$", "")
-                              .replace(",", "")
-                            const newFilters = {
-                              ...activeFilters,
-                              amount: amountValue,
-                            }
-                            handleFilterChange(newFilters)
-                          }}
-                        >
-                          {option}
-                        </button>
-                      ))}
-                      <div className="border-t border-[#2B2B2D]">
-                        <button
-                          className="w-full px-4 py-2 text-left text-sm text-white hover:text-white/70 transition-all cursor-pointer"
-                          onClick={() => {
-                            setShowCustomAmountInput(!showCustomAmountInput)
-                          }}
-                        >
-                          Custom Amount
-                        </button>
-                        {showCustomAmountInput && (
-                          <div className="px-3 py-2">
-                            <input
-                              type="number"
-                              placeholder="Enter amount"
-                              value={customAmount}
-                              onChange={(e) => setCustomAmount(e.target.value)}
-                              className="w-full px-2 py-1 bg-[#16171C] border border-[#2B2B2D] rounded text-white text-sm placeholder-gray-400 focus:outline-none focus:border-white"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" && customAmount) {
-                                  const newFilters = {
-                                    ...activeFilters,
-                                    amount: customAmount,
-                                  }
-                                  handleFilterChange(newFilters)
-                                  setAmountOpen(false)
-                                  setShowCustomAmountInput(false)
-                                  setCustomAmount("")
-                                }
-                              }}
-                            />
+                                    <div className="config-row">
+                                      <span>Min Volume</span>
+                                      <span>{amount}</span>
+                                    </div>
+
+                                    <div className="config-row">
+                                      <span>Status</span>
+                                      <span className="green-dot">
+                                        Active <i></i>
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    className="close-btn"
+                                    onClick={() => setIsSaved(false)}
+                                  >
+                                    CLOSE
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+
                             <button
-                              className="w-full mt-2 px-2 py-1 bg-white/10 text-white text-xs rounded hover:bg-white/20 transition-all"
-                              onClick={() => {
-                                if (customAmount) {
-                                  const newFilters = {
-                                    ...activeFilters,
-                                    amount: customAmount,
-                                  }
-                                  handleFilterChange(newFilters)
-                                  setAmountOpen(false)
-                                  setShowCustomAmountInput(false)
-                                  setCustomAmount("")
-                                }
+                              className="connect-wallet-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleWhaleAlertConnect();
                               }}
                             >
-                              Apply
+                              {user?.telegramChatId ? 'Create' : 'Connect'}
                             </button>
+
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+
+
+                        </div>
+                      )}
+                    </li>
+
+                    <li onClick={(e) => e.stopPropagation()}>
+                      <a href="javascript:void(0)"
+                        className={`plan-btn d-block ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                        onClick={() => setOpenDropdown(openDropdown === 'newFilter' ? null : 'newFilter')}>
+                        {activeFilters.tags.length > 0
+                          ? `: ${activeFilters.tags.length}`
+                          : ''} <FontAwesomeIcon icon={faFilter} />
+                      </a>
+                      {openDropdown === 'newFilter' && (
+                        <div className="filter-dropdown-menu w-xs p-2">
+                          <div className="row">
+
+                            <div className="col-lg-6">
+                              <div className="custom-frm-bx ">
+                                <label htmlFor="">Age (minutes)</label>
+                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                              </div>
+                            </div>
+
+                            <div className="col-lg-6">
+
+                              <div className="custom-frm-bx">
+                                <label htmlFor=""></label>
+                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                              </div>
+                            </div>
+
+                            <div className="col-lg-6">
+                              <div className="custom-frm-bx mb-0">
+                                <label htmlFor="">Market Cap (K)</label>
+                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                              </div>
+                            </div>
+
+                            <div className="col-lg-6">
+
+                              <div className="custom-frm-bx mb-0">
+                                <label htmlFor=""></label>
+                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                              </div>
+                            </div>
+
+                          </div>
+
+
+
+                        </div>
+                      )}
+                    </li>
+
+                  </ul>
                 </div>
               </div>
 
-              {/* Right Filter Button - Desktop Advanced Filters Popup */}
-              <div className="relative">
-                <button
-                  onClick={() => setFiltersPopupOpen(!filtersPopupOpen)}
-                  className="p-3 bg-[#1A1A1E] hover:bg-[#2A2A2E] border border-[#3B3B3D] rounded-xl transition-all cursor-pointer"
-                >
-                  <Filter className="w-10 h-6 text-gray-400" />
-                </button>
-
-                {filtersPopupOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-80 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-10 p-4">
-                    <div className="space-y-4">
-                      {/* Age Filter */}
-                      <div>
-                        <label className="block text-gray-400 text-xs font-medium mb-2">
-                          Age (minutes)
-                        </label>
-                        <div className="flex space-x-2">
-                          <div className="flex-1 relative">
-                            <input
-                              type="number"
-                              placeholder="Min"
-                              value={activeFilters.ageMin || ""}
-                              onChange={(e) => {
-                                const newFilters = {
-                                  ...activeFilters,
-                                  ageMin: e.target.value,
-                                }
-                                handleFilterChange(newFilters)
-                              }}
-                              className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400   text-xs"
-                            />
-                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                              (m)
-                            </span>
-                          </div>
-                          <div className="flex-1 relative">
-                            <input
-                              type="number"
-                              placeholder="Max"
-                              value={activeFilters.ageMax || ""}
-                              onChange={(e) => {
-                                const newFilters = {
-                                  ...activeFilters,
-                                  ageMax: e.target.value,
-                                }
-                                handleFilterChange(newFilters)
-                              }}
-                              className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400   text-xs"
-                            />
-                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                              (m)
+              {/* Active Filter Indicators - Only show when filters are active */}
+              {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery) && (
+                <div className="category-remove-filting">
+                  <ul>
+                    {/* Search Filter Indicator */}
+                    {activeFilters.searchQuery && (
+                      <li>
+                        <div className="category-filtering-add">
+                          <div className="category-filter-items">
+                            <h6>
+                              Search: <span>{activeFilters.searchQuery}</span>
+                            </h6>
+                            <span>
+                              <a
+                                href="javascript:void(0)"
+                                className="filter-remv-btn"
+                                onClick={() => handleFilterUpdate('searchQuery', "")}
+                              >
+                                <FontAwesomeIcon icon={faClose} />
+                              </a>
                             </span>
                           </div>
                         </div>
-                      </div>
+                      </li>
+                    )}
 
-                      {/* Market Cap Filter */}
-                      <div>
-                        <label className="block text-gray-400 text-xs font-medium mb-2">
-                          Market Cap (K)
-                        </label>
-                        <div className="flex space-x-2">
-                          <div className="flex-1 relative">
-                            <input
-                              type="number"
-                              placeholder="Min"
-                              value={activeFilters.marketCapMin || ""}
-                              onChange={(e) => {
-                                const newFilters = {
-                                  ...activeFilters,
-                                  marketCapMin: e.target.value,
-                                }
-                                handleFilterChange(newFilters)
-                              }}
-                              className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400   text-xs"
-                            />
-                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                              (k)
-                            </span>
-                          </div>
-                          <div className="flex-1 relative">
-                            <input
-                              type="number"
-                              placeholder="Max"
-                              value={activeFilters.marketCapMax || ""}
-                              onChange={(e) => {
-                                const newFilters = {
-                                  ...activeFilters,
-                                  marketCapMax: e.target.value,
-                                }
-                                handleFilterChange(newFilters)
-                              }}
-                              className="w-full bg-[#1F2024]  rounded-lg px-3 py-2 text-white placeholder-gray-400   text-xs"
-                            />
-                            <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                              (k)
+                    {/* Hotness Filter Indicator */}
+                    {activeFilters.hotness && (
+                      <li>
+                        <div className="category-filtering-add">
+                          <div className="category-filter-items">
+                            <h6>
+                              Hotness Score: <span>{hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}</span>
+                            </h6>
+                            <span>
+                              <a
+                                href="javascript:void(0)"
+                                className="filter-remv-btn"
+                                onClick={() => handleFilterUpdate('hotness', null)}
+                              >
+                                <FontAwesomeIcon icon={faClose} />
+                              </a>
                             </span>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                      </li>
+                    )}
 
-          {/* Advanced Filters */}
-          {showAdvancedFilters && (
-            <div className="mt-3 md:mt-4 p-3 md:p-4 lg:p-5 bg-[#101014] border border-gray-700 rounded-xl">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
-                <button
-                  onClick={() => setShowAdvancedFilters(false)}
-                  className="text-gray-400 hover:text-white p-1"
-                >
-                  <X className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-              </div>
+                    {/* Amount Filter Indicator */}
+                    {activeFilters.amount && (
+                      <li>
+                        <div className="category-filtering-add">
+                          <div className="category-filter-items">
+                            <h6>
+                              Amount: <span>{amountOptions.find(o => o.value === activeFilters.amount)?.label}</span>
+                            </h6>
+                            <span>
+                              <a
+                                href="javascript:void(0)"
+                                className="filter-remv-btn"
+                                onClick={() => handleFilterUpdate('amount', null)}
+                              >
+                                <FontAwesomeIcon icon={faClose} />
+                              </a>
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 lg:gap-6">
-                {/* Age Filter */}
-                <div>
-                  <label className="block text-gray-400 text-xs md:text-sm font-medium mb-1.5 md:mb-2">
-                    Age (in minutes)
-                  </label>
-                  <div className="flex space-x-1.5 md:space-x-2">
-                    <div className="flex-1 relative">
-                      <input
-                        type="number"
-                        placeholder="Min"
-                        value={activeFilters.ageMin || ""}
-                        onChange={(e) => {
-                          const newFilters = {
-                            ...activeFilters,
-                            ageMin: e.target.value,
-                          }
-                          handleFilterChange(newFilters)
-                        }}
-                        className="w-full bg-[#1A1A1E] border border-gray-700 rounded-lg px-2 md:px-3 py-2 md:py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm pr-8"
-                      />
-                      <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                        (m)
-                      </span>
-                    </div>
-                    <div className="flex-1 relative">
-                      <input
-                        type="number"
-                        placeholder="Max"
-                        value={activeFilters.ageMax || ""}
-                        onChange={(e) => {
-                          const newFilters = {
-                            ...activeFilters,
-                            ageMax: e.target.value,
-                          }
-                          handleFilterChange(newFilters)
-                        }}
-                        className="w-full bg-[#1A1A1E] border border-gray-700 rounded-lg px-2 md:px-3 py-2 md:py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm pr-8"
-                      />
-                      <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                        (m)
-                      </span>
-                    </div>
-                  </div>
+                    {/* Tags Filter Indicators - One for each active tag */}
+                    {activeFilters.tags.map((tag: string, index: number) => (
+                      <li key={`tag-${index}`}>
+                        <div className="category-filtering-add">
+                          <div className="category-filter-items">
+                            <h6>
+                              Tags: <span>{tag}</span>
+                            </h6>
+                            <span>
+                              <a
+                                href="javascript:void(0)"
+                                className="filter-remv-btn"
+                                onClick={() => toggleTag(tag)}
+                              >
+                                <FontAwesomeIcon icon={faClose} />
+                              </a>
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
+              )}
 
-                {/* Market Cap Filter */}
-                <div>
-                  <label className="block text-gray-400 text-xs md:text-sm font-medium mb-1.5 md:mb-2">
-                    Market Cap (in K)
-                  </label>
-                  <div className="flex space-x-1.5 md:space-x-2">
-                    <div className="flex-1 relative">
-                      <input
-                        type="number"
-                        placeholder="Min"
-                        value={activeFilters.marketCapMin || ""}
-                        onChange={(e) => {
-                          const newFilters = {
-                            ...activeFilters,
-                            marketCapMin: e.target.value,
-                          }
-                          handleFilterChange(newFilters)
-                        }}
-                        className="w-full bg-[#1A1A1E] border border-gray-700 rounded-lg px-2 md:px-3 py-2 md:py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm pr-8"
-                      />
-                      <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                        (k)
-                      </span>
-                    </div>
-                    <div className="flex-1 relative">
-                      <input
-                        type="number"
-                        placeholder="Max"
-                        value={activeFilters.marketCapMax || ""}
-                        onChange={(e) => {
-                          const newFilters = {
-                            ...activeFilters,
-                            marketCapMax: e.target.value,
-                          }
-                          handleFilterChange(newFilters)
-                        }}
-                        className="w-full bg-[#1A1A1E] border border-gray-700 rounded-lg px-2 md:px-3 py-2 md:py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm pr-8"
-                      />
-                      <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
-                        (k)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Applied Filters Display */}
-          {Object.keys(activeFilters).some(
-            (key) =>
-              activeFilters[key as keyof typeof activeFilters] !== null &&
-              activeFilters[key as keyof typeof activeFilters] !== "" &&
-              !(
-                Array.isArray(
-                  activeFilters[key as keyof typeof activeFilters]
-                ) &&
-                (activeFilters[key as keyof typeof activeFilters] as any[])
-                  .length === 0
-              )
-          ) && (
-              <div className="flex items-center gap-2 flex-wrap mb-4 mt-4">
-                <span className="text-gray-400 text-sm">Applied filters:</span>
-
-                {activeFilters.searchQuery && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-[#2A2A2D] text-white">
-                    Search:{" "}
-                    {(activeFilters as any).displayQuery ||
-                      activeFilters.searchQuery}
-                    <button
-                      onClick={() => {
-                        const newFilters = {
-                          ...activeFilters,
-                          searchQuery: "",
-                          displayQuery: "",
-                        }
-                        handleFilterChange(newFilters)
-                      }}
-                      className="ml-2 hover:bg-[#2A2A2D] rounded-full w-4 h-4 flex items-center justify-center cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {activeFilters.transactionType && (
-                  <span
-                    className={`inline-flex items-center px-2 py-1 rounded-md text-xs ${activeFilters.transactionType === "sell" ? "bg-[#ef4444]" : "bg-[#22c55e]"} text-white`}
-                  >
-                    Type: {activeFilters.transactionType}
-                    <button
-                      onClick={() => {
-                        const newFilters = {
-                          ...activeFilters,
-                          transactionType: null,
-                        }
-                        handleFilterChange(newFilters)
-                        setActiveFilter("all")
-                      }}
-                      className="ml-2 hover:bg-[#2A2A2D] rounded-full w-4 h-4 flex items-center justify-center cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {activeFilters.hotness && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-[#2A2A2D] text-white">
-                    Hotness: {activeFilters.hotness}
-                    <button
-                      onClick={() => {
-                        const newFilters = { ...activeFilters, hotness: null }
-                        handleFilterChange(newFilters)
-                      }}
-                      className="ml-2 hover:bg-[#2A2A2D] rounded-full w-4 h-4 flex items-center justify-center"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {activeFilters.amount && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-[#2A2A2D] text-white">
-                    Amount: ${activeFilters.amount}
-                    <button
-                      onClick={() => {
-                        const newFilters = { ...activeFilters, amount: null }
-                        handleFilterChange(newFilters)
-                      }}
-                      className="ml-2 hover:bg-[#2A2A2D] rounded-full w-4 h-4 flex items-center justify-center cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {activeFilters.tags &&
-                  activeFilters.tags.length > 0 &&
-                  activeFilters.tags.map((tag: any, index: number) => (
-                    <span
-                      key={`tag-${tag}-${index}`}
-                      className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-[#2A2A2D] text-white"
-                    >
-                      Tag: {tag}
-                      <button
-                        onClick={() => {
-                          const newFilters = { ...activeFilters }
-                          newFilters.tags = newFilters.tags.filter(
-                            (t: any) => t !== tag
-                          )
-                          handleFilterChange(newFilters)
-                        }}
-                        className="ml-2 hover:bg-orange-700 rounded-full w-4 h-4 flex items-center justify-center cursor-pointer"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-
-                {(activeFilters.ageMin || activeFilters.ageMax) && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-indigo-600 text-white">
-                    Age: {activeFilters.ageMin || "0"}-
-                    {activeFilters.ageMax || "∞"}m
-                    <button
-                      onClick={() => {
-                        const newFilters = {
-                          ...activeFilters,
-                          ageMin: null,
-                          ageMax: null,
-                        }
-                        handleFilterChange(newFilters)
-                      }}
-                      className="ml-2 hover:bg-indigo-700 rounded-full w-4 h-4 flex items-center justify-center cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {(activeFilters.marketCapMin || activeFilters.marketCapMax) && (
-                  <span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-pink-600 text-white">
-                    MC: {activeFilters.marketCapMin || "0"}-
-                    {activeFilters.marketCapMax || "∞"}k
-                    <button
-                      onClick={() => {
-                        const newFilters = {
-                          ...activeFilters,
-                          marketCapMin: null,
-                          marketCapMax: null,
-                        }
-                        handleFilterChange(newFilters)
-                      }}
-                      className="ml-2 hover:bg-pink-700 rounded-full w-4 h-4 flex items-center justify-center cursor-pointer"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                <button
-                  onClick={() => {
-                    const clearedFilters = {
-                      searchQuery: "",
-                      searchType: null,
-                      hotness: null,
-                      transactionType: null,
-                      tags: [],
-                      amount: null,
-                      ageMin: null,
-                      ageMax: null,
-                      marketCapMin: null,
-                      marketCapMax: null,
-                    }
-                    handleFilterChange(clearedFilters)
-                    setActiveFilter("all")
-                    setShowAdvancedFilters(false)
-                    setHotnessOpen(false)
-                    setAmountOpen(false)
-                    setFiltersPopupOpen(false)
-                    setClearSearchTrigger((prev) => prev + 1)
-                  }}
-                  className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-white/70 text-black cursor-pointer"
-                >
-                  Clear All
-                </button>
-              </div>
-            )}
-        </div>
-
-        {/* Transactions List */}
-
-        <div className="space-y-2 md:space-y-3 bg-[#1B1B1D] pt-2 pl-2 pb-2 pr-1 md:pt-3 md:pl-3 md:pb-3 md:pr-1 rounded-lg border-1 border-[#2A2A2D] flex-1">
-          <div className="h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-            {isAllTxLoading ? (
-              <div className="flex items-center justify-center h-[500px]">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="flex justify-center items-center z-20">
+              {/* Transactions List */}
+              <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
+                {isAllTxLoading ? (
+                  <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
                     <div className="lds-spinner text-white">
                       {Array.from({ length: 12 }).map((_, i) => (
                         <div key={i}></div>
                       ))}
                     </div>
                   </div>
-                </div>
-              </div>
-            ) : transactions.length === 0 ? (
-              <div className="flex items-center justify-center h-[500px]">
-                <p className="text-white opacity-70 text-sm">
-                  No transactions available at the moment. Please check back
-                  later or try adjusting your filters.
-                </p>
-              </div>
-            ) : (
-              transactions.map((tx: any, index: number) => (
-                <div
-                  key={`${tx.id}-${index}`}
-                  ref={
-                    index === transactions.length - 1
-                      ? lastTransactionRef
-                      : null
-                  }
-                  onClick={() =>
-                    handleTransactionInfoAll(tx.signature, tx.type)
-                  }
-                  className={`bg-[#161618] h-[90px] md:h-[182px] flex items-center justify-between rounded-lg p-2 md:p-3 transition-colors mb-2 cursor-pointer transition-all duration-300 relative ${newTxIds.has(tx.id) ? "animate-slide-up" : ""} hover:bg-[#1F2024]`}
-                  style={{
-                    animationDelay: newTxIds.has(tx.id)
-                      ? `${index * 100}ms`
-                      : "0ms",
-                  }}
-                  onAnimationEnd={() =>
-                    setNewTxIds((prev) => {
-                      const updated = new Set(prev)
-                      updated.delete(tx.id) // remove after animation finishes
-                      return updated
-                    })
-                  }
-                >
-                  {/* <div className="flex items-center justify-between min-w-0"> */}
-                  {/* Left Side - Whale Info */}
-                  <div className="flex items-center space-x-2 md:space-x-3 min-w-0 flex-1">
-                    <div className="text-left min-w-0 w-full">
-                      <div className="flex items-center justify-start space-x-1 md:space-x-2 mb-1 md:mb-2 text-[#06DF73]">
-                        <span
-                          className="text-[8px] md:text-sm"
-                          key={`${tx.id}-${index}`}
-                        >
-                          <TimeAgo timestamp={tx.timestamp} />
-                        </span>
-                      </div>
-                      <div className="flex items-start justify-start space-x-2 md:space-x-3">
-                        <div className="flex items-center justify-center flex-shrink-0">
-                          <img
-                            src={
-                              tx.influencerProfileImageUrl || DefaultTokenImage
-                            }
-                            alt={tx.influencerName}
-                            className="w-12 h-12 md:w-16 md:h-16 lg:w-25 lg:h-25 rounded-sm  border-1 border-[#2A2A2D] font-semibold"
-                            style={{ objectFit: "cover" }}
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.src = DefaultTokenImage
-                            }}
-                          />
+                ) : transactions.length === 0 ? (
+                  <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
+                    <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>
+                  </div>
+                ) : (
+                  transactions.map((tx: any, index: number) => (
+                    <div
+                      key={`${tx.id}-${index}`}
+                      ref={index === transactions.length - 1 ? lastTransactionRef : null}
+                      className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx.id) ? 'animate-slide-up' : ''}`}
+                      onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
+                      style={{ cursor: 'pointer' }}
+                      onAnimationEnd={() =>
+                        setNewTxIds((prev) => {
+                          const updated = new Set(prev)
+                          updated.delete(tx.id)
+                          return updated
+                        })
+                      }
+                    >
+                      <div className="d-flex align-items-center justify-content-between nw-btm-brd">
+                        <div>
+                          <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center space-x-1 md:space-x-2">
-                            <span className="text-white font-semibold text-[6px] md:text-xs xl:text-base flex items-center gap-1">
-                              {tx.influencerName}
-                              <img
-                                src={TwitterVerified}
-                                alt="Twitter"
-                                className="w-3 h-3 md:w-5 md:h-5"
-                              />
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1 md:space-x-2 mt-1 md:mt-2 md:mb-2">
-                            <span className="text-white font-semibold text-[6px] md:text-xs xl:text-sm  lg:text-xs flex items-center gap-1  ">
-                              <div className="flex items-center px-[5px] py-[2px] md:px-[10px] md:py-[5px] gap-1 md:gap-2   border border-[#625A5A] rounded-[5px]">
-                                <img
-                                  src={Twitter}
-                                  alt="Twitter"
-                                  className="w-2 h-2 md:w-2.5 md:h-2.5 color-white"
-                                />
-                                <span className="text-white font-semibold text-[8px] md:text-xs xl:text-sm  lg:text-xs flex items-center gap-1  opacity-70 truncate text-ellipsis">
-                                  {tx.influencerUsername}
-                                </span>
-                              </div>
-                              <ExternalLink
-                                className="color-white opacity-70 w-3 h-3 md:w-4 md:h-4"
-                                onClick={() => {
-                                  window.open(
-                                    `https://x.com/${tx.influencerUsername}`,
-                                    "_blank"
-                                  )
+                        <div>
+                          <ul className="quick-list">
+                            {tx.hotnessScore > 0 && (
+                              <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
+                            )}
+                            <li className="quick-item">
+                              <a
+                                href="javascript:void(0)"
+                                className="quick-nw-btn"
+                                onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleQuickBuy(tx)
+                                  }
                                 }}
-                              />
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1 md:space-x-2 mt-0.5 md:mt-1">
-                            <p
-                              className={`text-[8px] xl:text-sm lg:text-xs md:text-sm font-medium ${tx.type === "sell" ? "text-[#FF6467]" : "text-[#06DF73]"}`}
-                            >
-                              {tx.type === "sell"
-                                ? `Sold $${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                                : `Bought $${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                            </p>
-                          </div>
+                                aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
+                                title="Quick buy this token"
+                              >
+                                quick buy
+                              </a>
+                            </li>
+                            <li className="quick-item">
+                              <a
+                                href="javascript:void(0)"
+                                className="quick-nw-btn quick-copy-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
+                                }}
+                              >
+                                <RiFileCopyLine />
+                              </a>
+                            </li>
+                            <li className="quick-item">
+                              <a
+                                href="javascript:void(0)"
+                                className="quick-nw-btn quick-arrow-btn"
+                                onClick={(e) => { e.stopPropagation(); handleTransactionInfoNewTab(tx.signature, tx.type) }}
+                              >
+                                <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
+                              </a>
+                            </li>
+                          </ul>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Absolute positioned arrow */}
-                  <div className="flex items-center justify-center w-6 md:w-8 lg:w-10 flex-shrink-0 mx-1 md:mx-2">
-                    {/* Mobile & Tablet: Current ArrowRight icon */}
-                    <div className="lg:hidden">
-                      <ArrowRight className="w-4 h-4 text-white opacity-75" />
-                    </div>
-
-                    {/* Desktop: Simple minimalist arrow */}
-                    <div className="hidden lg:block">
-                      <svg
-                        className="w-25 h-16 text-white opacity-75"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="5"
-                        viewBox="0 0 200 80"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M4 40h192m0 0l-20-24m20 24l-20 24"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Right Side - Token Info */}
-                  <div className="flex items-start justify-start space-x-1 md:space-x-2 lg:space-x-3 min-w-0 flex-1">
-                    <div className="text-right min-w-0 w-full">
-                      <span className="text-yellow-400 text-[8px] md:text-sm lg:text-sm font-medium">
-                        {tx?.type === "buy" &&
-                          tx?.hotnessScore > 0 ? (
-                          getHotnessBadge(tx.hotnessScore)
-                        ) : (
-                          <div className="w-4 h-4">{ }</div>
-                        )}
-                      </span>
-
-                      <div className="flex items-start justify-start space-x-1 md:space-x-2 lg:space-x-3">
-                        <div className="text-right min-w-0 flex-1 flex flex-col gap-0.5">
-                          <div className="text-white font-bold text-[8px] md:text-sm xl:text-base lg:text-sm truncate">
-                            {tx.type === "sell"
-                              ? tx.transaction.tokenIn.symbol
-                              : tx.transaction.tokenOut.symbol}
-                          </div>
-                          <div className="text-white opacity-70 text-[6px] md:text-xs xl:text-sm lg:text-xs truncate">
-                            {tx.type === "sell"
-                              ? tx.transaction.tokenIn.name
-                              : tx.transaction.tokenOut.name}
-                          </div>
-                          <div className="text-[6px] md:text-xs xl:text-sm lg:text-xs mt-0.5 md:mt-1 text-[#C1C1C2] truncate font-medium">
-                            MC: ${formatNumber(getMarketCap(tx))}
-                          </div>
-                          <div className="text-[6px] md:text-xs xl:text-sm lg:text-xs text-[#C1C1C2] truncate font-medium">
-                            Age: {tx.age}
+                      <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
+                        <div className="left-item-bx">
+                          <img
+                            src={tx.influencerImage || DefaultTokenImage}
+                            alt="influencer"
+                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                            style={{ borderRadius: '50%', width: '40px', height: '40px', objectFit: 'cover' }}
+                          />
+                          <div className="whale-content flex-grow-1">
+                            <h4 className="username">
+                              {tx.influencerName}
+                              <span style={{ fontSize: '12px', color: '#888', marginLeft: '5px' }}>
+                                @{tx.influencerUsername}
+                              </span>
+                            </h4>
+                            <div className="tags">
+                              {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
+                                <span key={i} className="tag-title">{tag}</span>
+                              ))}
+                              {(tx.whaleLabel || []).length > 2 && (
+                                <span className="tag-title">+{(tx.whaleLabel || []).length - 2}</span>
+                              )}
+                            </div>
+                            <div className={`sold-out-title ${tx.type === 'buy' ? 'sold-title' : ''}`}>
+                              {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-center flex-shrink-0 ml-1 md:ml-2 relative">
-                          <div
-                            className="relative cursor-pointer group"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              const tokenAddress =
-                                tx.type === "sell"
-                                  ? tx.tokenInAddress
-                                  : tx.tokenOutAddress
-                              handleCopyTokenAddress(tokenAddress, tx.signature)
-                            }}
-                          >
+
+                        <div className="sell-trade-bx">
+                          {tx.type === 'sell' ? (
+                            <span className="sell-title">
+                              <FontAwesomeIcon icon={faArrowTrendDown} /> SELL
+                            </span>
+                          ) : (
+                            <span className="buy-trade-title">
+                              <IoMdTrendingUp /> BUY
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="right-info text-end">
+                          <div className="left-crd-content">
+                            <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
+                            <p>{tx.type === 'sell' ? tx.transaction?.tokenIn?.name?.substring(0, 20) : tx.transaction?.tokenOut?.name?.substring(0, 20)}</p>
+                            <small className="mc-title">MC: ${formatNumber(getMarketCap(tx))} / AGE: {tx.age}</small>
+                          </div>
+                          <div className="right-img">
                             <img
-                              src={
-                                tx.type === "sell"
-                                  ? tx.inTokenURL || DefaultTokenImage
-                                  : tx.outTokenURL || DefaultTokenImage
-                              }
-                              alt={
-                                tx.type === "sell"
-                                  ? tx.tokenInSymbol
-                                  : tx.tokenOutSymbol
-                              }
-                              className="w-12 h-12 md:w-16 md:h-16 lg:w-25 lg:h-25 rounded-sm border-1 border-[#2A2A2D] transition-all duration-200 group-hover:scale-105 group-active:scale-95 group-active:brightness-110"
-                              style={{ objectFit: "cover" }}
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.src = DefaultTokenImage
-                              }}
+                              src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
+                              alt="token"
+                              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
                             />
                           </div>
                         </div>
                       </div>
                     </div>
+                  ))
+                )}
+                {/* Loading more indicator */}
+                {isLoadingMore && (
+                  <div className="d-flex align-items-center justify-content-center py-4">
+                    <div className="lds-spinner text-white">
+                      {Array.from({ length: 12 }).map((_, i) => (
+                        <div key={i}></div>
+                      ))}
+                    </div>
                   </div>
-                  {/* </div> */}
-                </div>
-              ))
-            )}
-            {/* Infinite Scroll Loading Indicator */}
-            {isLoadingMore && (
-              <div className="flex items-center justify-center py-4">
-                <div className="flex flex-col items-center gap-2">
-                  <GridLoader />
-                  <span className="text-gray-400 text-sm">
-                    Loading more transactions...
-                  </span>
-                </div>
+                )}
               </div>
-            )}
-
-            {/* Load More Button (Alternative to auto-scroll) */}
-            {!isAllTxLoading && !isLoadingMore && hasMore && (
-              <div className="flex items-center justify-center py-4">
-                <button
-                  onClick={() => {
-                    const nextPage = currentPage + 1
-                    fetchTransactions(
-                      nextPage,
-                      itemsPerPage,
-                      activeFilters,
-                      true
-                    )
-                  }}
-                  className="px-6 py-3 bg-[#1A1A1E] hover:bg-[#2A2A2E] text-white rounded-xl transition-all border border-gray-700"
-                >
-                  Load More Transactions
-                </button>
-              </div>
-            )}
+            </div>
           </div>
         </div>
-        <ReactFlowProvider>
-          <KolFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
-        </ReactFlowProvider>
-      </div>
-      <ToastContainer />
+      </section>
+
+      <ReactFlowProvider>
+        <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      </ReactFlowProvider>
+
+      <SwapModal
+        isOpen={isSwapModalOpen}
+        onClose={() => {
+          setIsSwapModalOpen(false)
+          setSwapTokenInfo(null)
+        }}
+        mode="quickBuy"
+        initialInputToken={{
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
+          decimals: 9,
+          image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
+        }}
+        initialOutputToken={swapTokenInfo}
+        initialAmount={quickBuyAmount}
+      />
     </>
   )
 }
 
 export default KOLFeedPage
-
-const style = document.createElement("style")
-style.textContent = `
-  @keyframes slide-up {
-    from {
-      opacity: 0;
-      transform: translateY(100px) scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-  
-  .animate-slide-up {
-    animation: slide-up 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    transform-origin: center;
-  }
-
-  /* Enhanced new transaction highlight effect */
-  .animate-slide-up::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(6, 223, 115, 0.1), transparent);
-    border-radius: 8px;
-    opacity: 0;
-    animation: highlight-pulse 0.6s ease-out;
-    pointer-events: none;
-  }
-
-  @keyframes highlight-pulse {
-    0% {
-      opacity: 0;
-      transform: scaleX(0);
-    }
-    50% {
-      opacity: 1;
-      transform: scaleX(1);
-    }
-    100% {
-      opacity: 0;
-      transform: scaleX(1);
-    }
-  }
-  
-  /* Custom scrollbar styling */
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: #161618;
-    border-radius: 10px;
-    margin: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #374151;
-    border-radius: 10px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #374151;
-  }
-      /* Sparkle Button Styles */
-  :root {
-    --transition: 0.25s;
-    --spark: 1.8s;
-  }
-
-  .sparkle-button button {
-    --cut: 0.1em;
-    --active: 0;
-    --bg: hsl(260 calc(var(--active) * 97%) calc((var(--active) * 44%) + 12%));
-    background: var(--bg);
-    font-size: 1rem;
-    font-weight: 500;
-    border: 0;
-    cursor: pointer;
-    padding: 0.9em 1.3em;
-    display: flex;
-    align-items: center;
-    gap: 0.25em;
-    white-space: nowrap;
-    border-radius: 100px;
-    position: relative;
-    overflow: hidden;
-    box-shadow:
-      0 0.05em 0 0 hsl(260 calc(var(--active) * 97%) calc((var(--active) * 50%) + 30%)) inset,
-      0 -0.05em 0 0 hsl(260 calc(var(--active) * 97%) calc(var(--active) * 60%)) inset;
-    transition: box-shadow var(--transition), scale var(--transition), background var(--transition);
-    scale: calc(1 + (var(--active) * 0.05));
-  }
-
-  .sparkle-button button:active {
-    scale: 1;
-  }
-
-  .sparkle-button svg {
-    overflow: visible !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-
-  .sparkle-button .sparkle path {
-    color: hsl(0 0% calc((var(--active, 0) * 70%) + var(--base)));
-    transform-box: fill-box;
-    transform-origin: center;
-    fill: currentColor;
-    stroke: currentColor;
-    animation-delay: calc((var(--transition) * 1.5) + (var(--delay) * 1s));
-    animation-duration: 0.6s;
-    transition: color var(--transition);
-  }
-
-  .sparkle-button button:is(:hover, :focus-visible) path {
-    animation-name: bounce;
-  }
-
-  @keyframes bounce {
-    35%, 65% {
-      scale: var(--scale);
-    }
-  }
-
-  .sparkle-button .sparkle path:nth-of-type(1) {
-    --scale: 0.5;
-    --delay: 0.1;
-    --base: 40%;
-  }
-
-  .sparkle-button .sparkle path:nth-of-type(2) {
-    --scale: 1.5;
-    --delay: 0.2;
-    --base: 20%;
-  }
-
-  .sparkle-button .sparkle path:nth-of-type(3) {
-    --scale: 2.5;
-    --delay: 0.35;
-    --base: 30%;
-  }
-
-  .sparkle-button button:before {
-    content: "";
-    position: absolute;
-    inset: -0.25em;
-    z-index: -1;
-    border: 0.25em solid hsl(260 97% 50% / 0.5);
-    border-radius: 100px;
-    opacity: var(--active, 0);
-    transition: opacity var(--transition);
-  }
-
-  .sparkle-button .spark {
-    position: absolute;
-    inset: 0;
-    border-radius: 100px;
-    rotate: 0deg;
-    overflow: hidden;
-    mask: linear-gradient(white, transparent 50%);
-    animation: flip calc(var(--spark) * 2) infinite steps(2, end);
-  }
-
-  @keyframes flip {
-    to {
-      rotate: 360deg;
-    }
-  }
-
-  .sparkle-button .spark:before {
-    content: "";
-    position: absolute;
-    width: 200%;
-    aspect-ratio: 1;
-    top: 0%;
-    left: 50%;
-    z-index: -1;
-    transform: translate(-50%, -15%) rotate(-90deg);
-    opacity: calc((var(--active)) + 0.4);
-    background: conic-gradient(
-      from 0deg,
-      transparent 0 340deg,
-      white 360deg
-    );
-    transition: opacity var(--transition);
-    animation: rotate var(--spark) linear infinite both;
-  }
-
-  .sparkle-button .spark:after {
-    content: "";
-    position: absolute;
-    inset: var(--cut);
-    border-radius: 100px;
-  }
-
-  .sparkle-button .backdrop {
-    position: absolute;
-    inset: var(--cut);
-    background: var(--bg);
-    border-radius: 100px;
-    transition: background var(--transition);
-  }
-
-  @keyframes rotate {
-    to {
-      transform: rotate(90deg);
-    }
-  }
-
-  .sparkle-button button:is(:hover, :focus-visible) {
-    --active: 1;
-    --play-state: running;
-  }
-
-  .sparkle-button .text {
-    transform: translate(2%, -6%);
-    letter-spacing: 0.01ch;
-    background: linear-gradient(90deg, hsl(0 0% calc((var(--active) * 100%) + 65%)), hsl(0 0% calc((var(--active) * 97%) + 26%)));
-    -webkit-background-clip: text;
-    color: transparent;
-    transition: background var(--transition);
-  }
-
-  .sparkle-button button svg {
-    inline-size: 1.25em;
-    transform: translate(-25%, -5%);
-    transition: filter var(--transition), transform var(--transition);
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-  }
-
-  /* Mobile-specific sparkle button styles */
-  @media (max-width: 768px) {
-    .sparkle-button button svg {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      width: 1rem !important;
-      height: 1rem !important;
-    }
-    
-    .sparkle-button svg {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-  }
-
-  .sparkle-button button:is(:hover, :focus-visible) svg {
-    filter: brightness(0) invert(1);
-    transform: translate(-25%, -5%) scale(1.1);
-  }
-
- .sparkle-button .particle-pen {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  -webkit-mask: radial-gradient(white, transparent 65%);
-  z-index: -1;
-  opacity: var(--active, 0);
-  transition: opacity var(--transition);
-  overflow: hidden;
-}
-  
-  .sparkle-button .particle {
-    fill: white;
-    width: calc(var(--size, 0.25) * 1rem);
-    aspect-ratio: 1;
-    position: absolute;
-    top: calc(var(--y) * 1%);
-    left: calc(var(--x) * 1%);
-    opacity: var(--alpha, 1);
-    animation: float-out calc(var(--duration, 1) * 1s) calc(var(--delay) * -1s) infinite linear;
-    transform-origin: center;
-    z-index: -1;
-    animation-play-state: var(--play-state, paused);
-  }
-
-  .sparkle-button .particle path {
-    fill: hsl(0 0% 90%);
-    stroke: none;
-  }
-
-  .sparkle-button .particle:nth-of-type(even) {
-    animation-direction: reverse;
-  }
-
-  @keyframes float-out {
-    to {
-      rotate: 360deg;
-    }
-  }
-
-  .sparkle-button button:is(:hover, :focus-visible) ~ .particle-pen {
-    --active: 1;
-    --play-state: running;
-  }
-`
-document.head.appendChild(style)

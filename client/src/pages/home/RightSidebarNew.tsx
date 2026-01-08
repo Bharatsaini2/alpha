@@ -20,7 +20,7 @@ import { useAuth } from "../../contexts/AuthContext"
 import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
 import { IoWalletOutline } from "react-icons/io5"
-import SwapModal from "../../components/swap/SwapModal"
+import { SwapModal } from "../../components/swap/SwapModal"
 
 
 // import { MdOutlineCheckBox } from "react-icons/md";

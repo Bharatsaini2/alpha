@@ -10,7 +10,7 @@ import SideIcon6 from "../../assets/sd6.svg"
 import tele from "../../assets/telegram.png"
 import x from "../../assets/twitter.svg"
 import LogoutRounded from "../../assets/LogoutRounded.png"
-import { User } from "lucide-react"
+import { User, Star } from "lucide-react"
 
 interface SidebarProps {
   isOpen: boolean
@@ -45,6 +45,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
           icon: SideIcon5,
         },
         { name: "Signal Engine", path: "/signal-engine", icon: SideIcon6 },
+        { name: "Subscription", path: "/telegram-subscription", icon: Star, isLucide: true },
       ],
     },
   ]
@@ -108,54 +109,42 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 <div className="space-y-1">
                   {section.items.map((item) => {
                     const isActive = isActiveRoute(item.path)
-                    const isAlphaStream = item.name === "Alpha Stream"
 
-                    if (isAlphaStream) {
-                      return (
-                        <Link
-                          key={item.name}
-                          to={item.path}
-                          onClick={() => {
-                            if (window.innerWidth < 1024) {
-                              onToggle()
-                            }
-                          }}
-                          className={`
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.path}
+                        onClick={() => {
+                          if (window.innerWidth < 1024) {
+                            onToggle()
+                          }
+                        }}
+                        className={`
                             relative flex items-center justify-start space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-left w-full
                             ${isActive
-                              ? "text-white bg-[#2B2B2D]"
-                              : "text-[#B4B4B4] hover:text-white"
-                            }
+                            ? "text-white bg-[#2B2B2D]"
+                            : "text-[#B4B4B4] hover:text-white"
+                          }
                           `}
-                        >
+                      >
+                        {item.isLucide ? (
+                          // @ts-ignore
+                          <item.icon
+                            className={`w-5 h-5 ${isActive ? "text-white" : "text-[#767678]"}`}
+                          />
+                        ) : (
                           <img
-                            src={item.icon}
+                            src={item.icon as string}
                             alt={item.name}
                             className={`w-5 h-5 ${isActive ? "text-white" : "text-[#767678]"}`}
                           />
-                          <span
-                            className={`${isActive ? "text-white hover:text-white" : "text-[#B4B4B4] hover:text-white"}`}
-                          >
-                            {item.name}
-                          </span>
-                        </Link>
-                      )
-                    }
-
-                    return (
-                      <div
-                        key={item.name}
-                        className="relative flex items-center justify-start space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full opacity-50 cursor-not-allowed text-[#B4B4B4]"
-                      >
-                        <img
-                          src={item.icon}
-                          alt={item.name}
-                          className="w-5 h-5 text-[#767678]"
-                        />
-                        <span className="text-[#B4B4B4]">
+                        )}
+                        <span
+                          className={`${isActive ? "text-white hover:text-white" : "text-[#B4B4B4] hover:text-white"}`}
+                        >
                           {item.name}
                         </span>
-                      </div>
+                      </Link>
                     )
                   })}
                 </div>

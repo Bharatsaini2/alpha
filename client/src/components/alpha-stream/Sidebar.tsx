@@ -143,6 +143,7 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/") ? "nav-active" : ""}`}
                                 onClick={() => navigate("/")}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faChartLine} />
                                 <span>ALPHA STREAM</span>
@@ -151,12 +152,13 @@ function Sidebar() {
 
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive("/top-kol-coins") ? "nav-active" : ""
+                                className={`nav-link-item ${isActive("/top-coins") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/top-coins")}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faCoins} />
-                                <span>Top KOL Coins</span>
+                                <span>TOP COINS</span>
                             </a>
                         </li>
                     </ul>
@@ -167,8 +169,9 @@ function Sidebar() {
                     <ul className="nav-list">
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive("/kol") ? "nav-active" : ""}`}
-                                onClick={(e) => e.preventDefault()}
+                                className={`nav-link-item ${isActive("/kol-feed") ? "nav-active" : ""}`}
+                                onClick={() => navigate("/kol-feed")}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faRss} />
                                 <span>KOL FEED</span>
@@ -177,9 +180,10 @@ function Sidebar() {
 
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive("/all-kol-coins") ? "nav-active" : ""
+                                className={`nav-link-item ${isActive("/top-kol-coins") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/top-kol-coins")}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faRankingStar} />
                                 <span>TOP KOL COINS</span>
@@ -193,9 +197,10 @@ function Sidebar() {
                     <ul className="nav-list">
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive("/whale-leaderboard") ? "nav-active" : ""
+                                className={`nav-link-item ${isActive("/whales-leaderboard") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/whales-leaderboard")}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faCrown} />
                                 <span>WHALES LEADERBOARD</span>
@@ -206,7 +211,8 @@ function Sidebar() {
                             <a
                                 className={`nav-link-item ${isActive("/signal-engine") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/signal-engine")}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faSatelliteDish} />
                                 <span>SIGNAL ENGINE</span>
@@ -215,9 +221,10 @@ function Sidebar() {
 
                         <li className="nav-item-bar">
                             <a
-                                className={`nav-link-item ${isActive("/subscription") ? "nav-active" : ""
+                                className={`nav-link-item ${isActive("/telegram-subscription") ? "nav-active" : ""
                                     }`}
-                                onClick={(e) => e.preventDefault()}
+                                onClick={() => navigate("/telegram-subscription")}
+                                style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faStar} />
                                 <span>SUBSCRIPTION</span>
