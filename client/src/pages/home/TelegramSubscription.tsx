@@ -3,7 +3,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState, useEffect } from "react";
 import { PiPlugs, PiTelegramLogoDuotone } from "react-icons/pi";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
-import { MdDelete } from "react-icons/md";
+import { MdDelete, MdExpandMore, MdExpandLess } from "react-icons/md";
+import { HiOutlineExternalLink } from "react-icons/hi";
 import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../components/ui/Toast";
@@ -222,197 +223,270 @@ function TelegramSubscription() {
         });
     };
 
-
+    const getPriorityColor = (priority: string) => {
+        switch (priority.toLowerCase()) {
+            case 'high': return '#df2a4e';
+            case 'medium': return '#ffa502';
+            case 'low': return '#14904d';
+            default: return '#8f8f8f';
+        }
+    };
 
     return (
-        <>
-            <section className="">
-                <div className="row justify-content-center">
-                    <div className="col-lg-4 col-md-12 col-sm-12">
-                        <div className="">
-                            <a href="javascript:void(0)" onClick={() => navigate(-1)} className="back-link mb-2"> 
-                                <FontAwesomeIcon icon={faArrowLeft}/> Back
-                            </a>
+        <section className="telegram-subscription-section">
+            <div className="row justify-center">
+                <div className="col-lg-5">
+                    {/* Back Button */}
+                    <div className="mb-3">
+                        <button 
+                            onClick={() => navigate(-1)} 
+                            className="alpha-edit-btn"
+                        > 
+                            <FontAwesomeIcon icon={faArrowLeft} className="me-2" />
+                            Back
+                        </button>
+                    </div>
+
+                    {/* Connection Status Card */}
+                    <div className="alpha-profile-card mb-3">
+                        <div className="alpha-profile-title-bx nw-kol-profile">
+                            <div>
+                                <h6>Telegram Account</h6>
+                            </div>
+                            <div>
+                                {user?.telegramChatId ? (
+                                    <div className="dis-connect-btn">
+                                        Connected <span className="text-white fz-14"><PiPlugs /></span>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        className="subscribe-btn"
+                                        onClick={handleGenerateLinkToken}
+                                        disabled={generatingLink}
+                                    >
+                                        {generatingLink ? 'Generating...' : 'Connect'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="alpha-profile-card mb-3">
-                            <div className="alpha-profile-title-bx nw-kol-profile">
-                                <div>
-                                    <h6>Telegram Account</h6>
-                                </div>
-
-                                <div>
-                                    {user?.telegramChatId ? (
-                                        <button className="dis-connect-btn">
-                                            Connected <span className="text-white fz-14"><PiPlugs /></span>
-                                        </button>
-                                    ) : (
-                                        <button 
-                                            className="btn btn-primary btn-sm"
-                                            onClick={handleGenerateLinkToken}
-                                            disabled={generatingLink}
-                                        >
-                                            {generatingLink ? 'Generating...' : 'Connect Telegram'}
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
+                        <div className="alpha-profile-content nw-kol-profile">
                             {user?.telegramChatId ? (
-                                <div className="alpha-profile-content nw-kol-profile">
-                                    <div className="share-profile">
-                                        <img src="/profile-usr.png" alt="" />
-
-                                        <div>
-                                            <h4>User {user.telegramChatId}</h4>
-
-                                            <button className="telegram-share-btn mt-2">
-                                                <PiTelegramLogoDuotone />
-                                                Connected
-                                            </button>
-                                        </div>
+                                <div className="share-profile">
+                                    <img src="/profile-usr.png" alt="" />
+                                    <div>
+                                        <h4>User {user.telegramChatId}</h4>
+                                        <button className="telegram-share-btn mt-2">
+                                            <PiTelegramLogoDuotone />
+                                            Connected
+                                        </button>
                                     </div>
                                 </div>
                             ) : linkToken ? (
-                                <div className="alpha-profile-content nw-kol-profile">
-                                    <div className="text-center py-3">
-                                        <p className="mb-3">Click the button below to connect your Telegram account:</p>
-                                        <a 
-                                            href={getTelegramDeepLink()} 
-                                            target="_blank" 
-                                            rel="noopener noreferrer"
-                                            className="btn btn-success"
-                                        >
-                                            <PiTelegramLogoDuotone className="me-2" />
-                                            Open Telegram Bot
-                                        </a>
-                                        <p className="small text-muted mt-3">Link expires in 10 minutes</p>
-                                    </div>
+                                <div className="text-center py-3">
+                                    <p className="mb-3" style={{ color: '#ebebeb', fontSize: '12px', textTransform: 'uppercase' }}>
+                                        Click to open Telegram and connect your account:
+                                    </p>
+                                    <a 
+                                        href={getTelegramDeepLink()} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="nw-connect-wallet-btn"
+                                        style={{ textDecoration: 'none', display: 'inline-flex', width: 'auto', padding: '10px 20px' }}
+                                    >
+                                        <PiTelegramLogoDuotone className="me-2" />
+                                        Open Telegram Bot
+                                        <HiOutlineExternalLink className="ms-2" />
+                                    </a>
+                                    <p className="mt-3" style={{ color: '#8f8f8f', fontSize: '10px', textTransform: 'uppercase' }}>
+                                        Link expires in 10 minutes
+                                    </p>
                                 </div>
                             ) : (
-                                <div className="alpha-profile-content nw-kol-profile">
-                                    <div className="text-center py-3">
-                                        <p className="text-muted">No Telegram account connected</p>
-                                        <p className="small">Click "Connect Telegram" to get started</p>
-                                    </div>
+                                <div className="text-center py-3">
+                                    <p style={{ color: '#8f8f8f', fontSize: '12px', textTransform: 'uppercase', marginBottom: 0 }}>
+                                        Connect your Telegram account to receive whale alerts directly in your chat.
+                                    </p>
                                 </div>
                             )}
                         </div>
+                    </div>
 
-                        <div className="subscription-all-number mb-2">
-                            <div>
-                                <h6>List of Subscription Alerts</h6>
-                            </div>
-                            <div>
-                                <h6>[ {subscriptions.length} ]</h6>
+                    {/* Subscriptions Header */}
+                    <div className="subscription-all-number mb-2">
+                        <div>
+                            <h6>Alert Subscriptions</h6>
+                        </div>
+                        <div>
+                            <h6>[ {subscriptions.length} ]</h6>
+                        </div>
+                    </div>
+
+                    {/* Loading State */}
+                    {loading && (
+                        <div className="alpha-profile-card">
+                            <div className="alpha-profile-content nw-kol-profile text-center py-4">
+                                <p style={{ color: '#8f8f8f', fontSize: '12px', textTransform: 'uppercase' }}>
+                                    Loading subscriptions...
+                                </p>
                             </div>
                         </div>
+                    )}
 
-                        {loading && (
-                            <div className="text-center py-4">
-                                <p>Loading subscriptions...</p>
+                    {/* Error State */}
+                    {error && (
+                        <div className="alpha-profile-card">
+                            <div className="alpha-profile-content nw-kol-profile">
+                                <p style={{ color: '#df2a4e', fontSize: '12px', textTransform: 'uppercase' }}>
+                                    {error}
+                                </p>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {error && (
-                            <div className="alert alert-danger" role="alert">
-                                {error}
+                    {/* Empty State */}
+                    {!loading && !error && subscriptions.length === 0 && (
+                        <div className="alpha-profile-card">
+                            <div className="alpha-profile-content nw-kol-profile text-center py-4">
+                                <PiTelegramLogoDuotone style={{ fontSize: '48px', color: '#3d3d3d', marginBottom: '16px' }} />
+                                <h4 style={{ color: '#ebebeb', fontSize: '14px', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                    No Active Subscriptions
+                                </h4>
+                                <p style={{ color: '#8f8f8f', fontSize: '12px', textTransform: 'uppercase', marginBottom: 0 }}>
+                                    Create whale alerts to start receiving notifications
+                                </p>
                             </div>
-                        )}
+                        </div>
+                    )}
 
-                        {!loading && !error && subscriptions.length === 0 && (
-                            <div className="text-center py-4">
-                                <p>No active subscriptions found.</p>
-                            </div>
-                        )}
+                    {/* Subscriptions List */}
+                    {!loading && !error && subscriptions.length > 0 && (
+                        <div className="subscripton-bx" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                            <div className="accordion">
+                                {subscriptions.map((subscription) => (
+                                    <div className="accordion-item" key={subscription._id}>
+                                        <h2 className="accordion-header">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleAccordion(subscription._id)}
+                                                className={`accordion-button d-flex align-items-center gap-3 custom-accordion-btn ${
+                                                    openId === subscription._id ? "" : "collapsed"
+                                                }`}
+                                            >
+                                                <div className="alpha-profile-content d-flex justify-content-between w-100 align-items-center nw-kol-profile">
+                                                    <div className="share-profile">
+                                                        <div>
+                                                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type}
+                                                                {subscription.enabled && <RiVerifiedBadgeFill style={{ color: '#14904d', fontSize: '12px' }} />}
+                                                                <span 
+                                                                    style={{ 
+                                                                        backgroundColor: getPriorityColor(subscription.priority),
+                                                                        color: '#fff',
+                                                                        padding: '2px 6px',
+                                                                        fontSize: '10px',
+                                                                        textTransform: 'uppercase',
+                                                                        marginLeft: '8px'
+                                                                    }}
+                                                                >
+                                                                    {subscription.priority}
+                                                                </span>
+                                                            </h4>
+                                                            <p style={{ 
+                                                                color: '#ebebeb', 
+                                                                fontSize: '10px', 
+                                                                textTransform: 'uppercase',
+                                                                marginBottom: '2px',
+                                                                fontWeight: 500
+                                                            }}>
+                                                                {formatConfig(subscription.config)}
+                                                            </p>
+                                                            <p style={{ 
+                                                                color: '#8f8f8f', 
+                                                                fontSize: '10px', 
+                                                                textTransform: 'uppercase',
+                                                                marginBottom: 0
+                                                            }}>
+                                                                {formatDate(subscription.createdAt)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        </h2>
 
-                        {!loading && !error && subscriptions.length > 0 && (
-                            <div className="subscripton-bx">
-                                <div className="accordion">
-                                    {subscriptions.map((subscription) => (
-                                        <div className="accordion-item" key={subscription._id}>
-                                            <h2 className="accordion-header">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleAccordion(subscription._id)}
-                                                    className={`accordion-button d-flex align-items-center gap-3 custom-accordion-btn ${
-                                                        openId === subscription._id ? "" : "collapsed"
-                                                    }`}
-                                                >
-                                                    <div className="alpha-profile-content d-flex justify-content-between w-100 align-items-center nw-kol-profile">
-                                                        <div className="share-profile">
+                                        {openId === subscription._id && (
+                                            <div className="accordion-collapse show">
+                                                <div className="accordion-body" style={{ backgroundColor: '#0a0a0a', border: '1px solid #292929', borderTop: 'none' }}>
+                                                    <div style={{ padding: '16px' }}>
+                                                        <div className="nw-user-info-bx" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px', paddingTop: '0' }}>
                                                             <div>
-                                                                <h4>
-                                                                    {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type}
-                                                                    {subscription.enabled && <RiVerifiedBadgeFill className="ms-2" />}
-                                                                </h4>
-                                                                <p className="text-muted small mb-0">
-                                                                    {formatDate(subscription.createdAt)}
+                                                                <h6>Configuration</h6>
+                                                                <p>{formatConfig(subscription.config)}</p>
+                                                            </div>
+                                                            
+                                                            <div>
+                                                                <h6>Status</h6>
+                                                                <p style={{ color: subscription.enabled ? '#14904d' : '#8f8f8f' }}>
+                                                                    {subscription.enabled ? 'Active' : 'Inactive'}
+                                                                </p>
+                                                            </div>
+
+                                                            <div>
+                                                                <h6>Priority</h6>
+                                                                <p style={{ color: getPriorityColor(subscription.priority) }}>
+                                                                    {subscription.priority}
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </button>
-                                            </h2>
 
-                                            {openId === subscription._id && (
-                                                <div className="accordion-collapse show">
-                                                    <div className="accordion-body">
-                                                        <div className="mb-3">
-                                                            <strong>Configuration:</strong>
-                                                            <p className="mb-1">{formatConfig(subscription.config)}</p>
-                                                        </div>
-                                                        
-                                                        <div className="mb-3">
-                                                            <strong>Status:</strong>
-                                                            <span className={`ms-2 badge ${subscription.enabled ? 'bg-success' : 'bg-secondary'}`}>
-                                                                {subscription.enabled ? 'Active' : 'Inactive'}
-                                                            </span>
-                                                        </div>
-
-                                                        <div className="mb-3">
-                                                            <strong>Priority:</strong>
-                                                            <span className="ms-2">{subscription.priority}</span>
-                                                        </div>
-
-                                                        {deleteConfirmId === subscription._id ? (
-                                                            <div className="d-flex gap-2">
+                                                        <div style={{ borderTop: '1px solid #292929', paddingTop: '16px', marginTop: '16px' }}>
+                                                            {deleteConfirmId === subscription._id ? (
+                                                                <div className="text-center">
+                                                                    <p style={{ color: '#ebebeb', fontSize: '12px', textTransform: 'uppercase', marginBottom: '16px' }}>
+                                                                        Are you sure you want to delete this subscription?
+                                                                    </p>
+                                                                    <div className="d-flex gap-2 justify-content-center">
+                                                                        <button 
+                                                                            className="alpha-edit-btn"
+                                                                            onClick={handleDeleteConfirm}
+                                                                            disabled={deleting}
+                                                                            style={{ backgroundColor: '#df2a4e', borderColor: '#df2a4e' }}
+                                                                        >
+                                                                            {deleting ? 'Deleting...' : 'Yes, Delete'}
+                                                                        </button>
+                                                                        <button 
+                                                                            className="alpha-edit-btn"
+                                                                            onClick={handleDeleteCancel}
+                                                                            disabled={deleting}
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
                                                                 <button 
-                                                                    className="btn btn-danger btn-sm"
-                                                                    onClick={handleDeleteConfirm}
-                                                                    disabled={deleting}
+                                                                    className="alpha-edit-btn"
+                                                                    onClick={() => handleDeleteClick(subscription._id)}
+                                                                    style={{ backgroundColor: '#df2a4e', borderColor: '#df2a4e', display: 'flex', alignItems: 'center', gap: '5px' }}
                                                                 >
-                                                                    {deleting ? 'Deleting...' : 'Confirm Delete'}
+                                                                    <MdDelete />
+                                                                    Delete Subscription
                                                                 </button>
-                                                                <button 
-                                                                    className="btn btn-secondary btn-sm"
-                                                                    onClick={handleDeleteCancel}
-                                                                    disabled={deleting}
-                                                                >
-                                                                    Cancel
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <button 
-                                                                className="btn btn-danger btn-sm"
-                                                                onClick={() => handleDeleteClick(subscription._id)}
-                                                            >
-                                                                <MdDelete className="me-1" />
-                                                                Delete Subscription
-                                                            </button>
-                                                        )}
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
-            </section>
-        </>
+            </div>
+        </section>
     );
 }
 
