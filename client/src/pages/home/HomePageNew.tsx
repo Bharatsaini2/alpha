@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch, faShareNodes } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
@@ -19,9 +19,6 @@ import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { RiFileCopyLine } from "react-icons/ri";
 
 import SwapModal from "../../components/swap/SwapModal"
-import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
-import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { useAuth } from "../../contexts/AuthContext"
 
 
 
@@ -51,7 +48,15 @@ const tagOptions = [
     "KOL",
 ]
 
-
+const subOptions = [
+    "SMART MONEY",
+    "HEAVY ACCUMULATOR",
+    "SNIPER",
+    "FLIPPER",
+    "COORDINATED GROUP",
+    "DORMANT WHALE",
+    "KOL",
+]
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:9090", {
     transports: ["websocket"],
@@ -252,14 +257,11 @@ const HomePageNew = () => {
     const [openDropdown, setOpenDropdown] = useState<string | null>(null)
     const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set())
     const [isOpen, setIsOpen] = useState(false)
-    const [quickBuyAmount, setQuickBuyAmount] = useState(() => loadQuickBuyAmount() || "0")
-    const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
+    const [quickBuyAmount, setQuickBuyAmount] = useState("0")
     const [searchQuery, setSearchQuery] = useState("")
     const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
     const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
-    const { showToast } = useToast()
-    const { wallet } = useWalletConnection()
-    const { user } = useAuth()
+    const { showToast, ToastContainer } = useToast()
     const navigate = useNavigate()
 
     const [transactions, setTransactions] = useState<any[]>([])
@@ -566,20 +568,6 @@ const HomePageNew = () => {
     }
 
     const handleQuickBuy = (tx: any) => {
-        // Validate quick buy amount
-        const validation = validateQuickBuyAmount(quickBuyAmount)
-        if (!validation.isValid) {
-            showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
-            return
-        }
-
-        // Validate wallet connection
-        if (!wallet.connected) {
-            showToast("Please connect your wallet to continue", "error")
-            return
-        }
-
-        // Extract token info from clicked item
         const tokenInfo = {
             symbol: tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol,
             name: tx.type === 'sell' ? tx.transaction.tokenIn.name : tx.transaction.tokenOut.name,
@@ -587,28 +575,8 @@ const HomePageNew = () => {
             image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
             decimals: 9, // Default for most Solana tokens
         }
-
-        // Open SwapModal in 'quickBuy' mode with SOL as input token
         setSwapTokenInfo(tokenInfo)
         setIsSwapModalOpen(true)
-    }
-
-    const handleQuickBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value
-        setQuickBuyAmount(value)
-
-        // Validate and show error if invalid
-        const validation = validateQuickBuyAmount(value)
-        if (!validation.isValid && value !== '') {
-            setQuickBuyAmountError(validation.error || '')
-        } else {
-            setQuickBuyAmountError('')
-        }
-
-        // Save to session storage if valid
-        if (validation.isValid) {
-            saveQuickBuyAmount(value)
-        }
     }
 
     const handleFilterTabChange = (filterType: string) => {
@@ -648,24 +616,23 @@ const HomePageNew = () => {
         handleFilterUpdate('tags', newTags)
     }
 
-    // Clear filters function (currently unused but kept for future use)
-    // const clearFilters = () => {
-    //     const resetFilters = {
-    //         searchQuery: "",
-    //         searchType: null,
-    //         hotness: null,
-    //         transactionType: null,
-    //         tags: [],
-    //         amount: null,
-    //         ageMin: null,
-    //         ageMax: null,
-    //         marketCapMin: null,
-    //         marketCapMax: null,
-    //     }
-    //     setActiveFilters(resetFilters)
-    //     setActiveFilter("all")
-    //     setSearchQuery("")
-    // }
+    const clearFilters = () => {
+        const resetFilters = {
+            searchQuery: "",
+            searchType: null,
+            hotness: null,
+            transactionType: null,
+            tags: [],
+            amount: null,
+            ageMin: null,
+            ageMax: null,
+            marketCapMin: null,
+            marketCapMax: null,
+        }
+        setActiveFilters(resetFilters)
+        setActiveFilter("all")
+        setSearchQuery("")
+    }
 
     // Close dropdown when clicking outside
     // useEffect(() => {
@@ -673,11 +640,11 @@ const HomePageNew = () => {
     //     document.addEventListener("click", handleClickOutside)
     //     return () => document.removeEventListener("click", handleClickOutside)
     // }, [])
-    const searchRef = useRef<HTMLDivElement>(null);
+     const searchRef = useRef(null);
 
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        useEffect(() => {
+        function handleClickOutside(event) {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
                 setShowDropdown(false);
             }
         }
@@ -693,64 +660,50 @@ const HomePageNew = () => {
 
 
 
-    // Extract unique tokens from transactions for autocomplete
-    const uniqueTokenOptions = React.useMemo(() => {
-        const uniqueTokens = new Map();
+    const options = [
+        {
+            id: "0xA1B2C3",
+            titles: "Nobody Token",
+            descriptions: "This is a demo token description",
+            images: "/pic.png"
+        },
+        {
+            id: "0xD4E5F6",
+            titles: "Something Coin",
+            descriptions: "Another sample token detail",
+            images: "/pic.png"
+        },
+        {
+            id: "0xZ9Y8X7",
+            titles: "Anything Token",
+            descriptions: "ERC20 utility token",
+            images: "/pic.png"
+        },
+        {
+            id: "0xZ9Y8X8",
+            titles: "Same Token",
+            descriptions: "ERC20 utility token",
+            images: "/pic.png"
+        },
+        {
+            id: "0xZ9Y8X9",
+            titles: "Aura Token",
+            descriptions: "ERC20 utility token",
+            images: "/pic.png"
+        }
+    ];
 
-        transactions.forEach(tx => {
-            // Check both tokenIn (sell) and tokenOut (buy)
-            if (tx.transaction?.tokenIn) {
-                const address = tx.tokenInAddress;
-                if (address && !uniqueTokens.has(address)) {
-                    uniqueTokens.set(address, {
-                        id: address,
-                        titles: tx.transaction.tokenIn.symbol,
-                        descriptions: tx.transaction.tokenIn.name || "Unknown Token",
-                        images: tx.inTokenURL || DefaultTokenImage
-                    });
-                }
-            }
-
-            if (tx.transaction?.tokenOut) {
-                const address = tx.tokenOutAddress;
-                if (address && !uniqueTokens.has(address)) {
-                    uniqueTokens.set(address, {
-                        id: address,
-                        titles: tx.transaction.tokenOut.symbol,
-                        descriptions: tx.transaction.tokenOut.name || "Unknown Token",
-                        images: tx.outTokenURL || DefaultTokenImage
-                    });
-                }
-            }
-        });
-
-        return Array.from(uniqueTokens.values());
-    }, [transactions]);
-
-    const [filteredOptions, setFilteredOptions] = useState<any[]>([]);
+    // const [searchQuery, setSearchQuery] = useState("");
+    const [filteredOptions, setFilteredOptions] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
-    const handleSearch = (e: React.FormEvent) => {
+    const handleSearch = (e) => {
         e.preventDefault();
-
-        // If there's a search query, apply it as a filter
-        if (searchQuery.trim()) {
-            // Update active filters with the search query
-            setActiveFilters({
-                ...activeFilters,
-                searchQuery: searchQuery.trim(),
-                searchType: 'all'
-            });
-
-            // Clear the input field after searching
-            setSearchQuery("");
-
-            // Close dropdown
-            setShowDropdown(false);
-        }
+        // You can perform a search action here if needed
+        console.log("Search submitted:", searchQuery);
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e) => {
         const value = e.target.value;
         setSearchQuery(value);
 
@@ -760,30 +713,15 @@ const HomePageNew = () => {
             return;
         }
 
-        const filtered = uniqueTokenOptions.filter((option) =>
-            option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
-            option.id?.toLowerCase()?.includes(value?.toLowerCase())
-        ).slice(0, 10); // Limit to 10 results
-
+        const filtered = options.filter((option) =>
+            option.titles?.toLowerCase()?.includes(value?.toLowerCase())
+        );
         setFilteredOptions(filtered);
         setShowDropdown(filtered.length > 0);
     };
 
-    const handleSelect = (option: any) => {
-        // Apply the selected option as a search filter
-        setActiveFilters({
-            ...activeFilters,
-            searchQuery: option.titles,
-            searchType: 'all'
-        });
-
-        // Clear input and close dropdown
-        setSearchQuery("");
-        setShowDropdown(false);
-    };
-
-    const handleClearInput = () => {
-        setSearchQuery("");
+    const handleSelect = (option) => {
+        setSearchQuery(option);
         setShowDropdown(false);
     };
 
@@ -797,26 +735,26 @@ const HomePageNew = () => {
     const [walletTypeOpen, setWalletTypeOpen] = useState(false);
     const [amountOpen, setAmountOpen] = useState(false);
 
-    // const [trigger, setTrigger] = useState("Hotness Score");
-    // const [walletType, setWalletType] = useState("Any Label");
+    const [trigger, setTrigger] = useState("Hotness Score");
+    const [walletType, setWalletType] = useState("Any Label");
     const [amount, setAmount] = useState("$1K");
     const [customAmount, setCustomAmount] = useState("");
 
-    const closeAll = useCallback(() => {
+    const closeAll = () => {
         setTriggerOpen(false);
         setWalletTypeOpen(false);
         setAmountOpen(false);
-    }, []);
+    };
 
     useEffect(() => {
         document.addEventListener("click", closeAll);
         return () => document.removeEventListener("click", closeAll);
-    }, [closeAll]);
+    }, []);
 
 
-    const [walletTypes, setWalletTypes] = useState<string[]>([]);
+    const [walletTypes, setWalletTypes] = useState([]);
 
-    const toggleWalletType = (value: string) => {
+    const toggleWalletType = (value) => {
         setWalletTypes((prev) =>
             prev.includes(value)
                 ? prev.filter((item) => item !== value)
@@ -866,17 +804,19 @@ const HomePageNew = () => {
             // Convert amount string to number
             const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
 
-            // Handle wallet labels - if "Any Label" is selected or no labels, send all valid labels
-            let labelsToSend = walletTypes.length > 0 ? walletTypes.filter(label => label !== "Any Label") : ["Smart Money"]
+            // Handle wallet labels
+            // If "All" is selected, send empty array to indicate "accept all transactions"
+            let labelsToSend: string[] = []
 
-            // If "Any Label" was selected, send all valid labels
-            if (walletTypes.includes("Any Label")) {
-                labelsToSend = ["Smart Money", "Whale", "Insider", "Sniper", "Heavy Accumulator"]
-            }
-
-            // If no labels selected after filtering, default to Smart Money
-            if (labelsToSend.length === 0) {
-                labelsToSend = ["Smart Money"]
+            if (walletTypes.includes("All")) {
+                // "All" selected = accept ALL transactions (with or without labels)
+                labelsToSend = []
+            } else if (walletTypes.length > 0) {
+                // Specific labels selected = filter by those labels
+                labelsToSend = walletTypes.filter(label => label !== "All")
+            } else {
+                // No labels selected = default to empty (accept all)
+                labelsToSend = []
             }
 
             // Create whale alert subscription
@@ -915,11 +855,7 @@ const HomePageNew = () => {
                 <div className="row">
                     {/* Right Sidebar - Shows first on mobile, second on desktop */}
                     <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
-                        <RightSidebarNew
-                            pageType="alpha"
-                            transactions={transactions}
-
-                        />
+                        <RightSidebarNew />
                     </div>
 
                     {/* Transactions Feed Column - Shows second on mobile, first on desktop */}
@@ -952,7 +888,7 @@ const HomePageNew = () => {
                                 </div>
                             </form> */}
 
-                            <div className="search-container flex-grow-1" ref={searchRef}>
+                            <div className="search-container flex-grow-1"  ref={searchRef}>
                                 <form className="custom-frm-bx mb-3" onSubmit={handleSearch}>
                                     <input
                                         type="text"
@@ -971,7 +907,7 @@ const HomePageNew = () => {
                                             <button
                                                 type="button"
                                                 className="clear-input-btn"
-                                                onClick={handleClearInput}
+                                                onClick={() => setSearchQuery("")}
                                             >
                                                 ×
                                             </button>
@@ -1029,47 +965,32 @@ const HomePageNew = () => {
                                     onClick={() => quickBuyInputRef.current?.focus()}
                                 >
                                     <img src="/quick-btn.png" alt="" /> quick buy amount
-                                    <input
+                                    {/* <input
                                         ref={quickBuyInputRef}
                                         type="number"
                                         value={quickBuyAmount}
-                                        onChange={handleQuickBuyAmountChange}
+                                        onChange={(e) => setQuickBuyAmount(e.target.value)}
                                         onClick={(e) => e.stopPropagation()}
-                                        placeholder="0.5"
-                                        min="0"
-                                        step="0.1"
+                                        placeholder="100"
                                         style={{
                                             background: 'transparent',
-                                            border: quickBuyAmountError ? '1px solid #ef4444' : 'none',
+                                            border: 'none',
                                             color: '#fff',
-                                            width: '60px',
+                                            width: '50px',
                                             textAlign: 'right',
                                             outline: 'none',
-                                            fontSize: '14px',
-                                            borderRadius: '4px',
-                                            padding: '2px 4px'
+                                            fontSize: 'inherit',
+                                            marginLeft: 'auto'
                                         }}
-                                        title={quickBuyAmountError || ''}
-                                    />
-                                    <span style={{ color: '#fff', fontSize: '14px' }}>SOL</span>
+                                    /> */}
                                 </button>
-                                {quickBuyAmountError && (
-                                    <div style={{
-                                        color: '#ef4444',
-                                        fontSize: '11px',
-                                        marginTop: '4px',
-                                        paddingLeft: '8px'
-                                    }}>
-                                        {quickBuyAmountError}
-                                    </div>
-                                )}
                             </div>
                         </div>
 
                         {/* Filters */}
                         <div>
                             <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
-                                <div>
+                                <div className="home-mobile-tab-bx">
                                     <ul className="nav nav-tabs custom-tabs" role="tablist">
                                         <li className="nav-item" role="presentation">
                                             <a
@@ -1100,7 +1021,7 @@ const HomePageNew = () => {
                                         </li>
                                     </ul>
                                 </div>
-                                <div>
+                                <div className="mobile-mode-filter">
                                     <ul className="plan-btn-list">
                                         <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
@@ -1111,7 +1032,7 @@ const HomePageNew = () => {
                                                     : 'hotness'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'hotness' && (
-                                                <div className="filter-dropdown-menu">
+                                                <div className="filter-dropdown-menu filter-mobile-hotness">
                                                     <div className="filter-dropdown-header">Hotness Score</div>
                                                     {hotnessOptions.map(opt => (
                                                         <button
@@ -1134,7 +1055,7 @@ const HomePageNew = () => {
                                                     : 'amount'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'amount' && (
-                                                <div className="filter-dropdown-menu">
+                                                <div className="filter-dropdown-menu filter-mobile-amount">
                                                     <div className="filter-dropdown-header">Min Amount</div>
                                                     {amountOptions.map(opt => (
                                                         <button
@@ -1167,7 +1088,7 @@ const HomePageNew = () => {
                                                     : 'tAGS'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'tags' && (
-                                                <div className="filter-dropdown-menu">
+                                                <div className="filter-dropdown-menu filter-mobile-tag">
                                                     <div className="filter-dropdown-header">Whale Tags</div>
                                                     <button
                                                         className={`filter-dropdown-item ${activeFilters.tags.length === 0 ? 'active' : ''}`}
@@ -1197,7 +1118,7 @@ const HomePageNew = () => {
                                                     : 'Subscription'} <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'subs' && (
-                                                <div className="filter-dropdown-menu w-sm">
+                                                <div className="filter-dropdown-menu w-sm filter-mobile-subscription">
                                                     <div className="parent-dropdown-content">
                                                         <div className="sub-drop-header">
                                                             <div className="sub-drop-content">
@@ -1206,16 +1127,7 @@ const HomePageNew = () => {
                                                             </div>
 
                                                             <div>
-                                                                <button
-                                                                    className="paper-plan-connect-btn"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        // This button is just for show - displays connection status
-                                                                    }}
-                                                                    disabled
-                                                                >
-                                                                    <FontAwesomeIcon icon={faPaperPlane} /> {user?.telegramChatId ? 'Connected' : 'Connect'}
-                                                                </button>
+                                                                <button className="paper-plan-connect-btn"> <FontAwesomeIcon icon={faPaperPlane} /> Connect</button>
                                                             </div>
                                                         </div>
 
@@ -1249,9 +1161,9 @@ const HomePageNew = () => {
                                                                             min="0"
                                                                             max="10"
                                                                             value={hotness}
-                                                                            onChange={(e) => setHotness(Number(e.target.value))}
+                                                                            onChange={(e) => setHotness(e.target.value)}
                                                                             className="hotness-range"
-                                                                            style={{ "--range-progress": `${(hotness / 10) * 100}%` } as React.CSSProperties}
+                                                                            style={{ "--range-progress": `${(hotness / 10) * 100}%` }}
                                                                         />
 
                                                                     </div>
@@ -1277,7 +1189,7 @@ const HomePageNew = () => {
 
                                                             {walletTypeOpen && (
                                                                 <ul className="subscription-dropdown-menu show w-100">
-                                                                    {["Any Label", "Smart Money", "Whale", "Insider"].map((item) => (
+                                                                    {["All", "SMART MONEY", "HEAVY ACCUMULATOR", "SNIPER", "FLIPPER", "COORDINATED GROUP", "DORMANT WHALE"].map((item) => (
                                                                         <li
                                                                             key={item}
                                                                             className={`nw-subs-items ${walletTypes.includes(item) ? "active" : ""
@@ -1391,12 +1303,9 @@ const HomePageNew = () => {
 
                                                         <button
                                                             className="connect-wallet-btn"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleWhaleAlertConnect();
-                                                            }}
+                                                            onClick={() => setIsSaved(true)}
                                                         >
-                                                            {user?.telegramChatId ? 'Create' : 'Connect'}
+                                                            Connect
                                                         </button>
 
                                                     </div>
@@ -1469,100 +1378,34 @@ const HomePageNew = () => {
                                 </div>
                             </div>
 
-                            {/* Active Filter Indicators - Only show when filters are active */}
-                            {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery) && (
-                                <div className="category-remove-filting">
-                                    <ul>
-                                        {/* Search Filter Indicator */}
-                                        {activeFilters.searchQuery && (
-                                            <li>
-                                                <div className="category-filtering-add">
-                                                    <div className="category-filter-items">
-                                                        <h6>
-                                                            Search: <span>{activeFilters.searchQuery}</span>
-                                                        </h6>
-                                                        <span>
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                className="filter-remv-btn"
-                                                                onClick={() => handleFilterUpdate('searchQuery', "")}
-                                                            >
-                                                                <FontAwesomeIcon icon={faClose} />
-                                                            </a>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        )}
-
-                                        {/* Hotness Filter Indicator */}
-                                        {activeFilters.hotness && (
-                                            <li>
-                                                <div className="category-filtering-add">
-                                                    <div className="category-filter-items">
-                                                        <h6>
-                                                            Hotness Score: <span>{hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}</span>
-                                                        </h6>
-                                                        <span>
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                className="filter-remv-btn"
-                                                                onClick={() => handleFilterUpdate('hotness', null)}
-                                                            >
-                                                                <FontAwesomeIcon icon={faClose} />
-                                                            </a>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        )}
-
-                                        {/* Amount Filter Indicator */}
-                                        {activeFilters.amount && (
-                                            <li>
-                                                <div className="category-filtering-add">
-                                                    <div className="category-filter-items">
-                                                        <h6>
-                                                            Amount: <span>{amountOptions.find(o => o.value === activeFilters.amount)?.label}</span>
-                                                        </h6>
-                                                        <span>
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                className="filter-remv-btn"
-                                                                onClick={() => handleFilterUpdate('amount', null)}
-                                                            >
-                                                                <FontAwesomeIcon icon={faClose} />
-                                                            </a>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        )}
-
-                                        {/* Tags Filter Indicators - One for each active tag */}
-                                        {activeFilters.tags.map((tag: string, index: number) => (
-                                            <li key={`tag-${index}`}>
-                                                <div className="category-filtering-add">
-                                                    <div className="category-filter-items">
-                                                        <h6>
-                                                            Tags: <span>{tag}</span>
-                                                        </h6>
-                                                        <span>
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                className="filter-remv-btn"
-                                                                onClick={() => toggleTag(tag)}
-                                                            >
-                                                                <FontAwesomeIcon icon={faClose} />
-                                                            </a>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                            <div className="category-remove-filting">
+                                <ul>
+                                    <li>
+                                        <div className="category-filtering-add">
+                                            <div className="category-filter-items">
+                                                <h6>  Hotness Score : <span> &gt;3 </span>  </h6>
+                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div className="category-filtering-add">
+                                            <div className="category-filter-items">
+                                                <h6>  Amount : <span> &gt;$1,000 </span>  </h6>
+                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <div className="category-filtering-add">
+                                            <div className="category-filter-items">
+                                                <h6>  Tags : <span> Sniper </span>  </h6>
+                                                <span><a href="javascript:void(0)" className="filter-remv-btn"> <FontAwesomeIcon icon={faClose} /> </a></span>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
 
                             {/* Transactions List */}
                             <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
@@ -1602,7 +1445,7 @@ const HomePageNew = () => {
                                                     <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
                                                 </div>
                                                 <div>
-                                                    <ul className="quick-list">
+                                                    {/* <ul className="quick-list">
                                                         {tx.hotnessScore > 0 && (
                                                             <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
                                                         )}
@@ -1611,17 +1454,6 @@ const HomePageNew = () => {
                                                                 href="javascript:void(0)"
                                                                 className="quick-nw-btn"
                                                                 onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
-                                                                role="button"
-                                                                tabIndex={0}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter' || e.key === ' ') {
-                                                                        e.preventDefault()
-                                                                        e.stopPropagation()
-                                                                        handleQuickBuy(tx)
-                                                                    }
-                                                                }}
-                                                                aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
-                                                                title="Quick buy this token"
                                                             >
                                                                 quick buy
                                                             </a>
@@ -1636,7 +1468,7 @@ const HomePageNew = () => {
                                                                     handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
                                                                 }}
                                                             >
-                                                                {/* <FontAwesomeIcon icon={faCopy} /> */}
+                                                                
 
 
                                                                 <RiFileCopyLine />
@@ -1651,7 +1483,72 @@ const HomePageNew = () => {
                                                                 <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
                                                             </a>
                                                         </li>
-                                                    </ul>
+                                                    </ul> */}
+
+                                                    <div className="quick-list">
+                                                        {tx.hotnessScore > 0 && (
+                                                            <div>
+                                                                <span className="hotness-title">
+                                                                    Hotness score: {tx.hotnessScore}/10
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                          
+                                                            <div className="all-new-quick-bx">
+                                                                 <div className="quick-item">
+                                                                <a
+                                                                    href="javascript:void(0)"
+                                                                    className="quick-nw-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleQuickBuy(tx);
+                                                                    }}
+                                                                >
+                                                                    quick buy
+                                                                </a>
+                                                            </div>
+
+                                                            <div className="quick-item">
+                                                                    <a
+                                                                        href="javascript:void(0)"
+                                                                        className="quick-nw-btn quick-copy-btn"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleCopyTokenAddress(
+                                                                                tx.type === "sell"
+                                                                                    ? tx.tokenInAddress
+                                                                                    : tx.tokenOutAddress,
+                                                                                tx.signature
+                                                                            );
+                                                                        }}
+                                                                    >
+                                                                        <RiFileCopyLine />
+                                                                    </a>
+                                                            </div>
+
+                                                            <div className="quick-item">
+                                                                <a
+                                                                    href="javascript:void(0)"
+                                                                    className="quick-nw-btn quick-arrow-btn"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleTransactionInfoNewTab(tx.signature, tx.type);
+                                                                    }}
+                                                                >
+                                                                    <FontAwesomeIcon
+                                                                        icon={faArrowRight}
+                                                                        className="nw-arrow-tp"
+                                                                    />
+                                                                </a>
+                                                            </div>
+                                                            </div>
+                                                           
+
+                                                            </div>
+
+
+
                                                 </div>
                                             </div>
 
@@ -1665,10 +1562,10 @@ const HomePageNew = () => {
                                                     <img
                                                         src={tx.whaleTokenURL || DefaultTokenImage}
                                                         alt="whale"
-                                                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                                                        onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
                                                     />
                                                     <div className="whale-content flex-grow-1">
-                                                        <h4 className="username">{tx.whaleTokenSymbol} Whale ({tx.whaleAddress?.slice(0, 4)}..) </h4>
+                                                        <h4 className="username">{tx.whaleTokenSymbol} Whale (A4DC..) </h4>
                                                         <div className="tags">
                                                             {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                                                 <span key={i} className="tag-title">{tag}</span>
@@ -1678,7 +1575,7 @@ const HomePageNew = () => {
                                                             )}
                                                         </div>
                                                         <div className={`sold-out-title ${tx.type === 'buy' ? 'sold-title' : ''}`}>
-                                                            {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                            {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1707,7 +1604,7 @@ const HomePageNew = () => {
                                                         <img
                                                             src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
                                                             alt="token"
-                                                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                                                            onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
                                                         />
                                                     </div>
                                                 </div>
@@ -1779,19 +1676,11 @@ const HomePageNew = () => {
                     setIsSwapModalOpen(false)
                     setSwapTokenInfo(null)
                 }}
-                mode="quickBuy"
-                initialInputToken={{
-                    address: "So11111111111111111111111111111111111111112",
-                    symbol: "SOL",
-                    name: "Solana",
-                    decimals: 9,
-                    image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
-                }}
                 initialOutputToken={swapTokenInfo}
                 initialAmount={quickBuyAmount}
             />
 
-
+            <ToastContainer />
         </>
     )
 }

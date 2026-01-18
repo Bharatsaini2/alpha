@@ -129,22 +129,28 @@ export const createWhaleAlert = catchAsyncErrors(
       })
     }
 
-    if (!walletLabels || !Array.isArray(walletLabels) || walletLabels.length === 0) {
+    // Validate wallet labels
+    // Empty array = "All" (accept all transactions with or without labels)
+    // Non-empty array = specific labels to filter by
+    if (!walletLabels || !Array.isArray(walletLabels)) {
       return res.status(400).json({
         success: false,
-        message: 'At least one wallet label must be selected',
+        message: 'Wallet labels must be an array',
       })
     }
 
-    // Validate wallet labels
-    const validLabels = ['Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator', 'Whale']
-    const invalidLabels = walletLabels.filter(label => !validLabels.includes(label))
-    if (invalidLabels.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid wallet labels: ${invalidLabels.join(', ')}. Must be one of: ${validLabels.join(', ')}`,
-      })
+    // If labels are provided, validate them
+    if (walletLabels.length > 0) {
+      const validLabels = ['SMART MONEY', 'HEAVY ACCUMULATOR', 'SNIPER', 'FLIPPER', 'COORDINATED GROUP', 'DORMANT WHALE']
+      const invalidLabels = walletLabels.filter(label => !validLabels.includes(label))
+      if (invalidLabels.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid wallet labels: ${invalidLabels.join(', ')}. Must be one of: ${validLabels.join(', ')}`,
+        })
+      }
     }
+    // Empty array is valid - means "All" (accept all transactions)
 
     try {
       // Get user to verify wallet address and Telegram connection
@@ -509,13 +515,16 @@ export const generateLinkToken = catchAsyncErrors(
         message: 'Link token generated successfully',
       })
 
+      // Get bot username from environment or use default
+      const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'AlphaBlockAIbot'
+
       res.status(200).json({
         success: true,
         data: {
           token,
           expiresAt: expiry.toISOString(),
-          botUsername: 'AlphaBlockAIbot',
-          deepLink: `https://t.me/AlphaBlockAIbot?start=${token}`,
+          botUsername,
+          deepLink: `https://t.me/${botUsername}?start=${token}`,
         },
       })
     } catch (error) {

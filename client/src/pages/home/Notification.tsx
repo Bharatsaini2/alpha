@@ -61,7 +61,7 @@ function Notification() {
                           </th>
                           <th>
                             <span className="kol-feed-table-title">
-                              {" "}
+                              
                               Price <HiChevronUpDown />
                             </span>
                           </th>

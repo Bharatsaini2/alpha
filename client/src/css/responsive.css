@@ -27,18 +27,6 @@ body {
     width: 100% !important;
   }
 
-  .nw-user-info-bx {
-    flex-direction: column;
-    gap: 10px;
-    align-items: start;
-    padding-top: 15px;
-  }
-
-  .alpha-user-details img {
-    width: 64px;
-    height: 64px;
-  }
-
   .app {
     height: auto !important;
     min-height: 100vh;
@@ -60,7 +48,7 @@ body {
     overflow: visible !important;
     height: auto !important;
     min-height: 0;
-    padding: 8px 16px !important;
+    padding: 16px !important;
     grid-template-columns: 1fr;
     max-width: 100vw !important;
     width: 100% !important;
@@ -236,11 +224,6 @@ body {
     gap: 3px !important;
   }
 
-  .plan-btn {
-    font-size: 10px !important;
-    /* padding: 3px 5px !important; */
-  }
-
   .left-crd-content {
     text-align: end;
   }
@@ -255,6 +238,19 @@ body {
   .custom-tabs .nav-link {
     font-size: 12px !important;
     padding: 4px 16px !important;
+    width: 100% !important;
+  }
+
+  .portfolio-tab-container .custom-tabs {
+    width: 100%;
+  }
+
+  .portfolio-tab-container .nav-item {
+    width: 50%;
+  }
+
+  .portfolio-tab-container {
+    margin-top: 15px;
   }
 
   /* Rate box */
@@ -362,6 +358,7 @@ body {
   .category-remove-filting ul {
     flex-wrap: wrap;
   }
+
   .mobile-tabling-list {
     flex-direction: column;
   }
@@ -380,6 +377,358 @@ body {
 
   .nw-quick-bx .quick-btn {
     line-height: 0px;
+  }
+
+  .app {
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .main {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  /* .content {
+    overflow: visible;
+    height: auto;
+    min-height: 0;
+    padding: 12px 10px;
+  } */
+
+  .custom-tab-content {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  /* Fix container widths */
+  .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .col-lg-4,
+  .col-lg-8 {
+    padding-left: 0;
+    padding-right: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Market box responsiveness */
+  .market-bx {
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .ultra-pro-bx {
+    padding: 10px;
+  }
+
+  /* Trade box responsiveness */
+  .trade-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Amount box */
+  .amount-box h2 {
+    font-size: 18px;
+  }
+
+  /* Coin row responsiveness - hide quick buy on mobile */
+  .coin-row {
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .coin-row .quick-buy-btn {
+    display: none;
+  }
+
+  .coin-left {
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .coin-info {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .coin-title {
+    flex-wrap: wrap;
+  }
+
+  .coin-circle {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    font-size: 14px;
+  }
+
+  /* Plan buttons list - wrap on mobile */
+  .plan-btn-list {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .plan-btn {
+    font-size: 12px;
+    padding: 4px 6px;
+  }
+
+  /* Custom tabs - scroll horizontally if needed */
+  .custom-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  /* Rate box  */
+  .rate-box h5 {
+    font-size: 12px;
+  }
+
+  /* Connect wallet button */
+  .connect-wallet-btn {
+    font-size: 12px;
+    padding: 10px 16px;
+  }
+
+  /* Quick buy box hide on mobile */
+  /* .nw-quick-bx {
+    display: none;
+  } */
+
+  .custom-frm-bx.flex-grow-1 {
+    flex: 1;
+  }
+
+  .whale-address-section {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header-right-actions {
+    flex-grow: 1;
+    justify-content: space-between;
+  }
+
+  .alpha-user-details img {
+    width: 80px;
+    height: 80px;
+  }
+
+  .alpha-user-details h4 {
+    font-size: 14px !important;
+  }
+
+  .nw-user-info-bx {
+    flex-direction: column;
+    gap: 10px !important;
+    align-items: start !important;
+    padding-top: 16px !important;
+  }
+
+  .mb-content-bx {
+    margin-top: 15px;
+  }
+
+  .back-link {
+    margin-bottom: 10px !important;
+  }
+
+  .coin-mb-container {
+    flex-direction: column-reverse;
+  }
+
+  .coin-mb-container .custom-frm-bx {
+    width: 100%;
+    margin-bottom: 0px !important;
+  }
+
+  .mob-search-bx {
+    flex-direction: column;
+    width: 100%;
+    flex: 1;
+  }
+
+  .mob-market-box {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .coin-mb-container .custom-tabs {
+    width: 100%;
+  }
+
+  .coin-mb-container .nav-item {
+    width: 50%;
+  }
+
+  .new-mobile-tabing-bx {
+    width: 100%;
+    flex-direction: column;
+    gap: 10px !important;
+  }
+
+  .mob-market-box .plan-btn {
+    font-size: 12px !important;
+  }
+
+  .new-mobile-spacing {
+    padding: 0px;
+  }
+
+  .mobile-quick-list {
+  }
+
+  .nw-btm-brd {
+    align-items: start !important;
+  }
+
+  .quick-list {
+    flex-direction: column;
+  }
+
+  .hotness-title {
+    font-weight: 400;
+    color: #525252;
+  }
+
+  .desktop-tab-panel {
+    display: none !important;
+  }
+
+  .mobile-new-table {
+    display: block;
+  }
+
+  .mobile-block {
+    display: block;
+  }
+
+  .nw-portfolio-card {
+    height: 210px !important;
+  }
+
+  .mobile-portfolio-tatol-crd {
+    height: 173px !important;
+  }
+
+  .last-refreshed-bx {
+    justify-content: start;
+  }
+
+  /* mobile resposnive sidebar */
+
+  .mobile-sidebar-btn {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 240px;
+    height: 100vh;
+    background: #0a0a0a;
+    z-index: 9999;
+    transition: right 0.3s ease;
+  }
+
+  .sidebar.sidebar-mobile-open {
+    right: 0;
+  }
+
+  .mobile-sidebar-close {
+    display: block;
+  }
+
+  .main {
+    margin-left: 0 !important;
+  }
+
+  .sidebar-icon {
+    display: none;
+  }
+
+  /* .nav-btm-item {
+    margin-bottom: 50px;
+  } */
+
+  .mobile-new-connect-bx {
+    display: block;
+  }
+
+  .mobile-new-connect-bx .connect-btn {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 5px;
+  }
+
+  .mobile-new-connect-bx .nw-connected-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* mobile resposnive sidebar */
+
+  .home-mobile-tab-bx {
+    width: 100%;
+  }
+
+  .home-mobile-tab-bx .custom-tabs {
+    justify-content: center;
+    margin-bottom: 10px;
+  }
+
+  .home-mobile-tab-bx .nav-item {
+    width: 33.33%;
+  }
+
+  .mobile-mode-filter {
+    width: 100%;
+  }
+  .mobile-mode-filter .plan-btn-list {
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .filter-dropdown-menu {
+  }
+  .filter-mobile-hotness {
+    right: -85px;
+  }
+
+  .filter-mobile-amount {
+    right: -125px;
+  }
+
+  .filter-mobile-tag {
+    right: -120px;
+  }
+
+  .filter-mobile-subscription {
+    width: 340px;
+  }
+
+  .desktop-chart {
+    display: none;
+  }
+
+  .whale-row {
+    display: block !important;
+  }
+
+  .outflow-whale-row {
+    display: block !important;
   }
 }
 
@@ -401,11 +750,31 @@ body {
     justify-content: end !important;
   }
 
-  .nw-portfolio-card {
-    height: 210px !important;
+  /* .sidebar {
+    display: none !important;
+  } */
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
   }
 
-  .sidebar {
-    display: none !important;
+  /* .sidebar {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 260px;
+    height: 100vh;
+    background: #0b1220;
+    z-index: 1000;
+    transition: right 0.3s ease;
   }
+
+  .sidebar.sidebar-open {
+    right: 0;
+  }
+
+  .sidebar-close-btn {
+    display: block;
+  } */
 }

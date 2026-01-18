@@ -133,16 +133,15 @@ export function formatWhaleAlert(tx: IWhaleAllTransactionsV2, resolvedTokenSymbo
   const txLink = generateTransactionLink(tx.signature)
   const tokenLink = generateTokenLink(tokenAddress)
   
-  return `🐋 *Whale Alert*
+  return `🐋 *Whale ${typeUpper} Alert*
 
 *Wallet:* \`${walletEscaped}\`
 *Token:* *${tokenSymbolEscaped}*
-*Amount:* *${escapeMarkdownV2(formattedAmount)} ${tokenSymbolEscaped}*
-*USD Value:* *$${escapeMarkdownV2(formattedUSD)}*
-*Type:* *${typeUpper}*
+*Swap:* ${escapeMarkdownV2(formattedAmount)} ${tokenSymbolEscaped} \\(${escapeMarkdownV2(formattedUSD)}\\)
+*Hotness:* ${tx.hotnessScore || 'N/A'}/10
 
-[View Transaction](${txLink})
-[View Token](${tokenLink})`
+[📊 View Details](https://app.alpha-block.ai/transaction/${tx.signature}?type=whale&transaction=${tx.type})
+[🔍 Solscan](${txLink})`
 }
 
 /**

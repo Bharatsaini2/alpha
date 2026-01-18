@@ -108,54 +108,40 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 <div className="space-y-1">
                   {section.items.map((item) => {
                     const isActive = isActiveRoute(item.path)
-                    const isAlphaStream = item.name === "Alpha Stream"
-
-                    if (isAlphaStream) {
-                      return (
-                        <Link
-                          key={item.name}
-                          to={item.path}
-                          onClick={() => {
-                            if (window.innerWidth < 1024) {
-                              onToggle()
-                            }
-                          }}
-                          className={`
-                            relative flex items-center justify-start space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-left w-full
-                            ${isActive
-                              ? "text-white bg-[#2B2B2D]"
-                              : "text-[#B4B4B4] hover:text-white"
-                            }
-                          `}
-                        >
-                          <img
-                            src={item.icon}
-                            alt={item.name}
-                            className={`w-5 h-5 ${isActive ? "text-white" : "text-[#767678]"}`}
-                          />
-                          <span
-                            className={`${isActive ? "text-white hover:text-white" : "text-[#B4B4B4] hover:text-white"}`}
-                          >
-                            {item.name}
-                          </span>
-                        </Link>
-                      )
-                    }
-
                     return (
-                      <div
+                      <Link
                         key={item.name}
-                        className="relative flex items-center justify-start space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-left w-full opacity-50 cursor-not-allowed text-[#B4B4B4]"
+                        to={item.path}
+                        onClick={() => {
+                          // Close sidebar on mobile/tablet when item is clicked
+                          if (window.innerWidth < 1024) {
+                            onToggle()
+                          }
+                        }}
+                        className={`
+                          relative flex items-center justify-start space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-left w-full
+                          ${isActive
+                            ? "text-white bg-[#2B2B2D]"
+                            : "text-[#B4B4B4] hover:text-white"
+                          }
+                        `}
                       >
+                        {/* Active Item Left Shadow/Glow Effect */}
+                        {/* {isActive && (
+                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-white via-white/80 to-white/60 rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                        )} */}
+
                         <img
                           src={item.icon}
                           alt={item.name}
-                          className="w-5 h-5 text-[#767678]"
+                          className={`w-5 h-5 ${isActive ? "text-white" : "text-[#767678]"}`}
                         />
-                        <span className="text-[#B4B4B4]">
+                        <span
+                          className={`${isActive ? "text-white hover:text-white" : "text-[#B4B4B4] hover:text-white"}`}
+                        >
                           {item.name}
                         </span>
-                      </div>
+                      </Link>
                     )
                   })}
                 </div>

@@ -167,7 +167,7 @@ export class AlertMatcherService {
         }
 
         const subscription: UserSubscription = {
-          userId: alert.userId.toString(),
+          userId: user._id?.toString() || user.toString(),
           chatId: user.telegramChatId,
           priority: alert.priority,
           config: alert.config,
@@ -209,6 +209,17 @@ export class AlertMatcherService {
         component: 'AlertMatcherService',
         operation: 'processTransaction',
         message: 'Service not initialized, skipping transaction',
+      })
+      return
+    }
+
+    // Skip if this is not a whale transaction (e.g., KOL/influencer transaction)
+    if (!tx.whale || !tx.whale.address) {
+      logger.debug({
+        component: 'AlertMatcherService',
+        operation: 'processTransaction',
+        txHash: tx.signature,
+        message: 'Skipping non-whale transaction (no whale object)',
       })
       return
     }
@@ -605,15 +616,14 @@ export class AlertMatcherService {
     }
 
     // Check wallet labels with OR logic
-    // If wallet labels are specified, the transaction must have at least one matching label
+    // If ANY wallet labels are specified, accept ALL transactions (with or without labels)
+    // that meet the other criteria (USD amount, hotness score)
+    // This is intentional - selecting labels means "I want to see whale activity"
+    // regardless of whether the wallet is labeled yet
     if (config.walletLabels && config.walletLabels.length > 0) {
-      const txLabels = tx.whaleLabel || []
-      const hasMatchingLabel = txLabels.some(label => 
-        config.walletLabels!.includes(label)
-      )
-      if (!hasMatchingLabel) {
-        return false
-      }
+      // Labels are selected, but we accept all transactions
+      // The label filter is just an indicator that user wants whale alerts
+      return true
     }
 
     return true
