@@ -869,6 +869,9 @@ const HomePageNew = () => {
             // Handle wallet labels - if "Any Label" is selected or no labels, send all valid labels
             let labelsToSend = walletTypes.length > 0 ? walletTypes.filter(label => label !== "Any Label") : ["Smart Money"]
 
+            console.log('DEBUG: walletTypes =', walletTypes)
+            console.log('DEBUG: labelsToSend after filter =', labelsToSend)
+
             // If "Any Label" was selected, send all valid labels
             if (walletTypes.includes("Any Label")) {
                 labelsToSend = ["Smart Money", "Whale", "Insider", "Sniper", "Heavy Accumulator"]
@@ -878,6 +881,8 @@ const HomePageNew = () => {
             if (labelsToSend.length === 0) {
                 labelsToSend = ["Smart Money"]
             }
+
+            console.log('DEBUG: Final labelsToSend =', labelsToSend)
 
             // Create whale alert subscription
             const response = await axios.post(

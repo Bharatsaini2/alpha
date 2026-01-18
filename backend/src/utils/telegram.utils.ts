@@ -8,7 +8,7 @@ import { IInfluencerWhaleTransactionsV2 } from '../models/influencerWhaleTransac
  * @returns Escaped text safe for MarkdownV2
  */
 export function escapeMarkdownV2(text: string): string {
-  const specialChars = /([_*\[\]()~>#+=|{}.!-])/g
+  const specialChars = /([_*\[\]()~>`#+=|{}\\.!-])/g
   return text.replace(specialChars, '\\$1')
 }
 
@@ -60,7 +60,7 @@ export function formatLargeNumber(num: number): string {
  * @returns Solscan URL
  */
 export function generateTransactionLink(txHash: string): string {
-  return `https://solscan.io/tx/${txHash}`
+  return `https://app.alpha-block.ai/transaction/${txHash}`
 }
 
 /**
@@ -96,53 +96,67 @@ export function shortenAddress(
  * @returns Formatted MarkdownV2 message
  */
 export function formatWhaleAlert(tx: IWhaleAllTransactionsV2, resolvedTokenSymbol?: string): string {
-  const walletShort = shortenAddress(tx.whale.address)
-  const walletEscaped = escapeMarkdownV2(walletShort)
-  
   // Determine the primary token and amount based on transaction type
   let tokenSymbol: string
+  let tokenName: string
   let tokenAddress: string
-  let amount: string
   let usdAmount: string
+  let marketCap: number
   
   if (tx.type === 'buy') {
     tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenOut.symbol || 'Unknown'
+    tokenName = tx.transaction.tokenOut.name || tokenSymbol
     tokenAddress = tx.transaction.tokenOut.address
-    amount = tx.transaction.tokenOut.amount || '0'
     usdAmount = tx.transaction.tokenOut.usdAmount || '0'
+    marketCap = parseFloat(tx.transaction.tokenOut.marketCap || tx.marketCap?.buyMarketCap || '0')
   } else if (tx.type === 'sell') {
     tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenIn.symbol || 'Unknown'
+    tokenName = tx.transaction.tokenIn.name || tokenSymbol
     tokenAddress = tx.transaction.tokenIn.address
-    amount = tx.transaction.tokenIn.amount || '0'
     usdAmount = tx.transaction.tokenIn.usdAmount || '0'
+    marketCap = parseFloat(tx.transaction.tokenIn.marketCap || tx.marketCap?.sellMarketCap || '0')
   } else {
     // 'both' type - show tokenOut
     tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenOut.symbol || 'Unknown'
+    tokenName = tx.transaction.tokenOut.name || tokenSymbol
     tokenAddress = tx.transaction.tokenOut.address
-    amount = tx.transaction.tokenOut.amount || '0'
     usdAmount = tx.transaction.tokenOut.usdAmount || '0'
+    marketCap = parseFloat(tx.transaction.tokenOut.marketCap || tx.marketCap?.buyMarketCap || '0')
   }
   
-  const tokenSymbolEscaped = escapeMarkdownV2(tokenSymbol)
-  const amountNum = parseFloat(amount)
   const usdAmountNum = parseFloat(usdAmount)
-  const formattedAmount = formatCurrency(amountNum)
   const formattedUSD = formatLargeNumber(usdAmountNum)
+  const formattedMCap = formatLargeNumber(marketCap)
+  
+  // Get hotness score
+  const hotnessScore = (tx.hotnessScore || 0).toFixed(1)
+  
+  // Get wallet labels
+  const labels = tx.whaleLabel || []
+  const labelText = labels.length > 0 ? labels.join(' / ') : 'None'
+  
+  // Format timestamp to HH:MM UTC
+  const timestamp = tx.timestamp ? new Date(tx.timestamp) : new Date()
+  const hours = timestamp.getUTCHours().toString().padStart(2, '0')
+  const minutes = timestamp.getUTCMinutes().toString().padStart(2, '0')
+  const timeStr = `${hours}:${minutes} UTC`
   
   const typeUpper = tx.type.toUpperCase()
-  const txLink = generateTransactionLink(tx.signature)
+  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}`
   const tokenLink = generateTokenLink(tokenAddress)
   
-  return `🐋 *Whale Alert*
+  return `🐋 *Whale Buy Alert*
 
-*Wallet:* \`${walletEscaped}\`
-*Token:* *${tokenSymbolEscaped}*
-*Amount:* *${escapeMarkdownV2(formattedAmount)} ${tokenSymbolEscaped}*
-*USD Value:* *$${escapeMarkdownV2(formattedUSD)}*
-*Type:* *${typeUpper}*
+*Token:* ${escapeMarkdownV2(tokenName)} \\(${escapeMarkdownV2(tokenSymbol)}\\)
+*Chain:* Solana
+*CA:* \`${escapeMarkdownV2(shortenAddress(tokenAddress, 8, 8))}\`
+*MCAP:* $${escapeMarkdownV2(formattedMCap)}
+*Buy Amount:* $${escapeMarkdownV2(formattedUSD)}
+*Hotness Score:* ${escapeMarkdownV2(hotnessScore)}
+*Wallet Label:* ${escapeMarkdownV2(labelText)}
+*Time:* ${escapeMarkdownV2(timeStr)}
 
-[View Transaction](${txLink})
-[View Token](${tokenLink})`
+[View Transaction](${appTxLink}) \\| [View Token](${tokenLink})`
 }
 
 /**

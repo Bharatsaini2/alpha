@@ -166,8 +166,19 @@ export class AlertMatcherService {
           continue
         }
 
+        // Safety check: ensure user._id exists and is valid
+        if (!user._id) {
+          logger.warn({
+            component: 'AlertMatcherService',
+            operation: 'syncSubscriptions',
+            alertId: alert._id,
+            message: 'Alert has invalid userId structure, skipping',
+          })
+          continue
+        }
+
         const subscription: UserSubscription = {
-          userId: alert.userId.toString(),
+          userId: user._id.toString(),
           chatId: user.telegramChatId,
           priority: alert.priority,
           config: alert.config,
@@ -222,7 +233,7 @@ export class AlertMatcherService {
         operation: 'processTransaction',
         correlationId,
         txHash: tx.signature,
-        walletAddress: tx.whale.address,
+        walletAddress: tx.whale?.address || tx.whaleAddress || 'unknown',
         message: 'Starting transaction matching',
       })
 
@@ -289,6 +300,23 @@ export class AlertMatcherService {
         const isWhaleAlert = sub.config.hotnessScoreThreshold !== undefined ||
                             sub.config.walletLabels !== undefined ||
                             sub.config.minBuyAmountUSD !== undefined
+
+        // ONLY send alerts for BUY transactions
+        if (tx.type !== 'buy') {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchAlphaStream',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.ALPHA_STREAM,
+            isWhaleAlert,
+            txHash: tx.signature,
+            txType: tx.type,
+            matchResult: false,
+            message: 'Transaction is not a BUY - skipping alert',
+          })
+          continue
+        }
 
         // Use appropriate matching logic
         let matches = false

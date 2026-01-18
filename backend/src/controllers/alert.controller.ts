@@ -129,21 +129,52 @@ export const createWhaleAlert = catchAsyncErrors(
       })
     }
 
-    if (!walletLabels || !Array.isArray(walletLabels) || walletLabels.length === 0) {
+    // Validate wallet labels array
+    if (!walletLabels || !Array.isArray(walletLabels)) {
       return res.status(400).json({
         success: false,
-        message: 'At least one wallet label must be selected',
+        message: 'Wallet labels must be an array',
       })
     }
 
-    // Validate wallet labels
-    const validLabels = ['Sniper', 'Smart Money', 'Insider', 'Heavy Accumulator', 'Whale']
-    const invalidLabels = walletLabels.filter(label => !validLabels.includes(label))
-    if (invalidLabels.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid wallet labels: ${invalidLabels.join(', ')}. Must be one of: ${validLabels.join(', ')}`,
-      })
+    // Define valid labels (uppercase format as stored in database)
+    const validLabels = ['SNIPER', 'SMART MONEY', 'INSIDER', 'HEAVY ACCUMULATOR', 'WHALE', 'FLIPPER', 'COORDINATED GROUP', 'DORMANT WHALE', 'KOL']
+    
+    // Label normalization map to handle both uppercase and title case
+    const labelMap: Record<string, string> = {
+      'SNIPER': 'SNIPER',
+      'Sniper': 'SNIPER',
+      'SMART MONEY': 'SMART MONEY',
+      'Smart Money': 'SMART MONEY',
+      'INSIDER': 'INSIDER',
+      'Insider': 'INSIDER',
+      'HEAVY ACCUMULATOR': 'HEAVY ACCUMULATOR',
+      'Heavy Accumulator': 'HEAVY ACCUMULATOR',
+      'WHALE': 'WHALE',
+      'Whale': 'WHALE',
+      'FLIPPER': 'FLIPPER',
+      'Flipper': 'FLIPPER',
+      'COORDINATED GROUP': 'COORDINATED GROUP',
+      'Coordinated Group': 'COORDINATED GROUP',
+      'DORMANT WHALE': 'DORMANT WHALE',
+      'Dormant Whale': 'DORMANT WHALE',
+      'KOL': 'KOL',
+    }
+    
+    // Empty array is allowed (represents "all labels")
+    let normalizedLabels: string[] = []
+    
+    if (walletLabels.length > 0) {
+      // Normalize labels before validation
+      normalizedLabels = walletLabels.map(label => labelMap[label] || label)
+      const invalidLabels = normalizedLabels.filter(label => !validLabels.includes(label))
+      
+      if (invalidLabels.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid wallet labels: ${invalidLabels.join(', ')}. Must be one of: ${validLabels.join(', ')}`,
+        })
+      }
     }
 
     try {
@@ -183,15 +214,18 @@ export const createWhaleAlert = catchAsyncErrors(
         })
       }
 
+      // Normalize and sort wallet labels for consistent comparison
+      const sortedNormalizedLabels = normalizedLabels.slice().sort()
+      
       // Create or update whale alert subscription
       const config = {
         hotnessScoreThreshold,
-        walletLabels: walletLabels.sort(), // Sort for consistent comparison
+        walletLabels: sortedNormalizedLabels,
         minBuyAmountUSD,
       }
 
-      // Check if an alert with the exact same config already exists
-      const existingAlert = await UserAlert.findOne({
+      // Check if an alert with the same hotness score and min buy amount exists
+      const existingAlerts = await UserAlert.find({
         userId,
         type: AlertType.ALPHA_STREAM,
         enabled: true,
@@ -200,16 +234,21 @@ export const createWhaleAlert = catchAsyncErrors(
       })
 
       let alert
+      let isDuplicate = false
 
-      // If exact match exists, update it
-      if (existingAlert) {
-        // Check if wallet labels also match
-        const existingLabels = (existingAlert.config as any).walletLabels?.sort() || []
-        const newLabels = walletLabels.sort()
-        const labelsMatch = JSON.stringify(existingLabels) === JSON.stringify(newLabels)
+      // Check each existing alert to see if labels match after normalization
+      for (const existingAlert of existingAlerts) {
+        // Normalize and sort existing labels for comparison
+        const existingLabels = ((existingAlert.config as any).walletLabels || [])
+          .map((label: string) => labelMap[label] || label)
+          .sort()
+        
+        // Compare normalized, sorted arrays
+        const labelsMatch = JSON.stringify(existingLabels) === JSON.stringify(sortedNormalizedLabels)
 
         if (labelsMatch) {
-          // Exact match - update the existing alert
+          // Exact match found - update the existing alert timestamp
+          isDuplicate = true
           alert = await UserAlert.findByIdAndUpdate(
             existingAlert._id,
             {
@@ -217,18 +256,12 @@ export const createWhaleAlert = catchAsyncErrors(
             },
             { new: true }
           )
-        } else {
-          // Different labels - create new alert
-          alert = await UserAlert.create({
-            userId,
-            type: AlertType.ALPHA_STREAM,
-            priority: Priority.LOW,
-            enabled: true,
-            config,
-          })
+          break
         }
-      } else {
-        // No match - create new alert
+      }
+
+      // If no duplicate found, create new alert
+      if (!isDuplicate) {
         alert = await UserAlert.create({
           userId,
           type: AlertType.ALPHA_STREAM,
@@ -242,7 +275,7 @@ export const createWhaleAlert = catchAsyncErrors(
       alertMatcherService.invalidateUserSubscriptions(userId)
 
       // Send confirmation message to Telegram
-      const isUpdate = !!existingAlert
+      const isUpdate = isDuplicate
       telegramService.sendAlertConfirmation(
         userId,
         AlertType.ALPHA_STREAM,
