@@ -881,6 +881,8 @@ const HomePageNew = () => {
                 labelsToSend = []
             }
 
+            console.log('DEBUG: Final labelsToSend =', labelsToSend)
+
             // Create whale alert subscription
             const response = await axios.post(
                 `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,

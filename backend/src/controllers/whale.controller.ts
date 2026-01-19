@@ -1854,8 +1854,11 @@ const storeTransactionInDB = async (
 
   // Trigger alert matching asynchronously (non-blocking)
   setImmediate(() => {
+    // Convert Mongoose document to plain object for alert matching
+    const plainTransaction = savedTransaction.toObject ? savedTransaction.toObject() : savedTransaction
+    
     alertMatcherService
-      .processTransaction(savedTransaction)
+      .processTransaction(plainTransaction)
       .catch((error) => {
         logger.error({
           component: 'whale.controller',

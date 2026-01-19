@@ -239,24 +239,20 @@ describe('Telegram Utilities', () => {
             const tx = txData as unknown as IWhaleAllTransactionsV2
             const message = formatWhaleAlert(tx)
             
-            // Must contain wallet address (shortened)
-            expect(message).toMatch(/Wallet:/)
-            
             // Must contain token symbol
             expect(message).toMatch(/Token:/)
             
-            // Must contain amount
-            expect(message).toMatch(/Amount:/)
+            // Must contain buy amount
+            expect(message).toMatch(/Buy Amount:/)
             
-            // Must contain USD value
-            expect(message).toMatch(/USD Value:/)
+            // Must contain hotness score
+            expect(message).toMatch(/Hotness Score:/)
             
-            // Must contain transaction type
-            expect(message).toMatch(/Type:/)
-            expect(message).toMatch(/BUY|SELL|BOTH/)
+            // Must contain wallet label
+            expect(message).toMatch(/Wallet Label:/)
             
             // Must contain transaction link
-            expect(message).toContain('https://solscan.io/tx/')
+            expect(message).toContain('https://app.alpha-block.ai/transaction/')
             
             // Must contain token link
             expect(message).toContain('https://solscan.io/token/')
@@ -294,9 +290,8 @@ describe('Telegram Utilities', () => {
       const message = formatWhaleAlert(tx)
       
       expect(message).toContain('🐋')
-      expect(message).toContain('Whale Alert')
+      expect(message).toContain('Whale Buy Alert')
       expect(message).toContain('USDC')
-      expect(message).toContain('BUY')
     })
   })
 
@@ -393,10 +388,9 @@ describe('Telegram Utilities', () => {
             const tx = txData as unknown as IInfluencerWhaleTransactionsV2
             const message = formatKOLAlert(kol, tx)
             
-            // Must contain influencer name (may be escaped)
+            // Must contain influencer name
             expect(message).toMatch(/Influencer:/)
-            const escapedKol = escapeMarkdownV2(kol)
-            expect(message).toContain(escapedKol)
+            expect(message).toContain(kol)
             
             // Must contain token symbol
             expect(message).toMatch(/Token:/)
@@ -411,8 +405,8 @@ describe('Telegram Utilities', () => {
             // Must contain USD value
             expect(message).toMatch(/USD Value:/)
             
-            // Must contain transaction link
-            expect(message).toContain('https://solscan.io/tx/')
+            // Must contain transaction link (AlphaBlock format)
+            expect(message).toContain('https://app.alpha-block.ai/transaction/')
             
             // Must contain token link
             expect(message).toContain('https://solscan.io/token/')
@@ -483,8 +477,86 @@ describe('Telegram Utilities', () => {
   })
 
   describe('formatWhaleAlertMessage', () => {
-    // **Feature: telegram-whale-alerts, Property 7: Message formatting escapes special characters**
-    it('should escape all MarkdownV2 special characters in whale alert messages', () => {
+    // **Feature: whale-alert-backend-fix, Property 10: Required Fields in Message**
+    // **Validates: Requirements 4.2**
+    it('Property 10: should include all required fields in whale alert messages', () => {
+      fc.assert(
+        fc.property(
+          fc.record({
+            txHash: fc.string({ minLength: 32, maxLength: 88 }),
+            tokenAddress: fc.string({ minLength: 32, maxLength: 44 }),
+            tokenSymbol: fc.stringMatching(/^[A-Z0-9]{1,10}$/), // Alphanumeric only, 1-10 chars
+            tokenName: fc.stringMatching(/^[a-zA-Z0-9\s]{1,50}$/), // Alphanumeric and spaces, 1-50 chars
+            buyAmountUSD: fc.double({ min: 100, max: 1000000, noNaN: true }),
+            hotnessScore: fc.double({ min: 0, max: 10, noNaN: true }),
+            walletAddress: fc.string({ minLength: 32, maxLength: 44 }),
+            walletLabels: fc.array(
+              fc.constantFrom('SNIPER', 'SMART MONEY', 'INSIDER', 'HEAVY ACCUMULATOR', 'WHALE', 'FLIPPER'),
+              { minLength: 0, maxLength: 4 }
+            ),
+            timestamp: fc.integer({ min: 1600000000000, max: 2000000000000 }),
+          }),
+          (tx) => {
+            const message = formatWhaleAlertMessage(tx)
+            
+            // Required field 1: Token name
+            expect(message).toMatch(/Token:/)
+            expect(message).toContain(tx.tokenName)
+            
+            // Required field 2: Token symbol
+            expect(message).toContain(tx.tokenSymbol)
+            
+            // Required field 3: Chain name
+            expect(message).toContain('Chain:')
+            expect(message).toContain('Solana')
+            
+            // Required field 4: Contract address
+            expect(message).toMatch(/CA:/)
+            expect(message).toContain(tx.tokenAddress)
+            
+            // Required field 5: Buy amount (plain text, no escaping)
+            expect(message).toMatch(/Buy Amount:/)
+            // The formatted amount should be present (with $ prefix, no backslash escaping)
+            expect(message).toMatch(/Buy Amount: \$[\d.,]+[KMB]?/)
+            
+            // Required field 6: Hotness score (plain text, no escaping)
+            expect(message).toMatch(/Hotness Score:/)
+            expect(message).toMatch(/Hotness Score: [\d.]+\/10/)
+            
+            // Required field 7: Wallet labels
+            expect(message).toMatch(/Wallet Label:/)
+            if (tx.walletLabels.length > 0) {
+              // At least one label should be present
+              const hasLabel = tx.walletLabels.some(label => message.includes(label))
+              expect(hasLabel).toBe(true)
+            } else {
+              // Empty labels should show "Unknown"
+              expect(message).toContain('Unknown')
+            }
+            
+            // Required field 8: Transaction time
+            expect(message).toMatch(/Transaction Time:/)
+            expect(message).toMatch(/\d{2}:\d{2} UTC/)
+            
+            // Required field 9: Transaction detail link
+            expect(message).toContain('Transaction Detail:')
+            expect(message).toContain('https://app.alpha-block.ai/transaction/')
+            expect(message).toContain(tx.txHash)
+            
+            // Required field 10: Token link
+            expect(message).toContain('View Token:')
+            expect(message).toContain('https://solscan.io/token/')
+            expect(message).toContain(tx.tokenAddress)
+            
+            return true
+          }
+        ),
+        { numRuns: 100 }
+      )
+    })
+
+    // **Feature: telegram-whale-alerts, Property 7: Message formatting uses plain text**
+    it('should NOT escape MarkdownV2 special characters in whale alert messages (plain text format)', () => {
       fc.assert(
         fc.property(
           fc.record({
@@ -504,23 +576,24 @@ describe('Telegram Utilities', () => {
           (tx) => {
             const message = formatWhaleAlertMessage(tx)
             
-            // Special characters that must be escaped: _ * [ ] ( ) ~ > # + - = | { } . !
-            const specialChars = ['_', '*', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+            // Special characters should NOT be escaped (plain text format)
+            // The message should contain the raw characters without backslash escaping
             
-            // Check that special characters in the token name are escaped
+            // Check that token name appears without escaping
+            expect(message).toContain(tx.tokenName)
+            
+            // Check that token symbol appears without escaping
+            expect(message).toContain(tx.tokenSymbol)
+            
+            // Verify no backslash escape sequences exist (except in URLs which are fine)
+            // We'll check that special chars in token name/symbol are NOT escaped
+            const specialChars = ['_', '*', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
             for (const char of specialChars) {
               if (tx.tokenName.includes(char)) {
-                // The escaped version should have a backslash before the character
+                // Should NOT have backslash before the character
                 const escapedChar = `\\${char}`
-                expect(message).toContain(escapedChar)
-              }
-            }
-            
-            // Check that special characters in the token symbol are escaped
-            for (const char of specialChars) {
-              if (tx.tokenSymbol.includes(char)) {
-                const escapedChar = `\\${char}`
-                expect(message).toContain(escapedChar)
+                // The token name should appear as-is, not escaped
+                expect(message).toContain(tx.tokenName)
               }
             }
             
@@ -531,15 +604,15 @@ describe('Telegram Utilities', () => {
       )
     })
 
-    // **Feature: telegram-whale-alerts, Property 7: Message formatting escapes special characters**
+    // **Feature: telegram-whale-alerts, Property 7: Message formatting uses plain text**
     it('should include all required fields in whale alert messages', () => {
       fc.assert(
         fc.property(
           fc.record({
             txHash: fc.string({ minLength: 32, maxLength: 88 }),
             tokenAddress: fc.string({ minLength: 32, maxLength: 44 }),
-            tokenSymbol: fc.stringMatching(/^[A-Z0-9]+$/), // Alphanumeric only for simpler testing
-            tokenName: fc.stringMatching(/^[a-zA-Z0-9\s]+$/), // Alphanumeric and spaces
+            tokenSymbol: fc.stringMatching(/^[A-Z0-9]{1,10}$/), // Alphanumeric only for simpler testing
+            tokenName: fc.stringMatching(/^[a-zA-Z0-9\s]{1,50}$/), // Alphanumeric and spaces
             buyAmountUSD: fc.double({ min: 100, max: 1000000 }),
             hotnessScore: fc.double({ min: 0, max: 10 }),
             walletAddress: fc.string({ minLength: 32, maxLength: 44 }),
@@ -569,7 +642,6 @@ describe('Telegram Utilities', () => {
             
             // Must contain buy amount
             expect(message).toMatch(/Buy Amount:/)
-            expect(message).toMatch(/\$/)
             
             // Must contain hotness score
             expect(message).toMatch(/Hotness Score:/)
@@ -582,14 +654,14 @@ describe('Telegram Utilities', () => {
             expect(message).toMatch(/Time:/)
             expect(message).toMatch(/UTC/)
             
-            // Must contain transaction link
-            expect(message).toContain('View Transaction')
-            expect(message).toContain('https://solscan.io/tx/')
+            // Must contain transaction link (AlphaBlock format)
+            expect(message).toContain('Transaction Detail')
+            expect(message).toContain('https://app.alpha-block.ai/transaction/')
             expect(message).toContain(tx.txHash)
             
-            // Must contain Quick Buy link
-            expect(message).toContain('Quick Buy')
-            expect(message).toContain('https://alphablock.ai/swap?token=')
+            // Must contain token link
+            expect(message).toContain('View Token')
+            expect(message).toContain('https://solscan.io/token/')
             expect(message).toContain(tx.tokenAddress)
             
             return true
@@ -614,17 +686,17 @@ describe('Telegram Utilities', () => {
 
       const message = formatWhaleAlertMessage(tx)
       
-      expect(message).toContain('🐋 *Whale Buy Alert*')
+      expect(message).toContain('🐋 Whale Buy Alert')
       expect(message).toContain('USD Coin')
       expect(message).toContain('USDC')
       expect(message).toContain('Solana')
       expect(message).toContain('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
-      expect(message).toContain('$50\\.00K') // Escaped period
-      expect(message).toContain('8\\.5/10') // Escaped period
-      expect(message).toContain('Smart Money, Heavy Accumulator')
+      expect(message).toContain('$50.00K')
+      expect(message).toContain('8.5/10')
+      expect(message).toContain('Smart Money / Heavy Accumulator')
       expect(message).toContain('00:00 UTC')
-      expect(message).toContain('https://solscan.io/tx/5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt')
-      expect(message).toContain('https://alphablock.ai/swap?token=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
+      expect(message).toContain('https://app.alpha-block.ai/transaction/5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt')
+      expect(message).toContain('https://solscan.io/token/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
     })
 
     it('should handle empty wallet labels', () => {
@@ -645,7 +717,7 @@ describe('Telegram Utilities', () => {
       expect(message).toContain('Unknown')
     })
 
-    it('should handle special characters in token name and symbol', () => {
+    it('should handle special characters in token name and symbol (plain text format)', () => {
       const tx = {
         txHash: '5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt',
         tokenAddress: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
@@ -660,9 +732,9 @@ describe('Telegram Utilities', () => {
 
       const message = formatWhaleAlertMessage(tx)
       
-      // Special characters should be escaped
-      expect(message).toContain('Test\\_Token \\(v2\\.0\\)')
-      expect(message).toContain('TEST\\-TOKEN')
+      // Special characters should NOT be escaped (plain text format)
+      expect(message).toContain('Test_Token (v2.0)')
+      expect(message).toContain('TEST-TOKEN')
     })
 
     it('should fall back to plain text on formatting errors', () => {

@@ -19,10 +19,12 @@ jest.mock('../../services/telegram.service', () => ({
   telegramService: {},
 }))
 jest.mock('../../utils/logger', () => ({
-  debug: jest.fn(),
-  error: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
+  default: {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
 }))
 
 describe('Alert Controller Property-Based Tests', () => {
@@ -154,7 +156,6 @@ describe('Alert Controller Property-Based Tests', () => {
           fc.double({ min: 0.01, max: 10000, noNaN: true }), // Valid buy amount
           // Generate invalid wallet label configurations
           fc.oneof(
-            fc.constant([]), // Empty array
             fc.constant(null), // Null
             fc.constant(undefined), // Undefined
             fc.array(fc.string(), { minLength: 1, maxLength: 4 }), // Invalid label strings
@@ -178,7 +179,7 @@ describe('Alert Controller Property-Based Tests', () => {
               expect.objectContaining({
                 success: false,
                 message: expect.stringMatching(
-                  /At least one wallet label must be selected|Invalid wallet labels/,
+                  /Wallet labels must be an array|Invalid wallet labels/,
                 ),
               }),
             )
@@ -198,7 +199,6 @@ describe('Alert Controller Property-Based Tests', () => {
           fc.oneof(
             fc.constant({ minBuyAmountUSD: 100, walletLabels: ['Sniper'] }), // Missing hotness score
             fc.constant({ hotnessScoreThreshold: 5, walletLabels: ['Sniper'] }), // Missing buy amount
-            fc.constant({ hotnessScoreThreshold: 5, minBuyAmountUSD: 100 }), // Missing wallet labels
           ),
           async (incompleteConfig) => {
             // Reset mocks for each iteration
@@ -215,7 +215,7 @@ describe('Alert Controller Property-Based Tests', () => {
               expect.objectContaining({
                 success: false,
                 message: expect.stringMatching(
-                  /Hotness score threshold is required|Minimum buy amount is required|At least one wallet label must be selected/,
+                  /Hotness score threshold is required|Minimum buy amount is required/,
                 ),
               }),
             )

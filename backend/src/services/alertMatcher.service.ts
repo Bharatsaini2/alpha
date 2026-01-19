@@ -160,14 +160,25 @@ export class AlertMatcherService {
       // Group by alert type
       for (const alert of alerts) {
         const user = alert.userId as any
-        
+
         // Skip if user doesn't have telegram linked
         if (!user || !user.telegramChatId) {
           continue
         }
 
+        // Safety check: ensure user._id exists and is valid
+        if (!user._id) {
+          logger.warn({
+            component: 'AlertMatcherService',
+            operation: 'syncSubscriptions',
+            alertId: alert._id,
+            message: 'Alert has invalid userId structure, skipping',
+          })
+          continue
+        }
+
         const subscription: UserSubscription = {
-          userId: user._id?.toString() || user.toString(),
+          userId: user._id.toString(),
           chatId: user.telegramChatId,
           priority: alert.priority,
           config: alert.config,
@@ -233,7 +244,7 @@ export class AlertMatcherService {
         operation: 'processTransaction',
         correlationId,
         txHash: tx.signature,
-        walletAddress: tx.whale.address,
+        walletAddress: tx.whale?.address || tx.whaleAddress || 'unknown',
         message: 'Starting transaction matching',
       })
 
@@ -270,7 +281,7 @@ export class AlertMatcherService {
       })
     } catch (error) {
       const latency = Date.now() - startTime
-      
+
       logger.error({
         component: 'AlertMatcherService',
         operation: 'processTransaction',
@@ -293,13 +304,47 @@ export class AlertMatcherService {
   private async matchAlphaStream(tx: IWhaleAllTransactionsV2, correlationId: string): Promise<number> {
     const subscriptions = this.subscriptionMap.get(AlertType.ALPHA_STREAM) || []
     let matchCount = 0
-    
+
+    // Skip KOL/Influencer transactions for ALPHA_STREAM alerts
+    // KOL transactions will be handled by KOL_ACTIVITY alerts separately
+    const whaleAddress = tx.whale?.address || tx.whaleAddress
+    const isKOL = await this.getKOLInfo(whaleAddress)
+    if (isKOL) {
+      logger.debug({
+        component: 'AlertMatcherService',
+        operation: 'matchAlphaStream',
+        correlationId,
+        txHash: tx.signature,
+        whaleAddress,
+        kolUsername: isKOL.username,
+        message: 'Transaction is from KOL/Influencer - skipping ALPHA_STREAM alert',
+      })
+      return 0
+    }
+
     for (const sub of subscriptions) {
       try {
         // Determine if this is a whale alert subscription (has whale-specific config)
         const isWhaleAlert = sub.config.hotnessScoreThreshold !== undefined ||
-                            sub.config.walletLabels !== undefined ||
-                            sub.config.minBuyAmountUSD !== undefined
+          sub.config.walletLabels !== undefined ||
+          sub.config.minBuyAmountUSD !== undefined
+
+        // ONLY send alerts for BUY transactions (skip SELL-only)
+        if (tx.type === 'sell') {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchAlphaStream',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.ALPHA_STREAM,
+            isWhaleAlert,
+            txHash: tx.signature,
+            txType: tx.type,
+            matchResult: false,
+            message: 'Transaction is SELL-only - skipping alert',
+          })
+          continue
+        }
 
         // Use appropriate matching logic
         let matches = false
@@ -382,7 +427,7 @@ export class AlertMatcherService {
   private async matchWhaleCluster(tx: IWhaleAllTransactionsV2, correlationId: string): Promise<number> {
     const subscriptions = this.subscriptionMap.get(AlertType.WHALE_CLUSTER) || []
     let matchCount = 0
-    
+
     for (const sub of subscriptions) {
       try {
         // Check filters
@@ -485,7 +530,7 @@ export class AlertMatcherService {
   private async matchKOLActivity(tx: IWhaleAllTransactionsV2, correlationId: string): Promise<number> {
     const subscriptions = this.subscriptionMap.get(AlertType.KOL_ACTIVITY) || []
     let matchCount = 0
-    
+
     for (const sub of subscriptions) {
       try {
         // Check if transaction is from a KOL wallet
@@ -512,8 +557,8 @@ export class AlertMatcherService {
         // Resolve token symbol
         const tokenSymbol = this.resolveTokenSymbol(tx)
 
-        // Format message
-        const message = formatKOLAlert(kolInfo.name || kolInfo.username, tx, tokenSymbol)
+        // Format message with KOL username for X link
+        const message = formatKOLAlert(kolInfo.name || kolInfo.username, tx, tokenSymbol, kolInfo.username)
 
         // Queue alert
         const queued = await telegramService.queueAlert(
@@ -916,16 +961,16 @@ export class AlertMatcherService {
           size: this.clusterCache.size,
           hits: this.clusterCacheHits,
           misses: this.clusterCacheMisses,
-          hitRate: clusterCacheTotal > 0 
-            ? Math.round((this.clusterCacheHits / clusterCacheTotal) * 10000) / 100 
+          hitRate: clusterCacheTotal > 0
+            ? Math.round((this.clusterCacheHits / clusterCacheTotal) * 10000) / 100
             : 0,
         },
         tokenSymbol: {
           size: this.tokenSymbolCache.size,
           hits: this.symbolCacheHits,
           misses: this.symbolCacheMisses,
-          hitRate: symbolCacheTotal > 0 
-            ? Math.round((this.symbolCacheHits / symbolCacheTotal) * 10000) / 100 
+          hitRate: symbolCacheTotal > 0
+            ? Math.round((this.symbolCacheHits / symbolCacheTotal) * 10000) / 100
             : 0,
         },
       },

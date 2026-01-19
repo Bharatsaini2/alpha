@@ -21,13 +21,18 @@ jest.mock('../../services/alertMatcher.service', () => ({
   },
 }))
 jest.mock('../../services/telegram.service', () => ({
-  telegramService: {},
+  telegramService: {
+    sendAlertConfirmation: jest.fn().mockResolvedValue(undefined),
+    sendAlertDeletionConfirmation: jest.fn().mockResolvedValue(undefined),
+  },
 }))
 jest.mock('../../utils/logger', () => ({
-  debug: jest.fn(),
-  error: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
+  default: {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
 }))
 
 // Extend Request type to include userId
@@ -43,13 +48,14 @@ describe('Alert Controller Unit Tests', () => {
   let statusMock: jest.Mock
 
   beforeEach(() => {
-    jsonMock = jest.fn()
+    jsonMock = jest.fn().mockReturnThis()
     statusMock = jest.fn().mockReturnValue({ json: jsonMock })
     mockNext = jest.fn()
 
     mockRequest = {
       body: {},
       params: {},
+      query: {}, // Add query property
     }
 
     mockResponse = {
@@ -167,7 +173,7 @@ describe('Alert Controller Unit Tests', () => {
       }
 
       expect(User.findById).toHaveBeenCalledWith(userId)
-      expect(validateSOLBalance).toHaveBeenCalledWith(walletAddress)
+      expect(validateSOLBalance).toHaveBeenCalledWith(walletAddress, false)
       expect(statusMock).toHaveBeenCalledWith(200)
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
@@ -274,6 +280,7 @@ describe('Alert Controller Unit Tests', () => {
       const mockUser = {
         _id: userId,
         walletAddress,
+        telegramChatId: 'test-chat-id',
       }
 
       const mockPremiumResult = {
@@ -432,12 +439,14 @@ describe('Alert Controller Unit Tests', () => {
       expect(statusMock).toHaveBeenCalledWith(400)
       expect(jsonMock).toHaveBeenCalledWith({
         success: false,
-        message: 'At least one wallet label must be selected',
+        message: 'Wallet labels must be an array',
       })
     })
 
-    it('should return 400 when wallet labels array is empty', async () => {
+    it('should accept empty wallet labels array (represents "all labels")', async () => {
       const userId = 'test-user-id'
+      const walletAddress = 'test-wallet-address'
+      const alertId = 'test-alert-id'
       mockRequest.userId = userId
 
       mockRequest.body = {
@@ -446,12 +455,50 @@ describe('Alert Controller Unit Tests', () => {
         walletLabels: [],
       }
 
+      const mockUser = {
+        _id: userId,
+        walletAddress,
+        telegramChatId: 'test-chat-id',
+      }
+
+      const mockPremiumResult = {
+        hasAccess: true,
+        currentBalance: 0.001,
+        requiredBalance: 0.0006,
+      }
+
+      const mockAlert = {
+        _id: alertId,
+        userId,
+        type: AlertType.ALPHA_STREAM,
+        priority: Priority.LOW,
+        enabled: true,
+        config: {
+          hotnessScoreThreshold: 5,
+          minBuyAmountUSD: 1000,
+          walletLabels: [],
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+
+      ;(User.findById as jest.Mock).mockResolvedValue(mockUser)
+      ;(validateSOLBalance as jest.Mock).mockResolvedValue(mockPremiumResult)
+      ;(UserAlert.find as jest.Mock).mockResolvedValue([])
+      ;(UserAlert.create as jest.Mock).mockResolvedValue(mockAlert)
+
       await createWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
-      expect(statusMock).toHaveBeenCalledWith(400)
+      expect(statusMock).toHaveBeenCalledWith(200)
       expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: 'At least one wallet label must be selected',
+        success: true,
+        data: {
+          alertId: mockAlert._id,
+          type: mockAlert.type,
+          config: mockAlert.config,
+          createdAt: mockAlert.createdAt,
+          updatedAt: mockAlert.updatedAt,
+        },
       })
     })
 
@@ -509,6 +556,7 @@ describe('Alert Controller Unit Tests', () => {
       const mockUser = {
         _id: userId,
         walletAddress,
+        telegramChatId: 'test-chat-id',
       }
 
       const mockPremiumResult = {
@@ -526,7 +574,7 @@ describe('Alert Controller Unit Tests', () => {
         config: {
           hotnessScoreThreshold: 7,
           minBuyAmountUSD: 5000,
-          walletLabels: ['Sniper', 'Smart Money'],
+          walletLabels: ['SMART MONEY', 'SNIPER'], // Normalized and sorted
         },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -534,29 +582,22 @@ describe('Alert Controller Unit Tests', () => {
 
       ;(User.findById as jest.Mock).mockResolvedValue(mockUser)
       ;(validateSOLBalance as jest.Mock).mockResolvedValue(mockPremiumResult)
-      ;(UserAlert.findOneAndUpdate as jest.Mock).mockResolvedValue(mockAlert)
+      ;(UserAlert.find as jest.Mock).mockResolvedValue([])
+      ;(UserAlert.create as jest.Mock).mockResolvedValue(mockAlert)
 
       await createWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
-      expect(UserAlert.findOneAndUpdate).toHaveBeenCalledWith(
-        { userId, type: AlertType.ALPHA_STREAM },
-        {
-          userId,
-          type: AlertType.ALPHA_STREAM,
-          priority: Priority.LOW,
-          enabled: true,
-          config: {
-            hotnessScoreThreshold: 7,
-            minBuyAmountUSD: 5000,
-            walletLabels: ['Sniper', 'Smart Money'],
-          },
+      expect(UserAlert.create).toHaveBeenCalledWith({
+        userId,
+        type: AlertType.ALPHA_STREAM,
+        priority: Priority.LOW,
+        enabled: true,
+        config: {
+          hotnessScoreThreshold: 7,
+          minBuyAmountUSD: 5000,
+          walletLabels: ['SMART MONEY', 'SNIPER'], // Normalized and sorted
         },
-        {
-          upsert: true,
-          new: true,
-          runValidators: true,
-        },
-      )
+      })
       expect(alertMatcherService.invalidateUserSubscriptions).toHaveBeenCalledWith(userId)
       expect(statusMock).toHaveBeenCalledWith(200)
       expect(jsonMock).toHaveBeenCalledWith({
@@ -589,7 +630,7 @@ describe('Alert Controller Unit Tests', () => {
           config: {
             hotnessScoreThreshold: 7,
             minBuyAmountUSD: 5000,
-            walletLabels: ['Sniper'],
+            walletLabels: ['SNIPER'],
           },
           createdAt: new Date('2024-01-02'),
           updatedAt: new Date('2024-01-02'),
@@ -603,7 +644,7 @@ describe('Alert Controller Unit Tests', () => {
           config: {
             hotnessScoreThreshold: 5,
             minBuyAmountUSD: 1000,
-            walletLabels: ['Smart Money', 'Insider'],
+            walletLabels: ['INSIDER', 'SMART MONEY'],
           },
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-01'),
@@ -622,7 +663,6 @@ describe('Alert Controller Unit Tests', () => {
       expect(UserAlert.find).toHaveBeenCalledWith({
         userId,
         type: AlertType.ALPHA_STREAM,
-        enabled: true,
       })
       expect(mockFind.sort).toHaveBeenCalledWith({ createdAt: -1 })
       expect(statusMock).toHaveBeenCalledWith(200)
@@ -630,7 +670,7 @@ describe('Alert Controller Unit Tests', () => {
         success: true,
         data: {
           alerts: mockAlerts.map((alert) => ({
-            id: alert._id,
+            _id: alert._id,
             type: alert.type,
             priority: alert.priority,
             enabled: alert.enabled,
@@ -678,18 +718,18 @@ describe('Alert Controller Unit Tests', () => {
         _id: alertId,
         userId,
         type: AlertType.ALPHA_STREAM,
-        enabled: false,
+        enabled: true,
       }
 
-      ;(UserAlert.findOneAndUpdate as jest.Mock).mockResolvedValue(mockAlert)
+      ;(UserAlert.findOneAndDelete as jest.Mock).mockResolvedValue(mockAlert)
 
       await deleteWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
-      expect(UserAlert.findOneAndUpdate).toHaveBeenCalledWith(
-        { _id: alertId, userId, type: AlertType.ALPHA_STREAM },
-        { enabled: false },
-        { new: true },
-      )
+      expect(UserAlert.findOneAndDelete).toHaveBeenCalledWith({
+        _id: alertId,
+        userId,
+        type: AlertType.ALPHA_STREAM,
+      })
       expect(alertMatcherService.invalidateUserSubscriptions).toHaveBeenCalledWith(userId)
       expect(statusMock).toHaveBeenCalledWith(200)
       expect(jsonMock).toHaveBeenCalledWith({
@@ -704,7 +744,7 @@ describe('Alert Controller Unit Tests', () => {
       mockRequest.userId = userId
       mockRequest.params = { alertId }
 
-      ;(UserAlert.findOneAndUpdate as jest.Mock).mockResolvedValue(null)
+      ;(UserAlert.findOneAndDelete as jest.Mock).mockResolvedValue(null)
 
       await deleteWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
@@ -721,8 +761,8 @@ describe('Alert Controller Unit Tests', () => {
       mockRequest.userId = userId
       mockRequest.params = { alertId }
 
-      // findOneAndUpdate returns null when userId doesn't match
-      ;(UserAlert.findOneAndUpdate as jest.Mock).mockResolvedValue(null)
+      // findOneAndDelete returns null when userId doesn't match
+      ;(UserAlert.findOneAndDelete as jest.Mock).mockResolvedValue(null)
 
       await deleteWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
@@ -749,6 +789,7 @@ describe('Alert Controller Unit Tests', () => {
       const mockUser = {
         _id: userId,
         walletAddress,
+        telegramChatId: 'test-chat-id',
       }
 
       const mockPremiumResult = {
@@ -759,7 +800,8 @@ describe('Alert Controller Unit Tests', () => {
 
       ;(User.findById as jest.Mock).mockResolvedValue(mockUser)
       ;(validateSOLBalance as jest.Mock).mockResolvedValue(mockPremiumResult)
-      ;(UserAlert.findOneAndUpdate as jest.Mock).mockRejectedValue(new Error('Database error'))
+      ;(UserAlert.find as jest.Mock).mockResolvedValue([])
+      ;(UserAlert.create as jest.Mock).mockRejectedValue(new Error('Database error'))
 
       await createWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
@@ -796,7 +838,7 @@ describe('Alert Controller Unit Tests', () => {
       mockRequest.userId = userId
       mockRequest.params = { alertId }
 
-      ;(UserAlert.findOneAndUpdate as jest.Mock).mockRejectedValue(new Error('Database error'))
+      ;(UserAlert.findOneAndDelete as jest.Mock).mockRejectedValue(new Error('Database error'))
 
       await deleteWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
