@@ -294,6 +294,23 @@ export class AlertMatcherService {
     const subscriptions = this.subscriptionMap.get(AlertType.ALPHA_STREAM) || []
     let matchCount = 0
     
+    // Skip KOL/Influencer transactions for ALPHA_STREAM alerts
+    // KOL transactions will be handled by KOL_ACTIVITY alerts separately
+    const whaleAddress = tx.whale?.address || tx.whaleAddress
+    const isKOL = await this.getKOLInfo(whaleAddress)
+    if (isKOL) {
+      logger.debug({
+        component: 'AlertMatcherService',
+        operation: 'matchAlphaStream',
+        correlationId,
+        txHash: tx.signature,
+        whaleAddress,
+        kolUsername: isKOL.username,
+        message: 'Transaction is from KOL/Influencer - skipping ALPHA_STREAM alert',
+      })
+      return 0
+    }
+    
     for (const sub of subscriptions) {
       try {
         // Determine if this is a whale alert subscription (has whale-specific config)
@@ -301,8 +318,8 @@ export class AlertMatcherService {
                             sub.config.walletLabels !== undefined ||
                             sub.config.minBuyAmountUSD !== undefined
 
-        // ONLY send alerts for BUY transactions
-        if (tx.type !== 'buy') {
+        // ONLY send alerts for BUY transactions (skip SELL-only)
+        if (tx.type === 'sell') {
           logger.debug({
             component: 'AlertMatcherService',
             operation: 'matchAlphaStream',
@@ -313,7 +330,7 @@ export class AlertMatcherService {
             txHash: tx.signature,
             txType: tx.type,
             matchResult: false,
-            message: 'Transaction is not a BUY - skipping alert',
+            message: 'Transaction is SELL-only - skipping alert',
           })
           continue
         }
@@ -529,8 +546,8 @@ export class AlertMatcherService {
         // Resolve token symbol
         const tokenSymbol = this.resolveTokenSymbol(tx)
 
-        // Format message
-        const message = formatKOLAlert(kolInfo.name || kolInfo.username, tx, tokenSymbol)
+        // Format message with KOL username for X link
+        const message = formatKOLAlert(kolInfo.name || kolInfo.username, tx, tokenSymbol, kolInfo.username)
 
         // Queue alert
         const queued = await telegramService.queueAlert(
