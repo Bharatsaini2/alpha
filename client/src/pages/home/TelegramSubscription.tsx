@@ -136,7 +136,8 @@ function TelegramSubscription() {
         try {
             setLoading(true);
             setError(null);
-            const response = await api.get('/alerts/whale-alerts');
+            // Use my-alerts endpoint to get ALL alert types (whale + KOL)
+            const response = await api.get('/alerts/my-alerts');
             
             console.log('Fetched subscriptions:', response.data);
             
@@ -164,9 +165,28 @@ function TelegramSubscription() {
 
         console.log('Deleting subscription with ID:', deleteConfirmId);
 
+        // Find the subscription to determine its type
+        const subscription = subscriptions.find(sub => sub._id === deleteConfirmId);
+        if (!subscription) {
+            showToast('Subscription not found', 'error');
+            return;
+        }
+
         try {
             setDeleting(true);
-            const response = await api.delete(`/alerts/whale-alert/${deleteConfirmId}`);
+            
+            // Use the appropriate delete endpoint based on alert type
+            let deleteEndpoint = '';
+            if (subscription.type === 'ALPHA_STREAM') {
+                deleteEndpoint = `/alerts/whale-alert/${deleteConfirmId}`;
+            } else if (subscription.type === 'KOL_ACTIVITY') {
+                deleteEndpoint = `/alerts/kol-alert/${deleteConfirmId}`;
+            } else {
+                // Fallback to generic delete endpoint
+                deleteEndpoint = `/alerts/${deleteConfirmId}`;
+            }
+            
+            const response = await api.delete(deleteEndpoint);
             
             console.log('Delete response:', response.data);
             
@@ -427,7 +447,7 @@ function TelegramSubscription() {
                                                     <div className="share-profile">
                                                         <div>
                                                             <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                                {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type}
+                                                                {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type === 'KOL_ACTIVITY' ? 'KOL Alert' : subscription.type}
                                                                 {subscription.enabled && <RiVerifiedBadgeFill style={{ color: '#14904d', fontSize: '12px' }} />}
                                                                 <span 
                                                                     style={{ 

@@ -768,8 +768,8 @@ const KOLFeedPage = () => {
 
   const [hotness, setHotness] = useState(10);
 
-  // Handle whale alert subscription
-  const handleWhaleAlertConnect = async () => {
+  // Handle KOL alert subscription
+  const handleKOLAlertConnect = async () => {
     try {
       const token = localStorage.getItem("accessToken")
       if (!token) {
@@ -805,27 +805,11 @@ const KOLFeedPage = () => {
       // Convert amount string to number
       const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
 
-      // Handle wallet labels
-      // If "All" is selected, send empty array to indicate "accept all transactions"
-      let labelsToSend: string[] = []
-
-      if (walletTypes.includes("All")) {
-        // "All" selected = accept ALL transactions (with or without labels)
-        labelsToSend = []
-      } else if (walletTypes.length > 0) {
-        // Specific labels selected = filter by those labels
-        labelsToSend = walletTypes.filter(label => label !== "All")
-      } else {
-        // No labels selected = default to empty (accept all)
-        labelsToSend = []
-      }
-
-      // Create whale alert subscription
+      // Create KOL alert subscription
       const response = await axios.post(
-        `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,
+        `${import.meta.env.VITE_SERVER_URL}/alerts/kol-alert`,
         {
           hotnessScoreThreshold: hotness,
-          walletLabels: labelsToSend,
           minBuyAmountUSD: minBuyAmount,
         },
         {
@@ -837,13 +821,13 @@ const KOLFeedPage = () => {
 
       if (response.data.success) {
         setIsSaved(true)
-        showToast("Whale alert subscription created successfully!", "success")
+        showToast("KOL alert subscription created successfully!", "success")
         setTimeout(() => setIsSaved(false), 3000)
       }
     } catch (error: any) {
-      console.error("Whale alert subscription error:", error)
+      console.error("KOL alert subscription error:", error)
       showToast(
-        error.response?.data?.message || "Failed to create whale alert subscription",
+        error.response?.data?.message || "Failed to create KOL alert subscription",
         "error"
       )
     }
@@ -1127,7 +1111,7 @@ const KOLFeedPage = () => {
                           setHotness={setHotness}
                           amount={amount}
                           setAmount={setAmount}
-                          onActivate={handleWhaleAlertConnect}
+                          onActivate={handleKOLAlertConnect}
                           isSaved={isSaved}
                           setIsSaved={setIsSaved}
                           user={user}

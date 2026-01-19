@@ -4,6 +4,9 @@ import {
   createWhaleAlert,
   getWhaleAlerts,
   deleteWhaleAlert,
+  createKolAlert,
+  getKolAlerts,
+  deleteKolAlert,
   generateLinkToken,
   unlinkTelegram,
   upsertAlert,
@@ -37,6 +40,15 @@ alertRouter.get('/whale-alerts', getWhaleAlerts)
 
 // DELETE /api/v1/alerts/whale-alert/:alertId - Delete whale alert subscription
 alertRouter.delete('/whale-alert/:alertId', validateAlertId, deleteWhaleAlert)
+
+// POST /api/v1/alerts/kol-alert - Create or update KOL alert subscription
+alertRouter.post('/kol-alert', createKolAlert)
+
+// GET /api/v1/alerts/kol-alerts - Get user's KOL alert subscriptions
+alertRouter.get('/kol-alerts', getKolAlerts)
+
+// DELETE /api/v1/alerts/kol-alert/:alertId - Delete KOL alert subscription
+alertRouter.delete('/kol-alert/:alertId', validateAlertId, deleteKolAlert)
 
 // POST /api/v1/alerts/link - Generate account linking token
 alertRouter.post('/link', premiumGate, generateLinkToken)

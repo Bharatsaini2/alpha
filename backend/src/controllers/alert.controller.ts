@@ -984,3 +984,342 @@ export const getAlertSystemHealth = catchAsyncErrors(
     }
   },
 )
+
+/**
+ * POST /api/v1/alerts/kol-alert
+ * Create or update KOL alert subscription
+ */
+export const createKolAlert = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    const { hotnessScoreThreshold, minBuyAmountUSD } = req.body
+
+    // Validate input parameters
+    if (hotnessScoreThreshold === undefined || hotnessScoreThreshold === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hotness score threshold is required',
+      })
+    }
+
+    if (hotnessScoreThreshold < 0 || hotnessScoreThreshold > 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Hotness score must be between 0 and 10',
+      })
+    }
+
+    if (minBuyAmountUSD === undefined || minBuyAmountUSD === null) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum buy amount is required',
+      })
+    }
+
+    if (minBuyAmountUSD <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum buy amount must be positive',
+      })
+    }
+
+    try {
+      // Get user to verify wallet address and Telegram connection
+      const user = await User.findById(userId)
+
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'Wallet address not found. Please connect your wallet.',
+        })
+      }
+
+      // Check if Telegram is connected
+      if (!user.telegramChatId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Telegram account not connected. Please connect your Telegram account first.',
+        })
+      }
+
+      // Use walletAddressOriginal if available (correct case), otherwise use walletAddress
+      const walletForCheck = user.walletAddressOriginal || user.walletAddress
+
+      // Check premium access
+      const premiumResult = await validateSOLBalance(walletForCheck)
+
+      if (!premiumResult.hasAccess) {
+        return res.status(403).json({
+          success: false,
+          message: `Premium access required. Minimum balance: ${premiumResult.requiredBalance} SOL`,
+          data: {
+            currentBalance: premiumResult.currentBalance,
+            requiredBalance: premiumResult.requiredBalance,
+            difference: premiumResult.difference,
+          },
+        })
+      }
+
+      // Create or update KOL alert subscription
+      const config = {
+        hotnessScoreThreshold,
+        minBuyAmountUSD,
+      }
+
+      // Check if an alert with the same config exists
+      const existingAlert = await UserAlert.findOne({
+        userId,
+        type: AlertType.KOL_ACTIVITY,
+        enabled: true,
+        'config.hotnessScoreThreshold': hotnessScoreThreshold,
+        'config.minBuyAmountUSD': minBuyAmountUSD,
+      })
+
+      let alert
+      let isUpdate = false
+
+      if (existingAlert) {
+        // Update existing alert timestamp
+        isUpdate = true
+        alert = await UserAlert.findByIdAndUpdate(
+          existingAlert._id,
+          { updatedAt: new Date() },
+          { new: true }
+        )
+      } else {
+        // Create new alert
+        alert = await UserAlert.create({
+          userId,
+          type: AlertType.KOL_ACTIVITY,
+          priority: Priority.MEDIUM,
+          enabled: true,
+          config,
+        })
+      }
+
+      // Invalidate cache to pick up new subscription
+      alertMatcherService.invalidateUserSubscriptions(userId)
+
+      // Send confirmation message to Telegram
+      telegramService.sendAlertConfirmation(
+        userId,
+        AlertType.KOL_ACTIVITY,
+        config,
+        isUpdate,
+      ).catch((error) => {
+        logger.warn({
+          component: 'AlertController',
+          operation: 'createKolAlert',
+          userId,
+          error: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          message: 'Failed to send Telegram confirmation, but alert was created',
+        })
+      })
+
+      if (!alert) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create or update alert',
+        })
+      }
+
+      logger.info({
+        component: 'AlertController',
+        operation: 'createKolAlert',
+        userId,
+        alertId: alert._id,
+        config,
+        message: 'KOL alert subscription created/updated successfully',
+      })
+
+      res.status(200).json({
+        success: true,
+        data: {
+          alertId: alert._id,
+          type: alert.type,
+          config: alert.config,
+          createdAt: alert.createdAt,
+          updatedAt: alert.updatedAt,
+        },
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'createKolAlert',
+        userId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create KOL alert subscription',
+      })
+    }
+  },
+)
+
+/**
+ * GET /api/v1/alerts/kol-alerts
+ * Get user's KOL alert subscriptions
+ */
+export const getKolAlerts = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    try {
+      const alerts = await UserAlert.find({
+        userId,
+        type: AlertType.KOL_ACTIVITY,
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+
+      logger.debug({
+        component: 'AlertController',
+        operation: 'getKolAlerts',
+        userId,
+        alertCount: alerts.length,
+        message: 'Retrieved KOL alert subscriptions',
+      })
+
+      res.status(200).json({
+        success: true,
+        data: {
+          alerts: alerts.map((alert) => ({
+            _id: alert._id,
+            type: alert.type,
+            priority: alert.priority,
+            enabled: alert.enabled,
+            config: alert.config,
+            createdAt: alert.createdAt,
+            updatedAt: alert.updatedAt,
+          })),
+        },
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'getKolAlerts',
+        userId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve KOL alert subscriptions',
+      })
+    }
+  },
+)
+
+/**
+ * DELETE /api/v1/alerts/kol-alert/:alertId
+ * Delete KOL alert subscription
+ */
+export const deleteKolAlert = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+    const { alertId } = req.params
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    if (!alertId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Alert ID is required',
+      })
+    }
+
+    try {
+      // Hard delete - permanently remove from database
+      const alert = await UserAlert.findOneAndDelete({
+        _id: alertId,
+        userId,
+        type: AlertType.KOL_ACTIVITY,
+      })
+
+      if (!alert) {
+        return res.status(404).json({
+          success: false,
+          message: 'KOL alert subscription not found',
+        })
+      }
+
+      // Trigger immediate cache invalidation
+      alertMatcherService.invalidateUserSubscriptions(userId)
+
+      // Send deletion confirmation to Telegram
+      telegramService.sendAlertDeletionConfirmation(
+        userId,
+        AlertType.KOL_ACTIVITY,
+      ).catch((error) => {
+        logger.warn({
+          component: 'AlertController',
+          operation: 'deleteKolAlert',
+          userId,
+          error: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          message: 'Failed to send Telegram deletion confirmation',
+        })
+      })
+
+      logger.info({
+        component: 'AlertController',
+        operation: 'deleteKolAlert',
+        userId,
+        alertId,
+        message: 'KOL alert subscription permanently deleted',
+      })
+
+      res.status(200).json({
+        success: true,
+        message: 'KOL alert subscription deleted successfully',
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'deleteKolAlert',
+        userId,
+        alertId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+
+      res.status(500).json({
+        success: false,
+        message: 'Failed to delete KOL alert subscription',
+      })
+    }
+  },
+)

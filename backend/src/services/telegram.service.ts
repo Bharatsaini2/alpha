@@ -491,6 +491,27 @@ export class TelegramService {
         }
         
         message += `\nYou'll receive alerts here when matching transactions are detected\\!`
+      } else if (alertType === AlertType.KOL_ACTIVITY) {
+        const action = isUpdate ? 'updated' : 'created'
+        message = `✅ *KOL Alert ${action.charAt(0).toUpperCase() + action.slice(1)}*\n\n`
+        message += `Your KOL alert subscription has been ${action} successfully\\!\n\n`
+        message += `*Configuration:*\n`
+        
+        if (config.hotnessScoreThreshold !== undefined) {
+          message += `🔥 Hotness Score: ${config.hotnessScoreThreshold}/10\n`
+        }
+        
+        if (config.minBuyAmountUSD !== undefined) {
+          const formattedAmount = config.minBuyAmountUSD.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })
+          message += `💰 Min Buy Amount: ${formattedAmount}\n`
+        }
+        
+        message += `\nYou'll receive alerts here when KOL/Influencer transactions are detected\\!`
       } else {
         // Generic confirmation for other alert types
         const action = isUpdate ? 'updated' : 'created'
@@ -540,7 +561,7 @@ export class TelegramService {
         return false
       }
 
-      const message = `🗑️ *Alert Deleted*\n\nYour ${alertType === AlertType.ALPHA_STREAM ? 'Whale Alert' : alertType} subscription has been deleted\\.\n\nYou will no longer receive these alerts\\.`
+      const message = `🗑️ *Alert Deleted*\n\nYour ${alertType === AlertType.ALPHA_STREAM ? 'Whale Alert' : alertType === AlertType.KOL_ACTIVITY ? 'KOL Alert' : alertType} subscription has been deleted\\.\n\nYou will no longer receive these alerts\\.`
 
       // Send the message directly
       await this.sendMessage(user.telegramChatId, message)

@@ -259,7 +259,7 @@ export function formatKOLAlert(
   const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=buy`
   const tokenLink = `https://dexscreener.com/solana/${tokenAddress}`
 
-  return `*KOL Buy Alert* 
+  return `*KOL Buy Alert* 👤
 
 *KOL:* ${kolDisplay}
 
