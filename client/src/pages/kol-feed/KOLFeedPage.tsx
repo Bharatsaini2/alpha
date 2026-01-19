@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faArrowTrendDown, faClose, faFilter, faSearch } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
@@ -22,6 +22,7 @@ import SwapModal from "../../components/swap/SwapModal"
 import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useAuth } from "../../contexts/AuthContext"
+import KOLAlertPopup from "./KOLAlertPopup";
 
 const hotnessOptions = [
   { label: "All", value: null },
@@ -752,36 +753,15 @@ const KOLFeedPage = () => {
     setShowDropdown(false);
   };
 
-  const [triggerOpen, setTriggerOpen] = useState(false);
-  const [walletTypeOpen, setWalletTypeOpen] = useState(false);
-  const [amountOpen, setAmountOpen] = useState(false);
 
-  // const [trigger, setTrigger] = useState("Hotness Score");
-  // const [walletType, setWalletType] = useState("Any Label");
+
+
+
+
   const [amount, setAmount] = useState("$1K");
-  const [customAmount, setCustomAmount] = useState("");
-
-  const closeAll = useCallback(() => {
-    setTriggerOpen(false);
-    setWalletTypeOpen(false);
-    setAmountOpen(false);
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener("click", closeAll);
-    return () => document.removeEventListener("click", closeAll);
-  }, [closeAll]);
+  const [walletTypes] = useState<string[]>([]);
 
 
-  const [walletTypes, setWalletTypes] = useState<string[]>([]);
-
-  const toggleWalletType = (value: string) => {
-    setWalletTypes((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value]
-    );
-  };
 
   const [isSaved, setIsSaved] = useState(false);
 
@@ -1142,212 +1122,16 @@ const KOLFeedPage = () => {
                           : 'Subscription'} <HiChevronUpDown />
                       </a>
                       {openDropdown === 'subs' && (
-                        <div className="filter-dropdown-menu w-sm">
-                          <div className="parent-dropdown-content">
-                            <div className="sub-drop-header">
-                              <div className="sub-drop-content">
-                                <h6>System Config</h6>
-                                <h4>Whale Feed Alerts</h4>
-                              </div>
-
-                              <div>
-                                <button
-                                  className="paper-plan-connect-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    // This button is just for show - displays connection status
-                                  }}
-                                  disabled
-                                >
-                                  <FontAwesomeIcon icon={faPaperPlane} /> {user?.telegramChatId ? 'Connected' : 'Connect'}
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="custom-frm-bx position-relative">
-                              <label className="nw-label">Trigger Condition</label>
-                              <div
-                                className="form-select cursor-pointer text-start"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setTriggerOpen(!triggerOpen);
-                                }}
-                              >
-                                Hotness Score ({hotness})
-                              </div>
-
-                              {triggerOpen && (
-                                <div
-                                  className="subscription-dropdown-menu show w-100 p-3" onClick={(e) => e.stopPropagation()}
-                                >
-                                  <div className=" text-center mt-2">
-                                    <div>
-                                      <span className="range-value">{hotness}</span>
-                                    </div>
-
-                                    <div className="range-title">
-                                      <h6 className="mb-0 text-sm">Sensitivity TheresHold</h6>
-                                    </div>
-
-                                    <input
-                                      type="range"
-                                      min="0"
-                                      max="10"
-                                      value={hotness}
-                                      onChange={(e) => setHotness(Number(e.target.value))}
-                                      className="hotness-range"
-                                      style={{ "--range-progress": `${(hotness / 10) * 100}%` } as React.CSSProperties}
-                                    />
-
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-
-
-
-                            <div className="custom-frm-bx position-relative">
-                              <label className="nw-label">Wallet Filter</label>
-
-                              <div
-                                className="form-select cursor-pointer text-start"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setWalletTypeOpen(!walletTypeOpen);
-                                }}
-                              >
-                                {walletTypes.length > 0 ? walletTypes.join(", ") : "Select Wallet Type"}
-                              </div>
-
-                              {walletTypeOpen && (
-                                <ul className="subscription-dropdown-menu show w-100">
-                                  {["All", "SMART MONEY", "HEAVY ACCUMULATOR", "SNIPER", "FLIPPER", "COORDINATED GROUP", "DORMANT WHALE"].map((item) => (
-                                    <li
-                                      key={item}
-                                      className={`nw-subs-items ${walletTypes.includes(item) ? "active" : ""
-                                        }`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleWalletType(item);
-                                      }}
-                                    >
-                                      {item}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-
-                            <div className="custom-frm-bx position-relative">
-                              <label className="nw-label">Wallet Amount</label>
-                              <div
-                                className="form-select cursor-pointer text-start"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setAmountOpen(!amountOpen);
-                                }}
-                              >
-                                {amount}
-                              </div>
-
-                              {amountOpen && (
-                                <div
-                                  className="subscription-dropdown-menu show w-100 p-2"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <div
-                                    className="subs-items"
-                                    onClick={() => {
-                                      setAmount("$1K");
-                                      setAmountOpen(false);
-                                    }}
-                                  >
-                                    $1K
-                                  </div>
-                                  <div
-                                    className="subs-items"
-                                    onClick={() => {
-                                      setAmount("$5K");
-                                      setAmountOpen(false);
-                                    }}
-                                  >
-                                    $5K
-                                  </div>
-
-                                  <input
-                                    type="text"
-                                    className="form-control mt-2"
-                                    placeholder="Custom amount"
-                                    value={customAmount}
-                                    onChange={(e) => {
-                                      setCustomAmount(e.target.value);
-                                      setAmount(e.target.value);
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-
-                            {isSaved && (
-                              <div className="config-overlay">
-                                <div className="config-modal">
-                                  <h3 className="config-title">CONFIGURATION SAVED</h3>
-
-                                  <div className="config-box">
-                                    <div className="config-row">
-                                      <span>Feed Type</span>
-                                      <span>Whale Alerts</span>
-                                    </div>
-
-                                    <div className="config-row">
-                                      <span>Min Score</span>
-                                      <span className="green">{hotness}</span>
-                                    </div>
-
-                                    <div className="config-row">
-                                      <span>Labels</span>
-                                      <span>{walletTypes.join(", ") || "Any Label"}</span>
-                                    </div>
-
-                                    <div className="config-row">
-                                      <span>Min Volume</span>
-                                      <span>{amount}</span>
-                                    </div>
-
-                                    <div className="config-row">
-                                      <span>Status</span>
-                                      <span className="green-dot">
-                                        Active <i></i>
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  <button
-                                    className="close-btn"
-                                    onClick={() => setIsSaved(false)}
-                                  >
-                                    CLOSE
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-
-                            <button
-                              className="connect-wallet-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleWhaleAlertConnect();
-                              }}
-                            >
-                              {user?.telegramChatId ? 'Create' : 'Connect'}
-                            </button>
-
-                          </div>
-
-
-                        </div>
+                        <KOLAlertPopup
+                          hotness={hotness}
+                          setHotness={setHotness}
+                          amount={amount}
+                          setAmount={setAmount}
+                          onActivate={handleWhaleAlertConnect}
+                          isSaved={isSaved}
+                          setIsSaved={setIsSaved}
+                          user={user}
+                        />
                       )}
                     </li>
 
