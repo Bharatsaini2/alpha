@@ -11,6 +11,7 @@ interface KOLAlertPopupProps {
     isSaved: boolean;
     setIsSaved: (value: boolean) => void;
     user: any;
+    onClose: () => void;
 }
 
 const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
@@ -21,7 +22,8 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
     onActivate,
     isSaved,
     setIsSaved,
-    user
+    user,
+    onClose
 }) => {
     const [triggerOpen, setTriggerOpen] = useState(false);
     const [amountOpen, setAmountOpen] = useState(false);
@@ -182,7 +184,10 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
 
                         <button
                             className="close-btn"
-                            onClick={() => setIsSaved(false)}
+                            onClick={() => {
+                                setIsSaved(false);
+                                onClose();
+                            }}
                         >
                             CLOSE
                         </button>

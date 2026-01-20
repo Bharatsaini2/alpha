@@ -641,6 +641,13 @@ const KOLFeedPage = () => {
     handleFilterUpdate('tags', newTags)
   }
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenDropdown(null)
+    document.addEventListener("click", handleClickOutside)
+    return () => document.removeEventListener("click", handleClickOutside)
+  }, [])
+
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -1115,6 +1122,7 @@ const KOLFeedPage = () => {
                           isSaved={isSaved}
                           setIsSaved={setIsSaved}
                           user={user}
+                          onClose={() => setOpenDropdown(null)}
                         />
                       )}
                     </li>

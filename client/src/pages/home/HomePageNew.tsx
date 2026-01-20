@@ -806,11 +806,19 @@ const HomePageNew = () => {
         setTriggerOpen(false);
         setWalletTypeOpen(false);
         setAmountOpen(false);
+        setOpenDropdown(null);
     }, []);
 
     useEffect(() => {
-        document.addEventListener("click", closeAll);
-        return () => document.removeEventListener("click", closeAll);
+        const handleClickOutside = () => {
+            // Check if click is inside any specific ignored containers if necessary
+            // For now, the propagation stopping on specific elements combined with this global listener
+            // should handle the "click outside" requirement.
+            closeAll();
+        };
+
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
     }, [closeAll]);
 
 
@@ -1384,7 +1392,10 @@ const HomePageNew = () => {
 
                                                                     <button
                                                                         className="close-btn"
-                                                                        onClick={() => setIsSaved(false)}
+                                                                        onClick={() => {
+                                                                            setIsSaved(false);
+                                                                            setOpenDropdown(null);
+                                                                        }}
                                                                     >
                                                                         CLOSE
                                                                     </button>
