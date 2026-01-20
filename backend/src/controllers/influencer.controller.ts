@@ -840,6 +840,13 @@ const storeInfluencerTransactionInDB = async (
     tokenOutSymbol: details.tokenOutSymbol,
     whaleAddress: details.kolAddress, // Map kolAddress to whaleAddress for database compatibility
     kolAddress: details.kolAddress,
+    
+    // Add whale object for alert matcher compatibility
+    whale: {
+      address: details.kolAddress,
+      labels: [], // KOL transactions don't have wallet labels
+    },
+    
     tokenInAddress: details.tokenInAddress,
     tokenOutAddress: details.tokenOutAddress,
     // marketCap: isSell ? details.inMarketCap : details.outMarketCap,

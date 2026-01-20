@@ -17,7 +17,7 @@ interface AlertConfig {
 }
 
 interface AlertSubscription {
-    _id: string;
+    id: string;  // Changed from _id to match API response
     type: string;
     priority: string;
     enabled: boolean;
@@ -43,6 +43,7 @@ function TelegramSubscription() {
     const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
 
     const toggleAccordion = (id: string) => {
+        console.log('🔵 ACCORDION TOGGLE - ID:', id, 'Current openId:', openId);
         setOpenId(openId === id ? null : id);
     };
 
@@ -156,17 +157,29 @@ function TelegramSubscription() {
         }
     };
 
-    const handleDeleteClick = (alertId: string) => {
+    const handleDeleteClick = (alertId: string, e?: React.MouseEvent) => {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            // Use native event for more aggressive stopping
+            e.nativeEvent.stopImmediatePropagation();
+        }
+        console.log('🔴 DELETE CLICK - Setting deleteConfirmId to:', alertId);
         setDeleteConfirmId(alertId);
     };
 
-    const handleDeleteConfirm = async () => {
+    const handleDeleteConfirm = async (e?: React.MouseEvent) => {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            e.nativeEvent.stopImmediatePropagation();
+        }
         if (!deleteConfirmId) return;
 
         console.log('Deleting subscription with ID:', deleteConfirmId);
 
         // Find the subscription to determine its type
-        const subscription = subscriptions.find(sub => sub._id === deleteConfirmId);
+        const subscription = subscriptions.find(sub => sub.id === deleteConfirmId);
         if (!subscription) {
             showToast('Subscription not found', 'error');
             return;
@@ -215,7 +228,13 @@ function TelegramSubscription() {
         }
     };
 
-    const handleDeleteCancel = () => {
+    const handleDeleteCancel = (e?: React.MouseEvent) => {
+        if (e) {
+            e.stopPropagation();
+            e.preventDefault();
+            e.nativeEvent.stopImmediatePropagation();
+        }
+        console.log('🔴 CANCEL CLICK - Resetting deleteConfirmId');
         setDeleteConfirmId(null);
     };
 
@@ -434,13 +453,13 @@ function TelegramSubscription() {
                         <div className="subscripton-bx" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
                             <div className="accordion">
                                 {subscriptions.map((subscription) => (
-                                    <div className="accordion-item" key={subscription._id}>
+                                    <div className="accordion-item" key={subscription.id}>
                                         <h2 className="accordion-header">
                                             <button
                                                 type="button"
-                                                onClick={() => toggleAccordion(subscription._id)}
+                                                onClick={() => toggleAccordion(subscription.id)}
                                                 className={`accordion-button d-flex align-items-center gap-3 custom-accordion-btn ${
-                                                    openId === subscription._id ? "" : "collapsed"
+                                                    openId === subscription.id ? "" : "collapsed"
                                                 }`}
                                             >
                                                 <div className="alpha-profile-content d-flex justify-content-between w-100 align-items-center nw-kol-profile">
@@ -485,7 +504,7 @@ function TelegramSubscription() {
                                             </button>
                                         </h2>
 
-                                        {openId === subscription._id && (
+                                        {openId === subscription.id && (
                                             <div className="accordion-collapse show">
                                                 <div className="accordion-body" style={{ backgroundColor: '#0a0a0a', border: '1px solid #292929', borderTop: 'none' }}>
                                                     <div style={{ padding: '16px' }}>
@@ -511,7 +530,7 @@ function TelegramSubscription() {
                                                         </div>
 
                                                         <div style={{ borderTop: '1px solid #292929', paddingTop: '16px', marginTop: '16px' }}>
-                                                            {deleteConfirmId === subscription._id ? (
+                                                            {deleteConfirmId === subscription.id ? (
                                                                 <div className="text-center">
                                                                     <p style={{ color: '#ebebeb', fontSize: '12px', textTransform: 'uppercase', marginBottom: '16px' }}>
                                                                         Are you sure you want to delete this subscription?
@@ -519,7 +538,7 @@ function TelegramSubscription() {
                                                                     <div className="d-flex gap-2 justify-content-center">
                                                                         <button 
                                                                             className="alpha-edit-btn"
-                                                                            onClick={handleDeleteConfirm}
+                                                                            onClick={(e) => handleDeleteConfirm(e)}
                                                                             disabled={deleting}
                                                                             style={{ backgroundColor: '#df2a4e', borderColor: '#df2a4e' }}
                                                                         >
@@ -527,7 +546,7 @@ function TelegramSubscription() {
                                                                         </button>
                                                                         <button 
                                                                             className="alpha-edit-btn"
-                                                                            onClick={handleDeleteCancel}
+                                                                            onClick={(e) => handleDeleteCancel(e)}
                                                                             disabled={deleting}
                                                                         >
                                                                             Cancel
@@ -537,7 +556,7 @@ function TelegramSubscription() {
                                                             ) : (
                                                                 <button 
                                                                     className="alpha-edit-btn"
-                                                                    onClick={() => handleDeleteClick(subscription._id)}
+                                                                    onClick={(e) => handleDeleteClick(subscription.id, e)}
                                                                     style={{ backgroundColor: '#df2a4e', borderColor: '#df2a4e', display: 'flex', alignItems: 'center', gap: '5px' }}
                                                                 >
                                                                     <MdDelete />

@@ -1,46 +1,57 @@
-const TelegramBot = require('node-telegram-bot-api');
-require('dotenv').config({ path: './.env' });
-
-async function testDirectMessage() {
-  try {
-    console.log('🤖 Testing direct message to your chat ID...');
-    console.log('📱 Bot username:', process.env.TELEGRAM_BOT_USERNAME);
-    console.log('🆔 Your current chat ID: 8519526605');
-    
-    // Create bot instance without polling (to avoid conflict)
-    const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, { polling: false });
-    
-    // Try to send a test message to your current chat ID
-    const testMessage = `🧪 TEST MESSAGE from ${process.env.TELEGRAM_BOT_USERNAME}
-    
-This is a test to see if the dev bot can reach your chat.
-Time: ${new Date().toLocaleString()}
-
-If you receive this message, the dev bot is working with your current chat ID!`;
-
-    const result = await bot.sendMessage('8519526605', testMessage);
-    
-    console.log('✅ Message sent successfully!');
-    console.log('📨 Message ID:', result.message_id);
-    console.log('💬 Chat ID confirmed:', result.chat.id);
-    
-    console.log('\n🎉 SUCCESS: Your current chat ID (8519526605) works with the dev bot!');
-    console.log('   No need to change anything - alerts should work now.');
-    
-  } catch (error) {
-    console.error('❌ Error sending message:', error.message);
-    
-    if (error.message.includes('chat not found')) {
-      console.log('\n💡 Chat ID 8519526605 not found in dev bot.');
-      console.log('   You need to:');
-      console.log('   1. Go to @alphabotdevbot in Telegram');
-      console.log('   2. Send /start or any message');
-      console.log('   3. Get your new chat ID');
-    } else if (error.message.includes('bot was blocked')) {
-      console.log('\n🚫 Bot was blocked by user.');
-      console.log('   Please unblock @alphabotdevbot and try again.');
-    }
-  }
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+// Test Telegram service directly
+const mongoose_1 = __importDefault(require("mongoose"));
+const telegram_service_1 = require("./src/services/telegram.service");
+const alert_types_1 = require("./src/types/alert.types");
+const MONGO_URI = 'mongodb+srv://alphablockx:1DG1MB49WOmOJDfe@whale-tracker.mnwqbs6.mongodb.net/alpha-whale-tracker';
+function testTelegramDirect() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield mongoose_1.default.connect(MONGO_URI);
+            console.log('🔗 Connected to MongoDB');
+            // Test sending a direct alert
+            console.log('📤 Testing direct Telegram alert...');
+            const testMessage = `🐋 TEST ALERT
+Wallet: A4DC...hXgL
+Token: TEST
+Amount: 100 TEST
+USD Value: $849.57
+Type: BUY
+This is a test message to verify Telegram works.`;
+            // Use your user ID from the logs: 695caab996612f706c3ad96b
+            const result = yield telegram_service_1.telegramService.queueAlert('695caab996612f706c3ad96b', alert_types_1.AlertType.ALPHA_STREAM, 'test-signature-123', testMessage, alert_types_1.Priority.HIGH);
+            console.log('📊 Result:', result);
+            if (result) {
+                console.log('✅ Alert queued successfully!');
+                console.log('🔍 Check your Telegram dev bot (@alphabotdevbot) for the test message.');
+            }
+            else {
+                console.log('❌ Alert failed to queue');
+            }
+            // Wait a bit for processing
+            console.log('⏳ Waiting 5 seconds for message processing...');
+            yield new Promise(resolve => setTimeout(resolve, 5000));
+        }
+        catch (error) {
+            console.error('❌ Error:', error);
+        }
+        finally {
+            yield mongoose_1.default.disconnect();
+            process.exit(0);
+        }
+    });
 }
-
-testDirectMessage();
+testTelegramDirect().catch(console.error);

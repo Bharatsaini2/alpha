@@ -534,7 +534,12 @@ export class AlertMatcherService {
     for (const sub of subscriptions) {
       try {
         // Check if transaction is from a KOL wallet
-        const kolInfo = await this.getKOLInfo(tx.whale.address)
+        const whaleAddress = tx.whale?.address || tx.whaleAddress
+        if (!whaleAddress) {
+          continue
+        }
+        
+        const kolInfo = await this.getKOLInfo(whaleAddress)
         if (!kolInfo) {
           continue
         }
@@ -697,14 +702,30 @@ export class AlertMatcherService {
     config: AlertConfig,
     kolUsername: string,
   ): boolean {
-    // Check KOL filter
+    // Check hotness score threshold
+    if (config.hotnessScoreThreshold !== undefined) {
+      const hotnessScore = tx.hotnessScore || 0
+      if (hotnessScore < config.hotnessScoreThreshold) {
+        return false
+      }
+    }
+
+    // Check minimum buy amount
+    if (config.minBuyAmountUSD !== undefined) {
+      const usdAmount = parseFloat(tx.transaction.tokenOut.usdAmount || '0')
+      if (usdAmount < config.minBuyAmountUSD) {
+        return false
+      }
+    }
+
+    // Check KOL filter (if specific KOLs are selected)
     if (config.kolIds && config.kolIds.length > 0) {
       if (!config.kolIds.includes(kolUsername)) {
         return false
       }
     }
 
-    // Check token filter
+    // Check token filter (if specific tokens are selected)
     if (config.tokens && config.tokens.length > 0) {
       const tokenAddress = tx.transaction.tokenOut.address || tx.tokenOutAddress
       if (!config.tokens.includes(tokenAddress)) {
