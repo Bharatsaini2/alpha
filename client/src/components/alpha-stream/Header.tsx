@@ -8,7 +8,7 @@ import { useAuth } from "../../contexts/AuthContext"
 import { PiPlugsConnected } from "react-icons/pi";
 import { FaRegUserCircle } from "react-icons/fa";
 import { RiTelegram2Fill } from "react-icons/ri";
-import { Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useToast } from "../ui/Toast"
 
@@ -39,6 +39,7 @@ function Header() {
   const { user, isAuthenticated, logout, openLoginModal } = useAuth()
   const { wallet, disconnect } = useWalletConnection()
   const { showToast } = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchTrendingTokens()
@@ -201,6 +202,7 @@ function Header() {
                     text-transform: uppercase;
                     cursor: pointer;
                     transition: background 0.2s;
+                    white-space: nowrap;
                 }
                 .user-dropdown-item:hover {
                     background: #2B2B2D;
@@ -303,40 +305,33 @@ function Header() {
                   )}
                   <div className="user-dropdown-divider" />
 
-                  <div className="user-dropdown-item">
-
-                    <Link to="/profile-page" className="profile-navlink"> <FaRegUserCircle size={14} />
-                      Profile  </Link>
-
-
+                  <div
+                    className="user-dropdown-item"
+                    onClick={() => {
+                      setShowDropdown(false)
+                      navigate("/profile-page")
+                    }}
+                  >
+                    <FaRegUserCircle size={14} />
+                    Profile
                   </div>
                   <div className="user-dropdown-divider" />
 
                   <div
                     className="user-dropdown-item"
-                    onClick={(e) => {
+                    onClick={() => {
                       // Check if user has wallet connected
                       if (!user?.walletAddress && !wallet.address) {
-                        e.preventDefault();
                         setShowDropdown(false);
                         showToast('Please connect your wallet to access Telegram Subscription', 'error');
                       } else {
                         setShowDropdown(false);
+                        navigate("/telegram-subscription")
                       }
                     }}
                   >
-                    <Link
-                      to="/telegram-subscription"
-                      className="profile-navlink"
-                      onClick={(e) => {
-                        if (!user?.walletAddress && !wallet.address) {
-                          e.preventDefault();
-                        }
-                      }}
-                    >
-                      <RiTelegram2Fill size={14} />
-                      Telegram Subscription
-                    </Link>
+                    <RiTelegram2Fill size={14} />
+                    Telegram Subscription
                   </div>
                   <div className="user-dropdown-divider" />
 

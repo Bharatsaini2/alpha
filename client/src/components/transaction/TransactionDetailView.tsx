@@ -47,9 +47,9 @@ interface TransactionData {
         gasFee: string
         platform: string
         timestamp: string
-        priorityLevel?: 'Low' | 'Medium' | 'High' | 'VeryHigh' // ✅ NEW: Priority level used
-        estimatedPriorityFee?: number // ✅ NEW: Estimated priority fee in lamports
-        actualPriorityFee?: number // ✅ NEW: Actual priority fee paid in lamports
+        priorityLevel?: 'Low' | 'Medium' | 'High' | 'VeryHigh'
+        estimatedPriorityFee?: number
+        actualPriorityFee?: number
     }
     whaleAddress: string
     tokenInSymbol: string
@@ -57,6 +57,9 @@ interface TransactionData {
     hotnessScore: number
     type: string
     timestamp: string
+    influencerName?: string
+    influencerUsername?: string
+    influencerImage?: string
 }
 
 interface TransactionDetailViewProps {
@@ -158,18 +161,48 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                 </div>
 
 
-                {/* Whale Address Section */}
+                {/* Whale Address / Influencer Section */}
                 <div className="whale-address-section">
-                    <div className="address-label">
-                        WHALE ADDRESS:
-                        <span className="address-value">
-                            {data.whaleAddress.slice(0, 9)}...{data.whaleAddress.slice(-9)}
-                        </span>
-                        <Copy
-                            className="trans-copy-btn"
-                            onClick={() => onCopy(data.whaleAddress, "Whale Address")}
-                        />
+                    <div className="address-label" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {data.influencerImage && (
+                            <img
+                                src={data.influencerImage}
+                                alt="influencer"
+                                style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+                                onError={(e) => {
+                                    e.currentTarget.style.display = 'none'; // Fallback to just text if image fails
+                                }}
+                            />
+                        )}
+                        <div>
+                            {data.influencerName && (
+                                <div style={{ fontWeight: 'bold', fontSize: '1.2em' }}>
+                                    {data.influencerName}
+                                    {data.influencerUsername && (
+                                        <a
+                                            href={`https://x.com/${data.influencerUsername.replace(/^@/, '')}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            style={{ fontSize: '0.8em', color: '#888', marginLeft: '5px', textDecoration: 'none', cursor: 'pointer' }}
+                                        >
+                                            @{data.influencerUsername.replace(/^@/, '')}
+                                        </a>
+                                    )}
+                                </div>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ opacity: 0.7 }}>ADDRESS:</span>
+                                <span className="address-value">
+                                    {data.whaleAddress.slice(0, 9)}...{data.whaleAddress.slice(-9)}
+                                </span>
+                                <Copy
+                                    className="trans-copy-btn"
+                                    onClick={() => onCopy(data.whaleAddress, "Address")}
+                                />
+                            </div>
+                        </div>
                     </div>
+
                     <div className="header-right-actions">
                         <span className="time-ago-label">{getTimeAgo(data.timestamp)}</span>
                         {/* ✅ NEW: Priority Level Badge */}

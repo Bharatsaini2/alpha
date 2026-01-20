@@ -535,12 +535,18 @@ const KOLFeedPage = () => {
     return 0
   }
 
+  const handleRowClick = (tx: any) => {
+    // Navigate to transaction detail page
+    const type = tx.type === 'buy' ? 'buy' : 'sell';
+    navigate(`/transaction/${tx.signature}?type=kol&transaction=${type}`)
+  }
+
   const handleTransactionInfoAll = (signature: string, transactiontype: string) => {
-    navigate(`/transaction/${signature}?type=whale&transaction=${transactiontype}`)
+    navigate(`/transaction/${signature}?type=kol&transaction=${transactiontype}`)
   }
 
   const handleTransactionInfoNewTab = (signature: string, transactiontype: string) => {
-    const url = `/transaction/${signature}?type=whale&transaction=${transactiontype}`
+    const url = `/transaction/${signature}?type=kol&transaction=${transactiontype}`
     window.open(url, "_blank", "noopener,noreferrer")
   }
 
@@ -1363,17 +1369,28 @@ const KOLFeedPage = () => {
                       <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
                         <div className="left-item-bx">
                           <img
-                            src={tx.influencerImage || DefaultTokenImage}
+                            src={tx.influencerProfileImageUrl || DefaultTokenImage}
                             alt="influencer"
-                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                              const target = e.currentTarget;
+                              if (target.src.indexOf(DefaultTokenImage) === -1) {
+                                target.src = DefaultTokenImage;
+                              }
+                            }}
                             style={{ borderRadius: '50%', width: '40px', height: '40px', objectFit: 'cover' }}
                           />
                           <div className="whale-content flex-grow-1">
                             <h4 className="username">
                               {tx.influencerName}
-                              <span style={{ fontSize: '12px', color: '#888', marginLeft: '5px' }}>
-                                @{tx.influencerUsername}
-                              </span>
+                              <a
+                                href={`https://x.com/${tx.influencerUsername?.replace(/^@/, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ fontSize: '12px', color: '#888', marginLeft: '5px', textDecoration: 'none' }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                @{tx.influencerUsername?.replace(/^@/, '')}
+                              </a>
                             </h4>
                             <div className="tags">
                               {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (

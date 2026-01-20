@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faCheck } from '@fortawesome/free-solid-svg-icons';
 
 interface KOLAlertPopupProps {
     hotness: number;
@@ -107,35 +107,44 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
                                 className="subscription-dropdown-menu show w-100 p-2"
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                <div
-                                    className="subs-items"
-                                    onClick={() => {
-                                        setAmount("$1K");
-                                        setAmountOpen(false);
-                                    }}
-                                >
-                                    $1K
-                                </div>
-                                <div
-                                    className="subs-items"
-                                    onClick={() => {
-                                        setAmount("$5K");
-                                        setAmountOpen(false);
-                                    }}
-                                >
-                                    $5K
-                                </div>
+                                {["$1K", "$2K", "$3K", "$4K", "$5K"].map((val) => (
+                                    <div
+                                        key={val}
+                                        className="subs-items"
+                                        onClick={() => {
+                                            setAmount(val);
+                                            setAmountOpen(false);
+                                        }}
+                                    >
+                                        {val}
+                                    </div>
+                                ))}
 
-                                <input
-                                    type="text"
-                                    className="form-control mt-2"
-                                    placeholder="Custom amount"
-                                    value={customAmount}
-                                    onChange={(e) => {
-                                        setCustomAmount(e.target.value);
-                                        setAmount(e.target.value);
-                                    }}
-                                />
+                                <div className="position-relative mt-2">
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        placeholder="Custom amount"
+                                        value={customAmount}
+                                        onChange={(e) => {
+                                            setCustomAmount(e.target.value);
+                                            setAmount(e.target.value);
+                                        }}
+                                        style={{ paddingRight: '30px' }}
+                                    />
+                                    {customAmount && (
+                                        <FontAwesomeIcon
+                                            icon={faCheck}
+                                            className="position-absolute"
+                                            style={{
+                                                right: '10px',
+                                                top: '50%',
+                                                transform: 'translateY(-50%)',
+                                                color: '#28a745' // Green color
+                                            }}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>
