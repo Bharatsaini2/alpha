@@ -1283,6 +1283,7 @@ const HomePageNew = () => {
                                                                     e.stopPropagation();
                                                                     setWalletTypeOpen(!walletTypeOpen);
                                                                 }}
+                                                                style={{ height: "auto", whiteSpace: "normal" }}
                                                             >
                                                                 {walletTypes.length > 0 ? walletTypes.join(", ") : "Select Wallet Type"}
                                                             </div>

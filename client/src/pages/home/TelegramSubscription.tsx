@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useState, useEffect } from "react";
 import { PiPlugs, PiTelegramLogoDuotone } from "react-icons/pi";
 import { RiVerifiedBadgeFill } from "react-icons/ri";
-import { MdDelete, MdExpandMore, MdExpandLess } from "react-icons/md";
+import { MdDelete } from "react-icons/md";
 import { HiOutlineExternalLink } from "react-icons/hi";
 import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
@@ -29,7 +29,7 @@ interface AlertSubscription {
 function TelegramSubscription() {
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const [openId, setOpenId] = useState<string | null>(null);
     const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
     const [loading, setLoading] = useState(true);
@@ -38,7 +38,6 @@ function TelegramSubscription() {
     const [deleting, setDeleting] = useState(false);
     const [linkToken, setLinkToken] = useState<string | null>(null);
     const [generatingLink, setGeneratingLink] = useState(false);
-    const [checkingBalance, setCheckingBalance] = useState(false);
     const [hasAccess, setHasAccess] = useState<boolean | null>(null);
     const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
 
@@ -70,7 +69,7 @@ function TelegramSubscription() {
             // Start checking every 3 seconds for connection
             const interval = setInterval(checkTelegramConnection, 3000);
             setConnectionCheckInterval(interval);
-            
+
             // Stop checking after 10 minutes (when token expires)
             setTimeout(() => {
                 if (interval) {
@@ -78,7 +77,7 @@ function TelegramSubscription() {
                     setConnectionCheckInterval(null);
                 }
             }, 10 * 60 * 1000);
-            
+
             return () => {
                 if (interval) {
                     clearInterval(interval);
@@ -98,12 +97,12 @@ function TelegramSubscription() {
 
     const checkPremiumAccess = async (showToastOnError = false, forceRefresh = false) => {
         try {
-            setCheckingBalance(true);
-            const url = forceRefresh 
-                ? '/alerts/premium-access?refresh=true' 
+
+            const url = forceRefresh
+                ? '/alerts/premium-access?refresh=true'
                 : '/alerts/premium-access';
             const response = await api.get(url);
-            
+
             if (response.data.success) {
                 setHasAccess(response.data.data.hasAccess);
                 if (!response.data.data.hasAccess && showToastOnError) {
@@ -117,13 +116,13 @@ function TelegramSubscription() {
         } catch (err: any) {
             console.error('Error checking premium access:', err);
             setHasAccess(false);
-        } finally {
-            setCheckingBalance(false);
         }
     };
 
     // Check authentication on mount
     useEffect(() => {
+        if (authLoading) return; // Wait for auth check to complete
+
         if (!isAuthenticated) {
             showToast('Please log in to view your subscriptions', 'error');
             setTimeout(() => navigate('/'), 2000);
@@ -131,7 +130,7 @@ function TelegramSubscription() {
         }
         fetchSubscriptions();
         checkPremiumAccess(false); // Don't show toast on initial load
-    }, [isAuthenticated, navigate, showToast]);
+    }, [isAuthenticated, authLoading, navigate, showToast]);
 
     const fetchSubscriptions = async () => {
         try {
@@ -139,9 +138,9 @@ function TelegramSubscription() {
             setError(null);
             // Use my-alerts endpoint to get ALL alert types (whale + KOL)
             const response = await api.get('/alerts/my-alerts');
-            
+
             console.log('Fetched subscriptions:', response.data);
-            
+
             if (response.data.success) {
                 const alerts = response.data.data.alerts || [];
                 console.log('Setting subscriptions:', alerts);
@@ -187,7 +186,7 @@ function TelegramSubscription() {
 
         try {
             setDeleting(true);
-            
+
             // Use the appropriate delete endpoint based on alert type
             let deleteEndpoint = '';
             if (subscription.type === 'ALPHA_STREAM') {
@@ -198,18 +197,18 @@ function TelegramSubscription() {
                 // Fallback to generic delete endpoint
                 deleteEndpoint = `/alerts/${deleteConfirmId}`;
             }
-            
+
             const response = await api.delete(deleteEndpoint);
-            
+
             console.log('Delete response:', response.data);
-            
+
             if (response.data.success) {
                 // Show success toast
                 showToast('Subscription deleted successfully', 'success');
-                
+
                 // Reset delete confirmation state
                 setDeleteConfirmId(null);
-                
+
                 // Refetch subscriptions to get updated list from server
                 console.log('Refetching subscriptions...');
                 await fetchSubscriptions();
@@ -241,10 +240,10 @@ function TelegramSubscription() {
     const handleGenerateLinkToken = async () => {
         // Force refresh balance check and show toast if insufficient
         await checkPremiumAccess(true, true);
-        
+
         // Wait for state update
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         if (hasAccess === false) {
             return;
         }
@@ -252,7 +251,7 @@ function TelegramSubscription() {
         try {
             setGeneratingLink(true);
             const response = await api.post('/alerts/link');
-            
+
             if (response.data.success) {
                 setLinkToken(response.data.data.token);
                 // Store the full response for the deep link
@@ -285,27 +284,27 @@ function TelegramSubscription() {
 
     const formatConfig = (config: AlertConfig): string => {
         const parts: string[] = [];
-        
+
         if (config.hotnessScoreThreshold !== undefined) {
             parts.push(`Hotness: ${config.hotnessScoreThreshold}/10`);
         }
-        
+
         if (config.minBuyAmountUSD !== undefined) {
             parts.push(`Min Buy: $${config.minBuyAmountUSD.toLocaleString()}`);
         }
-        
+
         if (config.walletLabels && config.walletLabels.length > 0) {
             parts.push(`Labels: ${config.walletLabels.join(', ')}`);
         }
-        
+
         return parts.join(' | ');
     };
 
     const formatDate = (dateString: string): string => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'short', 
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
@@ -327,10 +326,10 @@ function TelegramSubscription() {
                 <div className="col-lg-5">
                     {/* Back Button */}
                     <div className="mb-3">
-                        <button 
-                            onClick={() => navigate(-1)} 
+                        <button
+                            onClick={() => navigate(-1)}
                             className="alpha-edit-btn"
-                        > 
+                        >
                             <FontAwesomeIcon icon={faArrowLeft} className="me-2" />
                             Back
                         </button>
@@ -348,7 +347,7 @@ function TelegramSubscription() {
                                         Connected <span className="text-white fz-14"><PiPlugs /></span>
                                     </div>
                                 ) : (
-                                    <button 
+                                    <button
                                         className="subscribe-btn"
                                         onClick={handleGenerateLinkToken}
                                         disabled={generatingLink}
@@ -376,9 +375,9 @@ function TelegramSubscription() {
                                     <p className="mb-3" style={{ color: '#ebebeb', fontSize: '12px', textTransform: 'uppercase' }}>
                                         Click to open Telegram and connect your account:
                                     </p>
-                                    <a 
-                                        href={getTelegramDeepLink()} 
-                                        target="_blank" 
+                                    <a
+                                        href={getTelegramDeepLink()}
+                                        target="_blank"
                                         rel="noopener noreferrer"
                                         className="nw-connect-wallet-btn"
                                         style={{ textDecoration: 'none', display: 'inline-flex', width: 'auto', padding: '10px 20px' }}
@@ -458,9 +457,8 @@ function TelegramSubscription() {
                                             <button
                                                 type="button"
                                                 onClick={() => toggleAccordion(subscription.id)}
-                                                className={`accordion-button d-flex align-items-center gap-3 custom-accordion-btn ${
-                                                    openId === subscription.id ? "" : "collapsed"
-                                                }`}
+                                                className={`accordion-button d-flex align-items-center gap-3 custom-accordion-btn ${openId === subscription.id ? "" : "collapsed"
+                                                    }`}
                                             >
                                                 <div className="alpha-profile-content d-flex justify-content-between w-100 align-items-center nw-kol-profile">
                                                     <div className="share-profile">
@@ -468,8 +466,8 @@ function TelegramSubscription() {
                                                             <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                                                                 {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type === 'KOL_ACTIVITY' ? 'KOL Alert' : subscription.type}
                                                                 {subscription.enabled && <RiVerifiedBadgeFill style={{ color: '#14904d', fontSize: '12px' }} />}
-                                                                <span 
-                                                                    style={{ 
+                                                                <span
+                                                                    style={{
                                                                         backgroundColor: getPriorityColor(subscription.priority),
                                                                         color: '#fff',
                                                                         padding: '2px 6px',
@@ -481,18 +479,18 @@ function TelegramSubscription() {
                                                                     {subscription.priority}
                                                                 </span>
                                                             </h4>
-                                                            <p style={{ 
-                                                                color: '#ebebeb', 
-                                                                fontSize: '10px', 
+                                                            <p style={{
+                                                                color: '#ebebeb',
+                                                                fontSize: '10px',
                                                                 textTransform: 'uppercase',
                                                                 marginBottom: '2px',
                                                                 fontWeight: 500
                                                             }}>
                                                                 {formatConfig(subscription.config)}
                                                             </p>
-                                                            <p style={{ 
-                                                                color: '#8f8f8f', 
-                                                                fontSize: '10px', 
+                                                            <p style={{
+                                                                color: '#8f8f8f',
+                                                                fontSize: '10px',
                                                                 textTransform: 'uppercase',
                                                                 marginBottom: 0
                                                             }}>
@@ -513,7 +511,7 @@ function TelegramSubscription() {
                                                                 <h6>Configuration</h6>
                                                                 <p>{formatConfig(subscription.config)}</p>
                                                             </div>
-                                                            
+
                                                             <div>
                                                                 <h6>Status</h6>
                                                                 <p style={{ color: subscription.enabled ? '#14904d' : '#8f8f8f' }}>
@@ -536,7 +534,7 @@ function TelegramSubscription() {
                                                                         Are you sure you want to delete this subscription?
                                                                     </p>
                                                                     <div className="d-flex gap-2 justify-content-center">
-                                                                        <button 
+                                                                        <button
                                                                             className="alpha-edit-btn"
                                                                             onClick={(e) => handleDeleteConfirm(e)}
                                                                             disabled={deleting}
@@ -544,7 +542,7 @@ function TelegramSubscription() {
                                                                         >
                                                                             {deleting ? 'Deleting...' : 'Yes, Delete'}
                                                                         </button>
-                                                                        <button 
+                                                                        <button
                                                                             className="alpha-edit-btn"
                                                                             onClick={(e) => handleDeleteCancel(e)}
                                                                             disabled={deleting}
@@ -554,7 +552,7 @@ function TelegramSubscription() {
                                                                     </div>
                                                                 </div>
                                                             ) : (
-                                                                <button 
+                                                                <button
                                                                     className="alpha-edit-btn"
                                                                     onClick={(e) => handleDeleteClick(subscription.id, e)}
                                                                     style={{ backgroundColor: '#df2a4e', borderColor: '#df2a4e', display: 'flex', alignItems: 'center', gap: '5px' }}

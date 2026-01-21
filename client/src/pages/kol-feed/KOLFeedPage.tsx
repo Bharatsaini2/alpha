@@ -39,15 +39,7 @@ const amountOptions = [
   { label: ">$10,000", value: "10000" }
 ]
 
-const tagOptions = [
-  "SMART MONEY",
-  "HEAVY ACCUMULATOR",
-  "SNIPER",
-  "FLIPPER",
-  "COORDINATED GROUP",
-  "DORMANT WHALE",
-  "KOL",
-]
+
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:9090", {
   transports: ["websocket"],
@@ -1080,35 +1072,7 @@ const KOLFeedPage = () => {
                         </div>
                       )}
                     </li>
-                    <li onClick={(e) => e.stopPropagation()}>
-                      <a href="javascript:void(0)"
-                        className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
-                        onClick={() => setOpenDropdown(openDropdown === 'tags' ? null : 'tags')}>
-                        {activeFilters.tags.length > 0
-                          ? `TAGS: ${activeFilters.tags.length}`
-                          : 'tAGS'} <HiChevronUpDown />
-                      </a>
-                      {openDropdown === 'tags' && (
-                        <div className="filter-dropdown-menu">
-                          <div className="filter-dropdown-header">Whale Tags</div>
-                          <button
-                            className={`filter-dropdown-item ${activeFilters.tags.length === 0 ? 'active' : ''}`}
-                            onClick={() => handleFilterUpdate('tags', [])}
-                          >
-                            All
-                          </button>
-                          {tagOptions.map(tag => (
-                            <button
-                              key={tag}
-                              className={`filter-dropdown-item ${activeFilters.tags.includes(tag) ? 'active' : ''}`}
-                              onClick={() => toggleTag(tag)}
-                            >
-                              {tag}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </li>
+
 
                     <li onClick={(e) => e.stopPropagation()}>
                       <a href="javascript:void(0)"
