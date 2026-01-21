@@ -22,6 +22,7 @@ import SwapModal from "../../components/swap/SwapModal"
 import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useAuth } from "../../contexts/AuthContext"
+import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 
 
 
@@ -260,6 +261,7 @@ const HomePageNew = () => {
     const { showToast } = useToast()
     const { wallet } = useWalletConnection()
     const { user } = useAuth()
+    const { validateAccess } = usePremiumAccess()
     const navigate = useNavigate()
 
     const [transactions, setTransactions] = useState<any[]>([])
@@ -852,65 +854,56 @@ const HomePageNew = () => {
                 return
             }
 
-            // Check premium access
-            const premiumResponse = await axios.get(
-                `${import.meta.env.VITE_SERVER_URL}/alerts/premium-access`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+            validateAccess(async () => {
+                try {
+                    // Convert amount string to number
+                    const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
+
+                    // Handle wallet labels
+                    // If "All" is selected, send empty array to indicate "accept all transactions"
+                    let labelsToSend: string[] = []
+
+                    if (walletTypes.includes("All")) {
+                        // "All" selected = accept ALL transactions (with or without labels)
+                        labelsToSend = []
+                    } else if (walletTypes.length > 0) {
+                        // Specific labels selected = filter by those labels
+                        labelsToSend = walletTypes.filter(label => label !== "All")
+                    } else {
+                        // No labels selected = default to empty (accept all)
+                        labelsToSend = []
+                    }
+
+                    console.log('DEBUG: Final labelsToSend =', labelsToSend)
+
+                    // Create whale alert subscription
+                    const response = await axios.post(
+                        `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,
+                        {
+                            hotnessScoreThreshold: hotness,
+                            walletLabels: labelsToSend,
+                            minBuyAmountUSD: minBuyAmount,
+                        },
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                            },
+                        }
+                    )
+
+                    if (response.data.success) {
+                        setIsSaved(true)
+                        showToast("Whale alert subscription created successfully!", "success")
+                        setTimeout(() => setIsSaved(false), 3000)
+                    }
+                } catch (error: any) {
+                    console.error("Whale alert subscription error:", error)
+                    showToast(
+                        error.response?.data?.message || "Failed to create whale alert subscription",
+                        "error"
+                    )
                 }
-            )
-
-            if (!premiumResponse.data.success || !premiumResponse.data.data.hasAccess) {
-                const difference = premiumResponse.data.data.difference || 0
-                showToast(
-                    `Insufficient balance. You need ${difference.toFixed(0)} more ALPHA tokens to access this feature.`,
-                    "error"
-                )
-                return
-            }
-
-            // Convert amount string to number
-            const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
-
-            // Handle wallet labels
-            // If "All" is selected, send empty array to indicate "accept all transactions"
-            let labelsToSend: string[] = []
-
-            if (walletTypes.includes("All")) {
-                // "All" selected = accept ALL transactions (with or without labels)
-                labelsToSend = []
-            } else if (walletTypes.length > 0) {
-                // Specific labels selected = filter by those labels
-                labelsToSend = walletTypes.filter(label => label !== "All")
-            } else {
-                // No labels selected = default to empty (accept all)
-                labelsToSend = []
-            }
-
-            console.log('DEBUG: Final labelsToSend =', labelsToSend)
-
-            // Create whale alert subscription
-            const response = await axios.post(
-                `${import.meta.env.VITE_SERVER_URL}/alerts/whale-alert`,
-                {
-                    hotnessScoreThreshold: hotness,
-                    walletLabels: labelsToSend,
-                    minBuyAmountUSD: minBuyAmount,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            )
-
-            if (response.data.success) {
-                setIsSaved(true)
-                showToast("Whale alert subscription created successfully!", "success")
-                setTimeout(() => setIsSaved(false), 3000)
-            }
+            })
         } catch (error: any) {
             console.error("Whale alert subscription error:", error)
             showToast(
@@ -1222,9 +1215,8 @@ const HomePageNew = () => {
                                                                     className="paper-plan-connect-btn"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        // This button is just for show - displays connection status
+                                                                        handleWhaleAlertConnect();
                                                                     }}
-                                                                    disabled
                                                                 >
                                                                     <FontAwesomeIcon icon={faPaperPlane} /> {user?.telegramChatId ? 'Connected' : 'Connect'}
                                                                 </button>
@@ -1237,6 +1229,10 @@ const HomePageNew = () => {
                                                                 className="form-select cursor-pointer text-start"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!triggerOpen) {
+                                                                        setWalletTypeOpen(false);
+                                                                        setAmountOpen(false);
+                                                                    }
                                                                     setTriggerOpen(!triggerOpen);
                                                                 }}
                                                             >
@@ -1281,6 +1277,10 @@ const HomePageNew = () => {
                                                                 className="form-select cursor-pointer text-start"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!walletTypeOpen) {
+                                                                        setTriggerOpen(false);
+                                                                        setAmountOpen(false);
+                                                                    }
                                                                     setWalletTypeOpen(!walletTypeOpen);
                                                                 }}
                                                                 style={{ height: "auto", whiteSpace: "normal" }}
@@ -1313,6 +1313,10 @@ const HomePageNew = () => {
                                                                 className="form-select cursor-pointer text-start"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (!amountOpen) {
+                                                                        setTriggerOpen(false);
+                                                                        setWalletTypeOpen(false);
+                                                                    }
                                                                     setAmountOpen(!amountOpen);
                                                                 }}
                                                             >
@@ -1792,7 +1796,7 @@ const HomePageNew = () => {
                         </div>
                     </div>
                 </div>
-            </section>
+            </section >
 
             <ReactFlowProvider>
                 <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} />

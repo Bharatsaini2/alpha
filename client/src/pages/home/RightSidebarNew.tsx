@@ -226,6 +226,25 @@ const RightSidebarNew = ({
     }
   }, [fetchInputBalance, fetchOutputBalance])
 
+  // Listen for 'open-quick-buy' event
+  useEffect(() => {
+    const handleOpenQuickBuy = (event: any) => { // Type as any to avoid CustomEvent compilation issues if strict
+      console.log('Received open-quick-buy event', event.detail);
+      const token = event.detail;
+
+      if (token) {
+        console.log('Setting swap token info:', token);
+        setSwapTokenInfo(token);
+        setIsSwapModalOpen(true);
+      }
+    };
+
+    window.addEventListener('open-quick-buy', handleOpenQuickBuy);
+    return () => {
+      window.removeEventListener('open-quick-buy', handleOpenQuickBuy);
+    };
+  }, []); // Empty dependency array to ensure listener is always active and not re-bound unnecessarily
+
   // Fetch swap quote with debouncing (handled by useSwapApi)
   const fetchQuote = useCallback(async () => {
     setIsLoading(true)

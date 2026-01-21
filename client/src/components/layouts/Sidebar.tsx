@@ -1,5 +1,6 @@
-import { Link, useLocation, useSearchParams } from "react-router-dom"
+import { Link, useLocation, useSearchParams, useNavigate } from "react-router-dom"
 import { useAuth } from "../../contexts/AuthContext"
+import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 
 import SideIcon1 from "../../assets/alpha.svg"
 import SideIcon2 from "../../assets/sd2.svg"
@@ -19,8 +20,10 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const location = useLocation()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user, logout } = useAuth()
+  const { validateAccess } = usePremiumAccess()
   const navigationItems = [
     {
       category: "Alpha Whales",
@@ -136,12 +139,10 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                           <img
                             src={item.icon as string}
                             alt={item.name}
-                            className={`w-5 h-5 ${isActive ? "text-white" : "text-[#767678]"}`}
+                            className="w-5 h-5 object-contain"
                           />
                         )}
-                        <span
-                          className={`${isActive ? "text-white hover:text-white" : "text-[#B4B4B4] hover:text-white"}`}
-                        >
+                        <span className={isActive ? "text-white" : "text-[#B4B4B4]"}>
                           {item.name}
                         </span>
                       </Link>
@@ -231,8 +232,8 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
               }}
             />
           </div>
-        </div>
-      </div>
+        </div >
+      </div >
     </>
   )
 }

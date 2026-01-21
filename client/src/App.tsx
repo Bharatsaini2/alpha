@@ -9,6 +9,7 @@ import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets"
 import { useEffect } from "react"
 import { ToastProvider } from "./components/ui/Toast"
 import { WalletToastManager } from "./components/wallet/WalletToastManager"
+import { PremiumAccessProvider } from "./contexts/PremiumAccessContext"
 
 const solanaWeb3JsAdapter = new SolanaAdapter({
   wallets: [new PhantomWalletAdapter() as any],
@@ -85,7 +86,9 @@ function App() {
       <ToastProvider>
         <WalletToastManager />
         <AuthProvider>
-          <AppRoutes />
+          <PremiumAccessProvider>
+            <AppRoutes />
+          </PremiumAccessProvider>
         </AuthProvider>
       </ToastProvider>
     </Router>

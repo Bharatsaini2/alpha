@@ -22,6 +22,7 @@ import SwapModal from "../../components/swap/SwapModal"
 import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useAuth } from "../../contexts/AuthContext"
+import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 import KOLAlertPopup from "./KOLAlertPopup";
 
 const hotnessOptions = [
@@ -249,6 +250,7 @@ const KOLFeedPage = () => {
   const { showToast } = useToast()
   const { wallet } = useWalletConnection()
   const { user } = useAuth()
+  const { validateAccess } = usePremiumAccess()
   const navigate = useNavigate()
 
   const [transactions, setTransactions] = useState<any[]>([])
@@ -788,47 +790,38 @@ const KOLFeedPage = () => {
         return
       }
 
-      // Check premium access
-      const premiumResponse = await axios.get(
-        `${import.meta.env.VITE_SERVER_URL}/alerts/premium-access`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      validateAccess(async () => {
+        try {
+          // Convert amount string to number
+          const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
+
+          // Create KOL alert subscription
+          const response = await axios.post(
+            `${import.meta.env.VITE_SERVER_URL}/alerts/kol-alert`,
+            {
+              hotnessScoreThreshold: hotness,
+              minBuyAmountUSD: minBuyAmount,
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          )
+
+          if (response.data.success) {
+            setIsSaved(true)
+            showToast("KOL alert subscription created successfully!", "success")
+            setTimeout(() => setIsSaved(false), 3000)
+          }
+        } catch (error: any) {
+          console.error("KOL alert subscription error:", error)
+          showToast(
+            error.response?.data?.message || "Failed to create KOL alert subscription",
+            "error"
+          )
         }
-      )
-
-      if (!premiumResponse.data.success || !premiumResponse.data.data.hasAccess) {
-        const difference = premiumResponse.data.data.difference || 0
-        showToast(
-          `Insufficient balance. You need ${difference.toFixed(0)} more ALPHA tokens to access this feature.`,
-          "error"
-        )
-        return
-      }
-
-      // Convert amount string to number
-      const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
-
-      // Create KOL alert subscription
-      const response = await axios.post(
-        `${import.meta.env.VITE_SERVER_URL}/alerts/kol-alert`,
-        {
-          hotnessScoreThreshold: hotness,
-          minBuyAmountUSD: minBuyAmount,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
-
-      if (response.data.success) {
-        setIsSaved(true)
-        showToast("KOL alert subscription created successfully!", "success")
-        setTimeout(() => setIsSaved(false), 3000)
-      }
+      })
     } catch (error: any) {
       console.error("KOL alert subscription error:", error)
       showToast(

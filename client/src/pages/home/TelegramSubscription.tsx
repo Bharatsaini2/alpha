@@ -9,6 +9,7 @@ import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../contexts/AuthContext";
+import { usePremiumAccess } from "../../contexts/PremiumAccessContext";
 
 interface AlertConfig {
     hotnessScoreThreshold?: number;
@@ -30,6 +31,7 @@ function TelegramSubscription() {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+    const { validateAccess } = usePremiumAccess();
     const [openId, setOpenId] = useState<string | null>(null);
     const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
     const [loading, setLoading] = useState(true);
@@ -38,8 +40,30 @@ function TelegramSubscription() {
     const [deleting, setDeleting] = useState(false);
     const [linkToken, setLinkToken] = useState<string | null>(null);
     const [generatingLink, setGeneratingLink] = useState(false);
-    const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+    const [hasAccess, setHasAccess] = useState<boolean>(false);
     const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
+
+    // ... (rest of helper functions) ...
+
+    // Check authentication and premium access on mount
+    useEffect(() => {
+        if (authLoading) return; // Wait for auth check to complete
+
+        if (!isAuthenticated) {
+            showToast('Please log in to view your subscriptions', 'error');
+            setTimeout(() => navigate('/'), 2000);
+            return;
+        }
+
+        // Validate premium access via context (shows modal if failed)
+        validateAccess(() => {
+            setHasAccess(true);
+            fetchSubscriptions();
+        });
+
+    }, [isAuthenticated, authLoading, navigate, showToast, validateAccess]);
+
+
 
     const toggleAccordion = (id: string) => {
         console.log('🔵 ACCORDION TOGGLE - ID:', id, 'Current openId:', openId);
@@ -95,42 +119,7 @@ function TelegramSubscription() {
         };
     }, [connectionCheckInterval]);
 
-    const checkPremiumAccess = async (showToastOnError = false, forceRefresh = false) => {
-        try {
 
-            const url = forceRefresh
-                ? '/alerts/premium-access?refresh=true'
-                : '/alerts/premium-access';
-            const response = await api.get(url);
-
-            if (response.data.success) {
-                setHasAccess(response.data.data.hasAccess);
-                if (!response.data.data.hasAccess && showToastOnError) {
-                    const difference = response.data.data.difference || 0;
-                    showToast(
-                        `Premium access required. You need ${difference.toFixed(2)} more ALPHA tokens.`,
-                        'error'
-                    );
-                }
-            }
-        } catch (err: any) {
-            console.error('Error checking premium access:', err);
-            setHasAccess(false);
-        }
-    };
-
-    // Check authentication on mount
-    useEffect(() => {
-        if (authLoading) return; // Wait for auth check to complete
-
-        if (!isAuthenticated) {
-            showToast('Please log in to view your subscriptions', 'error');
-            setTimeout(() => navigate('/'), 2000);
-            return;
-        }
-        fetchSubscriptions();
-        checkPremiumAccess(false); // Don't show toast on initial load
-    }, [isAuthenticated, authLoading, navigate, showToast]);
 
     const fetchSubscriptions = async () => {
         try {
@@ -238,39 +227,30 @@ function TelegramSubscription() {
     };
 
     const handleGenerateLinkToken = async () => {
-        // Force refresh balance check and show toast if insufficient
-        await checkPremiumAccess(true, true);
+        // Validate access before generating link
+        validateAccess(async () => {
+            // Access is valid, proceed with generation
+            try {
+                setGeneratingLink(true);
+                const response = await api.post('/alerts/link');
 
-        // Wait for state update
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        if (hasAccess === false) {
-            return;
-        }
-
-        try {
-            setGeneratingLink(true);
-            const response = await api.post('/alerts/link');
-
-            if (response.data.success) {
-                setLinkToken(response.data.data.token);
-                // Store the full response for the deep link
-                localStorage.setItem('telegramLinkResponse', JSON.stringify(response.data));
-                showToast('Link token generated! Click the link below to connect Telegram', 'success');
-            } else {
-                showToast('Failed to generate link token', 'error');
+                if (response.data.success) {
+                    setLinkToken(response.data.data.token);
+                    // Store the full response for the deep link
+                    localStorage.setItem('telegramLinkResponse', JSON.stringify(response.data));
+                    showToast('Link token generated! Click the link below to connect Telegram', 'success');
+                } else {
+                    showToast('Failed to generate link token', 'error');
+                }
+            } catch (err: any) {
+                console.error('Error generating link token:', err);
+                showToast(err.response?.data?.message || 'Failed to generate link token', 'error');
+            } finally {
+                setGeneratingLink(false);
             }
-        } catch (err: any) {
-            console.error('Error generating link token:', err);
-            const errorMsg = err.response?.data?.message || 'Failed to generate link token';
-            // Only show toast if it's not a duplicate premium access error
-            if (!errorMsg.includes('Premium access required')) {
-                showToast(errorMsg, 'error');
-            }
-        } finally {
-            setGeneratingLink(false);
-        }
+        });
     };
+
 
     const getTelegramDeepLink = () => {
         if (!linkToken) return '';
