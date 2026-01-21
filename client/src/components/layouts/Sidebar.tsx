@@ -84,9 +84,9 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
       {/* Sidebar */}
       <div
         className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#111113] border-r border-[#222222]
+        fixed lg:static inset-y-0 right-0 lg:left-0 z-50 w-64 bg-[#111113] border-l lg:border-r lg:border-l-0 border-[#222222]
         transform transition-transform duration-300 ease-in-out
-        ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        ${isOpen ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
       `}
       >
         <div className="flex flex-col h-full">

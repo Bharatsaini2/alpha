@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { IoMdTrendingUp, IoMdTrendingDown } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { User, LogOut } from "lucide-react"
+import { User, LogOut, Menu } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
 
@@ -11,8 +11,6 @@ import { RiTelegram2Fill } from "react-icons/ri";
 import { useNavigate } from "react-router-dom"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useToast } from "../ui/Toast"
-
-
 
 
 const BASE_URL =
@@ -31,7 +29,11 @@ interface TrendingToken {
   marketcap: number
 }
 
-function Header() {
+interface HeaderProps {
+  onOpenSidebar: () => void
+}
+
+function Header({ onOpenSidebar }: HeaderProps) {
   const [trendingTokens, setTrendingTokens] = useState<TrendingToken[]>([])
   const [loading, setLoading] = useState(true)
   const [showDropdown, setShowDropdown] = useState(false)
@@ -249,125 +251,140 @@ function Header() {
           )}
         </div>
         <div className="tp-header-bx" style={{ flexShrink: 0 }}>
-          {isUserConnected ? (
-            <div ref={dropdownRef} style={{ position: "relative" }}>
-              <button
-                className="nw-connected-btn"
-                onClick={() => setShowDropdown(!showDropdown)}
-              >
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt="User"
-                    style={{
-                      width: "20px",
-                      height: "20px",
-                      borderRadius: "50%",
-                    }}
-                  />
-                ) : (
-                  <span
-                    className="change-color"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: "20px",
-                      height: "20px",
-                    }}
-                  >
-                    <User size={14} />
-                  </span>
-                )}
-                {getDisplayName()} <HiChevronUpDown />
-              </button>
-
-              {showDropdown && (
-                <div className="user-dropdown">
-                  {user?.email && (
-                    <div
-                      className="user-dropdown-item"
-                      style={{ color: "#8F8F8F", cursor: "default" }}
+          <div className="hidden lg:flex items-center">
+            {isUserConnected ? (
+              <div ref={dropdownRef} style={{ position: "relative" }}>
+                <button
+                  className="nw-connected-btn"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                >
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt="User"
+                      style={{
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  ) : (
+                    <span
+                      className="change-color"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        width: "20px",
+                        height: "20px",
+                      }}
                     >
-                      {user.email}
-                    </div>
+                      <User size={14} />
+                    </span>
                   )}
-                  {(user?.walletAddress || wallet.address) && (
-                    <div
-                      className="user-dropdown-item"
-                      style={{ color: "#8F8F8F", cursor: "default" }}
-                    >
-                      {wallet.address
-                        ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`
-                        : `${user?.walletAddress?.slice(0, 6)}...${user?.walletAddress?.slice(-4)}`
-                      }
-                    </div>
-                  )}
-                  <div className="user-dropdown-divider" />
+                  {getDisplayName()} <HiChevronUpDown />
+                </button>
 
-                  <div
-                    className="user-dropdown-item"
-                    onClick={() => {
-                      setShowDropdown(false)
-                      navigate("/profile-page")
-                    }}
-                  >
-                    <FaRegUserCircle size={14} />
-                    Profile
-                  </div>
-                  <div className="user-dropdown-divider" />
-
-                  <div
-                    className="user-dropdown-item"
-                    onClick={() => {
-                      // Check if user has wallet connected
-                      if (!user?.walletAddress && !wallet.address) {
-                        setShowDropdown(false);
-                        showToast('Please connect your wallet to access Telegram Subscription', 'error');
-                      } else {
-                        setShowDropdown(false);
-                        navigate("/telegram-subscription")
-                      }
-                    }}
-                  >
-                    <RiTelegram2Fill size={14} />
-                    Telegram Subscription
-                  </div>
-                  <div className="user-dropdown-divider" />
-
-                  {/* Only show Connect option if wallet is NOT connected but user IS logged in (e.g. email) */}
-                  {!wallet.connected && (
-                    <>
+                {showDropdown && (
+                  <div className="user-dropdown">
+                    {user?.email && (
                       <div
                         className="user-dropdown-item"
-                        onClick={() => openLoginModal()}
+                        style={{ color: "#8F8F8F", cursor: "default" }}
                       >
-                        <PiPlugsConnected size={14} />
-                        Connect Wallet
+                        {user.email}
                       </div>
-                      <div className="user-dropdown-divider" />
-                    </>
-                  )}
+                    )}
+                    {(user?.walletAddress || wallet.address) && (
+                      <div
+                        className="user-dropdown-item"
+                        style={{ color: "#8F8F8F", cursor: "default" }}
+                      >
+                        {wallet.address
+                          ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`
+                          : `${user?.walletAddress?.slice(0, 6)}...${user?.walletAddress?.slice(-4)}`
+                        }
+                      </div>
+                    )}
+                    <div className="user-dropdown-divider" />
 
-                  <div
-                    className="user-dropdown-item"
-                    onClick={() => {
-                      setShowDropdown(false)
-                      if (wallet.connected) disconnect()
-                      logout()
-                    }}
-                  >
-                    <LogOut size={14} />
-                    Logout
+                    <div
+                      className="user-dropdown-item"
+                      onClick={() => {
+                        setShowDropdown(false)
+                        navigate("/profile-page")
+                      }}
+                    >
+                      <FaRegUserCircle size={14} />
+                      Profile
+                    </div>
+                    <div className="user-dropdown-divider" />
+
+                    <div
+                      className="user-dropdown-item"
+                      onClick={() => {
+                        // Check if user has wallet connected
+                        if (!user?.walletAddress && !wallet.address) {
+                          setShowDropdown(false);
+                          showToast('Please connect your wallet to access Telegram Subscription', 'error');
+                        } else {
+                          setShowDropdown(false);
+                          navigate("/telegram-subscription")
+                        }
+                      }}
+                    >
+                      <RiTelegram2Fill size={14} />
+                      Telegram Subscription
+                    </div>
+                    <div className="user-dropdown-divider" />
+
+                    {/* Only show Connect option if wallet is NOT connected but user IS logged in (e.g. email) */}
+                    {!wallet.connected && (
+                      <>
+                        <div
+                          className="user-dropdown-item"
+                          onClick={() => openLoginModal()}
+                        >
+                          <PiPlugsConnected size={14} />
+                          Connect Wallet
+                        </div>
+                        <div className="user-dropdown-divider" />
+                      </>
+                    )}
+
+                    <div
+                      className="user-dropdown-item"
+                      onClick={() => {
+                        setShowDropdown(false)
+                        if (wallet.connected) disconnect()
+                        logout()
+                      }}
+                    >
+                      <LogOut size={14} />
+                      Logout
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button className="connect-btn" onClick={() => openLoginModal()}>
-              CONNECT
+                )}
+              </div>
+            ) : (
+              <button className="connect-btn" onClick={() => openLoginModal()}>
+                CONNECT
+              </button>
+            )}
+          </div>
+
+          {/* Mobile: Hamburger Menu */}
+          <div className="flex lg:hidden">
+            <button
+              onClick={onOpenSidebar}
+              className="flex flex-col items-center justify-center gap-[3px] w-[38px] h-[38px] border !border-[#2A2A2A] bg-[#0A0A0A] hover:bg-[#2B2B2D] transition-colors"
+              style={{ borderColor: '#2A2A2A' }}
+            >
+              <span className="w-[18px] h-[2px] bg-[#EBEBEB]"></span>
+              <span className="w-[18px] h-[2px] bg-[#EBEBEB]"></span>
+              <span className="w-[18px] h-[2px] bg-[#EBEBEB]"></span>
             </button>
-          )}
+          </div>
         </div>
       </header>
     </>

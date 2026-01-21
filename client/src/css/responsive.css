@@ -18,6 +18,7 @@ body {
 }
 
 @media (max-width: 991px) {
+
   /* Force everything to fit viewport */
   html,
   body,
@@ -362,6 +363,7 @@ body {
   .category-remove-filting ul {
     flex-wrap: wrap;
   }
+
   .mobile-tabling-list {
     flex-direction: column;
   }
@@ -405,7 +407,41 @@ body {
     height: 210px !important;
   }
 
-  .sidebar {
-    display: none !important;
+  /* Toast responsive styles */
+  .coppied-address {
+    padding: 8px 12px !important;
+    max-width: calc(100vw - 24px) !important;
   }
+
+  .coppied-content {
+    gap: 8px !important;
+  }
+
+  .coppied-content p {
+    font-size: 12px !important;
+    line-height: 130% !important;
+  }
+
+  .coppied-icon {
+    font-size: 18px !important;
+  }
+
+  .coppied-btn {
+    padding: 5px 8px !important;
+    font-size: 10px !important;
+  }
+
+  .nw-sign-frm {
+    padding: 10px !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .nw-sign-frm h5 {
+    font-size: 12px !important;
+  }
+
+  .nw-sign-frm p {
+    font-size: 11px !important;
+  }
+
 }

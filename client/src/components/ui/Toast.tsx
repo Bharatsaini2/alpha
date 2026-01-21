@@ -206,9 +206,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             {createPortal(
                 <div
                     className="
-            fixed bottom-5 right-5 z-[10000]
+            fixed bottom-3 right-3 lg:bottom-5 lg:right-5 z-[10000]
             flex flex-col items-end space-y-2
             pointer-events-none
+            max-w-[calc(100vw-24px)] lg:max-w-md
           "
                 >
                     <AnimatePresence>

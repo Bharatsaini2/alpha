@@ -29,24 +29,24 @@ const MainLayout = () => {
 
   return (
     <>
-    <div className="app">
-     
-      <Sidebar />
+      <div className="app">
 
-      
-      <div className="main">
-       
-        <Header />
+        <Sidebar isOpen={_sidebarOpen} onToggle={() => setSidebarOpen(!_sidebarOpen)} />
 
-        
-        <section className="content">
-          <Outlet />
-        </section>
+
+        <div className="main">
+
+          <Header onOpenSidebar={() => setSidebarOpen(true)} />
+
+
+          <section className="content">
+            <Outlet />
+          </section>
+        </div>
+
+
+        <AuthManager />
       </div>
-
-     
-      <AuthManager />
-    </div>
     </>
   )
 }
