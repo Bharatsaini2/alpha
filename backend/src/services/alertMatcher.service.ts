@@ -533,6 +533,22 @@ export class AlertMatcherService {
 
     for (const sub of subscriptions) {
       try {
+        // ONLY send alerts for BUY transactions (skip SELL-only)
+        if (tx.type === 'sell') {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLActivity',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_ACTIVITY,
+            txHash: tx.signature,
+            txType: tx.type,
+            matchResult: false,
+            message: 'Transaction is SELL-only - skipping alert',
+          })
+          continue
+        }
+
         // Check if transaction is from a KOL wallet
         const whaleAddress = tx.whale?.address || tx.whaleAddress
         if (!whaleAddress) {

@@ -156,7 +156,14 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
                         <li className="nav-item-bar">
                             <a
                                 className={`nav-link-item ${isActive("/telegram-subscription") ? "nav-active" : ""}`}
-                                onClick={() => handleLinkClick("/telegram-subscription")}
+                                onClick={() => {
+                                    // Check if user is authenticated (either via email/social or wallet)
+                                    if (!isAuthenticated && !wallet.connected) {
+                                        showToast('Please log in to access Telegram Subscription', 'error');
+                                        return;
+                                    }
+                                    handleLinkClick("/telegram-subscription");
+                                }}
                                 style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faStar} />
@@ -174,6 +181,11 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
                         <button
                             className="connect-btn w-full justify-center text-center"
                             onClick={() => {
+                                // Check if user is authenticated (either via email/social or wallet)
+                                if (!isAuthenticated && !wallet.connected) {
+                                    showToast('Please log in to access Telegram Subscription', 'error');
+                                    return;
+                                }
                                 if (onToggle) onToggle();
                                 navigate("/telegram-subscription");
                             }}
@@ -280,6 +292,9 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
 function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
     const navigate = useNavigate()
     const location = useLocation()
+    const { isAuthenticated } = useAuth()
+    const { wallet } = useWalletConnection()
+    const { showToast } = useToast()
 
     const isActive = (path: string) => {
         return location.pathname === path
@@ -412,7 +427,14 @@ function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
                         <li className="nav-item-bar">
                             <a
                                 className={`nav-link-item ${isActive("/telegram-subscription") ? "nav-active" : ""}`}
-                                onClick={() => navigate("/telegram-subscription")}
+                                onClick={() => {
+                                    // Check if user is authenticated (either via email/social or wallet)
+                                    if (!isAuthenticated && !wallet.connected) {
+                                        showToast('Please log in to access Telegram Subscription', 'error');
+                                        return;
+                                    }
+                                    navigate("/telegram-subscription");
+                                }}
                                 style={{ cursor: 'pointer' }}
                             >
                                 <FontAwesomeIcon icon={faStar} />

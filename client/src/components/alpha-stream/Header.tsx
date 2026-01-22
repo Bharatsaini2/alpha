@@ -323,14 +323,18 @@ function Header({ onOpenSidebar }: HeaderProps) {
                     <div
                       className="user-dropdown-item"
                       onClick={() => {
+                        setShowDropdown(false);
+                        // Check if user is authenticated (either via email/social or wallet)
+                        if (!isAuthenticated && !wallet.connected) {
+                          showToast('Please log in to access Telegram Subscription', 'error');
+                          return;
+                        }
                         // Check if user has wallet connected
                         if (!user?.walletAddress && !wallet.address) {
-                          setShowDropdown(false);
                           showToast('Please connect your wallet to access Telegram Subscription', 'error');
-                        } else {
-                          setShowDropdown(false);
-                          navigate("/telegram-subscription")
+                          return;
                         }
+                        navigate("/telegram-subscription");
                       }}
                     >
                       <RiTelegram2Fill size={14} />

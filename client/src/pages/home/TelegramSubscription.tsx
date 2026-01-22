@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "../../components/ui/Toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext";
+import { useWalletConnection } from "../../hooks/useWalletConnection";
 
 interface AlertConfig {
     hotnessScoreThreshold?: number;
@@ -31,6 +32,7 @@ function TelegramSubscription() {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+    const { wallet } = useWalletConnection();
     const { validateAccess } = usePremiumAccess();
     const [openId, setOpenId] = useState<string | null>(null);
     const [subscriptions, setSubscriptions] = useState<AlertSubscription[]>([]);
@@ -49,9 +51,10 @@ function TelegramSubscription() {
     useEffect(() => {
         if (authLoading) return; // Wait for auth check to complete
 
-        if (!isAuthenticated) {
-            showToast('Please log in to view your subscriptions', 'error');
-            setTimeout(() => navigate('/'), 2000);
+        // Check if user is authenticated (either via email/social or wallet)
+        if (!isAuthenticated && !wallet.connected) {
+            showToast('Please log in to access Telegram Subscription', 'error');
+            navigate('/');
             return;
         }
 
@@ -61,7 +64,8 @@ function TelegramSubscription() {
             fetchSubscriptions();
         });
 
-    }, [isAuthenticated, authLoading, navigate, showToast, validateAccess]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated, authLoading, wallet.connected]);
 
 
 
