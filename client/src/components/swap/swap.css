@@ -11,15 +11,19 @@
   0% {
     background-position: -1000px 0;
   }
+
   100% {
     background-position: 1000px 0;
   }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 5px rgba(43, 106, 209, 0.3);
   }
+
   50% {
     box-shadow: 0 0 20px rgba(43, 106, 209, 0.6);
   }
@@ -30,6 +34,7 @@
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -40,6 +45,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -55,12 +61,10 @@
 
 /* Loading skeleton for balance */
 .balance-skeleton {
-  background: linear-gradient(
-    90deg,
-    #1a1a1a 0%,
-    #2a2a2a 50%,
-    #1a1a1a 100%
-  );
+  background: linear-gradient(90deg,
+      #1a1a1a 0%,
+      #2a2a2a 50%,
+      #1a1a1a 100%);
   background-size: 1000px 100%;
   animation: shimmer 2s infinite linear;
   border-radius: 4px;
@@ -227,12 +231,10 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.2),
-    transparent
-  );
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent);
   transition: left 0.5s ease;
 }
 
@@ -382,13 +384,18 @@
 }
 
 @keyframes loading-dots {
-  0%, 20% {
+
+  0%,
+  20% {
     content: '.';
   }
+
   40% {
     content: '..';
   }
-  60%, 100% {
+
+  60%,
+  100% {
     content: '...';
   }
 }
@@ -649,6 +656,7 @@
    ============================================ */
 
 @media print {
+
   .swap-execute-btn,
   .token-select-btn,
   .max-button,
@@ -689,41 +697,50 @@
 
 /* Liquidity Status Colors */
 .salana-atv-bx h6.healthy {
-  color: #44f79d; /* Green for Healthy - Requirement 10.4 */
+  color: #44f79d;
+  /* Green for Healthy - Requirement 10.4 */
 }
 
 .salana-atv-bx h6.warning {
-  color: #fbbf24; /* Yellow/Amber for Warning */
+  color: #fbbf24;
+  /* Yellow/Amber for Warning */
 }
 
 .salana-atv-bx h6.low {
-  color: #ef4444; /* Red for Low */
+  color: #ef4444;
+  /* Red for Low */
 }
 
 /* Trading Status Colors */
 .salana-atv-bx h6.active {
-  color: #44f79d; /* Green for Active */
+  color: #44f79d;
+  /* Green for Active */
 }
 
 .salana-atv-bx h6.inactive {
-  color: #8f8f8f; /* Gray for Inactive */
+  color: #8f8f8f;
+  /* Gray for Inactive */
 }
 
 .salana-atv-bx h6.paused {
-  color: #fbbf24; /* Yellow/Amber for Paused */
+  color: #fbbf24;
+  /* Yellow/Amber for Paused */
 }
 
 /* Honeypot Status Colors */
 .salana-atv-bx h6.passed {
-  color: #44f79d; /* Green for Passed - Requirement 10.5 */
+  color: #44f79d;
+  /* Green for Passed - Requirement 10.5 */
 }
 
 .salana-atv-bx h6.failed {
-  color: #ef4444; /* Red for Failed */
+  color: #ef4444;
+  /* Red for Failed */
 }
 
 .salana-atv-bx h6.unknown {
-  color: #8f8f8f; /* Gray for Unknown */
+  color: #8f8f8f;
+  /* Gray for Unknown */
 }
 
 /* Safety indicator list layout */
@@ -780,5 +797,50 @@
   .salana-activity-list li {
     min-width: auto;
     width: 100%;
+  }
+}
+
+/* ============================================
+   Large Token Buttons with Details
+   ============================================ */
+
+.token-btn-large {
+  background: transparent;
+  border: 1px solid #2a2a2a;
+  padding: 8px 10px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 56px;
+  margin: -1px 0 0 -1px;
+}
+
+.token-btn-large:hover {
+  background: #1a1a1a;
+  border-color: #3a3a3a;
+  z-index: 1;
+}
+
+.token-btn-large:active {
+  transform: translateY(0);
+}
+
+.token-btn-large img {
+  border: 1px solid #2a2a2a;
+  border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  .token-btn-large {
+    padding: 6px 8px;
+    min-height: 48px;
+  }
+
+  .token-btn-large img {
+    width: 32px !important;
+    height: 32px !important;
   }
 }

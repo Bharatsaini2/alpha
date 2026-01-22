@@ -289,6 +289,8 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                 src={data.transaction.tokenIn.symbol.toUpperCase().includes("SOL") ? solanalogo : (data.transaction.tokenIn.imageUrl || DefaultTokenImage)}
                                 alt="token in"
                                 className="token-image"
+                                onClick={() => onCopy(data.transaction.tokenIn.address, "Token Address")}
+                                style={{ cursor: "pointer" }}
                             />
                         </div>
                     </div>
@@ -361,6 +363,8 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                                 src={data.transaction.tokenOut.symbol.toUpperCase().includes("SOL") ? solanalogo : (data.transaction.tokenOut.imageUrl || DefaultTokenImage)}
                                 alt="token out"
                                 className="token-image"
+                                onClick={() => onCopy(data.transaction.tokenOut.address, "Token Address")}
+                                style={{ cursor: "pointer" }}
                             />
                             <div className="token-text">
                                 <h3>{data.transaction.tokenOut.symbol}</h3>

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect, memo } from "react"
-import { Search, X, Clock } from "lucide-react"
+import { Search, X, TrendingUp } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import fallbackImage from "../../assets/default_token.svg"
 import { POPULAR_TOKENS, TokenInfo } from "../../lib/tokenList"
@@ -181,6 +181,8 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   const [recentTokens, setRecentTokens] = useState<TokenInfo[]>([])
   const [userBalances, setUserBalances] = useState<Record<string, number>>({})
   const [isLoadingBalances, setIsLoadingBalances] = useState(false)
+  const [topWalletTokens, setTopWalletTokens] = useState<TokenInfo[]>([])
+  const [isCalculatingTopTokens, setIsCalculatingTopTokens] = useState(false)
 
   const searchInputRef = useRef<HTMLInputElement>(null)
   const modalRef = useRef<HTMLDivElement>(null)
@@ -257,6 +259,74 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     }
   }, [isOpen, userWallet, getAllTokenBalances, getBalance])
 
+  // Calculate top wallet tokens by USD value
+  useEffect(() => {
+    const calculateTopTokens = async () => {
+      setIsCalculatingTopTokens(true)
+      if (!userWallet || Object.keys(userBalances).length === 0) {
+        setTopWalletTokens([])
+        setIsCalculatingTopTokens(false)
+        return
+      }
+
+      // Create array of tokens with their USD values
+      const tokensWithValue: Array<TokenInfo & { balance: number; usdValue: number }> = []
+
+      for (const [address, balance] of Object.entries(userBalances)) {
+        if (balance <= 0) continue
+
+        // Try to find token in POPULAR_TOKENS first
+        let tokenInfo = POPULAR_TOKENS.find(t => t.address === address)
+
+        if (!tokenInfo) {
+          // If not found, try to fetch from Jupiter API
+          try {
+            const results = await searchJupiterUltra(address)
+            if (results.length > 0) {
+              const jupToken = results[0]
+              tokenInfo = {
+                address: jupToken.id,
+                symbol: jupToken.symbol,
+                name: jupToken.name,
+                decimals: jupToken.decimals,
+                image: jupToken.icon || undefined,
+                usdPrice: jupToken.usdPrice && jupToken.usdPrice < 100000 ? jupToken.usdPrice : undefined,
+                mcap: jupToken.mcap || undefined,
+                isVerified: jupToken.isVerified || false,
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to fetch token metadata for ${address}:`, error)
+            // Skip this token if we can't get metadata
+            continue
+          }
+        }
+
+        if (!tokenInfo) continue
+
+        const usdPrice = tokenInfo.usdPrice || 0
+        const usdValue = balance * usdPrice
+
+        tokensWithValue.push({
+          ...tokenInfo,
+          balance,
+          usdValue
+        })
+      }
+
+      // Sort by USD value (descending) and take top 4
+      const topTokens = tokensWithValue
+        .sort((a, b) => b.usdValue - a.usdValue)
+        .slice(0, 4)
+        .map(({ balance, usdValue, ...token }) => token)
+
+      setTopWalletTokens(topTokens)
+      setIsCalculatingTopTokens(false)
+    }
+
+    calculateTopTokens()
+  }, [userBalances, userWallet, searchJupiterUltra])
+
   // Search tokens - use Jupiter Ultra API for real-time data ONLY (no fallback)
   const searchTokens = useCallback(async (query: string): Promise<TokenInfo[]> => {
     if (!query || query.length < 2) return []
@@ -272,13 +342,13 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     const tokens: TokenInfo[] = jupiterResults.map((token: JupiterTokenResult) => {
       // Validate usdPrice - if it's suspiciously high, it might be mcap instead of price
       let validatedPrice = token.usdPrice || undefined
-      
+
       // If usdPrice is greater than $100k, it's probably market cap or wrong data
       if (validatedPrice && validatedPrice > 100000) {
         console.warn(`⚠️ Suspicious usdPrice for ${token.symbol}: $${validatedPrice.toLocaleString()} - clearing to fetch correct price`)
         validatedPrice = undefined // Clear it so it gets fetched properly later
       }
-      
+
       return {
         address: token.id,
         symbol: token.symbol,
@@ -393,21 +463,14 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
     }
   }, [isOpen, onClose])
 
-  // Get tokens to display - only show popular tokens by default
+  // Get tokens to display - search results or popular tokens only
   const getDisplayTokens = (): TokenInfo[] => {
     if (searchQuery) {
       return searchResults.filter(token => token.address !== excludeToken)
     }
 
-    // Show only popular tokens by default (no loading all tokens)
-    const popular = POPULAR_TOKENS.filter(token => token.address !== excludeToken)
-
-    const recent = recentTokens.filter(token =>
-      token.address !== excludeToken &&
-      !popular.some(p => p.address === token.address)
-    )
-
-    return [...popular, ...recent]
+    // Show only popular tokens (wallet tokens are shown separately in Top Holdings section)
+    return POPULAR_TOKENS.filter(token => token.address !== excludeToken)
   }
 
   const displayTokens = getDisplayTokens()
@@ -431,7 +494,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-md mx-4   shadow-2xl max-h-[80vh] flex flex-col nw-custm-modal-bx"
+            className="relative w-full max-w-lg mx-4   shadow-2xl max-h-[80vh] flex flex-col nw-custm-modal-bx"
           >
             {/* Header */}
             <div className=" gap-2 flex items-center justify-between px-3  py-2 border-b border-[#2B2B2D]">
@@ -447,8 +510,17 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                     onKeyDown={handleKeyDown}
                     placeholder="Search by name, symbol, or address..."
                     className="form-control "
-                    style={{ paddingLeft: "35px" }}
+                    style={{ paddingLeft: "35px", paddingRight: searchQuery ? "35px" : "12px" }}
                   />
+                  {searchQuery && !isSearching && !isJupiterSearching && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   {(isSearching || isJupiterSearching) && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -525,18 +597,86 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
 
             <div className="all-token-trans-bx px-3 py-2">
-              <button className="token-btn">
-                <img src="/btn-icon.png" alt="" />
-              </button>
-              <button className="token-btn">
-                <img src="/t-1.png" alt="" />
-              </button>
-              <button className="token-btn">
-                <img src="/t-2.png" alt="" />
-              </button>
-              <button className="token-btn">
-                <img src="/t-3.png" alt="" />
-              </button>
+              {/* Show skeleton loading while calculating top tokens */}
+              {isCalculatingTopTokens && userWallet && (
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="token-btn-large">
+                      <div className="flex items-center gap-2 w-full">
+                        <div className="w-10 h-10 bg-gray-700 rounded animate-pulse flex-shrink-0" />
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="h-3 bg-gray-700 rounded w-16 mb-1 animate-pulse" />
+                          <div className="h-2 bg-gray-700 rounded w-12 mb-1 animate-pulse" />
+                          <div className="h-2 bg-gray-700 rounded w-14 animate-pulse" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Show top wallet holdings */}
+              {!isCalculatingTopTokens && topWalletTokens.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  {topWalletTokens.map((token) => {
+                    const balance = userBalances[token.address] || 0
+                    const usdValue = balance * (token.usdPrice || 0)
+
+                    const formatBalance = (bal: number): string => {
+                      if (bal === 0) return "0"
+                      if (bal < 0.001) return "< 0.001"
+                      if (bal < 1) return bal.toFixed(6)
+                      if (bal < 1000) return bal.toFixed(3)
+                      return bal.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                    }
+
+                    return (
+                      <button
+                        key={token.address}
+                        className="token-btn-large"
+                        onClick={() => handleTokenSelect(token)}
+                      >
+                        <div className="flex items-center gap-2 w-full">
+                          <img
+                            src={token.image || fallbackImage}
+                            alt={token.symbol}
+                            className="w-10 h-10 rounded flex-shrink-0"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = fallbackImage
+                            }}
+                          />
+                          <div className="flex-1 text-left overflow-hidden">
+                            <div className="text-xs font-medium text-white truncate">{token.symbol}</div>
+                            <div className="text-[10px] text-gray-400 truncate">{formatBalance(balance)}</div>
+                            <div className="text-[10px] text-gray-500 truncate">
+                              ${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Show default icons if no wallet or no tokens */}
+              {!userWallet && (
+                <>
+                  <button className="token-btn">
+                    <img src="/btn-icon.png" alt="" />
+                  </button>
+                  <button className="token-btn">
+                    <img src="/t-1.png" alt="" />
+                  </button>
+                  <button className="token-btn">
+                    <img src="/t-2.png" alt="" />
+                  </button>
+                  <button className="token-btn">
+                    <img src="/t-3.png" alt="" />
+                  </button>
+                </>
+              )}
             </div>
 
 
@@ -555,12 +695,12 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                 </div>
               )} */}
 
-              {/* Recent Tokens Section */}
-              {!searchQuery && recentTokens.length > 0 && (
+              {/* Popular Tokens Section */}
+              {!searchQuery && (
                 <div className="px-3 py-2">
                   <div className="flex items-center gap-2 mb-0">
-                    <Clock size={16} className="text-gray-400" />
-                    <span className="text-sm font-medium text-gray-400">Recent</span>
+                    <TrendingUp size={16} className="text-gray-400" />
+                    <span className="text-sm font-medium text-gray-400">Popular</span>
                   </div>
                 </div>
               )}

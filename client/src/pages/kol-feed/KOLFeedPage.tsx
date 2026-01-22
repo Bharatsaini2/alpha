@@ -164,19 +164,11 @@ const expandTransactions = (
   transactions.forEach((tx) => {
     const getCorrectTokenAge = (transaction: any) => {
       if (transaction.type === "buy") {
-        return transaction.tokenOutAge !== null &&
-          transaction.tokenOutAge !== undefined
-          ? formatAge(transaction.tokenOutAge)
-          : "Unknown"
+        return formatAge(transaction.tokenOutAge)
       } else if (transaction.type === "sell") {
-        return transaction.tokenInAge !== null &&
-          transaction.tokenInAge !== undefined
-          ? formatAge(transaction.tokenInAge)
-          : "Unknown"
+        return formatAge(transaction.tokenInAge)
       } else {
-        return transaction.age !== null && transaction.age !== undefined
-          ? formatAge(transaction.age)
-          : "Unknown"
+        return formatAge(transaction.age)
       }
     }
 
@@ -191,10 +183,7 @@ const expandTransactions = (
         const threshold = amountThreshold ? parseFloat(amountThreshold) : 0
 
         if (!amountThreshold || buyAmount >= threshold) {
-          const buyAge =
-            tx.tokenOutAge !== null && tx.tokenOutAge !== undefined
-              ? formatAge(tx.tokenOutAge)
-              : "Unknown"
+          const buyAge = formatAge(tx.tokenOutAge)
 
           expandedTransactions.push({
             ...tx,
@@ -211,10 +200,7 @@ const expandTransactions = (
         const threshold = amountThreshold ? parseFloat(amountThreshold) : 0
 
         if (!amountThreshold || sellAmount >= threshold) {
-          const sellAge =
-            tx.tokenInAge !== null && tx.tokenInAge !== undefined
-              ? formatAge(tx.tokenInAge)
-              : "Unknown"
+          const sellAge = formatAge(tx.tokenInAge)
 
           expandedTransactions.push({
             ...tx,
@@ -678,7 +664,7 @@ const KOLFeedPage = () => {
           uniqueTokens.set(address, {
             id: address,
             titles: tx.transaction.tokenIn.symbol,
-            descriptions: tx.transaction.tokenIn.name || "Unknown Token",
+            descriptions: tx.transaction.tokenIn.name || "NA",
             images: tx.inTokenURL || DefaultTokenImage
           });
         }
@@ -690,7 +676,7 @@ const KOLFeedPage = () => {
           uniqueTokens.set(address, {
             id: address,
             titles: tx.transaction.tokenOut.symbol,
-            descriptions: tx.transaction.tokenOut.name || "Unknown Token",
+            descriptions: tx.transaction.tokenOut.name || "NA",
             images: tx.outTokenURL || DefaultTokenImage
           });
         }
@@ -1334,7 +1320,7 @@ const KOLFeedPage = () => {
                                 target.src = DefaultTokenImage;
                               }
                             }}
-                            style={{ borderRadius: '50%', width: '40px', height: '40px', objectFit: 'cover' }}
+                            style={{ borderRadius: '0', width: '40px', height: '40px', objectFit: 'cover' }}
                           />
                           <div className="whale-content flex-grow-1">
                             <h4 className="username">

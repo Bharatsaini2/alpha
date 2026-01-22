@@ -7,7 +7,7 @@ dayjs.extend(timezone)
 
 export const formatAge = (age: Date | string | null | undefined): string => {
   // Handle null, undefined, or invalid dates
-  if (age === null || age === undefined || age === "Unknown") return "Unknown"
+  if (age === null || age === undefined || age === "Unknown") return "NA"
 
   let ageDate: Date
 
@@ -20,7 +20,7 @@ export const formatAge = (age: Date | string | null | undefined): string => {
 
   // Check if date is valid
   if (isNaN(ageDate.getTime())) {
-    return "Unknown"
+    return "NA"
   }
 
   // Use IST timezone for consistent time calculation
@@ -30,7 +30,7 @@ export const formatAge = (age: Date | string | null | undefined): string => {
 
   // If the date is in the future (shouldn't happen for token creation), return "Unknown"
   if (diffInMs < 0) {
-    return "Unknown"
+    return "NA"
   }
 
   // Convert milliseconds to different time units
@@ -65,7 +65,7 @@ export const formatAgeDetailed = (
   age: Date | string | null | undefined
 ): string => {
   // Handle null, undefined, or invalid dates
-  if (!age) return "Unknown"
+  if (!age) return "NA"
 
   let ageDate: Date
 
@@ -78,7 +78,7 @@ export const formatAgeDetailed = (
 
   // Check if date is valid
   if (isNaN(ageDate.getTime())) {
-    return "Unknown"
+    return "NA"
   }
 
   // Use IST timezone for consistent time calculation
@@ -88,7 +88,7 @@ export const formatAgeDetailed = (
 
   // If the date is in the future (shouldn't happen for token creation), return "Unknown"
   if (diffInMs < 0) {
-    return "Unknown"
+    return "NA"
   }
 
   // Convert milliseconds to different time units
@@ -126,7 +126,7 @@ export const formatAgeFull = (
   age: Date | string | null | undefined
 ): string => {
   // Handle null, undefined, or invalid dates
-  if (!age) return "Unknown"
+  if (!age) return "NA"
 
   let ageDate: Date
 
@@ -139,7 +139,7 @@ export const formatAgeFull = (
 
   // Check if date is valid
   if (isNaN(ageDate.getTime())) {
-    return "Unknown"
+    return "NA"
   }
 
   // Use IST timezone for consistent time calculation
@@ -149,7 +149,7 @@ export const formatAgeFull = (
 
   // If the date is in the future (shouldn't happen for token creation), return "Unknown"
   if (diffInMs < 0) {
-    return "Unknown"
+    return "NA"
   }
 
   // Convert milliseconds to different time units

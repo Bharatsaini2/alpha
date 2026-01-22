@@ -165,20 +165,11 @@ const expandTransactions = (
       // For sell transactions, use tokenInAge (token being sold)
       // For both transactions, we'll use tokenOutAge for buy and tokenInAge for sell
       if (transaction.type === "buy") {
-        return transaction.tokenOutAge !== null &&
-          transaction.tokenOutAge !== undefined
-          ? formatAge(transaction.tokenOutAge)
-          : "Unknown"
+        return formatAge(transaction.tokenOutAge)
       } else if (transaction.type === "sell") {
-        return transaction.tokenInAge !== null &&
-          transaction.tokenInAge !== undefined
-          ? formatAge(transaction.tokenInAge)
-          : "Unknown"
+        return formatAge(transaction.tokenInAge)
       } else {
-        // Fallback to original age for backward compatibility
-        return transaction.age !== null && transaction.age !== undefined
-          ? formatAge(transaction.age)
-          : "Unknown"
+        return formatAge(transaction.age)
       }
     }
 
@@ -196,10 +187,7 @@ const expandTransactions = (
         // Only add if no threshold is set or amount meets threshold
         if (!amountThreshold || buyAmount >= threshold) {
           // For buy part of "both" transaction, use tokenOutAge
-          const buyAge =
-            tx.tokenOutAge !== null && tx.tokenOutAge !== undefined
-              ? formatAge(tx.tokenOutAge)
-              : "Unknown"
+          const buyAge = formatAge(tx.tokenOutAge)
 
           expandedTransactions.push({
             ...tx,
@@ -219,10 +207,7 @@ const expandTransactions = (
         // Only add if no threshold is set or amount meets threshold
         if (!amountThreshold || sellAmount >= threshold) {
           // For sell part of "both" transaction, use tokenInAge
-          const sellAge =
-            tx.tokenInAge !== null && tx.tokenInAge !== undefined
-              ? formatAge(tx.tokenInAge)
-              : "Unknown"
+          const sellAge = formatAge(tx.tokenInAge)
 
           expandedTransactions.push({
             ...tx,
@@ -827,7 +812,7 @@ const HomePage = () => {
       image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
       decimals: 9, // Default for most Solana tokens
     }
-    
+
     // Open SwapModal in 'quickBuy' mode with SOL as input token
     setSelectedToken(tokenInfo)
     setIsSwapModalOpen(true)
@@ -836,7 +821,7 @@ const HomePage = () => {
   const handleQuickBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setQuickBuyAmount(value)
-    
+
     // Validate and show error if invalid
     const validation = validateQuickBuyAmount(value)
     if (!validation.isValid && value !== '') {
@@ -844,7 +829,7 @@ const HomePage = () => {
     } else {
       setQuickBuyAmountError('')
     }
-    
+
     // Save to session storage if valid
     if (validation.isValid) {
       saveQuickBuyAmount(value)
@@ -2795,8 +2780,8 @@ const HomePage = () => {
                             {/* Token Description/Tagline */}
                             <p className="text-xs text-gray-500 mb-1.5 uppercase tracking-wide">
                               {tx.type === 'sell'
-                                ? (tx.transaction.tokenIn.name || 'Unknown').substring(0, 20)
-                                : (tx.transaction.tokenOut.name || 'Unknown').substring(0, 20)}
+                                ? (tx.transaction.tokenIn.name || 'NA').substring(0, 20)
+                                : (tx.transaction.tokenOut.name || 'NA').substring(0, 20)}
                             </p>
                             {/* MC / Age Stats */}
                             <div className="text-[10px] text-gray-500 uppercase tracking-wide">
@@ -2867,7 +2852,7 @@ const HomePage = () => {
       <ReactFlowProvider>
         <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
       </ReactFlowProvider>
-      
+
       <SwapModal
         isOpen={isSwapModalOpen}
         onClose={() => {
@@ -2885,7 +2870,7 @@ const HomePage = () => {
         initialOutputToken={selectedToken}
         initialAmount={quickBuyAmount}
       />
-      
+
       <ToastContainer />
     </>
   )

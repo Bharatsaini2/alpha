@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { IoSparklesOutline } from "react-icons/io5"
-import { HiChevronUpDown } from "react-icons/hi2"
 import { RiLoader2Fill } from "react-icons/ri"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import {
@@ -1110,7 +1109,7 @@ const RightSidebarNew = ({
                 <IoSparklesOutline
                   style={{ color: "#2B6AD1", marginRight: "5px" }}
                 />
-                ultra v3 <HiChevronUpDown />
+                ultra v3
               </a>
             </div>
             <div className="d-flex align-items-center gap-2">

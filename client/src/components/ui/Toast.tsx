@@ -120,7 +120,7 @@ const Toast: React.FC<ToastProps> = ({
                 <p>{message}</p>
                 <button
                     onClick={() => onClose(id)}
-                    className="coppied-btn"
+                    className="coppied-btn text-[10px] px-2 py-1"
                 >
                     Close
                 </button>

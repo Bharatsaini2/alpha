@@ -65,44 +65,44 @@ export function validateQuickBuyAmount(value: string | number | null | undefined
 }
 
 /**
- * Storage key for Quick Buy amount in sessionStorage
+ * Storage key for Quick Buy amount in localStorage
  */
 const QUICK_BUY_AMOUNT_KEY = 'quickBuyAmount'
 
 /**
- * Saves Quick Buy amount to session storage
+ * Saves Quick Buy amount to local storage
  * 
  * @param amount - The amount to save
  */
 export function saveQuickBuyAmount(amount: string): void {
   try {
-    sessionStorage.setItem(QUICK_BUY_AMOUNT_KEY, amount)
+    localStorage.setItem(QUICK_BUY_AMOUNT_KEY, amount)
   } catch (error) {
-    console.error('Failed to save Quick Buy amount to session storage:', error)
+    console.error('Failed to save Quick Buy amount to local storage:', error)
   }
 }
 
 /**
- * Loads Quick Buy amount from session storage
+ * Loads Quick Buy amount from local storage
  * 
  * @returns The saved amount or empty string if not found
  */
 export function loadQuickBuyAmount(): string {
   try {
-    return sessionStorage.getItem(QUICK_BUY_AMOUNT_KEY) || ''
+    return localStorage.getItem(QUICK_BUY_AMOUNT_KEY) || ''
   } catch (error) {
-    console.error('Failed to load Quick Buy amount from session storage:', error)
+    console.error('Failed to load Quick Buy amount from local storage:', error)
     return ''
   }
 }
 
 /**
- * Clears Quick Buy amount from session storage
+ * Clears Quick Buy amount from local storage
  */
 export function clearQuickBuyAmount(): void {
   try {
-    sessionStorage.removeItem(QUICK_BUY_AMOUNT_KEY)
+    localStorage.removeItem(QUICK_BUY_AMOUNT_KEY)
   } catch (error) {
-    console.error('Failed to clear Quick Buy amount from session storage:', error)
+    console.error('Failed to clear Quick Buy amount from local storage:', error)
   }
 }

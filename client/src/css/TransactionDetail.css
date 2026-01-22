@@ -123,14 +123,12 @@
 .trans-total-value {
   border: 1px solid #0000;
   z-index: 1;
-  border-image-source: linear-gradient(
-    18.34deg,
-    #df2a4e00 9.76%,
-    #df2a4e80 30.83%,
-    #df2a4e00 49.63%,
-    #df2a4e80 69.45%,
-    #df2a4e00 90.24%
-  );
+  border-image-source: linear-gradient(18.34deg,
+      #df2a4e00 9.76%,
+      #df2a4e80 30.83%,
+      #df2a4e00 49.63%,
+      #df2a4e80 69.45%,
+      #df2a4e00 90.24%);
   border-image-slice: 1;
   justify-content: center;
   align-items: center;
@@ -419,6 +417,56 @@
   }
 }
 
+@media (max-width: 768px) {
+  .tx-details-table {
+    padding: 20px 16px;
+  }
+
+  /* Adjust row layout for better space utilization */
+  .table-row {
+    padding: 12px 0;
+    gap: 8px;
+  }
+
+  .row-label {
+    font-size: 12px;
+    flex-shrink: 0;
+    /* Prevent label from shrinking */
+  }
+
+  .row-value {
+    font-size: 13px;
+    text-align: right;
+    justify-content: flex-end;
+  }
+
+  /* Ensure hash fits */
+  .row-value.mono {
+    font-size: 12px;
+  }
+
+  /* Adjust back link spacing */
+  .tx-detail-container {
+    padding: 10px;
+  }
+
+  .whale-address-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-right-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .address-label {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 /* Modal Confirmation */
 
 .solana-bx {
@@ -599,7 +647,8 @@
 }
 
 .impact-percent {
-  color: #ef4444; /* Red color for high price impact (> 5%) */
+  color: #ef4444;
+  /* Red color for high price impact (> 5%) */
 }
 
 .solana-total-bx {
@@ -726,11 +775,11 @@
   transition: 0.3s;
 }
 
-.switch input:checked + label {
+.switch input:checked+label {
   background: #0d2dcd;
 }
 
-.switch input:checked + label::after {
+.switch input:checked+label::after {
   transform: translateX(20px);
 }
 
@@ -739,7 +788,7 @@
   color: #666;
 }
 
-.switch input:checked ~ .switch-title {
+.switch input:checked~.switch-title {
   color: #34a853;
 }
 

@@ -1512,21 +1512,26 @@ input[type="number"] {
 
 .trade-interface-wrapper {
   position: relative;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 116px 116px;
   gap: 2px;
 }
 
 .swap-toggle-bx {
   position: absolute;
-  top: 117px;
-  /* 116px box + 1px half-gap */
-  left: 50%;
-  transform: translate(-50%, -50%);
-  margin: 0;
-  z-index: 10;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex !important;
+  align-items: center;
   justify-content: center;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.swap-toggle-bx button {
+  pointer-events: auto;
 }
 
 /* Button */
@@ -2258,23 +2263,23 @@ font-size: 16px;
 .coppied-address {
   background-color: #141414;
   border: 1px solid #525252;
-  padding: 11px 21px;
+  padding: 8px 16px;
 }
 
 .coppied-icon {
   color: #14904d;
-  font-size: 21px;
+  font-size: 16px;
 }
 
 .coppied-content {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 8px;
 }
 
 .coppied-content p {
   font-weight: 500;
-  font-size: 16px;
+  font-size: 13px;
   line-height: 140%;
   text-transform: uppercase;
   color: #ffffff;

@@ -175,19 +175,11 @@ const expandTransactions = (
     transactions.forEach((tx) => {
         const getCorrectTokenAge = (transaction: any) => {
             if (transaction.type === "buy") {
-                return transaction.tokenOutAge !== null &&
-                    transaction.tokenOutAge !== undefined
-                    ? formatAge(transaction.tokenOutAge)
-                    : "Unknown"
+                return formatAge(transaction.tokenOutAge)
             } else if (transaction.type === "sell") {
-                return transaction.tokenInAge !== null &&
-                    transaction.tokenInAge !== undefined
-                    ? formatAge(transaction.tokenInAge)
-                    : "Unknown"
+                return formatAge(transaction.tokenInAge)
             } else {
-                return transaction.age !== null && transaction.age !== undefined
-                    ? formatAge(transaction.age)
-                    : "Unknown"
+                return formatAge(transaction.age)
             }
         }
 
@@ -202,10 +194,7 @@ const expandTransactions = (
                 const threshold = amountThreshold ? parseFloat(amountThreshold) : 0
 
                 if (!amountThreshold || buyAmount >= threshold) {
-                    const buyAge =
-                        tx.tokenOutAge !== null && tx.tokenOutAge !== undefined
-                            ? formatAge(tx.tokenOutAge)
-                            : "Unknown"
+                    const buyAge = formatAge(tx.tokenOutAge)
 
                     expandedTransactions.push({
                         ...tx,
@@ -222,10 +211,7 @@ const expandTransactions = (
                 const threshold = amountThreshold ? parseFloat(amountThreshold) : 0
 
                 if (!amountThreshold || sellAmount >= threshold) {
-                    const sellAge =
-                        tx.tokenInAge !== null && tx.tokenInAge !== undefined
-                            ? formatAge(tx.tokenInAge)
-                            : "Unknown"
+                    const sellAge = formatAge(tx.tokenInAge)
 
                     expandedTransactions.push({
                         ...tx,
