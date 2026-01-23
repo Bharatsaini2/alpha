@@ -58,7 +58,7 @@ body {
   }
 
   .content {
-    overflow: visible !important;
+    overflow-y: auto !important;
     height: auto !important;
     min-height: 0;
     padding: 8px 16px !important;

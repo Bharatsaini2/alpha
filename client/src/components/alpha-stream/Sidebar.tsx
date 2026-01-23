@@ -5,7 +5,6 @@ import { BsLayoutSidebar } from "react-icons/bs"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../../contexts/AuthContext"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { useToast } from "../../contexts/ToastContext"
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 import { User, LogOut } from "lucide-react"
 import { HiChevronUpDown } from "react-icons/hi2"
@@ -19,7 +18,6 @@ interface SidebarProps {
 const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = false }: { collapsed: boolean, navigate: any, isActive: (path: string) => boolean, onToggle?: () => void, isMobile?: boolean }) => {
     const { user, isAuthenticated, logout, openLoginModal } = useAuth()
     const { wallet, disconnect } = useWalletConnection()
-    const { showToast } = useToast()
     const { validateAccess } = usePremiumAccess()
     const [showDropdown, setShowDropdown] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
@@ -284,9 +282,6 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
 function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
     const navigate = useNavigate()
     const location = useLocation()
-    const { isAuthenticated } = useAuth()
-    const { wallet } = useWalletConnection()
-    const { showToast } = useToast()
     const { validateAccess } = usePremiumAccess()
 
     const isActive = (path: string) => {

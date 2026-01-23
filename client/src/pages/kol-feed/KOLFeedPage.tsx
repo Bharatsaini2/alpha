@@ -822,7 +822,6 @@ const KOLFeedPage = () => {
           <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
             <RightSidebarNew
               pageType="kol"
-              transactions={transactions}
             />
           </div>
 
@@ -1310,27 +1309,40 @@ const KOLFeedPage = () => {
                           <img
                             src={tx.influencerProfileImageUrl || DefaultTokenImage}
                             alt="influencer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/kol-feed-profile/${tx.influencerUsername?.replace(/^@/, '')}`);
+                            }}
                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                               const target = e.currentTarget;
                               if (target.src.indexOf(DefaultTokenImage) === -1) {
                                 target.src = DefaultTokenImage;
                               }
                             }}
-                            style={{ borderRadius: '0', width: '40px', height: '40px', objectFit: 'cover' }}
+                            style={{ borderRadius: '0', width: '60px', height: '60px', objectFit: 'cover', cursor: 'pointer' }}
                           />
                           <div className="whale-content flex-grow-1">
-                            <h4 className="username">
-                              {tx.influencerName}
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/kol-feed-profile/${tx.influencerUsername?.replace(/^@/, '')}`);
+                              }}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <h4 className="username mb-0">
+                                {tx.influencerName}
+                              </h4>
                               <a
                                 href={`https://x.com/${tx.influencerUsername?.replace(/^@/, '')}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                style={{ fontSize: '12px', color: '#888', marginLeft: '5px', textDecoration: 'none' }}
+                                className="d-block"
+                                style={{ fontSize: '12px', color: '#888', textDecoration: 'none' }}
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 @{tx.influencerUsername?.replace(/^@/, '')}
                               </a>
-                            </h4>
+                            </div>
                             <div className="tags">
                               {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
                                 <span key={i} className="tag-title">{tag}</span>

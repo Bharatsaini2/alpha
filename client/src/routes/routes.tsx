@@ -48,12 +48,12 @@ const AppRoutes = () => {
         <Route path="signal-engine" element={<SignalEnginePage />} />
         <Route path="transaction/:id" element={<TransactionDetail />} />
 
-          {/* New */}
-         <Route path="kol-feed-profile" element={<KolFeedProfile />} />
-         <Route path="profile-page" element={<ProfilePage />} />
-         <Route path="telegram-subscription" element={<TelegramSubscription />} />
-         <Route path="notification" element={<Notification />} />
-        
+        {/* New */}
+        <Route path="kol-feed-profile/:username" element={<KolFeedProfile />} />
+        <Route path="profile-page" element={<ProfilePage />} />
+        <Route path="telegram-subscription" element={<TelegramSubscription />} />
+        <Route path="notification" element={<Notification />} />
+
       </Route>
 
       <Route path="*" element={<NotFound />} />

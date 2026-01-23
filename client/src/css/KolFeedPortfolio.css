@@ -10,6 +10,7 @@
 .portfolio-tp-bx {
   padding: 10px 16px;
 }
+
 .alpha-profile-title-bx {
   border-bottom: 1px solid #141414;
   justify-content: space-between;
@@ -17,6 +18,7 @@
   padding: 10px 16px;
   display: flex;
 }
+
 .portfolio-tp-bx h6 {
   text-transform: uppercase;
   color: #525252;
@@ -543,4 +545,92 @@
   position: absolute;
   top: 7px;
   left: 0;
+}
+
+/* === KOL Profile Mobile Layout Styles === */
+
+.mobile-new-table {
+  background: #0a0a0a;
+  border: 1px solid #292929;
+  margin-bottom: 20px;
+  padding: 16px;
+}
+
+.crypto-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crypto-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #1a1a1a;
+  padding-bottom: 8px;
+}
+
+.crypto-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.crypto-title {
+  text-transform: uppercase;
+  color: #8f8f8f;
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.crypto-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crypto-asset {
+  gap: 10px;
+}
+
+.crypto-logo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.crypto-name {
+  color: #fafafa;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.crypto-data {
+  color: #fafafa;
+  font-size: 14px;
+}
+
+.age-ago-data {
+  color: #8f8f8f;
+  font-size: 12px;
+}
+
+.mobile-block {
+  text-align: center;
+  padding: 10px;
+  text-transform: uppercase;
+  color: #525252;
+  font-size: 10px;
+}
+
+/* Visibility Toggles */
+@media (min-width: 992px) {
+  .mobile-new-table-container {
+    display: none !important;
+  }
+}
+
+@media (max-width: 991px) {
+  .desktop-tab-panel {
+    display: none !important;
+  }
 }

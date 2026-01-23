@@ -10,7 +10,6 @@ import { FaRegUserCircle } from "react-icons/fa";
 import { RiTelegram2Fill } from "react-icons/ri";
 import { useNavigate } from "react-router-dom"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { useToast } from "../../contexts/ToastContext"
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 
 
@@ -41,7 +40,6 @@ function Header({ onOpenSidebar }: HeaderProps) {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user, isAuthenticated, logout, openLoginModal } = useAuth()
   const { wallet, disconnect } = useWalletConnection()
-  const { showToast } = useToast()
   const { validateAccess } = usePremiumAccess()
   const navigate = useNavigate()
 

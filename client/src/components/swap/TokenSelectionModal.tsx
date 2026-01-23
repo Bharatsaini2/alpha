@@ -26,14 +26,6 @@ const TokenItem = memo<{
 }>(({ token, isSelected, balance, isLoadingBalance, userWallet, onSelect }) => {
   const hasBalance = balance !== undefined && balance > 0
 
-  const formatBalance = (bal: number): string => {
-    if (bal === 0) return "0"
-    if (bal < 0.001) return "< 0.001"
-    if (bal < 1) return bal.toFixed(6)
-    if (bal < 1000) return bal.toFixed(3)
-    return bal.toLocaleString(undefined, { maximumFractionDigits: 2 })
-  }
-
   const formatPrice = (price: number): string => {
     if (price < 0.00001) return `$${price.toExponential(2)}`
     if (price < 0.01) return `$${price.toFixed(6)}`
