@@ -398,8 +398,37 @@ export async function getTokenMetaDataUsingRPC(
       name: metadata.name,
     }
   } catch (error) {
-    console.error('Error fetching token metadata:', error)
-    return { symbol: 'Unknown' }
+    console.error('Error fetching token metadata from RPC:', error)
+    
+    // Fallback 1: Try DexScreener
+    try {
+      console.log(`🔄 Trying DexScreener fallback for ${tokenAddress}`)
+      const dexResponse = await axios.get(
+        `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`,
+        { timeout: 5000 }
+      )
+      
+      if (dexResponse.data?.pairs && dexResponse.data.pairs.length > 0) {
+        const pair = dexResponse.data.pairs[0]
+        const symbol = pair.baseToken?.symbol
+        const name = pair.baseToken?.name
+        
+        if (symbol && symbol !== 'Unknown') {
+          console.log(`✅ DexScreener found: ${symbol} (${name})`)
+          return { symbol, name: name || symbol }
+        }
+      }
+    } catch (dexError) {
+      console.error('DexScreener fallback failed:', dexError)
+    }
+    
+    // Fallback 2: Use shortened contract address as symbol
+    const shortAddress = `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`
+    console.log(`⚠️ Using contract address as fallback: ${shortAddress}`)
+    return { 
+      symbol: shortAddress,
+      name: tokenAddress
+    }
   }
 }
 

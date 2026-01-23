@@ -1406,10 +1406,25 @@ const resolveSymbol = async (token: any) => {
 
   try {
     const metadata = await getTokenMetaDataUsingRPC(token.token_address)
-
-    return metadata || { symbol: 'Unknown', name: 'Unknown' }
+    
+    // If metadata is found and not 'Unknown', use it
+    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown') {
+      return metadata
+    }
+    
+    // If still unknown, use contract address as fallback
+    const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
+    return { 
+      symbol: shortAddress,
+      name: token.token_address
+    }
   } catch {
-    return { symbol: 'Unknown', name: 'Unknown' }
+    // Last resort: use contract address
+    const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
+    return { 
+      symbol: shortAddress,
+      name: token.token_address
+    }
   }
 }
 
