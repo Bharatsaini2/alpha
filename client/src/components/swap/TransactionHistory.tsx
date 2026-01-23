@@ -62,7 +62,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
   const [transactions, setTransactions] = useState<SwapTransaction[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { user, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
 
   // Fetch transaction history
   const fetchTransactions = useCallback(async () => {
@@ -199,7 +199,7 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
           const priorityFeeInfo = getPriorityFeeInfo(transaction)
           const isSOLInput = transaction.inputMint === 'So11111111111111111111111111111111111111112'
           const isBuy = isSOLInput
-          
+
           return (
             <div
               key={transaction._id}
@@ -209,20 +209,18 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   {/* Transaction Type Badge */}
-                  <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                    isBuy 
-                      ? 'bg-green-500/20 text-green-400' 
+                  <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${isBuy
+                      ? 'bg-green-500/20 text-green-400'
                       : 'bg-red-500/20 text-red-400'
-                  }`}>
+                    }`}>
                     {isBuy ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                     {isBuy ? 'BUY' : 'SELL'}
                   </div>
 
                   {/* Priority Level Badge */}
                   {transaction.priorityLevel && (
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                      PRIORITY_LEVEL_COLORS[transaction.priorityLevel]
-                    }`}>
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${PRIORITY_LEVEL_COLORS[transaction.priorityLevel]
+                      }`}>
                       <Zap size={10} />
                       <span>{PRIORITY_LEVEL_ICONS[transaction.priorityLevel]}</span>
                       <span>{transaction.priorityLevel}</span>
@@ -297,9 +295,8 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
 
                     <div>
                       <div className="text-gray-400 mb-1">Difference</div>
-                      <div className={`${
-                        priorityFeeInfo.isHigher ? 'text-red-400' : 'text-green-400'
-                      }`}>
+                      <div className={`${priorityFeeInfo.isHigher ? 'text-red-400' : 'text-green-400'
+                        }`}>
                         {priorityFeeInfo.isHigher ? '+' : '-'}
                         {(priorityFeeInfo.difference / 1_000_000_000).toFixed(6)} SOL
                         <span className="ml-1">

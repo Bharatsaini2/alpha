@@ -6,11 +6,11 @@ import DefaultTokenImage from "../../assets/default_token.svg"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useSwapApi, QuoteResponse } from "../../hooks/useSwapApi"
 import { TokenSelectionModal, TokenInfo } from "./TokenSelectionModal"
-import { useToast } from "../ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 import "./swap.css"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faCopy } from "@fortawesome/free-solid-svg-icons"
-import { getTokenSafetyInfo, TokenSafetyInfo, getLiquidityStatusClass, getTradingStatusClass, getHoneypotStatusClass } from "../../lib/tokenSafety"
+import { getTokenSafetyInfo, TokenSafetyInfo, getLiquidityStatusClass, getTradingStatusClass } from "../../lib/tokenSafety"
 
 
 interface SwapModalProps {
@@ -47,7 +47,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   initialOutputToken,
   initialAmount,
 }) => {
-  const { wallet, connect, sendTransaction, getBalance } = useWalletConnection()
+  const { wallet, sendTransaction, getBalance } = useWalletConnection()
   const { getQuote, getSwapTransaction, trackTrade, isLoadingQuote, isLoadingSwap, clearErrors } = useSwapApi()
   const { showToast } = useToast()
 
@@ -62,7 +62,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [outputAmount, setOutputAmount] = useState<string>("")
   const [quote, setQuote] = useState<QuoteResponse | null>(null)
   const [slippage] = useState<number>(500) // Fixed 5% slippage (500 BPS) - Requirement 19.2
-  const [showSlippageSettings, setShowSlippageSettings] = useState(false)
+
   const [isInputModalOpen, setIsInputModalOpen] = useState(false)
   const [isOutputModalOpen, setIsOutputModalOpen] = useState(false)
   const [inputBalance, setInputBalance] = useState<number>(0)
@@ -81,7 +81,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [isSubmittingTransaction, setIsSubmittingTransaction] = useState<boolean>(false)
 
   // Track whether initial quote has been fetched for Quick Buy mode (Requirements 1.1, 6.1, 7.1)
-  const [hasInitialQuote, setHasInitialQuote] = useState<boolean>(false)
+
 
   // Update initial values when props change
   useEffect(() => {
@@ -104,7 +104,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       // Reset initial quote flag (Requirements 7.2, 7.5)
-      setHasInitialQuote(false)
 
       // Clear any pending auto-close timer
       if (autoCloseTimerId) {
@@ -246,7 +245,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     setBalanceError("")
     setPriorityFeeEnabled(false)
     setTokenSafetyInfo(null)
-    setShowSlippageSettings(false)
   }, [])
 
   const fetchQuote = useCallback(async () => {
@@ -374,7 +372,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       let transaction: Transaction | VersionedTransaction
       try {
         transaction = VersionedTransaction.deserialize(transactionBuffer)
-      } catch (e) {
+      } catch {
         // Fallback to legacy transaction if versioned deserialization fails
         transaction = Transaction.from(transactionBuffer)
       }

@@ -8,7 +8,7 @@ import React, {
 import { Copy, Search, X, Clock, Trash2 } from "lucide-react"
 import axios from "axios"
 import fallbackImage from "../assets/default_token.svg"
-import { useToast } from "../components/ui/Toast"
+import { useToast } from "../contexts/ToastContext"
 import { useSearchHistory } from "../hooks/useSearchHistory"
 
 interface SearchToken {
@@ -89,7 +89,7 @@ const TokenizedSearchInput = React.forwardRef<
     const [isComposing, setIsComposing] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
-    const { showToast, ToastContainer } = useToast()
+    const { showToast } = useToast()
     const inputRef = useRef<HTMLInputElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
 
@@ -794,11 +794,10 @@ const TokenizedSearchInput = React.forwardRef<
                   <button
                     key={`${suggestion.type}-${suggestion.label}-${index}`}
                     onClick={() => handleSuggestionClick(suggestion)}
-                    className={`w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] last:border-b-0 ${
-                      index === selectedIndex
-                        ? "bg-[#1A1A1A] text-white"
-                        : "hover:bg-[#1A1A1A] text-white"
-                    } cursor-pointer`}
+                    className={`w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] last:border-b-0 ${index === selectedIndex
+                      ? "bg-[#1A1A1A] text-white"
+                      : "hover:bg-[#1A1A1A] text-white"
+                      } cursor-pointer`}
                   >
                     <div className="flex items-center space-x-3 ">
                       {/* Image */}
@@ -843,7 +842,7 @@ const TokenizedSearchInput = React.forwardRef<
                         {suggestion.address && (
                           <div className="text-gray-500 text-xs font-mono truncate flex items-center gap-1 cursor-pointer">
                             {suggestion.address &&
-                            suggestion.address.length > 20
+                              suggestion.address.length > 20
                               ? `${suggestion.address.slice(0, 6)}...${suggestion.address.slice(-4)}`
                               : suggestion.address || "Unknown"}
                             <Copy
@@ -865,7 +864,7 @@ const TokenizedSearchInput = React.forwardRef<
             </div>
           )}
         </div>
-        <ToastContainer />
+
       </div>
     )
   }

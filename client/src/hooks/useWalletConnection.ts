@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { useAppKit, useAppKitAccount, useAppKitProvider, useDisconnect } from "@reown/appkit/react"
-import { useToast } from "../components/ui/Toast"
+import { useToast } from "../contexts/ToastContext"
 import {
   PublicKey,
   Transaction,

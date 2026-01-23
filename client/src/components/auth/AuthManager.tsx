@@ -8,16 +8,11 @@ const AuthManager: React.FC = () => {
     showLoginModal,
     isAuthFlowActive,
     closeAuthModals,
-    isAuthenticated,
-    isLoading,
   } = useAuth()
   const [showOTP, setShowOTP] = useState(false)
   const [otpEmail, setOtpEmail] = useState("")
 
-  const handleOTPRequested = (email: string) => {
-    setOtpEmail(email)
-    setShowOTP(true)
-  }
+
 
   const handleBackToLogin = () => {
     setShowOTP(false)
@@ -45,7 +40,6 @@ const AuthManager: React.FC = () => {
       <LoginModal
         isOpen={shouldShowLogin && !showOTP}
         onClose={handleCloseAuth}
-        onOTPRequested={handleOTPRequested}
       />
 
       {/* OTP Modal */}

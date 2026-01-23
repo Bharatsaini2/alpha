@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { io } from "socket.io-client"
 import { useNavigate } from "react-router-dom"
@@ -9,7 +9,7 @@ import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSear
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
-import { useToast } from "../../components/ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 import DefaultTokenImage from "../../assets/default_token.svg"
 import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
@@ -262,7 +262,7 @@ const HomePageNew = () => {
     // WebSocket state
     const [, setNewTransactionsCount] = useState(0)
     const [, setHasNewTransactions] = useState(false)
-    const [_pendingLiveTransactions, setPendingLiveTransactions] = useState<any[]>([])
+    const [, setPendingLiveTransactions] = useState<any[]>([])
 
     // Filters state
     const [activeFilters, setActiveFilters] = useState(() => {

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { useAppKitAccount, useWalletInfo } from "@reown/appkit/react"
-import { useToast } from "../ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 import PhantomLogo from "../../assets/phantom.svg"
 
 export const WalletToastManager = () => {

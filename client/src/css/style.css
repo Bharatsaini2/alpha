@@ -118,6 +118,7 @@ input::-webkit-inner-spin-button {
 
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .img-40 {
@@ -1312,7 +1313,7 @@ input[type="number"] {
   background: #141414;
 }
 
-.market-title-bx {}
+
 
 .market-title-bx h6 {
   border-bottom: 1px solid #141414;

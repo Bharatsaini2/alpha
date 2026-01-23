@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { Filter, ChevronDown, X, Copy, ExternalLink } from "lucide-react"
 import { io } from "socket.io-client"
@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom"
 import GridLoader from "../../utils/GridLoader"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
-import { useToast } from "../../components/ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 
 import DefaultTokenImage from "../../assets/default_token.svg"
 import axios from "axios"
@@ -246,7 +246,7 @@ const HomePage = () => {
   const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
   const [selectedToken, setSelectedToken] = useState<any>(null)
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
-  const { showToast, ToastContainer } = useToast()
+  const { showToast } = useToast()
   const { wallet } = useWalletConnection()
   const [clearSearchTrigger, setClearSearchTrigger] = useState(0)
   const navigate = useNavigate()
@@ -2871,7 +2871,7 @@ const HomePage = () => {
         initialAmount={quickBuyAmount}
       />
 
-      <ToastContainer />
+
     </>
   )
 }

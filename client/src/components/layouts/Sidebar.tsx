@@ -1,6 +1,5 @@
-import { Link, useLocation, useSearchParams, useNavigate } from "react-router-dom"
+import { Link, useLocation, useSearchParams } from "react-router-dom"
 import { useAuth } from "../../contexts/AuthContext"
-import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 
 import SideIcon1 from "../../assets/alpha.svg"
 import SideIcon2 from "../../assets/sd2.svg"
@@ -20,10 +19,9 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
   const location = useLocation()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user, logout } = useAuth()
-  const { validateAccess } = usePremiumAccess()
+
   const navigationItems = [
     {
       category: "Alpha Whales",
@@ -131,7 +129,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                           `}
                       >
                         {item.isLucide ? (
-                          // @ts-ignore
+
                           <item.icon
                             className={`w-5 h-5 ${isActive ? "text-white" : "text-[#767678]"}`}
                           />

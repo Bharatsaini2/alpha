@@ -318,7 +318,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
       const topTokens = tokensWithValue
         .sort((a, b) => b.usdValue - a.usdValue)
         .slice(0, 4)
-        .map(({ balance, usdValue, ...token }) => token)
+        .map(({ balance: _b, usdValue: _v, ...token }) => token)
 
       setTopWalletTokens(topTokens)
       setIsCalculatingTopTokens(false)

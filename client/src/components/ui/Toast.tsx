@@ -22,7 +22,7 @@ export interface ToastProps {
 const Toast: React.FC<ToastProps> = ({
     id,
     message,
-    title,
+
     icon,
     type = "success",
     variant = "standard",
@@ -130,25 +130,9 @@ const Toast: React.FC<ToastProps> = ({
 }
 
 // Toast Context
-interface ToastContextType {
-    showToast: (
-        message: string,
-        type?: ToastProps["type"],
-        variant?: ToastProps["variant"],
-        options?: { duration?: number, txSignature?: string, title?: string, icon?: string }
-    ) => string | null
-    removeToast: (id: string) => void
-}
 
-const ToastContext = React.createContext<ToastContextType | undefined>(undefined)
 
-export const useToast = () => {
-    const context = React.useContext(ToastContext)
-    if (!context) {
-        throw new Error("useToast must be used within a ToastProvider")
-    }
-    return context
-}
+import { ToastContext } from "../../contexts/ToastContext"
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<ToastProps[]>([])

@@ -175,7 +175,7 @@ function saveToCache(tokens: TokenInfo[]): void {
  * @returns Promise with array of tokens
  */
 export async function fetchJupiterTokens(
-  useStrictList: boolean = true
+  _useStrictList: boolean = true
 ): Promise<TokenInfo[]> {
   try {
     // Try to load from cache first
@@ -255,7 +255,7 @@ export async function fetchJupiterTokens(
     console.warn("⚠️ All Jupiter endpoints failed, using local token list")
     throw new Error("All Jupiter API endpoints failed")
 
-  } catch (error) {
+  } catch {
     console.error("❌ Failed to fetch Jupiter tokens, using fallback")
 
     // Return extended token list as fallback

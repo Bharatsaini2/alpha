@@ -8,13 +8,15 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import * as fc from "fast-check"
 import RightSidebarNew from "../RightSidebarNew"
+import { useSwapApi } from "../../../hooks/useSwapApi"
+import { useWalletConnection } from "../../../hooks/useWalletConnection"
 import { PublicKey } from "@solana/web3.js"
 
-// Mock dependencies
+
 const mockConnect = vi.fn()
 const mockDisconnect = vi.fn()
 const mockSendTransaction = vi.fn()
@@ -87,9 +89,9 @@ describe("Property 13: Transaction status feedback", () => {
       fc.asyncProperty(
         // Generate random amounts
         fc.double({ min: 0.01, max: 1000, noNaN: true }),
-        async (amount) => {
+        async (_amount) => {
           // Mock loading state
-          vi.mocked(require("../../../hooks/useSwapApi").useSwapApi).mockReturnValue({
+          vi.mocked(useSwapApi).mockReturnValue({
             getQuote: mockGetQuote,
             getSwapTransaction: mockGetSwapTransaction,
             trackTrade: mockTrackTrade,
@@ -136,7 +138,7 @@ describe("Property 13: Transaction status feedback", () => {
         ),
         async (error) => {
           // Mock error state
-          vi.mocked(require("../../../hooks/useSwapApi").useSwapApi).mockReturnValue({
+          vi.mocked(useSwapApi).mockReturnValue({
             getQuote: mockGetQuote,
             getSwapTransaction: mockGetSwapTransaction,
             trackTrade: mockTrackTrade,
@@ -155,26 +157,26 @@ describe("Property 13: Transaction status feedback", () => {
 
           await waitFor(() => {
             const errorDisplay = container.textContent || ""
-            
+
             // Should display user-friendly message
             expect(errorDisplay.length).toBeGreaterThan(0)
-            
+
             // Should NOT contain technical details like stack traces, error codes, or raw error objects
             expect(errorDisplay).not.toMatch(/Error:/i)
             expect(errorDisplay).not.toMatch(/at \w+\.\w+/i) // Stack trace pattern
             expect(errorDisplay).not.toMatch(/\{.*\}/i) // JSON object pattern
             expect(errorDisplay).not.toMatch(/undefined/i)
             expect(errorDisplay).not.toMatch(/null/i)
-            
+
             // Should contain user-friendly terms
-            const hasFriendlyMessage = 
+            const hasFriendlyMessage =
               errorDisplay.includes("Network") ||
               errorDisplay.includes("connection") ||
               errorDisplay.includes("try again") ||
               errorDisplay.includes("wait") ||
               errorDisplay.includes("balance") ||
               errorDisplay.includes("cancelled")
-            
+
             expect(hasFriendlyMessage).toBe(true)
           })
 
@@ -233,7 +235,7 @@ describe("Property 13: Transaction status feedback", () => {
       fc.asyncProperty(
         // Generate random valid transaction signatures
         fc.string({ minLength: 64, maxLength: 88 }).filter(s => /^[1-9A-HJ-NP-Za-km-z]+$/.test(s)),
-        async (signature) => {
+        async (_signature) => {
           // We can't easily simulate the full swap flow in a property test,
           // but we can verify the component structure supports displaying links
           const { container } = render(<RightSidebarNew />)
@@ -245,8 +247,8 @@ describe("Property 13: Transaction status feedback", () => {
 
           // Verify that the component has the capability to render external links
           // by checking for anchor tags or link-like elements
-          const links = container.querySelectorAll('a[href*="solscan.io"]')
-          
+          // const links = container.querySelectorAll('a[href*="solscan.io"]')
+
           // The component should have the structure to display transaction links
           // even if no transaction has been completed yet
           expect(container.innerHTML).toBeTruthy()
@@ -272,7 +274,7 @@ describe("Property 13: Transaction status feedback", () => {
         }),
         async ({ balance, inputAmount }) => {
           // Mock wallet with specific balance
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue({
+          vi.mocked(useWalletConnection).mockReturnValue({
             wallet: {
               connected: true,
               connecting: false,
@@ -302,13 +304,13 @@ describe("Property 13: Transaction status feedback", () => {
 
           await waitFor(() => {
             const warningText = container.textContent || ""
-            
+
             // Should display insufficient balance warning
-            const hasBalanceWarning = 
+            const hasBalanceWarning =
               warningText.includes("Insufficient") ||
               warningText.includes("balance") ||
               warningText.includes("You have")
-            
+
             expect(hasBalanceWarning).toBe(true)
           })
 
@@ -334,7 +336,7 @@ describe("Property 13: Transaction status feedback", () => {
         ),
         async (error) => {
           // Mock error state
-          vi.mocked(require("../../../hooks/useSwapApi").useSwapApi).mockReturnValue({
+          vi.mocked(useSwapApi).mockReturnValue({
             getQuote: mockGetQuote,
             getSwapTransaction: mockGetSwapTransaction,
             trackTrade: mockTrackTrade,
@@ -353,10 +355,10 @@ describe("Property 13: Transaction status feedback", () => {
 
           await waitFor(() => {
             const containerText = container.textContent || ""
-            
+
             // Should display retry option for recoverable errors
             const hasRetryOption = containerText.includes("Retry") || containerText.includes("try again")
-            
+
             expect(hasRetryOption).toBe(true)
           })
 
@@ -396,7 +398,7 @@ describe("Property 13: Transaction status feedback", () => {
             },
           }[state]
 
-          vi.mocked(require("../../../hooks/useSwapApi").useSwapApi).mockReturnValue({
+          vi.mocked(useSwapApi).mockReturnValue({
             getQuote: mockGetQuote,
             getSwapTransaction: mockGetSwapTransaction,
             trackTrade: mockTrackTrade,
@@ -415,12 +417,12 @@ describe("Property 13: Transaction status feedback", () => {
 
           await waitFor(() => {
             // Verify distinct visual indicators exist
-            const hasColoredElements = 
+            const hasColoredElements =
               container.querySelector('[class*="bg-blue"]') ||
               container.querySelector('[class*="bg-green"]') ||
               container.querySelector('[class*="bg-red"]') ||
               container.querySelector('[class*="bg-yellow"]')
-            
+
             expect(hasColoredElements).toBeTruthy()
           })
 
@@ -447,7 +449,7 @@ describe("Property 13: Transaction status feedback", () => {
         }),
         async (error) => {
           // Mock error with technical details
-          vi.mocked(require("../../../hooks/useSwapApi").useSwapApi).mockReturnValue({
+          vi.mocked(useSwapApi).mockReturnValue({
             getQuote: mockGetQuote,
             getSwapTransaction: mockGetSwapTransaction,
             trackTrade: mockTrackTrade,
@@ -466,18 +468,18 @@ describe("Property 13: Transaction status feedback", () => {
 
           await waitFor(() => {
             const displayedText = container.textContent || ""
-            
+
             // Should NOT display technical error codes
             expect(displayedText).not.toContain(error.code)
-            
+
             // Should NOT display stack traces
             if (error.stack) {
               expect(displayedText).not.toContain(error.stack)
             }
-            
+
             // Should NOT display raw error objects
             expect(displayedText).not.toMatch(/\[object Object\]/i)
-            
+
             // Should NOT display undefined or null
             expect(displayedText).not.toMatch(/\bundefined\b/i)
             expect(displayedText).not.toMatch(/\bnull\b/i)
@@ -500,7 +502,7 @@ describe("Property 13: Transaction status feedback", () => {
         fc.constant({ code: "USER_REJECTED", message: "User rejected the request" }),
         async (error) => {
           // Mock user rejection error
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue({
+          vi.mocked(useWalletConnection).mockReturnValue({
             wallet: {
               connected: true,
               connecting: false,
@@ -523,15 +525,15 @@ describe("Property 13: Transaction status feedback", () => {
 
           await waitFor(() => {
             const displayedText = container.textContent || ""
-            
+
             // Should display user-friendly message
-            const hasFriendlyMessage = 
+            const hasFriendlyMessage =
               displayedText.includes("cancelled") ||
               displayedText.includes("rejected") ||
               displayedText.includes("declined")
-            
+
             expect(hasFriendlyMessage).toBe(true)
-            
+
             // Should NOT use alarming language
             expect(displayedText).not.toMatch(/error/i)
             expect(displayedText).not.toMatch(/failed/i)

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { io } from "socket.io-client"
 import { useNavigate } from "react-router-dom"
@@ -9,7 +9,7 @@ import { faArrowRight, faArrowTrendDown, faClose, faFilter, faSearch } from "@fo
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
-import { useToast } from "../../components/ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 import DefaultTokenImage from "../../assets/default_token.svg"
 import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
@@ -251,7 +251,7 @@ const KOLFeedPage = () => {
   // WebSocket state
   const [, setNewTransactionsCount] = useState(0)
   const [, setHasNewTransactions] = useState(false)
-  const [_pendingLiveTransactions, setPendingLiveTransactions] = useState<any[]>([])
+  const [, setPendingLiveTransactions] = useState<any[]>([])
 
   // Filters state - using KOL specific key
   const [activeFilters, setActiveFilters] = useState(() => {
@@ -515,11 +515,7 @@ const KOLFeedPage = () => {
     return 0
   }
 
-  const handleRowClick = (tx: any) => {
-    // Navigate to transaction detail page
-    const type = tx.type === 'buy' ? 'buy' : 'sell';
-    navigate(`/transaction/${tx.signature}?type=kol&transaction=${type}`)
-  }
+
 
   const handleTransactionInfoAll = (signature: string, transactiontype: string) => {
     navigate(`/transaction/${signature}?type=kol&transaction=${transactiontype}`)
@@ -752,7 +748,7 @@ const KOLFeedPage = () => {
 
 
   const [amount, setAmount] = useState("$1K");
-  const [walletTypes] = useState<string[]>([]);
+
 
 
 

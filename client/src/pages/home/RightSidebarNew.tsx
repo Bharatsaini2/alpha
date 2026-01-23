@@ -14,7 +14,7 @@ import {
   TokenSelectionModal,
   TokenInfo,
 } from "../../components/swap/TokenSelectionModal"
-import { useToast } from "../../components/ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 import { useAuth } from "../../contexts/AuthContext"
 import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
@@ -190,7 +190,7 @@ const RightSidebarNew = ({
           : inputToken.address
       )
       setInputBalance(balance)
-    } catch (error) {
+    } catch {
       setInputBalance(0)
       showToast("Failed to fetch token balance", "error")
     }
@@ -205,7 +205,7 @@ const RightSidebarNew = ({
           : outputToken.address
       )
       setOutputBalance(balance)
-    } catch (error) {
+    } catch {
       setOutputBalance(0)
       // Don't show toast for output balance fetch failure to avoid spam
     }
@@ -602,7 +602,7 @@ const RightSidebarNew = ({
       let transaction: Transaction | VersionedTransaction
       try {
         transaction = VersionedTransaction.deserialize(transactionBuffer)
-      } catch (e) {
+      } catch {
         // Fallback to legacy transaction if versioned deserialization fails
         transaction = Transaction.from(transactionBuffer)
       }
@@ -668,7 +668,7 @@ const RightSidebarNew = ({
           outputAmount: outputAmountNum,
           platformFee,
         })
-      } catch (trackError) {
+      } catch {
         // Silently ignore - non-critical
       }
 

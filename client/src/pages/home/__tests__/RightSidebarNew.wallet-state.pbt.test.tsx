@@ -9,9 +9,11 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
-import { act } from "react"
+
 import * as fc from "fast-check"
 import RightSidebarNew from "../RightSidebarNew"
+import { useWalletConnection } from "../../../hooks/useWalletConnection"
+import { PublicKey } from "@solana/web3.js"
 
 // Mock the wallet adapter hooks
 const mockConnect = vi.fn()
@@ -86,7 +88,7 @@ describe("Property 12: Wallet connection state management", () => {
           quickBuyAmount: fc.option(fc.double({ min: 0, max: 1000 }).map(String), { nil: undefined }),
         }),
         async (props) => {
-          const { container } = render(<RightSidebarNew {...props} />)
+          render(<RightSidebarNew {...props} />)
 
           // Wait for component to render
           await waitFor(() => {
@@ -121,7 +123,7 @@ describe("Property 12: Wallet connection state management", () => {
               connected: true,
               connecting: false,
               disconnecting: false,
-              publicKey: { toBase58: () => walletAddress },
+              publicKey: new PublicKey(walletAddress),
               address: walletAddress,
             },
             connect: mockConnect,
@@ -136,7 +138,7 @@ describe("Property 12: Wallet connection state management", () => {
           }
 
           // Re-mock with connected state
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue(
+          vi.mocked(useWalletConnection).mockReturnValue(
             mockWalletConnected
           )
 
@@ -179,8 +181,8 @@ describe("Property 12: Wallet connection state management", () => {
               connected: initiallyConnected,
               connecting: false,
               disconnecting: false,
-              publicKey: initiallyConnected ? { toBase58: () => "test-address" } : null,
-              address: initiallyConnected ? "test-address" : null,
+              publicKey: initiallyConnected ? new PublicKey("11111111111111111111111111111111") : null,
+              address: initiallyConnected ? "11111111111111111111111111111111" : null,
             },
             connect: mockConnect,
             disconnect: mockDisconnect,
@@ -193,7 +195,7 @@ describe("Property 12: Wallet connection state management", () => {
             clearError: vi.fn(),
           }
 
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue(
+          vi.mocked(useWalletConnection).mockReturnValue(
             mockWallet
           )
 
@@ -251,7 +253,7 @@ describe("Property 12: Wallet connection state management", () => {
             clearError: vi.fn(),
           }
 
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue(
+          vi.mocked(useWalletConnection).mockReturnValue(
             mockWalletConnecting
           )
 
@@ -285,8 +287,8 @@ describe("Property 12: Wallet connection state management", () => {
               connected: true,
               connecting: false,
               disconnecting: false,
-              publicKey: { toBase58: () => "test-address" },
-              address: "test-address",
+              publicKey: new PublicKey("11111111111111111111111111111111"),
+              address: "11111111111111111111111111111111",
             },
             connect: mockConnect,
             disconnect: mockDisconnect,
@@ -299,7 +301,7 @@ describe("Property 12: Wallet connection state management", () => {
             clearError: vi.fn(),
           }
 
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue(
+          vi.mocked(useWalletConnection).mockReturnValue(
             mockWalletWithBalance
           )
 
@@ -332,7 +334,7 @@ describe("Property 12: Wallet connection state management", () => {
               connected: true,
               connecting: false,
               disconnecting: false,
-              publicKey: { toBase58: () => walletAddress },
+              publicKey: new PublicKey(walletAddress),
               address: walletAddress,
             },
             connect: mockConnect,
@@ -346,7 +348,7 @@ describe("Property 12: Wallet connection state management", () => {
             clearError: vi.fn(),
           }
 
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue(
+          vi.mocked(useWalletConnection).mockReturnValue(
             mockWalletConnected
           )
 
@@ -355,7 +357,7 @@ describe("Property 12: Wallet connection state management", () => {
           await waitFor(() => {
             const swapButton = screen.queryByText(/SWAP/i) as HTMLButtonElement
             expect(swapButton).toBeTruthy()
-            
+
             // Button should be disabled when no amount is entered
             if (swapButton) {
               expect(swapButton.disabled).toBe(true)
@@ -401,7 +403,7 @@ describe("Property 12: Wallet connection state management", () => {
             clearError: vi.fn(),
           }
 
-          vi.mocked(require("../../../hooks/useWalletConnection").useWalletConnection).mockReturnValue(
+          vi.mocked(useWalletConnection).mockReturnValue(
             mockWalletWithError
           )
 

@@ -18,7 +18,7 @@ export const SwapIntegrationExample: React.FC = () => {
     connect,
     disconnect,
     getBalance,
-    getTokenBalance,
+    // getTokenBalance,
     isLoading,
     error,
     clearError
@@ -51,7 +51,7 @@ export const SwapIntegrationExample: React.FC = () => {
       // This would call your backend API: GET /api/v1/trade/quote
       const response = await fetch(`/api/v1/trade/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=${parseFloat(amount) * 1e9}`)
       const data = await response.json()
-      
+
       if (data.success) {
         setQuote(data.quote)
         setOutputAmount((parseFloat(data.quote.outAmount) / 1e6).toFixed(6)) // USDC has 6 decimals
@@ -103,9 +103,9 @@ export const SwapIntegrationExample: React.FC = () => {
           userPublicKey: wallet.address
         })
       })
-      
+
       const swapData = await swapResponse.json()
-      
+
       if (!swapData.success) {
         throw new Error(swapData.message)
       }
@@ -119,7 +119,7 @@ export const SwapIntegrationExample: React.FC = () => {
       // await fetch('/api/v1/trade/track', { ... })
 
       alert('Swap successful! (This is a demo)')
-      
+
     } catch (err: any) {
       console.error('Swap failed:', err)
       alert(`Swap failed: ${err.message}`)
@@ -129,11 +129,11 @@ export const SwapIntegrationExample: React.FC = () => {
   return (
     <div className="swap-interface p-4 border rounded-lg">
       <h3 className="text-lg font-semibold mb-4">Jupiter Swap</h3>
-      
+
       {/* Wallet Connection Status */}
       <div className="mb-4">
         {!wallet.connected ? (
-          <button 
+          <button
             onClick={connect}
             disabled={isLoading}
             className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 disabled:opacity-50"
@@ -145,7 +145,7 @@ export const SwapIntegrationExample: React.FC = () => {
             <span className="text-sm text-gray-600">
               {wallet.address?.substring(0, 8)}...
             </span>
-            <button 
+            <button
               onClick={disconnect}
               disabled={isLoading}
               className="text-sm text-red-500 hover:text-red-700"
@@ -160,7 +160,7 @@ export const SwapIntegrationExample: React.FC = () => {
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded text-red-700">
           <p className="text-sm">{error.message}</p>
-          <button 
+          <button
             onClick={clearError}
             className="text-xs underline mt-1"
           >
@@ -176,7 +176,7 @@ export const SwapIntegrationExample: React.FC = () => {
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">From</label>
             <div className="flex items-center space-x-2">
-              <select 
+              <select
                 value={inputToken}
                 onChange={(e) => setInputToken(e.target.value)}
                 className="flex-1 p-2 border rounded"
@@ -194,7 +194,7 @@ export const SwapIntegrationExample: React.FC = () => {
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Balance: {solBalance.toFixed(4)} SOL</span>
-                  <button 
+                  <button
                     onClick={handleMaxClick}
                     className="text-blue-500 hover:text-blue-700"
                   >
@@ -209,7 +209,7 @@ export const SwapIntegrationExample: React.FC = () => {
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">To</label>
             <div className="flex items-center space-x-2">
-              <select 
+              <select
                 value={outputToken}
                 onChange={(e) => setOutputToken(e.target.value)}
                 className="flex-1 p-2 border rounded"

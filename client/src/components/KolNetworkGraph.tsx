@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ReactFlow,
@@ -35,7 +35,7 @@ import DefaultTokenImage from "../assets/default_token.svg"
 import solanalogo from "../assets/solana.svg"
 import { applyForceLayout } from "../utils/ForceLayout"
 import ErrorPopup from "./ui/ErrorPopup"
-import { useToast } from "./ui/Toast"
+import { useToast } from "../contexts/ToastContext"
 import { LastUpdatedTicker } from "./TicketComponent"
 import { useRandomBubbleAnimation } from "../hooks/useBubbleAnimation"
 
@@ -143,7 +143,7 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           <img
             src={
               (data.symbol as string) === "SOL" ||
-              (data.symbol as string) === "WSOL"
+                (data.symbol as string) === "WSOL"
                 ? solanalogo
                 : (data.imageUrl as string) || DefaultTokenImage
             }
@@ -704,7 +704,7 @@ const KolNetworkGraph: React.FC<{
   // const [tooltip, setTooltip] = useState<TooltipData | null>(null)
   const [tooltipAnchor, setTooltipAnchor] = useState<TooltipAnchor | null>(null)
   const [toolbarSide, setToolbarSide] = useState<Position>(Position.Right)
-  const { showToast, ToastContainer } = useToast()
+  const { showToast } = useToast()
   const { x: vpX, y: vpY, zoom } = useViewport()
   const [filters, setFilters] = useState({
     timeframe: "5m",
@@ -1009,12 +1009,12 @@ const KolNetworkGraph: React.FC<{
         const old = prevMap.get(n.id)
         return old
           ? {
-              ...old,
-              data: n.data,
-              style: n.style,
-              type: n.type,
-              // keep old.position/width/height to avoid geometry shift
-            }
+            ...old,
+            data: n.data,
+            style: n.style,
+            type: n.type,
+            // keep old.position/width/height to avoid geometry shift
+          }
           : n
       })
     })
@@ -1024,12 +1024,12 @@ const KolNetworkGraph: React.FC<{
         const old = prevMap.get(e.id)
         return old
           ? {
-              ...old,
-              data: e.data,
-              animated: e.animated,
-              type: e.type,
-              // keep any internal geometry React Flow manages
-            }
+            ...old,
+            data: e.data,
+            animated: e.animated,
+            type: e.type,
+            // keep any internal geometry React Flow manages
+          }
           : e
       })
     })
@@ -1235,9 +1235,8 @@ const KolNetworkGraph: React.FC<{
           {/* Mobile Timeframe */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
-                dropdown === "timeframe" ? "text-white" : "text-gray-400"
-              } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
+                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "timeframe" ? null : "timeframe")
               }
@@ -1272,9 +1271,8 @@ const KolNetworkGraph: React.FC<{
           {/* Mobile Whales */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
-                dropdown === "whales" ? "text-white" : "text-gray-400"
-              } ${dropdown === "whales" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "whales" ? "text-white" : "text-gray-400"
+                } ${dropdown === "whales" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "whales" ? null : "whales")
               }
@@ -1335,9 +1333,8 @@ const KolNetworkGraph: React.FC<{
           {/* Mobile Volume */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
-                dropdown === "volume" ? "text-white" : "text-gray-400"
-              } ${dropdown === "volume" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "volume" ? "text-white" : "text-gray-400"
+                } ${dropdown === "volume" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "volume" ? null : "volume")
               }
@@ -1401,18 +1398,16 @@ const KolNetworkGraph: React.FC<{
           {/* Timeframe */}
           <div className="relative w-40">
             <button
-              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${
-                dropdown === "timeframe" ? "text-white" : "text-gray-400"
-              } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
+                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "timeframe" ? null : "timeframe")
               }
             >
               {touched.timeframe ? filters.timeframe : "Timeframe"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "timeframe" ? "rotate-180" : ""} ${
-                  dropdown === "timeframe" ? "text-white" : "text-gray-400"
-                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "timeframe" ? "rotate-180" : ""} ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
+                  } ${dropdown === "timeframe" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "timeframe" && (
@@ -1440,18 +1435,16 @@ const KolNetworkGraph: React.FC<{
           {/* No. of Whales */}
           <div className="relative w-40">
             <button
-              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl  transition-colors cursor-pointer ${
-                dropdown === "whales" ? "text-white" : "text-gray-400"
-              } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
+              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl  transition-colors cursor-pointer ${dropdown === "whales" ? "text-white" : "text-gray-400"
+                } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
               onClick={() =>
                 setDropdown(dropdown === "whales" ? null : "whales")
               }
             >
               {touched.whales ? `${filters.whales}W` : "No. Whales"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "whales" ? "rotate-180" : ""} ${
-                  dropdown === "whales" ? "text-white" : "text-gray-400"
-                } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "whales" ? "rotate-180" : ""} ${dropdown === "whales" ? "text-white" : "text-gray-400"
+                  } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "whales" && (
@@ -1506,18 +1499,16 @@ const KolNetworkGraph: React.FC<{
           {/* Volume */}
           <div className="relative w-40">
             <button
-              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${
-                dropdown === "volume" ? "text-white" : "text-gray-400"
-              } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer  transition-colors`}
+              className={`flex items-center justify-between w-full px-4 py-3 border border-[#2B2B2D] rounded-xl ${dropdown === "volume" ? "text-white" : "text-gray-400"
+                } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer  transition-colors`}
               onClick={() =>
                 setDropdown(dropdown === "volume" ? null : "volume")
               }
             >
               {touched.volume ? filters.volume : "Volume"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "volume" ? "rotate-180" : ""} ${
-                  dropdown === "volume" ? "text-white" : "text-gray-400"
-                } ${dropdown === "volume" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "volume" ? "rotate-180" : ""} ${dropdown === "volume" ? "text-white" : "text-gray-400"
+                  } ${dropdown === "volume" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "volume" && (
@@ -1662,7 +1653,7 @@ const KolNetworkGraph: React.FC<{
           )}
         </div>
         <div className="flex items-center justify-start gap-1">
-          <img src="/AppIcon.png" className="h-[10px] md:h-[18px]" style={{width : "25px"}} />
+          <img src="/AppIcon.png" className="h-[10px] md:h-[18px]" style={{ width: "25px" }} />
           <div
             className="color-[#B4B4B4] text-[10px] md:text-[16px]"
             style={{ color: "#B4B4B4" }}
@@ -1675,7 +1666,7 @@ const KolNetworkGraph: React.FC<{
             AlphaBlock AI
           </div>
         </div>
-        <ToastContainer />
+
       </motion.div>
     </motion.div>
   )

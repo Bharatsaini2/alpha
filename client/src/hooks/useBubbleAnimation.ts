@@ -43,7 +43,7 @@ export const useBubbleAnimation = (config: BubbleAnimationConfig = {}) => {
       // Create smooth, continuous animations
       const t = progress * 2 * Math.PI // Convert to radians
 
-      let newState: BubbleAnimationState = {
+      const newState: BubbleAnimationState = {
         x: 0,
         y: 0,
         scale: 1,

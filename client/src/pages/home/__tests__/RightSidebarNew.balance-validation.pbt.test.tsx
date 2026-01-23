@@ -106,7 +106,7 @@ describe("Property 14: Token balance validation", () => {
         }),
         async ({ balance, excessAmount }) => {
           const amount = balance + excessAmount // Ensure amount > balance
-          
+
           // Mock balance
           mockGetBalance.mockResolvedValue(balance)
 
@@ -173,7 +173,7 @@ describe("Property 14: Token balance validation", () => {
         }),
         async ({ balance, percentage }) => {
           const amount = balance * percentage // Ensure amount <= balance
-          
+
           // Mock balance
           mockGetBalance.mockResolvedValue(balance)
 
@@ -246,7 +246,7 @@ describe("Property 14: Token balance validation", () => {
         }),
         async ({ balance, excessAmount }) => {
           const amount = balance + excessAmount
-          
+
           // Mock balance
           mockGetBalance.mockResolvedValue(balance)
           mockGetQuote.mockClear()
@@ -338,7 +338,7 @@ describe("Property 14: Token balance validation", () => {
 
           // Find MAX button
           const maxButton = screen.queryByText(/MAX/i)
-          
+
           if (maxButton && balance > 0) {
             await act(async () => {
               fireEvent.click(maxButton)
@@ -350,11 +350,11 @@ describe("Property 14: Token balance validation", () => {
 
             if (inputField) {
               const inputValue = parseFloat(inputField.value)
-              
+
               // For SOL (default input token), should reserve 0.01 for fees
               // For other tokens, should use full balance
               const expectedMax = isSol ? Math.max(0, balance - 0.01) : balance
-              
+
               // Allow small floating point differences
               expect(Math.abs(inputValue - expectedMax)).toBeLessThan(0.0001)
             }
@@ -407,7 +407,7 @@ describe("Property 14: Token balance validation", () => {
 
             // Update balance
             mockGetBalance.mockResolvedValue(newBalance)
-            
+
             // Trigger re-render (simulating balance update)
             rerender(<RightSidebarNew />)
 
@@ -546,7 +546,8 @@ describe("Property 14: Token balance validation", () => {
         async () => {
           mockGetBalance.mockResolvedValue(100)
 
-          const { container } = render(<RightSidebarNew />)
+          const { unmount } = render(<RightSidebarNew />)
+          unmount()
 
           // Wait for component to render
           await waitFor(() => {
@@ -556,7 +557,7 @@ describe("Property 14: Token balance validation", () => {
           // The TokenSelectionModal should exclude the opposite token
           // This is enforced by passing excludeToken prop
           // We verify this by checking that the modal receives the correct prop
-          
+
           // This property is enforced at the component level by design
           // The modal won't show tokens that are excluded
           expect(true).toBe(true)

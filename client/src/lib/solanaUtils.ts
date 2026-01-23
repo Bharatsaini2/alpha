@@ -40,7 +40,7 @@ export const isValidSolanaAddress = (address: string): ValidationResult => {
     return {
       isValid: true,
     }
-  } catch (error) {
+  } catch {
     return {
       isValid: false,
       error: "Invalid Solana address format",
@@ -270,7 +270,7 @@ export const shortenAddress = (address: string, chars: number = 4): string => {
 export const copyToClipboard = async (text: string): Promise<void> => {
   try {
     await navigator.clipboard.writeText(text)
-  } catch (error) {
+  } catch {
     // Fallback for older browsers
     const textArea = document.createElement("textarea")
     textArea.value = text

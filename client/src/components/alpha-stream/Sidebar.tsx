@@ -5,12 +5,10 @@ import { BsLayoutSidebar } from "react-icons/bs"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../../contexts/AuthContext"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { useToast } from "../ui/Toast"
-import { RiTelegram2Fill } from "react-icons/ri"
+import { useToast } from "../../contexts/ToastContext"
 import { User, LogOut } from "lucide-react"
 import { HiChevronUpDown } from "react-icons/hi2"
 import { FaRegUserCircle } from "react-icons/fa"
-import { PiPlugsConnected } from "react-icons/pi"
 
 interface SidebarProps {
     isOpen?: boolean

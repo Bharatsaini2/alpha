@@ -7,7 +7,7 @@ import { MdDelete } from "react-icons/md";
 import { HiOutlineExternalLink } from "react-icons/hi";
 import api from "../../lib/api";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "../../components/ui/Toast";
+import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext";
 import { useWalletConnection } from "../../hooks/useWalletConnection";
@@ -42,7 +42,7 @@ function TelegramSubscription() {
     const [deleting, setDeleting] = useState(false);
     const [linkToken, setLinkToken] = useState<string | null>(null);
     const [generatingLink, setGeneratingLink] = useState(false);
-    const [hasAccess, setHasAccess] = useState<boolean>(false);
+    const [, setHasAccess] = useState<boolean>(false);
     const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
 
     // ... (rest of helper functions) ...
@@ -64,7 +64,6 @@ function TelegramSubscription() {
             fetchSubscriptions();
         });
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isAuthenticated, authLoading, wallet.connected]);
 
 

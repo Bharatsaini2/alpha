@@ -1,7 +1,7 @@
 import "./App.css"
 import { BrowserRouter as Router } from "react-router-dom"
 import AppRoutes from "./routes/routes.tsx"
-import { AuthProvider } from "./contexts/AuthContext"
+import { AuthProvider } from "./contexts/AuthProvider"
 import { createAppKit } from "@reown/appkit/react"
 import { SolanaAdapter } from "@reown/appkit-adapter-solana/react"
 import { solana } from "@reown/appkit/networks"
@@ -9,7 +9,7 @@ import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets"
 import { useEffect } from "react"
 import { ToastProvider } from "./components/ui/Toast"
 import { WalletToastManager } from "./components/wallet/WalletToastManager"
-import { PremiumAccessProvider } from "./contexts/PremiumAccessContext"
+import { PremiumAccessProvider } from "./contexts/PremiumAccessProvider"
 
 const solanaWeb3JsAdapter = new SolanaAdapter({
   wallets: [new PhantomWalletAdapter() as any],
@@ -44,7 +44,7 @@ createAppKit({
     socials: false,
     email: false,
   },
-  // @ts-ignore
+
   enableReconnect: true,
 })
 

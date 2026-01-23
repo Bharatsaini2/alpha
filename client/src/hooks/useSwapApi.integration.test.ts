@@ -26,19 +26,19 @@ jest.mock('react', () => ({
 
 describe('useSwapApi Integration Tests', () => {
   let mockApiClient: any
-  let hook: ReturnType<typeof useSwapApi>
+  // let hook: ReturnType<typeof useSwapApi>
 
   beforeEach(() => {
     jest.clearAllMocks()
-    
+
     // Mock API client
     mockApiClient = {
       get: jest.fn(),
       post: jest.fn(),
     }
-    
+
     mockedAxios.create.mockReturnValue(mockApiClient)
-    
+
     // Setup React hooks mocks
     mockUseState.mockReturnValue([
       {
@@ -51,12 +51,13 @@ describe('useSwapApi Integration Tests', () => {
       },
       mockSetState,
     ])
-    
+
     mockUseCallback.mockImplementation((fn) => fn)
     mockUseRef.mockReturnValue({ current: mockApiClient })
     mockUseEffect.mockImplementation((fn) => fn())
-    
-    hook = useSwapApi()
+
+    // hook = useSwapApi()
+    useSwapApi()
   })
 
   describe('getQuote', () => {
@@ -229,7 +230,7 @@ describe('useSwapApi Integration Tests', () => {
     it('should handle network errors', async () => {
       const networkError = new Error('Network Error')
       networkError.name = 'NetworkError'
-      
+
       mockApiClient.get.mockRejectedValue(networkError)
 
       try {
@@ -243,7 +244,7 @@ describe('useSwapApi Integration Tests', () => {
     it('should handle timeout errors', async () => {
       const timeoutError = new Error('Request timeout')
       timeoutError.name = 'ECONNABORTED'
-      
+
       mockApiClient.post.mockRejectedValue(timeoutError)
 
       try {
@@ -265,7 +266,7 @@ describe('useSwapApi Integration Tests', () => {
           },
         },
       }
-      
+
       mockApiClient.get.mockRejectedValue(rateLimitError)
 
       try {

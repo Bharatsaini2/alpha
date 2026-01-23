@@ -1,11 +1,9 @@
 import React from "react"
-import { ArrowLeft, ArrowRightLeft, ExternalLink, Copy, TrendingUp, TrendingDown } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { ArrowLeft, Copy, TrendingUp, TrendingDown } from "lucide-react"
 import "../../css/TransactionDetail.css"
 import solanalogo from "../../assets/solana.svg"
 import DefaultTokenImage from "../../assets/default_token.svg"
-import { faCircleXmark } from "@fortawesome/free-solid-svg-icons"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+
 import { TfiReload } from "react-icons/tfi"
 
 import { FaArrowRightLong } from "react-icons/fa6"
@@ -95,13 +93,7 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
 }) => {
     const isBuy = transactionType === "buy"
 
-    const formatMarketCap = (marketCap: string) => {
-        const num = parseFloat(marketCap)
-        if (num >= 1e9) return (num / 1e9).toFixed(1) + "B"
-        if (num >= 1e6) return (num / 1e6).toFixed(1) + "M"
-        if (num >= 1e3) return (num / 1e3).toFixed(1) + "K"
-        return num.toFixed(0)
-    }
+
 
     const getTimeAgo = (timestamp: string) => {
         const now = new Date()

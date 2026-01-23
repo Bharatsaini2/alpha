@@ -2,42 +2,14 @@ import { useState, useEffect } from "react"
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import axios from "axios"
 import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js"
-import { useToast } from "../../components/ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 import TransactionDetailView from "../../components/transaction/TransactionDetailView"
 import SwapModal from "../../components/swap/SwapModal"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { validateQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
-import { searchJupiterUltra, fetchJupiterTokens } from "../../lib/jupiterTokens"
+import { searchJupiterUltra } from "../../lib/jupiterTokens"
 
-const COMMON_TOKENS: Record<string, { symbol: string; name: string; image: string; decimals: number; marketCap?: string }> = {
-  "So11111111111111111111111111111111111111112": {
-    symbol: "SOL",
-    name: "Solana",
-    image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
-    decimals: 9,
-    marketCap: "100000000000" // Fallback approx
-  },
-  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {
-    symbol: "USDC",
-    name: "USDC",
-    image: "https://assets.coingecko.com/coins/images/6319/large/usdc.png?1696506694",
-    decimals: 6,
-    marketCap: "35000000000"
-  },
-  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": {
-    symbol: "USDT",
-    name: "Tether USD",
-    image: "https://assets.coingecko.com/coins/images/325/large/Tether.png?1696501661",
-    decimals: 6,
-    marketCap: "100000000000"
-  },
-  "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN": {
-    symbol: "JUP",
-    name: "Jupiter",
-    image: "https://static.jup.ag/jup/icon.png",
-    decimals: 6
-  }
-}
+
 
 const TransactionDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -237,7 +209,7 @@ const TransactionDetail = () => {
           })
 
           // Build fallback data object
-          let fallbackData: any = {
+          const fallbackData: any = {
             _id: id,
             signature: id,
             transaction: {

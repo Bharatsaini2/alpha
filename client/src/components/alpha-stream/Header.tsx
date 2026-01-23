@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { IoMdTrendingUp, IoMdTrendingDown } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { User, LogOut, Menu } from "lucide-react"
+import { User, LogOut } from "lucide-react"
 import axios from "axios"
 import { useAuth } from "../../contexts/AuthContext"
 
@@ -10,7 +10,7 @@ import { FaRegUserCircle } from "react-icons/fa";
 import { RiTelegram2Fill } from "react-icons/ri";
 import { useNavigate } from "react-router-dom"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { useToast } from "../ui/Toast"
+import { useToast } from "../../contexts/ToastContext"
 
 
 const BASE_URL =
