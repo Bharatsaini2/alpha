@@ -1,6 +1,7 @@
 import { PiPlugs, PiTelegramLogoDuotone } from "react-icons/pi"
 import { useAuth } from "../../contexts/AuthContext"
 import { useNavigate } from "react-router-dom"
+import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 import api from "../../lib/api"
 import { useToast } from "../../contexts/ToastContext"
 import { useState } from "react"
@@ -9,6 +10,7 @@ function ProfilePage() {
   const { user, updateUser } = useAuth()
   const navigate = useNavigate()
   const { showToast } = useToast()
+  const { validateAccess } = usePremiumAccess()
   const [disconnecting, setDisconnecting] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
@@ -175,7 +177,7 @@ function ProfilePage() {
                   <div>
                     <button
                       className="btn btn-primary btn-sm"
-                      onClick={() => navigate('/telegram-subscription')}
+                      onClick={() => validateAccess(() => navigate('/telegram-subscription'))}
                     >
                       Connect Telegram
                     </button>

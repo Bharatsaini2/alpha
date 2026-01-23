@@ -11,6 +11,7 @@ import { RiTelegram2Fill } from "react-icons/ri";
 import { useNavigate } from "react-router-dom"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useToast } from "../../contexts/ToastContext"
+import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 
 
 const BASE_URL =
@@ -41,6 +42,7 @@ function Header({ onOpenSidebar }: HeaderProps) {
   const { user, isAuthenticated, logout, openLoginModal } = useAuth()
   const { wallet, disconnect } = useWalletConnection()
   const { showToast } = useToast()
+  const { validateAccess } = usePremiumAccess()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -324,17 +326,7 @@ function Header({ onOpenSidebar }: HeaderProps) {
                       className="user-dropdown-item"
                       onClick={() => {
                         setShowDropdown(false);
-                        // Check if user is authenticated (either via email/social or wallet)
-                        if (!isAuthenticated && !wallet.connected) {
-                          showToast('Please log in to access Telegram Subscription', 'error');
-                          return;
-                        }
-                        // Check if user has wallet connected
-                        if (!user?.walletAddress && !wallet.address) {
-                          showToast('Please connect your wallet to access Telegram Subscription', 'error');
-                          return;
-                        }
-                        navigate("/telegram-subscription");
+                        validateAccess(() => navigate("/telegram-subscription"))
                       }}
                     >
                       <RiTelegram2Fill size={14} />

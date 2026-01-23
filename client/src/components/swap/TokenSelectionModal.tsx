@@ -63,15 +63,15 @@ const TokenItem = memo<{
   return (
     <button
       onClick={() => onSelect(token)}
-      className={`w-full px-3 py-3 flex items-center gap-2 hover:bg-[#1A1A1A] transition-colors ${isSelected ? "bg-[#1A1A1A]" : ""
+      className={`w-full px-3 py-3 flex items-center gap-3 hover:bg-[#1A1A1A] transition-colors border-b border-[#1A1A1A/50] ${isSelected ? "bg-[#1A1A1A]" : ""
         }`}
     >
-      {/* Token Image */}
+      {/* Token Image - Sharp Square (Medium Size) */}
       <div className="flex-shrink-0">
         <img
           src={token.image || fallbackImage}
           alt={token.symbol}
-          className="w-11 h-11 rounded-0 border border-[#2B2B2D]"
+          className="w-[56px] h-[56px] rounded-none object-cover bg-[#0A0A0A]"
           onError={(e) => {
             const target = e.target as HTMLImageElement
             target.src = fallbackImage
@@ -79,61 +79,63 @@ const TokenItem = memo<{
         />
       </div>
 
-      {/* Token Info */}
-      <div className="flex-1 text-left min-w-0">
-        <div className="flex items-center gap-1 dropdown-content">
-          <h6 className="dropdown-title mb-0">{token.symbol}</h6>
-          {token.isPopular && (
-            <RiVerifiedBadgeFill size={14} className="text-white fill-current" />
-          )}
-          {token.isVerified && (
-            <span className="text-xs text-green-400"> <RiVerifiedBadgeFill /> </span>
+      {/* Token Info Stack */}
+      <div className="flex-1 text-left min-w-0 flex flex-col justify-center gap-0.5 h-[56px]">
+        {/* Row 1: Symbol + Badge */}
+        <div className="flex items-center gap-1.5 leading-none">
+          <h6 className="text-[13px] font-bold text-white mb-0">{token.symbol}</h6>
+          {(token.isPopular || (token.isVerified && !token.isPopular)) && (
+            <RiVerifiedBadgeFill size={12} className="text-[#00D9AC] fill-current" />
           )}
         </div>
-        <div >
-          <p className="dropdown-desc">  {token.name} </p>
+
+        {/* Row 2: Name */}
+        <div className="text-[9px] text-gray-400 font-medium uppercase tracking-wider leading-none truncate">
+          {token.name}
         </div>
-        <div className="dropdown-id">
-          <span>CA: </span>
-          <span className="cpy-title ">{truncateAddress(token.address)}</span>
-          <a
-            href="javascript:void(0)"
-            className="drop-cpy-btn ms-1"
+
+        {/* Row 3: CA */}
+        <div className="flex items-center gap-1.5 group">
+          <span className="text-[9px] text-gray-500 font-mono leading-none">CA:</span>
+          <span className="text-[9px] text-gray-500 font-mono leading-none truncate max-w-[100px]">{truncateAddress(token.address)}</span>
+          <div
+            role="button"
+            className="text-gray-600 hover:text-gray-400 transition-colors cursor-pointer flex items-center"
             onClick={(e) => handleCopy(e, token.address)}
           >
-            <FontAwesomeIcon icon={faCopy} />
-          </a>
+            <FontAwesomeIcon icon={faCopy} className="text-[9px]" />
+          </div>
         </div>
 
-
-        {/* Show price and mcap if available from Jupiter Ultra */}
-        {(token.usdPrice || token.mcap) && (
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            {token.usdPrice && <span>{formatPrice(token.usdPrice)}</span>}
-            {token.mcap && <span>MC: {formatMcap(token.mcap)}</span>}
-          </div>
-        )}
+        {/* Row 4: Price + MC */}
+        <div className="flex items-center gap-2 text-[10px] font-mono leading-none">
+          <span className="text-gray-300 font-medium">
+            {token.usdPrice ? formatPrice(token.usdPrice) : '-'}
+          </span>
+          <span className="text-gray-500">
+            MC: {token.mcap ? formatMcap(token.mcap) : '-'}
+          </span>
+        </div>
       </div>
 
-      {/* Balance */}
+      {/* Balance - Top Aligned */}
       {userWallet && (
-        <div className="text-right flex-shrink-0 flex flex-col items-end">
+        <div className="text-right flex-shrink-0 flex flex-col items-end pt-1">
           {isLoadingBalance ? (
-            <div className="w-12 h-4 bg-gray-700 rounded animate-pulse" />
+            <div className="w-12 h-4 bg-gray-800 rounded animate-pulse" />
           ) : hasBalance ? (
             <>
-              <div className="text-sm text-white font-medium">
-                <span className="text-gray-500 text-xs mr-1">Bal:</span>
-                {formatBalance(balance!)}
+              <div className="text-lg font-bold text-white leading-none mb-1">
+                {Math.floor(balance!).toLocaleString()}
               </div>
               {totalValue > 0 && (
-                <div className="text-xs text-gray-400">
+                <div className="text-[11px] text-gray-500 font-mono">
                   ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
             </>
           ) : (
-            <div className="text-sm text-gray-500">0</div>
+            <div className="text-lg font-bold text-gray-700">0</div>
           )}
         </div>
       )}

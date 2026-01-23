@@ -1,7 +1,8 @@
 import React, { useState, useCallback, ReactNode } from "react"
 import { useWalletConnection } from "../hooks/useWalletConnection"
-import { PremiumAccessModal } from "../components/modals/PremiumAccessModal"
+import { useToast } from "../contexts/ToastContext"
 import { SwapModal } from "../components/swap/SwapModal"
+import { loadQuickBuyAmount } from "../utils/quickBuyValidation"
 import {
     PremiumAccessContext,
     ALPHA_TOKEN_MINT,
@@ -15,21 +16,21 @@ interface PremiumAccessProviderProps {
 export const PremiumAccessProvider: React.FC<PremiumAccessProviderProps> = ({
     children,
 }) => {
-    const [isModalOpen, setIsModalOpen] = useState(false)
-    const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
     const { getBalance, wallet } = useWalletConnection()
+    const { showToast } = useToast()
+    const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
+    const [quickBuyAmount, setQuickBuyAmount] = useState<string>("")
 
     const openQuickBuy = useCallback(() => {
-        setIsModalOpen(false)
+        const amount = loadQuickBuyAmount()
+        setQuickBuyAmount(amount || "0.1")
         setIsSwapModalOpen(true)
     }, [])
 
     const validateAccess = useCallback(
         async (onSuccess: () => void) => {
             if (!wallet.connected) {
-                // If wallet not connected, maybe we should let them connect?
-                // User requirement assumes they check balance. If not connected, balance is 0.
-                setIsModalOpen(true)
+                showToast("Please connect your wallet to access premium features", "error")
                 return
             }
 
@@ -41,24 +42,22 @@ export const PremiumAccessProvider: React.FC<PremiumAccessProviderProps> = ({
                 if (balance >= PREMIUM_BALANCE_THRESHOLD) {
                     onSuccess()
                 } else {
-                    setIsModalOpen(true)
+                    showToast(`You need ${PREMIUM_BALANCE_THRESHOLD} $ALPHA tokens to access this feature`, "error", "standard", {
+                        actionLabel: "BUY NOW",
+                        onAction: openQuickBuy
+                    })
                 }
             } catch (error) {
                 console.error("[PremiumAccess] Error checking access:", error)
-                setIsModalOpen(true) // Fail safe to blocking if check fails, or could be open (user preference: strict)
+                showToast("Failed to verify premium access", "error")
             }
         },
-        [getBalance, wallet.connected]
+        [getBalance, wallet.connected, showToast]
     )
 
     return (
         <PremiumAccessContext.Provider value={{ validateAccess }}>
             {children}
-            <PremiumAccessModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onBuyNow={openQuickBuy}
-            />
             <SwapModal
                 isOpen={isSwapModalOpen}
                 onClose={() => setIsSwapModalOpen(false)}
@@ -79,6 +78,7 @@ export const PremiumAccessProvider: React.FC<PremiumAccessProviderProps> = ({
                     image:
                         "https://dd.dexscreener.com/ds-data/tokens/solana/3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump.png",
                 }}
+                initialAmount={quickBuyAmount}
             />
         </PremiumAccessContext.Provider>
     )

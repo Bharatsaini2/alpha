@@ -10,6 +10,8 @@ import { Transaction, VersionedTransaction } from "@solana/web3.js"
 import DefaultTokenImage from "../../assets/default_token.svg"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useSwapApi, QuoteResponse } from "../../hooks/useSwapApi"
+import { topCoinsAPI } from "../../lib/api"
+import { loadQuickBuyAmount } from "../../utils/quickBuyValidation"
 import {
   TokenSelectionModal,
   TokenInfo,
@@ -26,9 +28,7 @@ import { SwapModal } from "../../components/swap/SwapModal"
 
 interface RightSidebarNewProps {
   selectedToken?: any
-
   pageType?: 'alpha' | 'kol' // Determine which page we're on (alpha streams or kol feed)
-  transactions?: any[] // Whale transactions for calculating hot coins
 }
 
 // Default tokens for swap
@@ -53,9 +53,7 @@ const DEFAULT_OUTPUT_TOKEN: TokenInfo = {
 
 const RightSidebarNew = ({
   selectedToken,
-
   pageType = 'alpha', // Default to 'alpha' for Alpha Streams page
-  transactions = [] // Default to empty array
 }: RightSidebarNewProps) => {
   // Auth hook for login modal
   const { openLoginModal } = useAuth()
@@ -97,6 +95,8 @@ const RightSidebarNew = ({
   const [isSwapping, setIsSwapping] = useState(false)
   const [swapProgress, setSwapProgress] = useState<number>(0) // Progress bar percentage (0-100)
   const [swapButtonStatus, setSwapButtonStatus] = useState<'idle' | 'executing' | 'success'>('idle') // Button animation status
+  const [isLoadingHotCoins, setIsLoadingHotCoins] = useState(true) // Local loading state for hot coins
+  const [hotCoins, setHotCoins] = useState<any[]>([]) // Sidebar hot coins list
 
   // Auto-reset form after success (robust reset logic)
   useEffect(() => {
@@ -122,6 +122,50 @@ const RightSidebarNew = ({
       if (timeoutId) clearTimeout(timeoutId)
     }
   }, [swapButtonStatus, clearErrors])
+
+  // Fetch Hot Coins from API based on pageType
+  useEffect(() => {
+    const fetchHotCoins = async () => {
+      setIsLoadingHotCoins(true)
+      try {
+        let coins: any[] = []
+        if (pageType === 'kol') {
+          const response = await topCoinsAPI.getTopKolCoins({ timeframe: '24H' }) // Default to 24H
+          if (response.data.success) {
+            // Default to small caps (matches Top KOL Page default)
+            coins = response.data.data.coins.smallCaps || []
+          }
+        } else {
+          // Default to Alpha Streams logic (Top Coins)
+          const response = await topCoinsAPI.getTopCoins({ timeframe: '24H' })
+          if (response.data.success) {
+            // Default to small caps
+            coins = response.data.data.coins.smallCaps || []
+          }
+        }
+
+        // Slice top 5 and map to required format
+        const mappedCoins = coins.slice(0, 5).map((coin: any) => ({
+          address: coin.tokenAddress,
+          symbol: coin.symbol,
+          name: coin.name,
+          image: coin.imageUrl,
+          marketCap: coin.marketCap,
+          // Map rank to hotnessScore for badge display, or just 0
+          hotnessScore: coin.rank || 0,
+        }))
+
+        setHotCoins(mappedCoins)
+      } catch (error) {
+        console.error("Failed to fetch sidebar hot coins:", error)
+        setHotCoins([])
+      } finally {
+        setIsLoadingHotCoins(false)
+      }
+    }
+
+    fetchHotCoins()
+  }, [pageType])
 
   // Update tokens when selectedToken prop changes
   useEffect(() => {
@@ -781,6 +825,8 @@ const RightSidebarNew = ({
       console.log('Opening SwapModal with token:', tokenInfo)
 
       // Open SwapModal in 'quickBuy' mode with SOL as input token
+      const savedAmount = loadQuickBuyAmount()
+      setQuickBuyAmount(savedAmount || "0.1")
       setSwapTokenInfo(tokenInfo)
       setIsSwapModalOpen(true)
     },
@@ -872,6 +918,7 @@ const RightSidebarNew = ({
 
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
   const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
+  const [quickBuyAmount, setQuickBuyAmount] = useState<string>("")
 
   // Calculate USD values with robust fallbacks
   const { inputUsdValue, outputUsdValue } = useMemo(() => {
@@ -935,143 +982,7 @@ const RightSidebarNew = ({
     return { inputUsdValue: inVal, outputUsdValue: outVal }
   }, [inputAmount, outputAmount, inputToken, outputToken, quote])
 
-  // Calculate hot coins based on new requirements
-  const hotCoins = useMemo(() => {
-    console.log('Hot Coins Calculation - Total transactions:', transactions?.length)
 
-    if (!transactions || transactions.length === 0) {
-      console.log('No transactions available')
-      return []
-    }
-
-    const now = Date.now()
-    const oneHourAgo = now - (60 * 60 * 1000) // 1 hour
-    const thirtyMinutesAgo = now - (30 * 60 * 1000) // 30 minutes
-
-    // Group transactions by token address
-    const coinData = new Map<string, {
-      symbol: string
-      address: string
-      image: string
-      name: string
-      marketCap: number
-      uniqueWhales: Set<string>
-      totalBuyAmount: number
-      transactions: any[]
-      lastHotBuyTime: number
-    }>()
-
-    // Process all transactions
-    transactions.forEach((tx: any) => {
-      const coinSymbol = tx.tokenOutSymbol ||
-        tx.transaction?.tokenOut?.symbol ||
-        tx.outTokenSymbol ||
-        tx.token_out_symbol
-
-      const coinAddress = tx.transaction?.tokenOut?.address ||
-        tx.outTokenAddress ||
-        tx.token_out_address
-
-      const coinImage = tx.transaction?.tokenOut?.imageUrl ||
-        tx.outTokenURL ||
-        tx.token_out_image
-
-      const coinName = tx.transaction?.tokenOut?.name ||
-        tx.outTokenName ||
-        tx.token_out_name ||
-        coinSymbol
-
-      const marketCap = parseFloat(tx.transaction?.tokenOut?.marketCap ||
-        tx.outTokenMarketCap ||
-        tx.token_out_market_cap ||
-        '0')
-
-      const whaleAddress = tx.whaleAddress || tx.whale_address
-      const buyAmount = parseFloat(tx.transaction?.amountInUSD || tx.amount_in_usd || '0')
-      const hotnessScore = tx.hotnessScore || tx.hotness_score || 0
-      const txTimestamp = new Date(tx.timestamp || tx.createdAt).getTime()
-
-      if (!coinSymbol || !coinAddress) return
-
-      if (!coinData.has(coinAddress)) {
-        coinData.set(coinAddress, {
-          symbol: coinSymbol,
-          address: coinAddress,
-          image: coinImage,
-          name: coinName,
-          marketCap: marketCap,
-          uniqueWhales: new Set(),
-          totalBuyAmount: 0,
-          transactions: [],
-          lastHotBuyTime: 0
-        })
-      }
-
-      const coin = coinData.get(coinAddress)!
-      coin.transactions.push(tx)
-
-      // Track whale buys with hotness > 7
-      if (hotnessScore > 7 && whaleAddress) {
-        coin.uniqueWhales.add(whaleAddress)
-        coin.totalBuyAmount += buyAmount
-        coin.lastHotBuyTime = Math.max(coin.lastHotBuyTime, txTimestamp)
-      }
-    })
-
-    // Filter coins based on entry criteria
-    const eligibleCoins = Array.from(coinData.values())
-      .filter(coin => {
-        // Entry criteria (last 1 hour)
-        const recentHotBuys = coin.transactions.filter(tx => {
-          const txTime = new Date(tx.timestamp || tx.createdAt).getTime()
-          const hotnessScore = tx.hotnessScore || tx.hotness_score || 0
-          return txTime >= oneHourAgo && hotnessScore > 7
-        })
-
-        // Check all entry conditions
-        const hasMarketCap = coin.marketCap >= 100000
-        const hasMinWhales = coin.uniqueWhales.size >= 2
-        const hasMinBuyAmount = coin.totalBuyAmount >= 3000
-        const hasRecentActivity = recentHotBuys.length > 0
-
-        // Removal criteria (last 30 minutes)
-        const hasRecentHotBuy = coin.lastHotBuyTime >= thirtyMinutesAgo
-
-        console.log(`Coin ${coin.symbol}:`, {
-          marketCap: coin.marketCap,
-          uniqueWhales: coin.uniqueWhales.size,
-          totalBuyAmount: coin.totalBuyAmount,
-          hasRecentHotBuy,
-          meetsEntry: hasMarketCap && hasMinWhales && hasMinBuyAmount && hasRecentActivity
-        })
-
-        // Entry: All conditions must be met
-        const meetsEntry = hasMarketCap && hasMinWhales && hasMinBuyAmount && hasRecentActivity
-
-        // Stay: Must have recent hot buy in last 30 minutes
-        const shouldStay = hasRecentHotBuy
-
-        return meetsEntry && shouldStay
-      })
-      .sort((a, b) => {
-        // Sort by total buy amount (descending)
-        return b.totalBuyAmount - a.totalBuyAmount
-      })
-      .slice(0, 5) // Show top 5
-      .map(coin => ({
-        symbol: coin.symbol,
-        address: coin.address,
-        image: coin.image,
-        name: coin.name,
-        marketCap: coin.marketCap.toString(),
-        hotnessScore: Math.max(...coin.transactions.map(tx => tx.hotnessScore || tx.hotness_score || 0)),
-        count: coin.uniqueWhales.size,
-        totalBuyAmount: coin.totalBuyAmount
-      }))
-
-    console.log('Final hot coins:', eligibleCoins)
-    return eligibleCoins
-  }, [transactions])
 
   return (
     <>
@@ -1356,10 +1267,30 @@ const RightSidebarNew = ({
                         <FontAwesomeIcon icon={faChevronDown} />
                       </button>
                       <div className="amount-box">
-                        {isLoadingQuote ? (
-                          <div className="nw-skeleton">
-                            <div className="skeleton-amount mb-1"></div>
-                            <div className="skeleton-usd"></div>
+                        {isLoadingQuote || isLoading ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                            <div
+                              style={{
+                                background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'shimmer 2s infinite linear',
+                                borderRadius: '4px',
+                                height: '28px',
+                                width: '140px'
+                              }}
+                              aria-hidden="true"
+                            />
+                            <div
+                              style={{
+                                background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                                backgroundSize: '200% 100%',
+                                animation: 'shimmer 2s infinite linear',
+                                borderRadius: '4px',
+                                height: '14px',
+                                width: '80px'
+                              }}
+                              aria-hidden="true"
+                            />
                           </div>
                         ) : (
                           <>
@@ -1496,8 +1427,8 @@ const RightSidebarNew = ({
                         left: 0,
                         height: '100%',
                         width: `${swapProgress}%`,
-                        background: 'linear-gradient(90deg, #162ECD 0%, #162ECD 80%, transparent 100%)',
-                        boxShadow: '0 0 10px rgba(22, 46, 205, 0.4)',
+                        background: 'linear-gradient(90deg, #162ECD 0%, #162ECD 85%, rgba(22, 46, 205, 0) 100%)',
+                        filter: 'drop-shadow(0 0 10px rgba(22, 46, 205, 0.5))',
                         transition: 'width 0.3s ease',
                         zIndex: 0
                       }}
@@ -1668,7 +1599,60 @@ const RightSidebarNew = ({
           <span className="trading-icon-title">{pageType === 'kol' ? 'HOT KOL COINS' : 'HOT COINS'}</span>
         </div>
         <div className="hot-coins-card">
-          {hotCoins.length > 0 ? (
+          {isLoadingHotCoins ? (
+            // Skeleton Loading State
+            Array.from({ length: 5 }).map((_, i) => (
+              <div className="coin-row" key={`skeleton-${i}`}>
+                <div className="coin-left">
+                  <span className="rank" style={{ opacity: 0.3 }}>#{i + 1}</span>
+                  <div
+                    className="coin-circle"
+                    style={{
+                      backgroundColor: '#1a1a1a',
+                      animation: 'shimmer 2s infinite linear',
+                      background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                      backgroundSize: '200% 100%',
+                      border: 'none'
+                    }}
+                  />
+                  <div className="coin-info" style={{ gap: '6px' }}>
+                    <div
+                      style={{
+                        height: '14px',
+                        width: '80px',
+                        borderRadius: '3px',
+                        background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 2s infinite linear'
+                      }}
+                    />
+                    <div
+                      style={{
+                        height: '10px',
+                        width: '50px',
+                        borderRadius: '2px',
+                        background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                        backgroundSize: '200% 100%',
+                        animation: 'shimmer 2s infinite linear'
+                      }}
+                    />
+                  </div>
+                </div>
+                <div
+                  className="quick-buy-btn"
+                  style={{
+                    width: '70px',
+                    height: '28px',
+                    background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+                    backgroundSize: '200% 100%',
+                    animation: 'shimmer 2s infinite linear',
+                    border: 'none',
+                    pointerEvents: 'none'
+                  }}
+                />
+              </div>
+            ))
+          ) : hotCoins.length > 0 ? (
             hotCoins.map((coin, index) => (
               <div className="coin-row" key={coin.address || index}>
                 <div className="coin-left">
@@ -1777,7 +1761,7 @@ const RightSidebarNew = ({
           image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
         }}
         initialOutputToken={swapTokenInfo}
-
+        initialAmount={quickBuyAmount}
       />
     </>
   )

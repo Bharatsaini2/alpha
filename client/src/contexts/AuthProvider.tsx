@@ -1,6 +1,7 @@
-import React, { useState, useEffect, ReactNode } from "react"
+import React, { useState, useEffect, ReactNode, useRef } from "react"
 import axios from "axios"
 import { AuthContext, User, API_BASE } from "./AuthContext"
+import { useAppKit, useAppKitAccount } from "@reown/appkit/react"
 
 interface AuthProviderProps {
     children: ReactNode
@@ -11,6 +12,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [isLoading, setIsLoading] = useState(true)
     const [showLoginModal, setShowLoginModal] = useState(false)
     const [isAuthFlowActive, setIsAuthFlowActive] = useState(false)
+
+    const { open } = useAppKit()
+    const { address, isConnected } = useAppKitAccount()
+
+    const loginInProgressRef = useRef(false)
+    const processedAddressRef = useRef<string | null>(null)
 
     const isAuthenticated = !!user
 
@@ -110,6 +117,60 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         initializeAuth()
     }, [])
 
+    const handleWalletLogin = async (walletAddress: string) => {
+        // Prevent duplicate login attempts
+        if (loginInProgressRef.current || processedAddressRef.current === walletAddress) {
+            return
+        }
+
+        try {
+            loginInProgressRef.current = true
+            processedAddressRef.current = walletAddress
+
+            // Request nonce from backend
+            const nonceResponse = await axios.post(`${API_BASE}/auth/phantom/nonce`, {
+                walletAddress,
+            })
+
+            if (nonceResponse.data.success) {
+                const { message } = nonceResponse.data.data
+
+                // Verify with backend
+                const verifyResponse = await axios.post(
+                    `${API_BASE}/auth/phantom/verify`,
+                    {
+                        walletAddress,
+                        signature: [], // Empty signature for now (auto-verify on backend)
+                        message,
+                    }
+                )
+
+                if (verifyResponse.data.success) {
+                    // Store tokens
+                    login(
+                        verifyResponse.data.data.user,
+                        verifyResponse.data.data.accessToken,
+                        verifyResponse.data.data.refreshToken
+                    )
+
+                    // Refresh user data to get latest status
+                    await refreshUser()
+                }
+            }
+        } catch (error) {
+            console.error("Wallet login error in provider:", error)
+        } finally {
+            loginInProgressRef.current = false
+        }
+    }
+
+    // Handle wallet connection from AppKit
+    useEffect(() => {
+        if (isConnected && address && !isAuthenticated && !loginInProgressRef.current) {
+            handleWalletLogin(address)
+        }
+    }, [isConnected, address, isAuthenticated])
+
     const login = (
         userData: User,
         accessToken: string,
@@ -180,7 +241,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
 
     const openLoginModal = () => {
-        setShowLoginModal(true)
+        // Directly open AppKit wallet selection
+        open({ view: "Connect" })
         setIsAuthFlowActive(true)
     }
 

@@ -17,6 +17,8 @@ export interface ToastProps {
     txSignature?: string
     duration?: number
     onClose: (id: string) => void
+    actionLabel?: string
+    onAction?: () => void
 }
 
 const Toast: React.FC<ToastProps> = ({
@@ -29,6 +31,7 @@ const Toast: React.FC<ToastProps> = ({
     txSignature,
     duration = 3000,
     onClose,
+    ...props
 }) => {
     // Single timer: after duration, ask manager to remove this toast.
     useEffect(() => {
@@ -124,6 +127,35 @@ const Toast: React.FC<ToastProps> = ({
                 >
                     Close
                 </button>
+                {/* Action Button */}
+                {(props.actionLabel && props.onAction) && (
+                    <button
+                        onClick={() => {
+                            props.onAction?.()
+                            onClose(id)
+                        }}
+                        className="connect-wallet-btn"
+                        style={{
+                            width: 'auto',
+                            padding: '6px 14px',
+                            marginLeft: '12px',
+                            whiteSpace: 'nowrap',
+                            backgroundColor: '#162ECD',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            letterSpacing: '1px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minHeight: 'unset',
+                            height: 'auto'
+                        }}
+                    >
+                        {props.actionLabel}
+                        <span className="corner top-right"></span>
+                        <span className="corner bottom-left"></span>
+                    </button>
+                )}
             </div>
         </div>
     )
@@ -149,7 +181,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         message: string,
         type: ToastProps["type"] = "success",
         variant: ToastProps["variant"] = "standard",
-        options?: { duration?: number, txSignature?: string, title?: string, icon?: string }
+        options?: {
+            duration?: number
+            txSignature?: string
+            title?: string
+            icon?: string
+            actionLabel?: string
+            onAction?: () => void
+        }
     ) => {
         // Only debounce standard messages to prevent spam, allow important updates
         if (isDebouncing && variant === "standard") return null
@@ -177,7 +216,9 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 title: options?.title,
                 icon: options?.icon,
                 duration,
-                onClose: removeToast
+                onClose: removeToast,
+                actionLabel: options?.actionLabel,
+                onAction: options?.onAction
             },
         ])
 

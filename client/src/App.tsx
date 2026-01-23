@@ -29,16 +29,17 @@ const projectId =
 createAppKit({
   adapters: [solanaWeb3JsAdapter],
   networks: [solana],
-  allWallets: "HIDE",
+  allWallets: "SHOW",
   metadata,
   projectId,
   themeVariables: {
     "--w3m-accent": "#A259FF",
   },
   featuredWalletIds: [
-    "a797aa35c0fadbfc1a53e7f675162ed5226968b44a19ee3d24385c64d1d3c393",
+    "a797aa35c0fadbfc1a53e7f675162ed5226968b44a19ee3d24385c64d1d3c393", // Phantom
+    "df7eb372a95f70bb7e93dc49c951152a4e28bc02a9040333246ebec27e4e1169", // Solflare
   ],
-  enableWalletConnect: false,
+  enableWalletConnect: true,
   features: {
     analytics: true,
     socials: false,

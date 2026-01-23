@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import { useAuth } from "../../contexts/AuthContext"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useToast } from "../../contexts/ToastContext"
+import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 import { User, LogOut } from "lucide-react"
 import { HiChevronUpDown } from "react-icons/hi2"
 import { FaRegUserCircle } from "react-icons/fa"
@@ -19,6 +20,7 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
     const { user, isAuthenticated, logout, openLoginModal } = useAuth()
     const { wallet, disconnect } = useWalletConnection()
     const { showToast } = useToast()
+    const { validateAccess } = usePremiumAccess()
     const [showDropdown, setShowDropdown] = useState(false)
     const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -155,12 +157,7 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
                             <a
                                 className={`nav-link-item ${isActive("/telegram-subscription") ? "nav-active" : ""}`}
                                 onClick={() => {
-                                    // Check if user is authenticated (either via email/social or wallet)
-                                    if (!isAuthenticated && !wallet.connected) {
-                                        showToast('Please log in to access Telegram Subscription', 'error');
-                                        return;
-                                    }
-                                    handleLinkClick("/telegram-subscription");
+                                    validateAccess(() => handleLinkClick("/telegram-subscription"))
                                 }}
                                 style={{ cursor: 'pointer' }}
                             >
@@ -179,13 +176,10 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
                         <button
                             className="connect-btn w-full justify-center text-center"
                             onClick={() => {
-                                // Check if user is authenticated (either via email/social or wallet)
-                                if (!isAuthenticated && !wallet.connected) {
-                                    showToast('Please log in to access Telegram Subscription', 'error');
-                                    return;
-                                }
-                                if (onToggle) onToggle();
-                                navigate("/telegram-subscription");
+                                validateAccess(() => {
+                                    if (onToggle) onToggle();
+                                    navigate("/telegram-subscription");
+                                })
                             }}
                         >
                             Telegram Subscription
@@ -293,6 +287,7 @@ function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
     const { isAuthenticated } = useAuth()
     const { wallet } = useWalletConnection()
     const { showToast } = useToast()
+    const { validateAccess } = usePremiumAccess()
 
     const isActive = (path: string) => {
         return location.pathname === path
@@ -426,12 +421,7 @@ function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
                             <a
                                 className={`nav-link-item ${isActive("/telegram-subscription") ? "nav-active" : ""}`}
                                 onClick={() => {
-                                    // Check if user is authenticated (either via email/social or wallet)
-                                    if (!isAuthenticated && !wallet.connected) {
-                                        showToast('Please log in to access Telegram Subscription', 'error');
-                                        return;
-                                    }
-                                    navigate("/telegram-subscription");
+                                    validateAccess(() => navigate("/telegram-subscription"))
                                 }}
                                 style={{ cursor: 'pointer' }}
                             >

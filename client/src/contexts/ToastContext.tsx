@@ -11,6 +11,8 @@ interface ToastContextType {
             txSignature?: string
             title?: string
             icon?: string
+            actionLabel?: string
+            onAction?: () => void
         }
     ) => string | null
     removeToast: (id: string) => void

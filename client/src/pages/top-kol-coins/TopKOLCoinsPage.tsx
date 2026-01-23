@@ -487,10 +487,37 @@ function TopKOLCoinsPage() {
                       </thead>
 
                       <tbody>
-                        {filteredCoins.length === 0 ? (
+                        {loading ? (
+                          // Skeleton Loading State
+                          Array.from({ length: 10 }).map((_, i) => (
+                            <tr key={`skeleton-${i}`} className="border-b border-[#2A2A2D]">
+                              <td className="p-4 text-center">
+                                <div className="w-4 h-4 rounded-full bg-[#1a1a1a] mx-auto animate-pulse" />
+                              </td>
+                              <td className="p-4">
+                                <div className="h-4 w-6 bg-[#1a1a1a] rounded animate-pulse" />
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-[#1a1a1a] animate-pulse" />
+                                  <div className="h-4 w-16 bg-[#1a1a1a] rounded animate-pulse" />
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="h-4 w-20 bg-[#1a1a1a] rounded animate-pulse" />
+                              </td>
+                              <td className="p-4">
+                                <div className="h-4 w-12 bg-[#1a1a1a] rounded animate-pulse" />
+                              </td>
+                              <td className="p-4">
+                                <div className="h-4 w-24 bg-[#1a1a1a] rounded animate-pulse" />
+                              </td>
+                            </tr>
+                          ))
+                        ) : filteredCoins.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="text-center text-gray-500 py-8">
-                              {loading ? "Loading..." : "No coins found."}
+                              No coins found.
                             </td>
                           </tr>
                         ) : (
