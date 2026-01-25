@@ -71,9 +71,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const [priorityFeeEnabled, setPriorityFeeEnabled] = useState<boolean>(false)
   const [tokenSafetyInfo, setTokenSafetyInfo] = useState<TokenSafetyInfo | null>(null)
   const [balanceError, setBalanceError] = useState<string>("")
-  const [transactionSignature, setTransactionSignature] = useState<string>("")
-  const [showSignature, setShowSignature] = useState<boolean>(false)
-  const [autoCloseTimerId, setAutoCloseTimerId] = useState<NodeJS.Timeout | null>(null)
 
   // Loading states for different stages (Requirement 22.1, 22.2, 22.3, 22.4)
   const [isPreparingTransaction, setIsPreparingTransaction] = useState<boolean>(false)
@@ -89,29 +86,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     if (initialOutputToken) setOutputToken(initialOutputToken)
     if (initialAmount) setInputAmount(initialAmount)
   }, [initialInputToken, initialOutputToken, initialAmount])
-
-  // Cleanup auto-close timer on unmount or when modal closes (Requirement 17.5)
-  useEffect(() => {
-    return () => {
-      if (autoCloseTimerId) {
-        clearTimeout(autoCloseTimerId)
-        setAutoCloseTimerId(null)
-      }
-    }
-  }, [autoCloseTimerId])
-
-  // Cancel pending operations when user manually closes modal (Requirement 17.5)
-  useEffect(() => {
-    if (!isOpen) {
-      // Reset initial quote flag (Requirements 7.2, 7.5)
-
-      // Clear any pending auto-close timer
-      if (autoCloseTimerId) {
-        clearTimeout(autoCloseTimerId)
-        setAutoCloseTimerId(null)
-      }
-    }
-  }, [isOpen, autoCloseTimerId])
 
   // Requirement 24.3: Add Escape key handler to close modal
   useEffect(() => {
@@ -240,8 +214,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     setInputAmount("")
     setOutputAmount("")
     setQuote(null)
-    setTransactionSignature("")
-    setShowSignature(false)
     setBalanceError("")
     setPriorityFeeEnabled(false)
     setTokenSafetyInfo(null)
@@ -413,16 +385,10 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       // Clear submission loading state
       setIsSubmittingTransaction(false)
 
-      // Store signature for display in modal (Requirement 16.4)
-      setTransactionSignature(signature)
-      setShowSignature(true)
-
       // Copy transaction signature to clipboard (Requirement 16.1)
       try {
         await navigator.clipboard.writeText(signature)
-        // Requirement 16.2: Display "Address copied to clipboard" confirmation message
-        showToast("Address copied to clipboard", "success")
-        // Requirement 15.3: Display "Transaction successful!" on success
+        // Requirement 15.3: Display "Transaction successful!" on success with transaction variant (includes View TX and Close buttons)
         showToast("Transaction successful!", "success", "transaction", { txSignature: signature })
       } catch (clipboardError) {
         // Requirement 16.3: Handle clipboard access failures gracefully
@@ -447,33 +413,28 @@ export const SwapModal: React.FC<SwapModalProps> = ({
 
       // Track trade (Requirement 21.1, 21.2)
       // Make tracking non-blocking - don't affect user experience (Requirement 21.3)
-      try {
-        await trackTrade({
-          signature,
-          walletAddress: wallet.publicKey.toBase58(),
-          inputMint: inputToken.address,
-          outputMint: outputToken.address,
-          inputAmount: inputAmountNum,
-          outputAmount: outputAmountNum,
-          platformFee,
-        })
-      } catch (trackError) {
+      // Fire and forget - don't await the result
+      trackTrade({
+        signature,
+        walletAddress: wallet.publicKey.toBase58(),
+        inputMint: inputToken.address,
+        outputMint: outputToken.address,
+        inputAmount: inputAmountNum,
+        outputAmount: outputAmountNum,
+        platformFee,
+      }).catch(trackError => {
         // Log errors but don't display them to user (Requirement 21.4)
         console.error('Failed to track trade:', trackError)
         // Track trades even if tracking request fails (Requirement 21.5)
         // Continue execution without affecting user experience
-      }
+      })
 
-      // Requirement 17.1: Keep modal open for exactly 3 seconds after successful transaction
-      // Requirement 17.2: Auto-close modal after 3 seconds
-      // Requirement 17.3: Reset all form fields on auto-close
-      const timerId = setTimeout(() => {
+      // Auto-close modal after successful transaction and show toast
+      // Toast notification will remain visible with View TX button
+      setTimeout(() => {
         resetFormFields()
         onClose()
-        setAutoCloseTimerId(null)
-      }, 3000)
-
-      setAutoCloseTimerId(timerId)
+      }, 1500) // Close modal after 1.5 seconds, toast stays visible
     } catch (error: any) {
       // Requirement 17.4: Keep modal open on transaction failure to allow retry
       // Clear all loading states on error
@@ -1137,108 +1098,43 @@ export const SwapModal: React.FC<SwapModalProps> = ({
                     className="balance-error-bx"
                     style={{
                       padding: '8px 12px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid #292929',
-                      borderRadius: '0',
-                      marginTop: '8px'
+                      backgroundColor: 'rgba(239, 68, 68, 0.05)',
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                      borderRadius: '2px',
+                      marginTop: '10px'
                     }}
                     role="alert"
                     aria-live="assertive"
                   >
                     <p style={{
                       color: '#ef4444',
-                      fontSize: '14px',
+                      fontSize: '11px',
                       margin: 0,
                       fontWeight: 500,
+                      fontFamily: '"Geist Mono", "Courier New", monospace',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px'
+                      gap: '6px',
+                      letterSpacing: '0.02em'
                     }}>
-                      <AlertCircle size={16} />
+                      <AlertCircle size={14} />
                       {balanceError}
                     </p>
                     <p style={{
                       color: '#9ca3af',
-                      fontSize: '12px',
-                      margin: '4px 0 0 0'
+                      fontSize: '10px',
+                      margin: '4px 0 0 0',
+                      fontFamily: '"Geist Mono", "Courier New", monospace',
+                      textAlign: 'center',
+                      letterSpacing: '0.01em'
                     }}>
                       Balance: {solBalance.toFixed(6)} SOL | Required: {totalCostInSOL.toFixed(6)} SOL
                     </p>
                   </div>
                 )}
 
-                {/* Display transaction signature after successful transaction (Requirements 16.4, 16.5) */}
-                {showSignature && transactionSignature && (
-                  <div
-                    className="transaction-signature-bx"
-                    style={{
-                      padding: '12px',
-                      backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                      border: '1px solid rgba(34, 197, 94, 0.3)',
-                      borderRadius: '6px',
-                      marginTop: '8px'
-                    }}
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginBottom: '8px'
-                    }}>
-                      <h6 style={{
-                        color: '#22c55e',
-                        fontSize: '14px',
-                        margin: 0,
-                        fontWeight: 600
-                      }}>
-                        Transaction Signature
-                      </h6>
-                      <button
-                        onClick={copySignatureToClipboard}
-                        className="solana-cp-btn"
-                        style={{
-                          padding: '4px 8px',
-                          backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                          border: '1px solid rgba(34, 197, 94, 0.4)',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        title="Copy signature"
-                        aria-label="Copy transaction signature to clipboard"
-                      >
-                        <FontAwesomeIcon icon={faCopy} style={{ color: '#22c55e' }} />
-                      </button>
-                    </div>
-                    <p style={{
-                      color: '#9ca3af',
-                      fontSize: '12px',
-                      margin: 0,
-                      wordBreak: 'break-all',
-                      fontFamily: 'monospace'
-                    }}>
-                      {transactionSignature}
-                    </p>
-                    <a
-                      href={`https://solscan.io/tx/${transactionSignature}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-block',
-                        marginTop: '8px',
-                        color: '#22c55e',
-                        fontSize: '12px',
-                        textDecoration: 'underline'
-                      }}
-                      aria-label="View transaction on Solscan blockchain explorer"
-                    >
-                      View on Solscan →
-                    </a>
-                  </div>
-                )}
+                {/* Transaction signature display removed - toast notification is sufficient */}
 
                 <div className="salana-activity-bx" role="region" aria-label="Token safety indicators">
                   <ul className="salana-activity-list">

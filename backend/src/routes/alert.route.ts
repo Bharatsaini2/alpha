@@ -7,6 +7,9 @@ import {
   createKolAlert,
   getKolAlerts,
   deleteKolAlert,
+  createKolProfileAlert,
+  getKolProfileAlerts,
+  deleteKolProfileAlert,
   generateLinkToken,
   unlinkTelegram,
   upsertAlert,
@@ -49,6 +52,15 @@ alertRouter.get('/kol-alerts', getKolAlerts)
 
 // DELETE /api/v1/alerts/kol-alert/:alertId - Delete KOL alert subscription
 alertRouter.delete('/kol-alert/:alertId', validateAlertId, deleteKolAlert)
+
+// POST /api/v1/alerts/kol-profile - Create or update KOL Profile alert subscription
+alertRouter.post('/kol-profile', createKolProfileAlert)
+
+// GET /api/v1/alerts/kol-profile-alerts - Get user's KOL Profile alert subscriptions
+alertRouter.get('/kol-profile-alerts', getKolProfileAlerts)
+
+// DELETE /api/v1/alerts/kol-profile/:alertId - Delete KOL Profile alert subscription
+alertRouter.delete('/kol-profile/:alertId', validateAlertId, deleteKolProfileAlert)
 
 // POST /api/v1/alerts/link - Generate account linking token
 alertRouter.post('/link', premiumGate, generateLinkToken)

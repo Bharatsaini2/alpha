@@ -860,14 +860,30 @@ export const processWalletSignature = async (
 
     logger.info(`TX Type Wallet: ${parsedTx.result?.type}`)
 
-    const txType: any = parsedTx?.result?.type
-    if (!parsedTx.success || (txType !== 'SWAP' && txType !== 'SWAP2')) {
+    // Simplified filter: Accept any successful transaction with buy AND sell activity
+    if (!parsedTx.success) {
       logger.info(
-        `Wallet [Filter] Skipping ${signature}: Not a successful SWAP or SWAP2 transaction according to Shyft.`,
+        `Wallet [Filter] Skipping ${signature}: Transaction not successful.`,
       )
       await redisClient.del(duplicateKey)
       return
     }
+
+    // Check if transaction has both buy and sell activity (filter out zero changes)
+    const balanceChanges = parsedTx?.result?.token_balance_changes || []
+    const nonZeroChanges = balanceChanges.filter((c: any) => c.change_amount !== 0)
+    const hasBuyActivity = nonZeroChanges.some((c: any) => c.change_amount > 0)
+    const hasSellActivity = nonZeroChanges.some((c: any) => c.change_amount < 0)
+
+    if (!hasBuyActivity || !hasSellActivity) {
+      logger.info(
+        `Wallet [Filter] Skipping ${signature}: No buy/sell activity detected (${nonZeroChanges.length} non-zero changes).`,
+      )
+      await redisClient.del(duplicateKey)
+      return
+    }
+
+    logger.info(`✅ Transaction has buy/sell activity - processing... (${nonZeroChanges.length} non-zero changes)`)
 
     const actions = parsedTx?.result?.actions
 
@@ -899,8 +915,7 @@ export const processWalletSignature = async (
       logger.info(`✅ Swap data extracted from: tokens_swapped`)
     } else if (
       parsedTx.result?.token_balance_changes &&
-      parsedTx.result.token_balance_changes.length > 0 &&
-      txType === 'SWAP'
+      parsedTx.result.token_balance_changes.length > 0
     ) {
       logger.info(
         `⚠️ tokens_swapped not found. Checking token_balance_changes...`,

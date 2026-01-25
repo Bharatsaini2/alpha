@@ -13,9 +13,13 @@ import axios from "axios"
 import { formatNumber, formatPrice } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import DefaultTokenImage from "../../assets/default_token.svg"
+import { useToast } from "../../contexts/ToastContext"
+import { useAuth } from "../../contexts/AuthContext"
 
 function KolFeedProfile() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState("portfolio")
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [triggerOpen, setTriggerOpen] = useState(false)
@@ -24,6 +28,7 @@ function KolFeedProfile() {
   const [customAmount, setCustomAmount] = useState("")
   const [isSaved, setIsSaved] = useState(false)
   const [hotness, setHotness] = useState<number>(10)
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
 
   const closeAll = () => {
     setTriggerOpen(false)
@@ -53,6 +58,38 @@ function KolFeedProfile() {
 
   const BASE_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"
 
+  // Check if user has an active subscription for this KOL
+  const checkExistingSubscription = async (kolAddress: string) => {
+    try {
+      const token = localStorage.getItem("accessToken")
+      if (!token || !user?.telegramChatId) {
+        setHasActiveSubscription(false)
+        return
+      }
+
+      const response = await axios.get(
+        `${BASE_URL}/alerts/kol-profile-alerts`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (response.data.success && response.data.data.alerts) {
+        // Check if any alert matches this KOL address
+        const hasAlert = response.data.data.alerts.some(
+          (alert: any) => 
+            alert.config.targetKolAddress?.toLowerCase() === kolAddress.toLowerCase()
+        )
+        setHasActiveSubscription(hasAlert)
+      }
+    } catch (error) {
+      console.error("Error checking subscription:", error)
+      setHasActiveSubscription(false)
+    }
+  }
+
   useEffect(() => {
     const fetchKOLData = async () => {
       try {
@@ -65,12 +102,18 @@ function KolFeedProfile() {
 
         if (txs.length > 0) {
           const firstTx = txs[0]
+          const kolAddress = firstTx.kolAddress || firstTx.whaleAddress
           setProfile({
             name: firstTx.influencerName || username,
             username: firstTx.influencerUsername || username,
             avatar: firstTx.influencerProfileImageUrl,
-            address: firstTx.kolAddress || firstTx.whaleAddress,
+            address: kolAddress,
           })
+          
+          // Check for existing subscription
+          if (kolAddress) {
+            await checkExistingSubscription(kolAddress)
+          }
         }
       } catch (err) {
         console.error("Error fetching KOL data:", err)
@@ -114,6 +157,72 @@ function KolFeedProfile() {
     }
   }, [isSaved])
 
+  // Parse amount string like "$1K", "$5K", "$10K" to numeric value
+  const parseAmount = (amountStr: string): number => {
+    const cleanStr = amountStr.replace(/[$,]/g, "").toUpperCase()
+    if (cleanStr.endsWith("K")) {
+      return parseFloat(cleanStr.replace("K", "")) * 1000
+    }
+    return parseFloat(cleanStr) || 0
+  }
+
+  // Handle KOL Profile alert creation
+  const handleCreateKolProfileAlert = async () => {
+    try {
+      const token = localStorage.getItem("accessToken")
+      if (!token) {
+        showToast("Please log in to create alerts", "error")
+        return
+      }
+
+      // Check if Telegram is connected
+      if (!user?.telegramChatId) {
+        showToast("Please connect your Telegram account first from the Telegram Subscription page", "error")
+        return
+      }
+
+      // Validate profile data
+      if (!profile || !profile.username || !profile.address) {
+        showToast("Profile data not loaded. Please try again.", "error")
+        return
+      }
+
+      const numericAmount = parseAmount(amount)
+      if (numericAmount <= 0) {
+        showToast("Please enter a valid amount", "error")
+        return
+      }
+
+      // Create KOL Profile alert
+      const response = await axios.post(
+        `${BASE_URL}/alerts/kol-profile`,
+        {
+          targetKolUsername: profile.username,
+          targetKolAddress: profile.address,
+          minHotnessScore: hotness,
+          minAmount: numericAmount,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (response.data.success) {
+        setIsSaved(true)
+        setHasActiveSubscription(true) // Update subscription state
+        showToast("KOL Profile alert subscription created successfully!", "success")
+        setTimeout(() => setIsSaved(false), 3000)
+      }
+    } catch (error: any) {
+      console.error("KOL Profile alert subscription error:", error)
+      showToast(
+        error.response?.data?.message || "Failed to create KOL Profile alert subscription",
+        "error"
+      )
+    }
+  }
 
   return (
     <>
@@ -156,7 +265,7 @@ function KolFeedProfile() {
                             {profile?.name || username} <RiVerifiedBadgeFill />
                           </h4>
                           <button className="telegram-share-btn">
-                            <FaXTwitter style={{ color: "#EBEBEB" }} /> @{profile?.username || username}
+                            <FaXTwitter style={{ color: "#EBEBEB" }} /> {profile?.username?.startsWith('@') ? profile.username : `@${profile?.username || username}`}
                           </button>
                         </>
                       )}
@@ -193,7 +302,7 @@ function KolFeedProfile() {
                                 setOpenDropdown(openDropdown === "subs" ? null : "subs")
                               }}
                             >
-                              subscribed <FaStar />
+                              {hasActiveSubscription ? "subscribed" : "subscribe"} <FaStar />
                             </button>
 
                             <li onClick={(e) => e.stopPropagation()}>
@@ -212,13 +321,24 @@ function KolFeedProfile() {
                                       <div className="sub-drop-header">
                                         <div className="sub-drop-content">
                                           <h6>Target Profile</h6>
-                                          <h4>@CryptoWhale_0</h4>
+                                          <h4>{profile?.username?.startsWith('@') ? profile.username : `@${profile?.username || 'CryptoWhale_0'}`}</h4>
                                         </div>
 
                                         <div>
-                                          <button className="paper-plan-connect-btn">
-                                            <FontAwesomeIcon icon={faPaperPlane} /> Connect
-                                          </button>
+                                          {user?.telegramChatId ? (
+                                            <div className="dis-connect-btn" style={{ cursor: 'default' }}>
+                                              Connected <span className="text-white fz-14"><FontAwesomeIcon icon={faPaperPlane} /></span>
+                                            </div>
+                                          ) : (
+                                            <button 
+                                              className="paper-plan-connect-btn"
+                                              onClick={() => {
+                                                showToast("Please connect Telegram from the Telegram Subscription page", "error")
+                                              }}
+                                            >
+                                              <FontAwesomeIcon icon={faPaperPlane} /> Connect
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
 
@@ -316,14 +436,14 @@ function KolFeedProfile() {
                                         )}
                                       </div>
 
-                                      {/* CONNECT BUTTON */}
+                                      {/* SUBSCRIBE BUTTON */}
                                       <button
                                         className="connect-wallet-btn"
-                                        onClick={() => setIsSaved(true)}
+                                        onClick={handleCreateKolProfileAlert}
                                       >
                                         <span className="corner top-right"></span>
                                         <span className="corner bottom-left"></span>
-                                        Connect
+                                        Subscribe
                                       </button>
                                     </div>
                                   }

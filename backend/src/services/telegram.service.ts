@@ -512,6 +512,40 @@ export class TelegramService {
         }
         
         message += `\nYou'll receive alerts here when KOL/Influencer transactions are detected\\!`
+      } else if (alertType === AlertType.KOL_PROFILE) {
+        const action = isUpdate ? 'updated' : 'created'
+        message = `✅ *KOL Profile Alert ${action.charAt(0).toUpperCase() + action.slice(1)}*\n\n`
+        message += `Your KOL profile alert subscription has been ${action} successfully\\!\n\n`
+        message += `*Configuration:*\n`
+        
+        if (config.targetKolUsername) {
+          // Remove @ if it's already in the username
+          const username = config.targetKolUsername.startsWith('@') 
+            ? config.targetKolUsername.slice(1) 
+            : config.targetKolUsername
+          message += `👤 Target KOL: @${username}\n`
+        }
+        
+        if (config.minHotnessScore !== undefined) {
+          message += `🔥 Min Hotness Score: ${config.minHotnessScore}/10\n`
+        }
+        
+        if (config.minAmount !== undefined) {
+          const formattedAmount = config.minAmount.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })
+          message += `💰 Min Buy Amount: ${formattedAmount}\n`
+        }
+        
+        const username = config.targetKolUsername 
+          ? (config.targetKolUsername.startsWith('@') 
+              ? config.targetKolUsername.slice(1) 
+              : config.targetKolUsername)
+          : 'this KOL'
+        message += `\nYou'll receive alerts here when @${username} makes matching transactions\\!`
       } else {
         // Generic confirmation for other alert types
         const action = isUpdate ? 'updated' : 'created'

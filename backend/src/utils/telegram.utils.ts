@@ -279,6 +279,86 @@ _Powered by @AlphaBlockAI_ `
 }
 
 /**
+ * Format KOL Profile Alert message for Telegram
+ * Similar to KOL Alert but specifically for subscribed KOL profiles
+ * 
+ * @param kolName - The KOL's display name
+ * @param tx - The influencer transaction data
+ * @param resolvedTokenSymbol - Optional resolved token symbol
+ * @param kolUsername - Optional KOL Twitter/X username
+ * @returns Formatted MarkdownV2 message
+ */
+export function formatKOLProfileAlert(
+  kolName: string,
+  tx: IInfluencerWhaleTransactionsV2,
+  resolvedTokenSymbol?: string,
+  kolUsername?: string,
+): string {
+  // Determine the primary token and amount based on transaction type
+  let tokenSymbol: string
+  let tokenName: string
+  let tokenAddress: string
+  let usdAmount: string
+  let marketCap: number
+  const isBuy = tx.type === 'buy'
+
+  if (isBuy) {
+    tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenOut.symbol || 'Unknown'
+    tokenName = tx.transaction.tokenOut.name || tokenSymbol
+    tokenAddress = tx.transaction.tokenOut.address
+    usdAmount = tx.transaction.tokenOut.usdAmount || '0'
+    marketCap = parseFloat(tx.transaction.tokenOut.marketCap || tx.marketCap?.buyMarketCap || '0')
+  } else {
+    tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenIn.symbol || 'Unknown'
+    tokenName = tx.transaction.tokenIn.name || tokenSymbol
+    tokenAddress = tx.transaction.tokenIn.address
+    usdAmount = tx.transaction.tokenIn.usdAmount || '0'
+    marketCap = parseFloat(tx.transaction.tokenIn.marketCap || tx.marketCap?.sellMarketCap || '0')
+  }
+
+  const usdAmountNum = parseFloat(usdAmount)
+  const formattedUSD = formatLargeNumber(usdAmountNum)
+  const formattedMCap = formatLargeNumber(marketCap)
+
+  // Get hotness score
+  const hotnessScoreNum = tx.hotnessScore || 0
+  const hotnessScore = hotnessScoreNum % 1 === 0 ? hotnessScoreNum.toFixed(0) : hotnessScoreNum.toFixed(1)
+
+  // Format timestamp
+  const timestamp = tx.timestamp ? new Date(tx.timestamp) : new Date()
+  const hours = timestamp.getUTCHours().toString().padStart(2, '0')
+  const minutes = timestamp.getUTCMinutes().toString().padStart(2, '0')
+  const timeStr = `${hours}:${minutes} UTC`
+
+  // Generate X/Twitter profile link
+  const xLink = kolUsername ? `https://x.com/${kolUsername}` : null
+  const kolDisplay = xLink
+    ? `[${escapeMarkdownV2(kolName)}](${xLink})`
+    : escapeMarkdownV2(kolName)
+
+  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=${isBuy ? 'buy' : 'sell'}`
+  const tokenLink = `https://dexscreener.com/solana/${tokenAddress}`
+
+  return `🎯 *KOL Profile ${isBuy ? 'Buy' : 'Sell'} Alert*
+
+👤 *KOL:* ${kolDisplay}
+
+🪙 *Token:* ${escapeMarkdownV2(tokenName)} \\(${escapeMarkdownV2(tokenSymbol)}\\)
+⛓️ *Chain:* Solana
+📝 *CA:* \`${tokenAddress}\`
+💰 *MCAP:* ${escapeMarkdownV2(formattedMCap)}
+
+💵 *${isBuy ? 'Buy' : 'Sell'} Amount:* ${escapeMarkdownV2(formattedUSD)}
+🔥 *Hotness Score:* ${escapeMarkdownV2(hotnessScore)}/10
+
+⏰ *Transaction Time:* ${escapeMarkdownV2(timeStr)}
+
+🔗 [View Transaction](${appTxLink}) \\| 🪙 [View Token](${tokenLink})
+
+_Powered by @AlphaBlockAI_ `
+}
+
+/**
  * Whale transaction data for alert formatting
  */
 export interface WhaleTransactionData {

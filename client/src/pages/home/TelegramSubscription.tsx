@@ -16,6 +16,11 @@ interface AlertConfig {
     hotnessScoreThreshold?: number;
     walletLabels?: string[];
     minBuyAmountUSD?: number;
+    // KOL Profile fields
+    targetKolUsername?: string;
+    targetKolAddress?: string;
+    minHotnessScore?: number;
+    minAmount?: number;
 }
 
 interface AlertSubscription {
@@ -31,7 +36,7 @@ interface AlertSubscription {
 function TelegramSubscription() {
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+    const { user, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
     const { wallet } = useWalletConnection();
     const { validateAccess } = usePremiumAccess();
     const [openId, setOpenId] = useState<string | null>(null);
@@ -44,6 +49,8 @@ function TelegramSubscription() {
     const [generatingLink, setGeneratingLink] = useState(false);
     const [, setHasAccess] = useState<boolean>(false);
     const [connectionCheckInterval, setConnectionCheckInterval] = useState<NodeJS.Timeout | null>(null);
+    const [disconnecting, setDisconnecting] = useState(false);
+    const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
 
     // ... (rest of helper functions) ...
 
@@ -75,30 +82,47 @@ function TelegramSubscription() {
 
     // Check for Telegram connection status updates
     const checkTelegramConnection = async () => {
+        console.log('🔵 Checking Telegram connection...');
         try {
             const response = await api.get('/auth/me');
-            if (response.data.success && response.data.user) {
-                const updatedUser = response.data.user;
+            console.log('📡 Auth response:', response.data);
+            
+            if (response.data.success && response.data.data?.user) {
+                const updatedUser = response.data.data.user;
+                console.log('👤 Current user telegramChatId:', user?.telegramChatId);
+                console.log('👤 Updated user telegramChatId:', updatedUser.telegramChatId);
+                
                 // If user now has telegramChatId but didn't before, update the auth context
                 if (updatedUser.telegramChatId && !user?.telegramChatId) {
-                    // Force a refresh of user data in auth context
-                    window.location.reload();
+                    console.log('✅ Telegram connected! Refreshing user data...');
+                    // Use refreshUser from AuthContext instead of page reload for seamless update
+                    await refreshUser();
+                    console.log('🎉 User data refreshed successfully!');
+                    showToast('Telegram connected successfully!', 'success');
+                    // Clear the link token and stop polling
+                    setLinkToken(null);
+                    if (connectionCheckInterval) {
+                        clearInterval(connectionCheckInterval);
+                        setConnectionCheckInterval(null);
+                    }
                 }
             }
         } catch (error) {
-            console.error('Error checking Telegram connection:', error);
+            console.error('❌ Error checking Telegram connection:', error);
         }
     };
 
     // Start polling for connection status when link token is generated
     useEffect(() => {
         if (linkToken && !user?.telegramChatId) {
+            console.log('🚀 Starting Telegram connection polling...');
             // Start checking every 3 seconds for connection
             const interval = setInterval(checkTelegramConnection, 3000);
             setConnectionCheckInterval(interval);
 
             // Stop checking after 10 minutes (when token expires)
             setTimeout(() => {
+                console.log('⏱️ Polling timeout reached (10 minutes)');
                 if (interval) {
                     clearInterval(interval);
                     setConnectionCheckInterval(null);
@@ -107,9 +131,12 @@ function TelegramSubscription() {
 
             return () => {
                 if (interval) {
+                    console.log('🛑 Cleaning up polling interval');
                     clearInterval(interval);
                 }
             };
+        } else {
+            console.log('⚠️ Polling not started:', { linkToken, telegramChatId: user?.telegramChatId });
         }
     }, [linkToken, user?.telegramChatId]);
 
@@ -254,6 +281,32 @@ function TelegramSubscription() {
         });
     };
 
+    const handleDisconnectTelegram = async () => {
+        try {
+            setDisconnecting(true);
+            setShowDisconnectConfirm(false);
+            const response = await api.post('/alerts/unlink-telegram');
+
+            if (response.data.success) {
+                // Refresh user data to remove telegramChatId
+                await refreshUser();
+                // Clear subscriptions since they were all deleted
+                setSubscriptions([]);
+                showToast(
+                    `Telegram disconnected successfully. ${response.data.data.alertsDeleted} alert(s) deleted.`,
+                    'success'
+                );
+            } else {
+                showToast('Failed to disconnect Telegram account', 'error');
+            }
+        } catch (err: any) {
+            console.error('Error disconnecting Telegram:', err);
+            showToast(err.response?.data?.message || 'Failed to disconnect Telegram account', 'error');
+        } finally {
+            setDisconnecting(false);
+        }
+    };
+
 
     const getTelegramDeepLink = () => {
         if (!linkToken) return '';
@@ -274,6 +327,22 @@ function TelegramSubscription() {
 
         if (config.minBuyAmountUSD !== undefined) {
             parts.push(`Min Buy: $${config.minBuyAmountUSD.toLocaleString()}`);
+        }
+
+        // KOL Profile specific fields
+        if (config.targetKolUsername) {
+            const username = config.targetKolUsername.startsWith('@') 
+                ? config.targetKolUsername 
+                : `@${config.targetKolUsername}`;
+            parts.push(`KOL: ${username}`);
+        }
+
+        if (config.minHotnessScore !== undefined) {
+            parts.push(`Hotness: ${config.minHotnessScore}/10`);
+        }
+
+        if (config.minAmount !== undefined) {
+            parts.push(`Min: $${config.minAmount.toLocaleString()}`);
         }
 
         if (config.walletLabels && config.walletLabels.length > 0) {
@@ -343,16 +412,70 @@ function TelegramSubscription() {
 
                         <div className="alpha-profile-content nw-kol-profile">
                             {user?.telegramChatId ? (
-                                <div className="share-profile">
-                                    <img src="/profile-usr.png" alt="" />
-                                    <div>
-                                        <h4>User {user.telegramChatId}</h4>
-                                        <button className="telegram-share-btn mt-2">
-                                            <PiTelegramLogoDuotone />
-                                            Connected
-                                        </button>
+                                <>
+                                    <div className="share-profile">
+                                        <img src="/profile-usr.png" alt="" />
+                                        <div>
+                                            <h4>User {user.telegramChatId}</h4>
+                                            <button className="telegram-share-btn mt-2">
+                                                <PiTelegramLogoDuotone />
+                                                Connected
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
+                                    
+                                    {/* Disconnect Section */}
+                                    <div className="mt-3" style={{ borderTop: '1px solid #292929', paddingTop: '12px' }}>
+                                        {showDisconnectConfirm ? (
+                                            <div className="text-center">
+                                                <p style={{ color: '#df2a4e', fontSize: '10px', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 500 }}>
+                                                    This will disconnect Telegram and delete all your alerts. Continue?
+                                                </p>
+                                                <div className="d-flex gap-2 justify-content-center">
+                                                    <button
+                                                        className="alpha-edit-btn"
+                                                        onClick={handleDisconnectTelegram}
+                                                        disabled={disconnecting}
+                                                        style={{ 
+                                                            backgroundColor: '#df2a4e', 
+                                                            borderColor: '#df2a4e',
+                                                            padding: '5px 10px',
+                                                            fontSize: '10px'
+                                                        }}
+                                                    >
+                                                        {disconnecting ? 'Disconnecting...' : 'Yes, Disconnect'}
+                                                    </button>
+                                                    <button
+                                                        className="alpha-edit-btn"
+                                                        onClick={() => setShowDisconnectConfirm(false)}
+                                                        disabled={disconnecting}
+                                                        style={{ 
+                                                            padding: '5px 10px',
+                                                            fontSize: '10px'
+                                                        }}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                className="alpha-edit-btn"
+                                                onClick={() => setShowDisconnectConfirm(true)}
+                                                style={{ 
+                                                    backgroundColor: '#0a0a0a', 
+                                                    borderColor: '#3d3d3d',
+                                                    padding: '5px 10px',
+                                                    fontSize: '10px',
+                                                    width: '100%',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                Disconnect Telegram
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
                             ) : linkToken ? (
                                 <div className="text-center py-3">
                                     <p className="mb-3" style={{ color: '#ebebeb', fontSize: '12px', textTransform: 'uppercase' }}>
@@ -447,20 +570,8 @@ function TelegramSubscription() {
                                                     <div className="share-profile">
                                                         <div>
                                                             <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                                {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type === 'KOL_ACTIVITY' ? 'KOL Alert' : subscription.type}
+                                                                {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type === 'KOL_ACTIVITY' ? 'KOL Alert' : subscription.type === 'KOL_PROFILE' ? 'KOL Profile' : subscription.type}
                                                                 {subscription.enabled && <RiVerifiedBadgeFill style={{ color: '#14904d', fontSize: '12px' }} />}
-                                                                <span
-                                                                    style={{
-                                                                        backgroundColor: getPriorityColor(subscription.priority),
-                                                                        color: '#fff',
-                                                                        padding: '2px 6px',
-                                                                        fontSize: '10px',
-                                                                        textTransform: 'uppercase',
-                                                                        marginLeft: '8px'
-                                                                    }}
-                                                                >
-                                                                    {subscription.priority}
-                                                                </span>
                                                             </h4>
                                                             <p style={{
                                                                 color: '#ebebeb',
@@ -487,48 +598,61 @@ function TelegramSubscription() {
 
                                         {openId === subscription.id && (
                                             <div className="accordion-collapse show">
-                                                <div className="accordion-body" style={{ backgroundColor: '#0a0a0a', border: '1px solid #292929', borderTop: 'none' }}>
-                                                    <div style={{ padding: '16px' }}>
-                                                        <div className="nw-user-info-bx" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '16px', paddingTop: '0' }}>
-                                                            <div>
-                                                                <h6>Configuration</h6>
-                                                                <p>{formatConfig(subscription.config)}</p>
-                                                            </div>
-
-                                                            <div>
-                                                                <h6>Status</h6>
-                                                                <p style={{ color: subscription.enabled ? '#14904d' : '#8f8f8f' }}>
-                                                                    {subscription.enabled ? 'Active' : 'Inactive'}
-                                                                </p>
-                                                            </div>
-
-                                                            <div>
-                                                                <h6>Priority</h6>
-                                                                <p style={{ color: getPriorityColor(subscription.priority) }}>
-                                                                    {subscription.priority}
-                                                                </p>
-                                                            </div>
+                                                <div className="accordion-body" style={{ backgroundColor: '#0a0a0a', border: '1px solid #292929', borderTop: 'none', padding: '10px' }}>
+                                                    <div style={{ 
+                                                        display: 'flex', 
+                                                        flexDirection: 'row', 
+                                                        alignItems: 'flex-start', 
+                                                        gap: '20px', 
+                                                        marginBottom: '10px'
+                                                    }}>
+                                                        <div style={{ flex: '1' }}>
+                                                            <h6 style={{ fontSize: '9px', marginBottom: '3px', color: '#8f8f8f', textTransform: 'uppercase', fontWeight: 400 }}>Configuration</h6>
+                                                            <p style={{ fontSize: '10px', margin: '0', color: '#ebebeb', textTransform: 'uppercase' }}>{formatConfig(subscription.config)}</p>
                                                         </div>
 
-                                                        <div style={{ borderTop: '1px solid #292929', paddingTop: '16px', marginTop: '16px' }}>
+                                                        <div style={{ minWidth: '70px' }}>
+                                                            <h6 style={{ fontSize: '9px', marginBottom: '3px', color: '#8f8f8f', textTransform: 'uppercase', fontWeight: 400 }}>Status</h6>
+                                                            <p style={{ 
+                                                                color: subscription.enabled ? '#14904d' : '#8f8f8f',
+                                                                fontSize: '10px',
+                                                                margin: '0',
+                                                                fontWeight: 500,
+                                                                textTransform: 'uppercase'
+                                                            }}>
+                                                                {subscription.enabled ? 'Active' : 'Inactive'}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ borderTop: '1px solid #292929', paddingTop: '10px' }}>
                                                             {deleteConfirmId === subscription.id ? (
                                                                 <div className="text-center">
-                                                                    <p style={{ color: '#ebebeb', fontSize: '12px', textTransform: 'uppercase', marginBottom: '16px' }}>
-                                                                        Are you sure you want to delete this subscription?
+                                                                    <p style={{ color: '#ebebeb', fontSize: '10px', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 500 }}>
+                                                                        Are you sure?
                                                                     </p>
                                                                     <div className="d-flex gap-2 justify-content-center">
                                                                         <button
                                                                             className="alpha-edit-btn"
                                                                             onClick={(e) => handleDeleteConfirm(e)}
                                                                             disabled={deleting}
-                                                                            style={{ backgroundColor: '#df2a4e', borderColor: '#df2a4e' }}
+                                                                            style={{ 
+                                                                                backgroundColor: '#df2a4e', 
+                                                                                borderColor: '#df2a4e',
+                                                                                padding: '5px 10px',
+                                                                                fontSize: '10px'
+                                                                            }}
                                                                         >
-                                                                            {deleting ? 'Deleting...' : 'Yes, Delete'}
+                                                                            {deleting ? 'Deleting...' : 'Yes'}
                                                                         </button>
                                                                         <button
                                                                             className="alpha-edit-btn"
                                                                             onClick={(e) => handleDeleteCancel(e)}
                                                                             disabled={deleting}
+                                                                            style={{ 
+                                                                                padding: '5px 10px',
+                                                                                fontSize: '10px'
+                                                                            }}
                                                                         >
                                                                             Cancel
                                                                         </button>
@@ -538,19 +662,29 @@ function TelegramSubscription() {
                                                                 <button
                                                                     className="alpha-edit-btn"
                                                                     onClick={(e) => handleDeleteClick(subscription.id, e)}
-                                                                    style={{ backgroundColor: '#df2a4e', borderColor: '#df2a4e', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                                                    style={{ 
+                                                                        backgroundColor: '#df2a4e', 
+                                                                        borderColor: '#df2a4e', 
+                                                                        display: 'flex', 
+                                                                        alignItems: 'center', 
+                                                                        gap: '4px',
+                                                                        padding: '5px 10px',
+                                                                        fontSize: '10px',
+                                                                        width: '100%',
+                                                                        justifyContent: 'center'
+                                                                    }}
                                                                 >
-                                                                    <MdDelete />
-                                                                    Delete Subscription
+                                                                    <MdDelete style={{ fontSize: '12px' }} />
+                                                                    Delete
                                                                 </button>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            )}
                                     </div>
                                 ))}
+
                             </div>
                         </div>
                     )}

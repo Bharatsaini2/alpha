@@ -204,6 +204,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         // Default duration depends on variant
         let duration = options?.duration ?? 3000
         if (variant === "processing") duration = 0 // Don't auto-close processing toasts
+        if (variant === "transaction") duration = 0 // Don't auto-close transaction toasts - user closes manually
 
         setToasts((prev) => [
             ...prev,

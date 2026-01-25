@@ -701,20 +701,18 @@ const RightSidebarNew = ({
         platformFee = outputAmountNum * 0.0075
       }
 
-      // Track trade
-      try {
-        await trackTrade({
-          signature,
-          walletAddress: wallet.publicKey.toBase58(),
-          inputMint: inputToken.address,
-          outputMint: outputToken.address,
-          inputAmount: inputAmountNum,
-          outputAmount: outputAmountNum,
-          platformFee,
-        })
-      } catch {
+      // Track trade - fire and forget (non-blocking)
+      trackTrade({
+        signature,
+        walletAddress: wallet.publicKey.toBase58(),
+        inputMint: inputToken.address,
+        outputMint: outputToken.address,
+        inputAmount: inputAmountNum,
+        outputAmount: outputAmountNum,
+        platformFee,
+      }).catch(() => {
         // Silently ignore - non-critical
-      }
+      })
 
       // Reset form logic moved to useEffect watching swapButtonStatus
 

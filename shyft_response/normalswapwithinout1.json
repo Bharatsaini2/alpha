@@ -1,0 +1,230 @@
+{
+  "success": true,
+  "message": "Transaction details fetched successfully",
+  "result": {
+    "timestamp": "2026-01-23T11:08:13.000Z",
+    "fee": 0.001005,
+    "fee_payer": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P",
+    "signers": [
+      "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P"
+    ],
+    "signatures": [
+      "3WVpD8HAnso5kWbee1qA7fxKLXnu8jiY6eokxnpv3PWKvL4imdzxfKvLBqmyAp75fYCBbKMK6Mpi8v1EWewoQN1S"
+    ],
+    "protocol": {
+      "address": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+      "name": "RAYDIUM_CLMM"
+    },
+    "type": "SWAP",
+    "status": "Success",
+    "token_balance_changes": [
+      {
+        "address": "5QxR8aLbWkgW3PJdVMZ1KoBcPnQqNYCEHGooX9ir9vo2",
+        "decimals": 6,
+        "change_amount": 12833113871604,
+        "post_balance": 12833113871604,
+        "pre_balance": 0,
+        "mint": "5eTuF52LmxisGfPPhZeiUkBPMdTkF3WfF1w5P5FUbonk",
+        "owner": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P"
+      },
+      {
+        "address": "D5RuRtb1u7FtZob8pxaFewwtsRiAKL3EMomVKcxneydU",
+        "decimals": 6,
+        "change_amount": 1907822529,
+        "post_balance": 20665911380,
+        "pre_balance": 18758088851,
+        "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "owner": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
+      },
+      {
+        "address": "E1WvTu4PaR4yTfX1yDgEC4g7i6JN9SH41UxiaMLRvjXC",
+        "decimals": 6,
+        "change_amount": -12833113871604,
+        "post_balance": 126379601474023,
+        "pre_balance": 139212715345627,
+        "mint": "5eTuF52LmxisGfPPhZeiUkBPMdTkF3WfF1w5P5FUbonk",
+        "owner": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
+      },
+      {
+        "address": "5QpMZ6MuyKjg8Qa1X8gM5G3YMsd43rpHb2iQ6hdcRM7m",
+        "decimals": 9,
+        "change_amount": 15037765873,
+        "post_balance": 78359368854548,
+        "pre_balance": 78344331088675,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS"
+      },
+      {
+        "address": "DHY2efKhMcZyAgmPw82C2Gez1e98Ab7oWcXfxz9frUCr",
+        "decimals": 6,
+        "change_amount": -1907822529,
+        "post_balance": 9017496627907,
+        "pre_balance": 9019404450436,
+        "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "owner": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS"
+      }
+    ],
+    "actions": [
+      {
+        "info": {
+          "swapper": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P",
+          "tokens_swapped": {
+            "in": {
+              "token_address": "So11111111111111111111111111111111111111112",
+              "name": "Wrapped SOL",
+              "symbol": "SOL",
+              "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+              "amount": 15.037765873,
+              "amount_raw": 15037765873
+            },
+            "out": {
+              "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+              "name": "World Liberty Financial USD",
+              "symbol": "USD1",
+              "image_uri": "https://raw.githubusercontent.com/worldliberty/usd1-metadata/refs/heads/main/logo.png",
+              "amount": 1907.822529,
+              "amount_raw": 1907822529
+            }
+          },
+          "swaps": [
+            {
+              "liquidity_pool_address": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+              "name": "Wrapped SOL-World Liberty Financial USD",
+              "source": "raydiumClmm",
+              "in": {
+                "token_address": "So11111111111111111111111111111111111111112",
+                "name": "Wrapped SOL",
+                "symbol": "SOL",
+                "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+                "amount": 15.037765873,
+                "amount_raw": 15037765873
+              },
+              "out": {
+                "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+                "name": "World Liberty Financial USD",
+                "symbol": "USD1",
+                "image_uri": "https://raw.githubusercontent.com/worldliberty/usd1-metadata/refs/heads/main/logo.png",
+                "amount": 1907.822529,
+                "amount_raw": 1907822529
+              }
+            }
+          ],
+          "slippage_in_percent": null,
+          "quoted_out_amount": null,
+          "slippage_paid": null
+        },
+        "source_protocol": {
+          "address": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+          "name": "RAYDIUM_CLMM"
+        },
+        "type": "SWAP",
+        "ix_index": 17
+      },
+      {
+        "info": {
+          "amount": 15.037765873,
+          "amount_raw": 15037765873,
+          "receiver": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+          "sender": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P",
+          "receiver_associated_account": "5QpMZ6MuyKjg8Qa1X8gM5G3YMsd43rpHb2iQ6hdcRM7m",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+        "ix_index": 18
+      },
+      {
+        "info": {
+          "amount": 1907.822529,
+          "amount_raw": 1907822529,
+          "receiver": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P",
+          "sender": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+          "receiver_associated_account": "8wudurczWtryvo2Cy8nsujAByFhpq5d5ynFVzLv1aax5",
+          "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+        "ix_index": 19
+      },
+      {
+        "info": {
+          "amount": 1907.822529,
+          "amount_raw": 1907822529,
+          "receiver": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL",
+          "sender": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P",
+          "receiver_associated_account": "D5RuRtb1u7FtZob8pxaFewwtsRiAKL3EMomVKcxneydU",
+          "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+        "ix_index": 21
+      },
+      {
+        "info": {
+          "amount": 12833113.871604,
+          "amount_raw": 12833113871604,
+          "receiver": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P",
+          "sender": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL",
+          "receiver_associated_account": "5QxR8aLbWkgW3PJdVMZ1KoBcPnQqNYCEHGooX9ir9vo2",
+          "token_address": "5eTuF52LmxisGfPPhZeiUkBPMdTkF3WfF1w5P5FUbonk"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+        "ix_index": 22
+      }
+    ],
+    "events": [
+      {
+        "data": {
+          "pool_id": "3gX8rH3tjZpCib9z4uxctHchbKASTneiBC7uYbbxGwyT",
+          "input_vault_before": 18718012798,
+          "output_vault_before": 139120116800143,
+          "input_amount": 1907822529,
+          "output_amount": 12833113871604,
+          "input_transfer_fee": 0,
+          "output_transfer_fee": 0,
+          "base_input": true,
+          "input_mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+          "output_mint": "5eTuF52LmxisGfPPhZeiUkBPMdTkF3WfF1w5P5FUbonk",
+          "trade_fee": 4769557,
+          "creator_fee": 953911,
+          "creator_fee_on_input": true
+        },
+        "name": "SwapEvent"
+      },
+      {
+        "data": {
+          "poolState": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+          "sender": "9RTva4wSk8E3EWYc8wtF9V94RUQGkemWtt3i8dUtsA4P",
+          "tokenAccount0": "636vaBo3KC3RrV6XCtc71i1vk4j8GYCQVhqdneZmcrhP",
+          "tokenAccount1": "8wudurczWtryvo2Cy8nsujAByFhpq5d5ynFVzLv1aax5",
+          "amount0": 15037765873,
+          "transferFee0": 0,
+          "amount1": 1907822529,
+          "transferFee1": 0,
+          "zeroForOne": true,
+          "sqrtPriceX64": 6578670022982008000,
+          "liquidity": 465769931418908,
+          "tick": -20623
+        },
+        "name": "SwapEvent"
+      }
+    ]
+  }
+}

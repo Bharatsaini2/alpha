@@ -888,7 +888,7 @@ const processSignature = async (signatureJson: any): Promise<void> => {
 
     let tokenIn: any = null
     let tokenOut: any = null
-    let swapSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' =
+    let swapSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' | 'event_override' =
       'tokens_swapped'
 
     const actionInfo = actions[0]?.info
@@ -976,26 +976,66 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       
       logger.info(`🔍 Token sent: ${tokenSentChange ? 'Found' : 'Not found'}, Token received: ${tokenReceivedChange ? 'Found' : 'Not found'}`)
 
-      if (tokenSentChange && tokenReceivedChange) {
-        tokenIn = {
-          token_address: tokenSentChange.mint,
-          amount:
-            Math.abs(tokenSentChange.change_amount) /
-            Math.pow(10, tokenSentChange.decimals),
-          symbol: tokenSentChange.symbol || 'Unknown',
-          name: tokenSentChange.name || 'Unknown',
-        }
+      // Handle both two-sided swaps and one-sided transfers
+      if (tokenSentChange || tokenReceivedChange) {
+        if (tokenSentChange && tokenReceivedChange) {
+          // Two-sided swap: token sent and token received
+          tokenIn = {
+            token_address: tokenSentChange.mint,
+            amount:
+              Math.abs(tokenSentChange.change_amount) /
+              Math.pow(10, tokenSentChange.decimals),
+            symbol: tokenSentChange.symbol || 'Unknown',
+            name: tokenSentChange.name || 'Unknown',
+          }
 
-        tokenOut = {
-          token_address: tokenReceivedChange.mint,
-          amount:
-            tokenReceivedChange.change_amount /
-            Math.pow(10, tokenReceivedChange.decimals),
-          symbol: tokenReceivedChange.symbol || 'Unknown',
-          name: tokenReceivedChange.name || 'Unknown',
+          tokenOut = {
+            token_address: tokenReceivedChange.mint,
+            amount:
+              tokenReceivedChange.change_amount /
+              Math.pow(10, tokenReceivedChange.decimals),
+            symbol: tokenReceivedChange.symbol || 'Unknown',
+            name: tokenReceivedChange.name || 'Unknown',
+          }
+          swapSource = 'token_balance'
+          logger.info(`✅ Swap data extracted from: token_balance_changes (two-sided)`)
+        } else if (tokenSentChange) {
+          // One-sided: only token sent (sell)
+          tokenIn = {
+            token_address: tokenSentChange.mint,
+            amount:
+              Math.abs(tokenSentChange.change_amount) /
+              Math.pow(10, tokenSentChange.decimals),
+            symbol: tokenSentChange.symbol || 'Unknown',
+            name: tokenSentChange.name || 'Unknown',
+          }
+          tokenOut = {
+            token_address: 'So11111111111111111111111111111111111111112',
+            amount: 0,
+            symbol: 'SOL',
+            name: 'SOL',
+          }
+          swapSource = 'token_balance'
+          logger.info(`✅ Swap data extracted from: token_balance_changes (sell only)`)
+        } else if (tokenReceivedChange) {
+          // One-sided: only token received (buy)
+          tokenIn = {
+            token_address: 'So11111111111111111111111111111111111111112',
+            amount: 0,
+            symbol: 'SOL',
+            name: 'SOL',
+          }
+          tokenOut = {
+            token_address: tokenReceivedChange.mint,
+            amount:
+              tokenReceivedChange.change_amount /
+              Math.pow(10, tokenReceivedChange.decimals),
+            symbol: tokenReceivedChange.symbol || 'Unknown',
+            name: tokenReceivedChange.name || 'Unknown',
+          }
+          swapSource = 'token_balance'
+          logger.info(`✅ Swap data extracted from: token_balance_changes (buy only)`)
         }
-        swapSource = 'token_balance'
-        logger.info(`✅ Swap data extracted from: token_balance_changes`)
       }
     } else {
       logger.info(
@@ -1028,6 +1068,49 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       }
     }
 
+    // Step 6: Event Override (Safety Net) - Per SHYFT Spec
+    // If we still don't have swap data, check for swap events as a fallback
+    if ((!tokenIn || !tokenOut) && parsedTx.result?.events) {
+      const events = parsedTx.result.events
+      const hasSwapEvent = events.some((e: any) => 
+        e.type === 'BuyEvent' || 
+        e.type === 'SellEvent' || 
+        e.type === 'SwapEvent' ||
+        e.type === 'Swap'
+      )
+      
+      if (hasSwapEvent) {
+        logger.info(`🔍 Swap event detected: Using event override as safety net`)
+        // Try to extract from first swap event
+        const swapEvent = events.find((e: any) => 
+          e.type === 'BuyEvent' || 
+          e.type === 'SellEvent' || 
+          e.type === 'SwapEvent' ||
+          e.type === 'Swap'
+        )
+        
+        if (swapEvent?.data) {
+          // Attempt to extract from event data
+          if (swapEvent.data.inputMint && swapEvent.data.outputMint) {
+            tokenIn = {
+              token_address: swapEvent.data.inputMint,
+              amount: swapEvent.data.inputAmount || 0,
+              symbol: swapEvent.data.inputSymbol || 'Unknown',
+              name: swapEvent.data.inputName || 'Unknown',
+            }
+            tokenOut = {
+              token_address: swapEvent.data.outputMint,
+              amount: swapEvent.data.outputAmount || 0,
+              symbol: swapEvent.data.outputSymbol || 'Unknown',
+              name: swapEvent.data.outputName || 'Unknown',
+            }
+            swapSource = 'event_override'
+            logger.info(`✅ Swap data extracted from: event_override (${swapEvent.type})`)
+          }
+        }
+      }
+    }
+
     if (!tokenIn || !tokenOut) {
       logger.info(
         `Whale [Filter] Skipping ${signature}: Unable to extract swap data from any source.`,
@@ -1055,12 +1138,12 @@ const processSignature = async (signatureJson: any): Promise<void> => {
         ? { symbol: outSymbol, name: outSymbol }
         : outSymbol
 
-    // Update token symbols if resolved
-    if (tokenIn.symbol === 'Unknown') {
+    // Update token symbols if resolved (handle Unknown, Token, null, undefined, empty)
+    if (!tokenIn.symbol || tokenIn.symbol === 'Unknown' || tokenIn.symbol === 'Token') {
       tokenIn.symbol = inSymbolData.symbol
       tokenIn.name = inSymbolData.name
     }
-    if (tokenOut.symbol === 'Unknown') {
+    if (!tokenOut.symbol || tokenOut.symbol === 'Unknown' || tokenOut.symbol === 'Token') {
       tokenOut.symbol = outSymbolData.symbol
       tokenOut.name = outSymbolData.name
     }

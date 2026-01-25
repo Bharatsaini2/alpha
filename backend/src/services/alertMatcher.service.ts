@@ -2,6 +2,7 @@ import { AlertType, Priority, AlertConfig, ClusterResult } from '../types/alert.
 import { UserAlert } from '../models/userAlert.model'
 import { User } from '../models/user.model'
 import { IWhaleAllTransactionsV2 } from '../models/whaleAllTransactionsV2.model'
+import { IInfluencerWhaleTransactionsV2 } from '../models/influencerWhaleTransactionsV2.model'
 import whaleAllTransactionModelV2 from '../models/whaleAllTransactionsV2.model'
 import InfluencerWhalesAddressModelV2 from '../models/Influencer-wallet-whalesV2'
 import { telegramService } from './telegram.service'
@@ -10,6 +11,7 @@ import {
   formatWhaleAlert,
   formatClusterAlert,
   formatKOLAlert,
+  formatKOLProfileAlert,
 } from '../utils/telegram.utils'
 
 /**
@@ -224,13 +226,18 @@ export class AlertMatcherService {
       return
     }
 
-    // Skip if this is not a whale transaction (e.g., KOL/influencer transaction)
-    if (!tx.whale || !tx.whale.address) {
+    // Check if this is a whale transaction OR a KOL/influencer transaction
+    // Whale transactions have: tx.whale.address
+    // KOL transactions have: tx.whaleAddress (without nested whale object)
+    const whaleAddress = tx.whale?.address || tx.whaleAddress
+    const isKOLTransaction = !tx.whale && tx.whaleAddress
+    
+    if (!whaleAddress) {
       logger.debug({
         component: 'AlertMatcherService',
         operation: 'processTransaction',
         txHash: tx.signature,
-        message: 'Skipping non-whale transaction (no whale object)',
+        message: 'Skipping transaction - no whale or KOL address found',
       })
       return
     }
@@ -244,15 +251,23 @@ export class AlertMatcherService {
         operation: 'processTransaction',
         correlationId,
         txHash: tx.signature,
-        walletAddress: tx.whale?.address || tx.whaleAddress || 'unknown',
+        walletAddress: whaleAddress,
+        isKOLTransaction,
         message: 'Starting transaction matching',
       })
 
       // Match against each alert type
       const matchResults = await Promise.all([
-        this.matchAlphaStream(tx, correlationId),
-        this.matchWhaleCluster(tx, correlationId),
+        // Only match ALPHA_STREAM for non-KOL whale transactions
+        !isKOLTransaction ? this.matchAlphaStream(tx, correlationId) : Promise.resolve(0),
+        // Only match WHALE_CLUSTER for non-KOL whale transactions
+        !isKOLTransaction ? this.matchWhaleCluster(tx, correlationId) : Promise.resolve(0),
+        // Match KOL_ACTIVITY for all transactions (checks if wallet is KOL inside)
         this.matchKOLActivity(tx, correlationId),
+        // Match KOL Profile alerts (only for influencer transactions)
+        (tx as any).kolAddress || (tx as any).influencerUsername 
+          ? this.matchKOLProfile(tx as any, correlationId)
+          : Promise.resolve(0),
       ])
 
       // Calculate latency
@@ -533,7 +548,12 @@ export class AlertMatcherService {
 
     for (const sub of subscriptions) {
       try {
-        // ONLY send alerts for BUY transactions (skip SELL-only)
+        // Send alerts for BUY, BOTH, and SWAP transactions (skip SELL-only)
+        // Transaction types: 'buy', 'sell', 'both', 'swap'
+        // - 'buy': Pure buy transaction ✅
+        // - 'sell': Pure sell transaction ❌
+        // - 'both': Swap with buy+sell components ✅
+        // - 'swap': Token swap transaction ✅
         if (tx.type === 'sell') {
           logger.debug({
             component: 'AlertMatcherService',
@@ -612,6 +632,142 @@ export class AlertMatcherService {
         logger.error({
           component: 'AlertMatcherService',
           operation: 'matchKOLActivity',
+          correlationId,
+          userId: sub.userId,
+          txHash: tx.signature,
+          error: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        })
+      }
+    }
+
+    return matchCount
+  }
+
+  /**
+   * Match transaction against KOL_PROFILE subscriptions
+   * Alerts for specific KOL profiles that users have subscribed to
+   * @returns Number of matches
+   */
+  private async matchKOLProfile(tx: IInfluencerWhaleTransactionsV2, correlationId: string): Promise<number> {
+    const subscriptions = this.subscriptionMap.get(AlertType.KOL_PROFILE) || []
+    let matchCount = 0
+
+    for (const sub of subscriptions) {
+      try {
+        // Send alerts for BUY, BOTH, and SWAP transactions (skip SELL-only)
+        // Transaction types: 'buy', 'sell', 'both', 'swap'
+        // - 'buy': Pure buy transaction ✅
+        // - 'sell': Pure sell transaction ❌
+        // - 'both': Swap with buy+sell components ✅
+        // - 'swap': Token swap transaction ✅
+        if (tx.type === 'sell') {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLProfile',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_PROFILE,
+            txHash: tx.signature,
+            txType: tx.type,
+            matchResult: false,
+            message: 'Transaction is SELL-only - skipping alert',
+          })
+          continue
+        }
+
+        // Check if transaction is from the target KOL
+        const kolAddress = tx.whaleAddress
+        const targetKolAddress = sub.config.targetKolAddress
+
+        if (!kolAddress || !targetKolAddress || kolAddress.toLowerCase() !== targetKolAddress.toLowerCase()) {
+          continue
+        }
+
+        // Check hotness score threshold
+        if (sub.config.minHotnessScore && tx.hotnessScore < sub.config.minHotnessScore) {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLProfile',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_PROFILE,
+            txHash: tx.signature,
+            hotnessScore: tx.hotnessScore,
+            threshold: sub.config.minHotnessScore,
+            matchResult: false,
+            message: 'Hotness score below threshold',
+          })
+          continue
+        }
+
+        // Check minimum amount
+        if (sub.config.minAmount) {
+          const usdAmount = parseFloat(tx.transaction.tokenOut.usdAmount || '0')
+          if (usdAmount < sub.config.minAmount) {
+            logger.debug({
+              component: 'AlertMatcherService',
+              operation: 'matchKOLProfile',
+              correlationId,
+              userId: sub.userId,
+              alertType: AlertType.KOL_PROFILE,
+              txHash: tx.signature,
+              amount: usdAmount,
+              threshold: sub.config.minAmount,
+              matchResult: false,
+              message: 'Amount below threshold',
+            })
+            continue
+          }
+        }
+
+        // Resolve token symbol (inline for IInfluencerWhaleTransactionsV2)
+        const isBuy = tx.type === 'buy'
+        const token = isBuy ? tx.transaction.tokenOut : tx.transaction.tokenIn
+        const tokenSymbol = token.symbol || 'Unknown'
+
+        // Get KOL info
+        const kolName = tx.influencerName || sub.config.targetKolUsername || 'Unknown KOL'
+        const kolUsername = tx.influencerUsername || sub.config.targetKolUsername
+
+        // Format message using KOL Profile alert format
+        const message = formatKOLProfileAlert(kolName, tx, tokenSymbol, kolUsername)
+
+        // Queue alert
+        const queued = await telegramService.queueAlert(
+          sub.userId,
+          AlertType.KOL_PROFILE,
+          tx.signature,
+          message,
+          sub.priority,
+        )
+
+        if (queued) {
+          matchCount++
+          this.metrics.totalMatches++
+          const typeCount = this.metrics.matchesByType.get(AlertType.KOL_PROFILE) || 0
+          this.metrics.matchesByType.set(AlertType.KOL_PROFILE, typeCount + 1)
+
+          logger.info({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLProfile',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_PROFILE,
+            txHash: tx.signature,
+            matchResult: true,
+            kol: kolUsername,
+            hotnessScore: tx.hotnessScore,
+            amount: tx.transaction.tokenOut.usdAmount,
+            message: 'KOL_PROFILE alert matched and queued',
+          })
+        }
+      } catch (error) {
+        logger.error({
+          component: 'AlertMatcherService',
+          operation: 'matchKOLProfile',
           correlationId,
           userId: sub.userId,
           txHash: tx.signature,

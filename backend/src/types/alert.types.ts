@@ -5,6 +5,7 @@ export enum AlertType {
   ALPHA_STREAM = 'ALPHA_STREAM',
   WHALE_CLUSTER = 'WHALE_CLUSTER',
   KOL_ACTIVITY = 'KOL_ACTIVITY',
+  KOL_PROFILE = 'KOL_PROFILE',  // NEW: Alerts for specific KOL
 }
 
 /**
@@ -29,6 +30,10 @@ export interface AlertConfig {
   hotnessScoreThreshold?: number
   walletLabels?: string[]
   minBuyAmountUSD?: number
+  // KOL Profile alert specific config
+  targetKolUsername?: string
+  targetKolAddress?: string
+  minHotnessScore?: number
 }
 
 /**

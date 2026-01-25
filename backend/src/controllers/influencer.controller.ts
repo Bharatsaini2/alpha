@@ -1317,12 +1317,12 @@ const processInfluencerSignature = async (
         ? { symbol: outSymbol, name: outSymbol }
         : outSymbol
 
-    // Update token symbols if resolved
-    if (tokenIn.symbol === 'Unknown') {
+    // Update token symbols if resolved (handle Unknown, Token, null, undefined, empty)
+    if (!tokenIn.symbol || tokenIn.symbol === 'Unknown' || tokenIn.symbol === 'Token') {
       tokenIn.symbol = inSymbolData.symbol
       tokenIn.name = inSymbolData.name
     }
-    if (tokenOut.symbol === 'Unknown') {
+    if (!tokenOut.symbol || tokenOut.symbol === 'Unknown' || tokenOut.symbol === 'Token') {
       tokenOut.symbol = outSymbolData.symbol
       tokenOut.name = outSymbolData.name
     }
