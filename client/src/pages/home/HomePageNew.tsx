@@ -5,12 +5,13 @@ import { useNavigate } from "react-router-dom"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch, faCheck } from "@fortawesome/free-solid-svg-icons"
+import { faArrowRight, faArrowTrendDown, faClose, faFilter, faPaperPlane, faSearch, faCheck, faClock, faTrash } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import { useToast } from "../../contexts/ToastContext"
 import DefaultTokenImage from "../../assets/default_token.svg"
+import { useSearchHistory } from "../../hooks/useSearchHistory"
 import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
@@ -361,6 +362,36 @@ const HomePageNew = () => {
                 const amount = parseFloat(filters.amount.replace(/[>$,\s]/g, ""))
                 const transactionAmount = getTransactionAmount(transaction)
                 if (transactionAmount < amount) return false
+            }
+
+            if (filters.ageMin || filters.ageMax) {
+                const txTimestamp = new Date(transaction.timestamp).getTime()
+                const now = Date.now()
+                const ageInMinutes = (now - txTimestamp) / (1000 * 60)
+
+                if (filters.ageMin) {
+                    const minAge = parseFloat(filters.ageMin)
+                    if (ageInMinutes < minAge) return false
+                }
+
+                if (filters.ageMax) {
+                    const maxAge = parseFloat(filters.ageMax)
+                    if (ageInMinutes > maxAge) return false
+                }
+            }
+
+            if (filters.marketCapMin || filters.marketCapMax) {
+                const mcap = getMarketCap(transaction)
+                
+                if (filters.marketCapMin) {
+                    const minMcap = parseFloat(filters.marketCapMin) * 1000 // Convert K to actual value
+                    if (mcap < minMcap) return false
+                }
+
+                if (filters.marketCapMax) {
+                    const maxMcap = parseFloat(filters.marketCapMax) * 1000 // Convert K to actual value
+                    if (mcap > maxMcap) return false
+                }
             }
 
             return true
@@ -718,11 +749,54 @@ const HomePageNew = () => {
     const [filteredOptions, setFilteredOptions] = useState<any[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
+    // Search History Hook
+    const { history, saveSearch, clearHistory, deleteHistoryItem } = useSearchHistory({ page: "home" });
+
+    // Map history to options format
+    const historyOptions = React.useMemo(() => {
+        return history.map(item => {
+            if (item.tokens && item.tokens.length > 0) {
+                const token = item.tokens[0];
+                return {
+                    id: token.address || item._id,
+                    titles: token.symbol || item.query,
+                    descriptions: token.name || "Token",
+                    images: token.imageUrl || DefaultTokenImage,
+                    isHistory: true,
+                    historyId: item._id,
+                    query: item.query
+                };
+            }
+            return {
+                id: item._id,
+                titles: item.query,
+                descriptions: "Recent Search",
+                images: null, // Will handle in render
+                isHistory: true,
+                historyId: item._id,
+                query: item.query
+            };
+        });
+    }, [history]);
+
+    // Update filtered options when history changes and input is empty
+    useEffect(() => {
+        if (searchQuery.trim() === "") {
+            setFilteredOptions(historyOptions);
+            if (showDropdown && historyOptions.length === 0) {
+                setShowDropdown(false);
+            }
+        }
+    }, [historyOptions, searchQuery, showDropdown]);
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
 
         // If there's a search query, apply it as a filter
         if (searchQuery.trim()) {
+            // Save to history
+            saveSearch(searchQuery.trim(), 'all');
+
             // Update active filters with the search query
             setActiveFilters({
                 ...activeFilters,
@@ -743,14 +817,15 @@ const HomePageNew = () => {
         setSearchQuery(value);
 
         if (value.trim() === "") {
-            setFilteredOptions([]);
-            setShowDropdown(false);
+            setFilteredOptions(historyOptions);
+            setShowDropdown(historyOptions.length > 0);
             return;
         }
 
         const filtered = uniqueTokenOptions.filter((option) =>
             option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
-            option.id?.toLowerCase()?.includes(value?.toLowerCase())
+            option.id?.toLowerCase()?.includes(value?.toLowerCase()) ||
+            option.descriptions?.toLowerCase()?.includes(value?.toLowerCase())
         ).slice(0, 10); // Limit to 10 results
 
         setFilteredOptions(filtered);
@@ -758,6 +833,19 @@ const HomePageNew = () => {
     };
 
     const handleSelect = (option: any) => {
+        // Save to history if it's not already a history item
+        if (!option.isHistory) {
+             saveSearch(option.titles, 'coin', [{
+                 value: option.id,
+                 type: 'coin',
+                 label: option.titles,
+                 symbol: option.titles,
+                 name: option.descriptions,
+                 address: option.id,
+                 imageUrl: option.images
+             }]);
+        }
+
         // Apply the selected option as a search filter
         setActiveFilters({
             ...activeFilters,
@@ -906,11 +994,11 @@ const HomePageNew = () => {
                 <div className="row">
                     {/* Right Sidebar - Shows first on mobile, second on desktop */}
                     <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
-                        <RightSidebarNew
-                            pageType="alpha"
-                            transactions={transactions}
-
-                        />
+                        <div className="custom-scrollbar" style={{ maxHeight: 'calc(100vh - 60px)', overflowY: 'auto' }}>
+                            <RightSidebarNew
+                                pageType="alpha"
+                            />
+                        </div>
                     </div>
 
                     {/* Transactions Feed Column - Shows second on mobile, first on desktop */}
@@ -951,7 +1039,14 @@ const HomePageNew = () => {
                                         placeholder="Search by token name or address..."
                                         value={searchQuery}
                                         onChange={handleChange}
-                                        onFocus={() => setShowDropdown(filteredOptions.length > 0)}
+                                        onFocus={() => {
+                                            if (searchQuery.trim() === "") {
+                                                setFilteredOptions(historyOptions);
+                                                setShowDropdown(historyOptions.length > 0);
+                                            } else {
+                                                setShowDropdown(filteredOptions.length > 0);
+                                            }
+                                        }}
                                     />
 
                                     <div className="searching-bx">
@@ -972,9 +1067,28 @@ const HomePageNew = () => {
 
                                 {showDropdown && (
                                     <div className="dropdown-options">
-                                        <div className="dropdown-header text-end all-data-clear">
-                                            <button className="quick-nw-btn">Clear All</button>
-                                        </div>
+                                        {/* Only show Clear All if viewing history (empty query) */}
+                                        {searchQuery.trim() === "" && filteredOptions.length > 0 && filteredOptions[0].isHistory ? (
+                                            <div className="dropdown-header text-end all-data-clear">
+                                                <button 
+                                                    className="quick-nw-btn"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        clearHistory();
+                                                    }}
+                                                >
+                                                    Clear All
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            filteredOptions.some(item => !item.isHistory) && (
+                                                <div className="dropdown-header text-end all-data-clear">
+                                                    <button className="quick-nw-btn">Clear All</button>
+                                                </div>
+                                            )
+                                        )}
+                                        
                                         <ul className="dropdown-scroll">
                                             {filteredOptions.map((item, index) => (
                                                 <li
@@ -982,28 +1096,51 @@ const HomePageNew = () => {
                                                     className="dropdown-item d-flex align-items-start"
                                                     onClick={() => handleSelect(item)}
                                                 >
-                                                    <img src={item?.images} alt="" className="dropdown-img" />
+                                                    {item.images ? (
+                                                        <img src={item.images} alt="" className="dropdown-img" />
+                                                    ) : (
+                                                        <div className="dropdown-img d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px', background: '#1a1a1a', borderRadius: '50%', color: '#888'}}>
+                                                            <FontAwesomeIcon icon={faClock} />
+                                                        </div>
+                                                    )}
 
                                                     <div className="dropdown-content flex-grow-1">
                                                         <h6 className="dropdown-title">{item?.titles}</h6>
                                                         <p className="dropdown-desc">{item?.descriptions}</p>
-                                                        <span className="dropdown-id">
-                                                            <span className="cpy-title">CA:</span>{item?.id}
-                                                            <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
-                                                                <FontAwesomeIcon icon={faCopy} />
-                                                            </a>
-                                                        </span>
+                                                        {item?.id && !item.isHistory && (
+                                                            <span className="dropdown-id">
+                                                                <span className="cpy-title">CA:</span>{item?.id}
+                                                                <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
+                                                                    <FontAwesomeIcon icon={faCopy} />
+                                                                </a>
+                                                            </span>
+                                                        )}
                                                     </div>
 
-                                                    <button
-                                                        className="dropdown-close"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setShowDropdown(false);
-                                                        }}
-                                                    >
-                                                        ×
-                                                    </button>
+                                                    {item.isHistory ? (
+                                                        <button
+                                                            className="dropdown-close"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (item.historyId) {
+                                                                    deleteHistoryItem(item.historyId);
+                                                                }
+                                                            }}
+                                                            title="Remove from history"
+                                                        >
+                                                            <FontAwesomeIcon icon={faTrash} style={{fontSize: '12px'}} />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="dropdown-close"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setShowDropdown(false);
+                                                            }}
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    )}
                                                 </li>
                                             ))}
                                         </ul>
@@ -1445,30 +1582,54 @@ const HomePageNew = () => {
                                                         <div className="col-lg-6">
                                                             <div className="custom-frm-bx ">
                                                                 <label htmlFor="">Age (minutes)</label>
-                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                                                <input
+                                                                    type="number"
+                                                                    className="form-control text-end"
+                                                                    placeholder="min"
+                                                                    value={activeFilters.ageMin || ""}
+                                                                    onChange={(e) => setActiveFilters((prev: any) => ({ ...prev, ageMin: e.target.value }))}
+                                                                />
                                                             </div>
                                                         </div>
 
                                                         <div className="col-lg-6">
 
                                                             <div className="custom-frm-bx">
-                                                                <label htmlFor=""></label>
-                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                                                <label htmlFor="">&nbsp;</label>
+                                                                <input
+                                                                    type="number"
+                                                                    className="form-control text-end"
+                                                                    placeholder="max"
+                                                                    value={activeFilters.ageMax || ""}
+                                                                    onChange={(e) => setActiveFilters((prev: any) => ({ ...prev, ageMax: e.target.value }))}
+                                                                />
                                                             </div>
                                                         </div>
 
                                                         <div className="col-lg-6">
                                                             <div className="custom-frm-bx mb-0">
                                                                 <label htmlFor="">Market Cap (K)</label>
-                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                                                <input
+                                                                    type="number"
+                                                                    className="form-control text-end"
+                                                                    placeholder="min"
+                                                                    value={activeFilters.marketCapMin || ""}
+                                                                    onChange={(e) => setActiveFilters((prev: any) => ({ ...prev, marketCapMin: e.target.value }))}
+                                                                />
                                                             </div>
                                                         </div>
 
                                                         <div className="col-lg-6">
 
                                                             <div className="custom-frm-bx mb-0">
-                                                                <label htmlFor=""></label>
-                                                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                                                <label htmlFor="">&nbsp;</label>
+                                                                <input
+                                                                    type="number"
+                                                                    className="form-control text-end"
+                                                                    placeholder="max"
+                                                                    value={activeFilters.marketCapMax || ""}
+                                                                    onChange={(e) => setActiveFilters((prev: any) => ({ ...prev, marketCapMax: e.target.value }))}
+                                                                />
                                                             </div>
                                                         </div>
 
@@ -1485,7 +1646,7 @@ const HomePageNew = () => {
                             </div>
 
                             {/* Active Filter Indicators - Only show when filters are active */}
-                            {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery) && (
+                            {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery || activeFilters.ageMin || activeFilters.ageMax || activeFilters.marketCapMin || activeFilters.marketCapMax) && (
                                 <div className="category-remove-filting">
                                     <ul>
                                         {/* Search Filter Indicator */}
@@ -1575,6 +1736,50 @@ const HomePageNew = () => {
                                                 </div>
                                             </li>
                                         ))}
+
+                                        {/* Age Filter Indicator */}
+                                        {(activeFilters.ageMin || activeFilters.ageMax) && (
+                                            <li>
+                                                <div className="category-filtering-add">
+                                                    <div className="category-filter-items">
+                                                        <h6>
+                                                            Age: <span>{activeFilters.ageMin || '0'} - {activeFilters.ageMax || '∞'} min</span>
+                                                        </h6>
+                                                        <span>
+                                                            <a
+                                                                href="javascript:void(0)"
+                                                                className="filter-remv-btn"
+                                                                onClick={() => setActiveFilters((prev: any) => ({ ...prev, ageMin: null, ageMax: null }))}
+                                                            >
+                                                                <FontAwesomeIcon icon={faClose} />
+                                                            </a>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        )}
+
+                                        {/* Market Cap Filter Indicator */}
+                                        {(activeFilters.marketCapMin || activeFilters.marketCapMax) && (
+                                            <li>
+                                                <div className="category-filtering-add">
+                                                    <div className="category-filter-items">
+                                                        <h6>
+                                                            MCap: <span>{activeFilters.marketCapMin || '0'}K - {activeFilters.marketCapMax || '∞'}K</span>
+                                                        </h6>
+                                                        <span>
+                                                            <a
+                                                                href="javascript:void(0)"
+                                                                className="filter-remv-btn"
+                                                                onClick={() => setActiveFilters((prev: any) => ({ ...prev, marketCapMin: null, marketCapMax: null }))}
+                                                            >
+                                                                <FontAwesomeIcon icon={faClose} />
+                                                            </a>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        )}
                                     </ul>
                                 </div>
                             )}
@@ -1596,15 +1801,15 @@ const HomePageNew = () => {
                                 ) : (
                                     transactions.map((tx: any, index: number) => (
                                         <div
-                                            key={`${tx.id}-${index}`}
+                                            key={tx._id}
                                             ref={index === transactions.length - 1 ? lastTransactionRef : null}
-                                            className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx.id) ? 'animate-slide-up' : ''}`}
+                                            className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? 'animate-slide-up' : ''}`}
                                             onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
                                             style={{ cursor: 'pointer' }}
                                             onAnimationEnd={() =>
                                                 setNewTxIds((prev) => {
                                                     const updated = new Set(prev)
-                                                    updated.delete(tx.id)
+                                                    updated.delete(tx._id)
                                                     return updated
                                                 })
                                             }

@@ -206,13 +206,13 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   const fetchSolBalance = useCallback(async () => {
     try {
       // Fetch SOL balance (no tokenMint parameter = SOL balance)
-      const balance = await getBalance()
+      const balance = await getBalance(undefined, wallet.address || undefined)
       setSolBalance(balance)
     } catch (error) {
       console.error("Failed to fetch SOL balance:", error)
       setSolBalance(0)
     }
-  }, [getBalance])
+  }, [getBalance, wallet.address])
 
   // Fetch balance when wallet connects
   useEffect(() => {
@@ -226,14 +226,15 @@ export const SwapModal: React.FC<SwapModalProps> = ({
       const balance = await getBalance(
         inputToken.address === "So11111111111111111111111111111111111111112"
           ? undefined
-          : inputToken.address
+          : inputToken.address,
+        wallet.address || undefined
       )
       setInputBalance(balance)
     } catch (error) {
       console.error("Failed to fetch balance:", error)
       setInputBalance(0)
     }
-  }, [getBalance, inputToken.address])
+  }, [getBalance, inputToken.address, wallet.address])
 
   // Helper function to reset all form fields (Requirement 17.3)
   const resetFormFields = useCallback(() => {

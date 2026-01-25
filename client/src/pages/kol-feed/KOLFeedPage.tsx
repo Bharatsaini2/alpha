@@ -7,6 +7,7 @@ import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
 import { faArrowRight, faArrowTrendDown, faClose, faFilter, faSearch } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
+import { FaXTwitter } from "react-icons/fa6"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import { useToast } from "../../contexts/ToastContext"
@@ -468,7 +469,7 @@ const KOLFeedPage = () => {
             })
             setNewTxIds((prev) => {
               const updated = new Set(prev)
-              expandedTransactions.forEach((tx: any) => updated.add(tx.id))
+              expandedTransactions.forEach((tx: any) => updated.add(tx._id))
               return updated
             })
           } else {
@@ -717,7 +718,8 @@ const KOLFeedPage = () => {
 
     const filtered = uniqueTokenOptions.filter((option) =>
       option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
-      option.id?.toLowerCase()?.includes(value?.toLowerCase())
+      option.id?.toLowerCase()?.includes(value?.toLowerCase()) ||
+      option.descriptions?.toLowerCase()?.includes(value?.toLowerCase())
     ).slice(0, 10); // Limit to 10 results
 
     setFilteredOptions(filtered);
@@ -820,9 +822,11 @@ const KOLFeedPage = () => {
         <div className="row">
           {/* Right Sidebar - Shows first on mobile, second on desktop */}
           <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
-            <RightSidebarNew
-              pageType="kol"
-            />
+            <div className="custom-scrollbar" style={{ maxHeight: 'calc(100vh - 60px)', overflowY: 'auto' }}>
+              <RightSidebarNew
+                pageType="kol"
+              />
+            </div>
           </div>
 
           {/* Transactions Feed Column - Shows second on mobile, first on desktop */}
@@ -1237,15 +1241,15 @@ const KOLFeedPage = () => {
                 ) : (
                   transactions.map((tx: any, index: number) => (
                     <div
-                      key={`${tx.id}-${index}`}
+                      key={tx._id}
                       ref={index === transactions.length - 1 ? lastTransactionRef : null}
-                      className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx.id) ? 'animate-slide-up' : ''}`}
+                      className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? 'animate-slide-up' : ''}`}
                       onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
                       style={{ cursor: 'pointer' }}
                       onAnimationEnd={() =>
                         setNewTxIds((prev) => {
                           const updated = new Set(prev)
-                          updated.delete(tx.id)
+                          updated.delete(tx._id)
                           return updated
                         })
                       }
@@ -1336,11 +1340,20 @@ const KOLFeedPage = () => {
                                 href={`https://x.com/${tx.influencerUsername?.replace(/^@/, '')}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="d-block"
-                                style={{ fontSize: '12px', color: '#888', textDecoration: 'none' }}
+                                className="d-flex align-items-center gap-2 mt-1"
+                                style={{ 
+                                  backgroundColor: '#2A2A2D',
+                                  padding: '4px 8px',
+                                  width: 'fit-content',
+                                  textDecoration: 'none',
+                                  borderRadius: '0px'
+                                }}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                @{tx.influencerUsername?.replace(/^@/, '')}
+                                <FaXTwitter style={{ fontSize: '11px', color: '#9CA3AF' }} />
+                                <span style={{ fontSize: '12px', color: '#9CA3AF', textTransform: 'uppercase' }}>
+                                  @{tx.influencerUsername?.replace(/^@/, '')}
+                                </span>
                               </a>
                             </div>
                             <div className="tags">

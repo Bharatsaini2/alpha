@@ -1710,41 +1710,6 @@ const RightSidebarNew = ({
         </div>
       </div>
 
-      {/* data-bs-toggle="modal" data-bs-target="#swapModal" */}
-      <div
-        className="modal fade"
-        id="swapModal"
-        tabIndex={-1}
-        aria-labelledby="exampleModalLabel"
-        aria-hidden="true"
-      >
-        <div className="modal-dialog modal-dialog-centered modal-sm">
-          <div className="modal-content nw-sign-frm p-0">
-            <div className="modal-body">
-              <div className="row">
-                <div className="col-lg-12">
-                  <div className="swap-transition-bx">
-                    {/* <span className="swap-check"><MdOutlineCheckBox /></span> */}
-                    <div>
-                      <h5>Transaction confirmed</h5>
-                      <p>swapped 20 sol for 5,809 trump</p>
-                      <div className="d-flex align-items-center gap-2">
-                        <a href="javscript:void(0)" className="plan-btn">
-                          view tx
-                        </a>
-                        <a href="javscript:void(0)" className="plan-btn">
-                          close
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* SwapModal for Quick Buy */}
       <SwapModal
         isOpen={isSwapModalOpen}
