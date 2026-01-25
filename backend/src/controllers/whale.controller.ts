@@ -2534,7 +2534,9 @@ export const getAllWhaleTransactions = async (
       }
     }
 
-    // Age filter (in minutes) - filter by token creation age
+    // Age filter (in minutes) - filter by transaction time (recency)
+    // NOTE: Changed from 'age' (token creation) to 'timestamp' (transaction time) 
+    // because token creation age data is often missing (null), and UI implies "Transaction Age"
     if (filters.ageMin || filters.ageMax) {
       const ageQuery: any = {}
       const now = new Date()
@@ -2543,7 +2545,7 @@ export const getAllWhaleTransactions = async (
         const minAgeMs = parseInt(filters.ageMin) * 60 * 1000 // Convert minutes to milliseconds
         ageQuery.$lte = new Date(now.getTime() - minAgeMs)
         logger.info(
-          `🕐 Age Min: ${filters.ageMin}m = ${minAgeMs}ms = ${new Date(now.getTime() - minAgeMs)}`,
+          `🕐 Age Min (Tx Time): ${filters.ageMin}m = ${minAgeMs}ms = ${new Date(now.getTime() - minAgeMs)}`,
         )
       }
 
@@ -2551,12 +2553,12 @@ export const getAllWhaleTransactions = async (
         const maxAgeMs = parseInt(filters.ageMax) * 60 * 1000 // Convert minutes to milliseconds
         ageQuery.$gte = new Date(now.getTime() - maxAgeMs)
         logger.info(
-          `🕐 Age Max: ${filters.ageMax}m = ${maxAgeMs}ms = ${new Date(now.getTime() - maxAgeMs)}`,
+          `🕐 Age Max (Tx Time): ${filters.ageMax}m = ${maxAgeMs}ms = ${new Date(now.getTime() - maxAgeMs)}`,
         )
       }
 
-      filterQuery.age = ageQuery
-      logger.info(`🕐 Age Filter Query:`, ageQuery)
+      filterQuery.timestamp = ageQuery
+      logger.info(`🕐 Age (Timestamp) Filter Query:`, ageQuery)
     }
 
     // Market Cap filter (in K - thousands)

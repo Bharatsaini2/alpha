@@ -33,13 +33,6 @@ const TokenItem = memo<{
     return `$${price.toFixed(2)}`
   }
 
-  const formatMcap = (mcap: number): string => {
-    if (mcap >= 1e9) return `$${(mcap / 1e9).toFixed(2)}B`
-    if (mcap >= 1e6) return `$${(mcap / 1e6).toFixed(2)}M`
-    if (mcap >= 1e3) return `$${(mcap / 1e3).toFixed(2)}K`
-    return `$${mcap.toFixed(0)}`
-  }
-
   const truncateAddress = (addr: string) => {
     if (!addr) return "..."
     return `${addr.slice(0, 4)}...${addr.slice(-4)}`
@@ -51,6 +44,14 @@ const TokenItem = memo<{
   }
 
   const totalValue = (balance || 0) * (token.usdPrice || 0)
+
+  const formatBalance = (bal: number) => {
+    if (bal === 0) return "0"
+    if (bal < 0.000001) return "< 0.000001"
+    if (bal < 0.1) return bal.toFixed(6)
+    if (bal < 100) return bal.toFixed(4)
+    return bal.toLocaleString(undefined, { maximumFractionDigits: 2 })
+  }
 
   return (
     <button
@@ -99,15 +100,14 @@ const TokenItem = memo<{
           </div>
         </div>
 
-        {/* Row 4: Price + MC */}
-        <div className="flex items-center gap-2 text-[10px] font-mono leading-none">
-          <span className="text-gray-300 font-medium">
-            {token.usdPrice ? formatPrice(token.usdPrice) : '-'}
-          </span>
-          <span className="text-gray-500">
-            MC: {token.mcap ? formatMcap(token.mcap) : '-'}
-          </span>
-        </div>
+        {/* Row 4: Price */}
+        {token.usdPrice && (
+          <div className="flex items-center gap-2 text-[10px] font-mono leading-none">
+            <span className="text-gray-300 font-medium">
+              {formatPrice(token.usdPrice)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Balance - Top Aligned */}
@@ -117,18 +117,11 @@ const TokenItem = memo<{
             <div className="w-12 h-4 bg-gray-800 rounded animate-pulse" />
           ) : hasBalance ? (
             <>
-              <div className="text-lg font-bold text-white leading-none mb-1">
-                {Math.floor(balance!).toLocaleString()}
+              <div className="text-sm font-bold text-white leading-none mb-1">
+                {formatBalance(balance!)}
               </div>
-              {totalValue > 0 && (
-                <div className="text-[11px] text-gray-500 font-mono">
-                  ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              )}
             </>
-          ) : (
-            <div className="text-lg font-bold text-gray-700">0</div>
-          )}
+          ) : null}
         </div>
       )}
     </button>
@@ -222,7 +215,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
         // 1. Fetch Native SOL Balance
         try {
-          const solBalance = await getBalance()
+          const solBalance = await getBalance(undefined, userWallet)
           // Native SOL address
           balances["So11111111111111111111111111111111111111112"] = solBalance
         } catch (err) {
@@ -231,7 +224,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
         // 2. Fetch SPL Token Balances
         try {
-          const tokenBalances = await getAllTokenBalances()
+          const tokenBalances = await getAllTokenBalances(userWallet)
           tokenBalances.forEach(token => {
             // Use uiAmount for display
             balances[token.mint] = token.uiAmount
@@ -618,9 +611,9 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
                     const formatBalance = (bal: number): string => {
                       if (bal === 0) return "0"
-                      if (bal < 0.001) return "< 0.001"
-                      if (bal < 1) return bal.toFixed(6)
-                      if (bal < 1000) return bal.toFixed(3)
+                      if (bal < 0.000001) return "< 0.000001"
+                      if (bal < 0.1) return bal.toFixed(6)
+                      if (bal < 100) return bal.toFixed(4)
                       return bal.toLocaleString(undefined, { maximumFractionDigits: 2 })
                     }
 
@@ -643,9 +636,6 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                           <div className="flex-1 text-left overflow-hidden">
                             <div className="text-xs font-medium text-white truncate">{token.symbol}</div>
                             <div className="text-[10px] text-gray-400 truncate">{formatBalance(balance)}</div>
-                            <div className="text-[10px] text-gray-500 truncate">
-                              ${usdValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
                           </div>
                         </div>
                       </button>

@@ -41,9 +41,9 @@ export interface UseWalletConnection {
   connect: () => Promise<void>
   disconnect: () => Promise<void>
   sendTransaction: (transaction: Transaction | VersionedTransaction) => Promise<string>
-  getBalance: (tokenMint?: string) => Promise<number>
-  getTokenBalance: (tokenMint: string) => Promise<TokenBalance | null>
-  getAllTokenBalances: () => Promise<TokenBalance[]>
+  getBalance: (tokenMint?: string, walletAddress?: string) => Promise<number>
+  getTokenBalance: (tokenMint: string, walletAddress?: string) => Promise<TokenBalance | null>
+  getAllTokenBalances: (walletAddress?: string) => Promise<TokenBalance[]>
   isLoading: boolean
   error: WalletConnectionError | null
   clearError: () => void
@@ -226,15 +226,17 @@ export const useWalletConnection = (): UseWalletConnection => {
   /**
    * Get SOL balance or token balance for connected wallet
    */
-  const getBalance = useCallback(async (tokenMint?: string): Promise<number> => {
+  const getBalance = useCallback(async (tokenMint?: string, walletAddress?: string): Promise<number> => {
     try {
-      if (!publicKey || !isConnected) {
+      const targetPublicKey = walletAddress ? new PublicKey(walletAddress) : publicKey
+
+      if (!targetPublicKey) {
         throw new Error("Wallet not connected")
       }
 
       if (!tokenMint) {
         // Get SOL balance
-        const balance = await connection.getBalance(publicKey, 'confirmed')
+        const balance = await connection.getBalance(targetPublicKey, 'confirmed')
         return balance / LAMPORTS_PER_SOL
       } else {
         // Get token balance - inline logic to avoid circular dependency
@@ -244,7 +246,7 @@ export const useWalletConnection = (): UseWalletConnection => {
           // Get associated token account address
           const associatedTokenAddress = await getAssociatedTokenAddress(
             mintPublicKey,
-            publicKey
+            targetPublicKey
           )
 
           try {
@@ -283,14 +285,16 @@ export const useWalletConnection = (): UseWalletConnection => {
 
       return 0
     }
-  }, [publicKey, isConnected, connection])
+  }, [publicKey, connection])
 
   /**
    * Get specific token balance for connected wallet
    */
-  const getTokenBalance = useCallback(async (tokenMint: string): Promise<TokenBalance | null> => {
+  const getTokenBalance = useCallback(async (tokenMint: string, walletAddress?: string): Promise<TokenBalance | null> => {
     try {
-      if (!publicKey || !isConnected) {
+      const targetPublicKey = walletAddress ? new PublicKey(walletAddress) : publicKey
+
+      if (!targetPublicKey) {
         throw new Error("Wallet not connected")
       }
 
@@ -299,7 +303,7 @@ export const useWalletConnection = (): UseWalletConnection => {
       // Get associated token account address
       const associatedTokenAddress = await getAssociatedTokenAddress(
         mintPublicKey,
-        publicKey
+        targetPublicKey
       )
 
       try {
@@ -343,20 +347,22 @@ export const useWalletConnection = (): UseWalletConnection => {
 
       return null
     }
-  }, [publicKey, isConnected, connection])
+  }, [publicKey, connection])
 
   /**
    * Get all token balances for connected wallet
    */
-  const getAllTokenBalances = useCallback(async (): Promise<TokenBalance[]> => {
+  const getAllTokenBalances = useCallback(async (walletAddress?: string): Promise<TokenBalance[]> => {
     try {
-      if (!publicKey || !isConnected) {
+      const targetPublicKey = walletAddress ? new PublicKey(walletAddress) : publicKey
+
+      if (!targetPublicKey) {
         throw new Error("Wallet not connected")
       }
 
       // Get all token accounts for the wallet
       const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-        publicKey,
+        targetPublicKey,
         {
           programId: new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
         },
@@ -395,7 +401,7 @@ export const useWalletConnection = (): UseWalletConnection => {
 
       return []
     }
-  }, [publicKey, isConnected, connection])
+  }, [publicKey, connection])
 
   // Wallet state object
   const walletState: WalletConnectionState = {

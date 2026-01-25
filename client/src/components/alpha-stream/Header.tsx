@@ -258,30 +258,18 @@ function Header({ onOpenSidebar }: HeaderProps) {
                   className="nw-connected-btn"
                   onClick={() => setShowDropdown(!showDropdown)}
                 >
-                  {user?.avatar ? (
-                    <img
-                      src={user.avatar}
-                      alt="User"
-                      style={{
-                        width: "20px",
-                        height: "20px",
-                        borderRadius: "50%",
-                      }}
-                    />
-                  ) : (
-                    <span
-                      className="change-color"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        width: "20px",
-                        height: "20px",
-                      }}
-                    >
-                      <User size={14} />
-                    </span>
-                  )}
+                  <span
+                    className="change-color"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: "20px",
+                      height: "20px",
+                    }}
+                  >
+                    <User size={14} />
+                  </span>
                   {getDisplayName()} <HiChevronUpDown />
                 </button>
 
