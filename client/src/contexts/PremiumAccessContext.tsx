@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react';
 
 export const ALPHA_TOKEN_MINT = '3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump';
-export const PREMIUM_BALANCE_THRESHOLD = 1000;
+export const PREMIUM_BALANCE_THRESHOLD = 500000;
 
 interface PremiumAccessContextType {
     validateAccess: (onSuccess: () => void) => Promise<void>;

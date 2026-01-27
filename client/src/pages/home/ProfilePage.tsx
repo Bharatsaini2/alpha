@@ -5,6 +5,7 @@ import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 import api from "../../lib/api"
 import { useToast } from "../../contexts/ToastContext"
 import { useState } from "react"
+import { getUserAvatarUrl } from "../../utils/avatarUtils"
 
 function ProfilePage() {
   const { user, updateUser } = useAuth()
@@ -76,7 +77,7 @@ function ProfilePage() {
               <div className="alpha-profile-content nw-kol-profile">
                 <div className="alpha-profile-user-bx ">
                   <div className="alpha-user-details">
-                    <img src="/profile-usr.png" alt="" />
+                    <img src={getUserAvatarUrl(user?.avatar)} alt="User Avatar" />
                     <div>
                       <h4>
                         {user?.walletAddress
@@ -96,7 +97,7 @@ function ProfilePage() {
                         </div>
                         <div>
                           <h6>Join date</h6>
-                          <p>{formatDate(user?.lastLogin)}</p>
+                          <p>{formatDate(user?.createdAt)}</p>
                         </div>
                       </div>
 
@@ -147,10 +148,10 @@ function ProfilePage() {
 
                 <div className="alpha-profile-content nw-kol-profile">
                   <div className="share-profile shre-profile-tilte">
-                    <img src="/profile-usr.png" alt="" />
+                    <img src={getUserAvatarUrl(user?.avatar)} alt="User Avatar" />
 
                     <div>
-                      <h4>User {user.telegramChatId}</h4>
+                      <h4>@{user.telegramUsername || 'User'}</h4>
 
                       <button className="telegram-share-btn">
                         <PiTelegramLogoDuotone />

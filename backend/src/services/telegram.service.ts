@@ -625,6 +625,39 @@ export class TelegramService {
   }
 
   /**
+   * Send a system notification message to a user by chat ID
+   * Used for balance validator and other system-level notifications
+   * @param chatId - Telegram chat ID
+   * @param message - Message text
+   * @returns true if sent successfully, false otherwise
+   */
+  async sendSystemNotification(chatId: string, message: string): Promise<boolean> {
+    try {
+      await this.sendMessage(chatId, message)
+
+      logger.info({
+        component: 'TelegramService',
+        operation: 'sendSystemNotification',
+        chatId,
+        message: 'System notification sent successfully',
+      })
+
+      return true
+    } catch (error) {
+      logger.error({
+        component: 'TelegramService',
+        operation: 'sendSystemNotification',
+        chatId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+      return false
+    }
+  }
+
+  /**
    * Graceful shutdown - drain queue before exit
    */
   async shutdown(): Promise<void> {

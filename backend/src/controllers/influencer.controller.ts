@@ -32,6 +32,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { ExpressAdapter } from '@bull-board/express'
 import WebSocket from 'ws'
 import { createBullBoard } from '@bull-board/api'
+import { parseShyftTransaction, ShyftTransaction } from '../utils/shyftParser'
 
 function startOfUTCDay(date: Date): Date {
   return new Date(
@@ -703,11 +704,22 @@ const storeInfluencerTransactionInDB = async (
   isSell: boolean,
   parsedTx: any,
   txStatus: any,
+  classificationSource?: string,
+  confidence?: string,
 ): Promise<void> => {
   let clampedHotnessScore = 0
 
   if (isBuy) {
     clampedHotnessScore = Math.max(0, Math.min(details.hotnessScore ?? 0, 10))
+  }
+
+  // Log classification source and confidence
+  if (classificationSource || confidence) {
+    logger.info(
+      pc.cyan(
+        `📊 Classification: source=${classificationSource || 'unknown'}, confidence=${confidence || 'unknown'}`,
+      ),
+    )
   }
 
   let typeValue: 'buy' | 'sell' | 'both'
@@ -1303,6 +1315,41 @@ const processInfluencerSignature = async (
       ),
     )
 
+    // NEW: Use canonical SHYFT parser for validation and enhanced classification
+    let classificationSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' = swapSource as any
+    let confidence: 'MAX' | 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM'
+    
+    try {
+      const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
+      if (parsedSwap) {
+        // Map parser classification_source to controller's expected values
+        if (parsedSwap.classification_source === 'token_balance_changes') {
+          classificationSource = 'token_balance'
+        } else if (parsedSwap.classification_source === 'tokens_swapped') {
+          classificationSource = 'tokens_swapped'
+        } else if (parsedSwap.classification_source === 'events') {
+          classificationSource = 'token_transfer' // Map events to token_transfer for compatibility
+        }
+        confidence = parsedSwap.confidence
+        logger.info(
+          pc.cyan(
+            `✅ Parser validation: side=${parsedSwap.side}, source=${classificationSource}, confidence=${confidence}`,
+          ),
+        )
+      } else {
+        logger.info(
+          pc.yellow(
+            `⚠️ Parser returned null, using fallback classification`,
+          ),
+        )
+      }
+    } catch (error) {
+      logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        `Parser validation failed, using fallback classification`,
+      )
+    }
+
     const [inSymbol, outSymbol] = await Promise.all([
       resolveSymbol(tokenIn),
       resolveSymbol(tokenOut),
@@ -1584,6 +1631,8 @@ const processInfluencerSignature = async (
           isSell,
           parsedTx,
           txStatus,
+          classificationSource,
+          confidence,
         )
       }
 

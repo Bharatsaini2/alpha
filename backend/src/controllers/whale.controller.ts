@@ -44,6 +44,7 @@ import logger from '../utils/logger'
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { ExpressAdapter } from '@bull-board/express'
+import { parseShyftTransaction, ShyftTransaction } from '../utils/shyftParser'
 dotenv.config()
 
 function startOfUTCDay(date: Date): Date {
@@ -1124,6 +1125,41 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       ),
     )
 
+    // NEW: Use canonical SHYFT parser for validation and enhanced classification
+    let classificationSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' | 'event_override' = swapSource
+    let confidence: 'MAX' | 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM'
+    
+    try {
+      const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
+      if (parsedSwap) {
+        // Map parser classification_source to controller's expected values
+        if (parsedSwap.classification_source === 'token_balance_changes') {
+          classificationSource = 'token_balance'
+        } else if (parsedSwap.classification_source === 'tokens_swapped') {
+          classificationSource = 'tokens_swapped'
+        } else if (parsedSwap.classification_source === 'events') {
+          classificationSource = 'event_override'
+        }
+        confidence = parsedSwap.confidence
+        logger.info(
+          pc.cyan(
+            `✅ Parser validation: side=${parsedSwap.side}, source=${classificationSource}, confidence=${confidence}`,
+          ),
+        )
+      } else {
+        logger.info(
+          pc.yellow(
+            `⚠️ Parser returned null, using fallback classification`,
+          ),
+        )
+      }
+    } catch (error) {
+      logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        `Parser validation failed, using fallback classification`,
+      )
+    }
+
     const [inSymbol, outSymbol] = await Promise.all([
       resolveSymbol(tokenIn),
       resolveSymbol(tokenOut),
@@ -1138,12 +1174,13 @@ const processSignature = async (signatureJson: any): Promise<void> => {
         ? { symbol: outSymbol, name: outSymbol }
         : outSymbol
 
-    // Update token symbols if resolved (handle Unknown, Token, null, undefined, empty)
-    if (!tokenIn.symbol || tokenIn.symbol === 'Unknown' || tokenIn.symbol === 'Token') {
+    // Update token symbols if resolved (handle Unknown, null, undefined, empty)
+    // Note: We no longer filter out "Token" as some tokens are legitimately named "Token"
+    if (!tokenIn.symbol || tokenIn.symbol === 'Unknown' || tokenIn.symbol.trim() === '') {
       tokenIn.symbol = inSymbolData.symbol
       tokenIn.name = inSymbolData.name
     }
-    if (!tokenOut.symbol || tokenOut.symbol === 'Unknown' || tokenOut.symbol === 'Token') {
+    if (!tokenOut.symbol || tokenOut.symbol === 'Unknown' || tokenOut.symbol.trim() === '') {
       tokenOut.symbol = outSymbolData.symbol
       tokenOut.name = outSymbolData.name
     }
@@ -1373,6 +1410,8 @@ const processSignature = async (signatureJson: any): Promise<void> => {
           isSell,
           parsedTx,
           txStatus,
+          classificationSource,
+          confidence,
         )
       }
 
@@ -1483,7 +1522,9 @@ const formatNumber = (value: number): string => {
 
 // 🛠️ Helper: Get symbol safely
 const resolveSymbol = async (token: any) => {
-  if (token.symbol && token.symbol !== 'Unknown' && token.symbol !== 'Token') {
+  // If token already has a valid symbol (not Unknown, not empty), use it
+  // Note: We removed the "Token" check because some tokens are legitimately named "Token"
+  if (token.symbol && token.symbol !== 'Unknown' && token.symbol.trim() !== '') {
     return { symbol: token.symbol, name: token.name || token.symbol }
   }
 
@@ -1491,7 +1532,8 @@ const resolveSymbol = async (token: any) => {
     const metadata = await getTokenMetaDataUsingRPC(token.token_address)
     
     // If metadata is found and not 'Unknown', use it
-    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown') {
+    // Accept "Token" as a valid symbol since some tokens are actually named that
+    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown' && metadata.symbol.trim() !== '') {
       return metadata
     }
     
@@ -1755,11 +1797,22 @@ const storeTransactionInDB = async (
   isSell: boolean,
   parsedTx: any,
   txStatus: any,
+  classificationSource?: string,
+  confidence?: string,
 ): Promise<void> => {
   let clampedHotnessScore = 0
 
   if (isBuy) {
     clampedHotnessScore = Math.max(0, Math.min(details.hotnessScore ?? 0, 10))
+  }
+
+  // Log classification source and confidence
+  if (classificationSource || confidence) {
+    logger.info(
+      pc.cyan(
+        `📊 Classification: source=${classificationSource || 'unknown'}, confidence=${confidence || 'unknown'}`,
+      ),
+    )
   }
 
   let typeValue: 'buy' | 'sell' | 'both'

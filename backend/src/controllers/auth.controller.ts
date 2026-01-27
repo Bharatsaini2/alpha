@@ -10,6 +10,7 @@ import {
   verifyRefreshToken,
   verifyAccessToken,
 } from '../utils/jwt'
+import { getRandomAvatar } from '../utils/avatarUtils'
 import { sendOTP, verifyOTP } from '../services/otpService'
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import dotenv from 'dotenv'
@@ -196,6 +197,7 @@ export const verifyPhantomSignature = catchAsyncErrors(
       user = new User({
         walletAddress: walletAddress.toLowerCase(), // Lowercase for lookups
         walletAddressOriginal: walletAddress, // Original case for Solana operations
+        avatar: getRandomAvatar(), // Assign random avatar to new users
       })
       await user.save()
     } else {
@@ -203,6 +205,10 @@ export const verifyPhantomSignature = catchAsyncErrors(
       user.lastLogin = new Date()
       if (!user.walletAddressOriginal) {
         user.walletAddressOriginal = walletAddress
+      }
+      // If user doesn't have an avatar, assign one
+      if (!user.avatar) {
+        user.avatar = getRandomAvatar()
       }
       await user.save()
     }
@@ -413,6 +419,7 @@ export const getCurrentUser = catchAsyncErrors(
           walletAddress: user.walletAddress,
           displayName: user.displayName,
           avatar: user.avatar,
+          createdAt: user.createdAt,
           lastLogin: user.lastLogin,
           telegramChatId: user.telegramChatId,
         },

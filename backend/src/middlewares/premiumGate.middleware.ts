@@ -22,9 +22,9 @@ export interface PremiumAccessResult {
 export const ALPHA_TOKEN_MINT = '3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump'
 
 /**
- * Minimum ALPHA token balance required for premium access (1000 ALPHA)
+ * Minimum ALPHA token balance required for premium access (500,000 ALPHA / 5 lakh)
  */
-export const PREMIUM_BALANCE_THRESHOLD = 1000
+export const PREMIUM_BALANCE_THRESHOLD = 500000
 
 /**
  * Cache TTL for balance checks (5 minutes in seconds)

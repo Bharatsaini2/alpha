@@ -13,6 +13,8 @@ export interface User {
   emailVerified?: boolean
   walletAddress?: string
   displayName?: string
+  avatar?: string
+  createdAt?: string
   lastLogin?: string
   telegramChatId?: string
   telegramUsername?: string

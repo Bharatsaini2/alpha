@@ -11,6 +11,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext";
 import { useWalletConnection } from "../../hooks/useWalletConnection";
+import { getUserAvatarUrl } from "../../utils/avatarUtils";
 
 interface AlertConfig {
     hotnessScoreThreshold?: number;
@@ -414,9 +415,9 @@ function TelegramSubscription() {
                             {user?.telegramChatId ? (
                                 <>
                                     <div className="share-profile">
-                                        <img src="/profile-usr.png" alt="" />
+                                        <img src={getUserAvatarUrl(user?.avatar)} alt="User Avatar" />
                                         <div>
-                                            <h4>User {user.telegramChatId}</h4>
+                                            <h4>@{user.telegramUsername || 'User'}</h4>
                                             <button className="telegram-share-btn mt-2">
                                                 <PiTelegramLogoDuotone />
                                                 Connected

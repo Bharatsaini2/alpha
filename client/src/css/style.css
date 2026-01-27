@@ -1015,6 +1015,7 @@ input[type="number"] {
   color: #ebebeb;
   text-align: start;
   margin-bottom: 0;
+  margin-top: 0;
   text-wrap-mode: nowrap;
 }
 
@@ -1043,6 +1044,7 @@ input[type="number"] {
   font-size: 12px;
   text-transform: uppercase;
   color: #df2a4e;
+  margin-top: auto;
 }
 
 .sold-title {
@@ -1060,7 +1062,13 @@ input[type="number"] {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+<<<<<<< Updated upstream
   gap: 4px;
+=======
+  justify-content: flex-start;
+  height: 64px;
+  gap: 0px;
+>>>>>>> Stashed changes
 }
 
 .hotness-title {
@@ -1144,7 +1152,8 @@ input[type="number"] {
   vertical-align: middle;
   text-transform: uppercase;
   color: #ebebeb;
-  /* margin-bottom: 0; */
+  margin-bottom: 0;
+  margin-top: 0;
 }
 
 .up-trade {
@@ -1183,6 +1192,7 @@ input[type="number"] {
   text-transform: uppercase;
   color: #8f8f8f;
   margin-bottom: 0;
+  margin-top: 0;
 }
 
 .right-info .mc-title {
@@ -1192,6 +1202,7 @@ input[type="number"] {
   text-transform: uppercase;
   color: #525252;
   margin-bottom: 0;
+  margin-top: auto;
 }
 
 .right-info {
@@ -1199,7 +1210,7 @@ input[type="number"] {
   align-items: center;
   gap: 10px;
   flex: 1;
-  justify-content: end;
+  justify-content: flex-end;
 }
 
 .nw-trade-title {
@@ -1318,6 +1329,23 @@ input[type="number"] {
   /* border-radius: 50%; */
   object-fit: cover;
   border: 1px solid #3d3d3d;
+}
+
+.left-crd-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 0px;
+  height: 64px;
+  flex: 1;
+}
+
+.right-img {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 .market-bx {

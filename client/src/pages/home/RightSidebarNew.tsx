@@ -1372,7 +1372,7 @@ const RightSidebarNew = ({
             </div> */}
 
 
-            <div className="">
+            <div style={{ marginTop: '10px' }}>
               {!wallet.connected ? (
                 <button
                   onClick={handleConnectWallet}

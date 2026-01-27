@@ -97,7 +97,7 @@ const MarketOrderWidget = ({ selectedToken, quickBuyAmount }: { selectedToken?: 
       </div>
 
       {/* Connect Wallet Button */}
-      <button className="w-full bg-[#00D9AC] hover:bg-[#00C49A] text-black font-bold py-3.5 rounded-lg transition-colors uppercase tracking-wider text-sm">
+      <button className="w-full bg-[#00D9AC] hover:bg-[#00C49A] text-black font-bold py-3.5 rounded-lg transition-colors uppercase tracking-wider text-sm mt-4">
         CONNECT WALLET
       </button>
 

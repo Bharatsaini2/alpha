@@ -26,6 +26,7 @@ import alertRouter from './routes/alert.route'
 import { processManager, registerServer } from './config/processManager'
 import { telegramService } from './services/telegram.service'
 import { alertMatcherService } from './services/alertMatcher.service'
+import { balanceValidatorService } from './services/balanceValidator.service'
 import { validateAndLogEnv } from './config/envValidation'
 import './cron/topTokenWhaleMarketcapAlertJob'
 import './cron/smartMoney'
@@ -427,6 +428,15 @@ redisClient.on('ready', async () => {
         // Continue server startup even if Alert Matcher fails
       }
 
+      // Initialize Balance Validator service
+      try {
+        await balanceValidatorService.start()
+        console.log('✅ Balance Validator service started (hourly checks enabled)')
+      } catch (error) {
+        console.error('⚠️ Balance Validator service initialization failed:', error)
+        // Continue server startup even if Balance Validator fails
+      }
+
       // Register the server with process manager
       registerServer('http-server', 'HTTP/WebSocket server', server)
       console.log('✅ Server registered with process manager')
@@ -497,6 +507,14 @@ async function performShutdown(signal: string) {
       console.log('✅ Alert Matcher service shutdown completed')
     } catch (error) {
       console.error('⚠️ Error shutting down Alert Matcher service:', error)
+    }
+
+    // Shutdown Balance Validator service
+    try {
+      await balanceValidatorService.stop()
+      console.log('✅ Balance Validator service shutdown completed')
+    } catch (error) {
+      console.error('⚠️ Error shutting down Balance Validator service:', error)
     }
 
     // Force garbage collection

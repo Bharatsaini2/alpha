@@ -18,6 +18,10 @@ const birdEyeClient = axios.create({
   headers: { 'X-API-KEY': BIRD_EYE_API_KEY },
 })
 
+// In-memory cache for token metadata (24 hour TTL)
+const tokenMetadataCache = new Map<string, { symbol?: string; name?: string; timestamp: number }>()
+const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
+
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -386,49 +390,102 @@ export async function getTokenMetaDataUsingRPC(
   symbol?: string
   name?: string
 }> {
-  const connection = new Connection(SOLANA_RPC_URL)
-  const metaplex = Metaplex.make(connection)
-  const mint = new PublicKey(tokenAddress)
+  // Check cache first
+  const cached = tokenMetadataCache.get(tokenAddress)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`✅ Cache hit for ${tokenAddress}: ${cached.symbol}`)
+    return { symbol: cached.symbol, name: cached.name }
+  }
 
+  // Fallback 1: Try DexScreener FIRST (faster and more reliable)
   try {
-    const metadata = await metaplex.nfts().findByMint({ mintAddress: mint })
+    console.log(`🔄 Trying DexScreener for ${tokenAddress}`)
+    const dexResponse = await axios.get(
+      `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`,
+      { timeout: 8000 }
+    )
+    
+    if (dexResponse.data?.pairs && dexResponse.data.pairs.length > 0) {
+      const pair = dexResponse.data.pairs[0]
+      const symbol = pair.baseToken?.symbol
+      const name = pair.baseToken?.name
+      
+      if (symbol && symbol !== 'Unknown') {
+        console.log(`✅ DexScreener found: ${symbol} (${name})`)
+        // Cache the result
+        tokenMetadataCache.set(tokenAddress, { symbol, name, timestamp: Date.now() })
+        return { symbol, name: name || symbol }
+      }
+    }
+  } catch (dexError) {
+    console.warn(`⚠️ DexScreener failed: ${dexError instanceof Error ? dexError.message : String(dexError)}`)
+  }
 
-    return {
-      symbol: metadata.symbol,
-      name: metadata.name,
+  // Fallback 2: Try RPC with timeout
+  try {
+    console.log(`🔄 Trying RPC metadata for ${tokenAddress}`)
+    const connection = new Connection(SOLANA_RPC_URL, {
+      commitment: 'confirmed',
+      wsEndpoint: undefined, // Disable websocket to avoid hanging
+    })
+    const metaplex = Metaplex.make(connection)
+    const mint = new PublicKey(tokenAddress)
+
+    // Add timeout wrapper
+    const metadataPromise = metaplex.nfts().findByMint({ mintAddress: mint })
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('RPC timeout')), 5000)
+    )
+
+    const metadata = await Promise.race([metadataPromise, timeoutPromise]) as any
+
+    if (metadata?.symbol) {
+      console.log(`✅ RPC found: ${metadata.symbol} (${metadata.name})`)
+      // Cache the result
+      tokenMetadataCache.set(tokenAddress, { symbol: metadata.symbol, name: metadata.name, timestamp: Date.now() })
+      return {
+        symbol: metadata.symbol,
+        name: metadata.name,
+      }
     }
   } catch (error) {
-    console.error('Error fetching token metadata from RPC:', error)
-    
-    // Fallback 1: Try DexScreener
-    try {
-      console.log(`🔄 Trying DexScreener fallback for ${tokenAddress}`)
-      const dexResponse = await axios.get(
-        `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`,
-        { timeout: 5000 }
-      )
-      
-      if (dexResponse.data?.pairs && dexResponse.data.pairs.length > 0) {
-        const pair = dexResponse.data.pairs[0]
-        const symbol = pair.baseToken?.symbol
-        const name = pair.baseToken?.name
-        
-        if (symbol && symbol !== 'Unknown') {
-          console.log(`✅ DexScreener found: ${symbol} (${name})`)
-          return { symbol, name: name || symbol }
-        }
+    console.warn(`⚠️ RPC failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  // Fallback 3: Try Birdeye API
+  try {
+    console.log(`🔄 Trying Birdeye for ${tokenAddress}`)
+    const birdEyeResponse = await axios.get(
+      `https://public-api.birdeye.so/defi/token_overview?address=${tokenAddress}`,
+      {
+        headers: { 'X-API-KEY': process.env.BIRD_EYE_API_KEY || '1209ac01dce54f0a97fd6b58c7b9ecb4' },
+        timeout: 5000,
       }
-    } catch (dexError) {
-      console.error('DexScreener fallback failed:', dexError)
+    )
+
+    if (birdEyeResponse.data?.data) {
+      const symbol = birdEyeResponse.data.data.symbol
+      const name = birdEyeResponse.data.data.name
+      
+      if (symbol && symbol !== 'Unknown') {
+        console.log(`✅ Birdeye found: ${symbol} (${name})`)
+        // Cache the result
+        tokenMetadataCache.set(tokenAddress, { symbol, name, timestamp: Date.now() })
+        return { symbol, name: name || symbol }
+      }
     }
-    
-    // Fallback 2: Use shortened contract address as symbol
-    const shortAddress = `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`
-    console.log(`⚠️ Using contract address as fallback: ${shortAddress}`)
-    return { 
-      symbol: shortAddress,
-      name: tokenAddress
-    }
+  } catch (error) {
+    console.warn(`⚠️ Birdeye failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+
+  // Last resort: Use shortened contract address
+  const shortAddress = `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`
+  console.log(`⚠️ All metadata sources failed, using fallback: ${shortAddress}`)
+  // Cache the fallback too (but with shorter TTL)
+  tokenMetadataCache.set(tokenAddress, { symbol: shortAddress, name: tokenAddress, timestamp: Date.now() })
+  return { 
+    symbol: shortAddress,
+    name: tokenAddress
   }
 }
 

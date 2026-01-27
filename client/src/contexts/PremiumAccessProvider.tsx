@@ -42,7 +42,8 @@ export const PremiumAccessProvider: React.FC<PremiumAccessProviderProps> = ({
                 if (balance >= PREMIUM_BALANCE_THRESHOLD) {
                     onSuccess()
                 } else {
-                    showToast(`You need ${PREMIUM_BALANCE_THRESHOLD} $ALPHA tokens to access this feature`, "error", "standard", {
+                    const formattedThreshold = PREMIUM_BALANCE_THRESHOLD.toLocaleString()
+                    showToast(`You need ${formattedThreshold} $ALPHA tokens (5 lakh) to access this feature`, "error", "standard", {
                         actionLabel: "BUY NOW",
                         onAction: openQuickBuy
                     })
