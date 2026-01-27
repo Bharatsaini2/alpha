@@ -2784,7 +2784,7 @@ const HomePage = () => {
                                 : (tx.transaction.tokenOut.name || 'NA').substring(0, 20)}
                             </p>
                             {/* MC / Age Stats */}
-                            <div className="text-[10px] text-gray-500 uppercase tracking-wide">
+                            <div className="text-[10px] text-gray-500 uppercase tracking-wide whitespace-nowrap">
                               MC: <span className="text-gray-300">${formatNumber(getMarketCap(tx))}</span> / AGE: <span className="text-gray-300">{tx.age}</span>
                             </div>
                           </div>

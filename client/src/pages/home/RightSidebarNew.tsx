@@ -1592,6 +1592,31 @@ const RightSidebarNew = ({
       </div>
 
       {/* Hot KOL Coins */}
+      <style>{`
+        .local-marquee-container {
+          position: relative;
+          overflow: hidden;
+          max-width: 120px;
+          mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+          -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+        }
+
+        .local-marquee-track {
+          display: flex;
+          gap: 16px; /* spacing between duplicates */
+          width: max-content;
+          animation: scroll-local-marquee 10s linear infinite;
+        }
+
+        .local-marquee-track:hover {
+          animation-play-state: paused;
+        }
+
+        @keyframes scroll-local-marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
       <div className="market-bx ultra-pro-bx nw-market-bx">
         <div className="py-2">
           <span className="trading-icon-title">{pageType === 'kol' ? 'HOT KOL COINS' : 'HOT COINS'}</span>
@@ -1610,7 +1635,8 @@ const RightSidebarNew = ({
                       animation: 'shimmer 2s infinite linear',
                       background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
                       backgroundSize: '200% 100%',
-                      border: 'none'
+                      border: 'none',
+                      flexShrink: 0
                     }}
                   />
                   <div className="coin-info" style={{ gap: '6px' }}>
@@ -1653,27 +1679,40 @@ const RightSidebarNew = ({
           ) : hotCoins.length > 0 ? (
             hotCoins.map((coin, index) => (
               <div className="coin-row" key={coin.address || index}>
-                <div className="coin-left">
-                  <span className="rank">#{index + 1}</span>
+                <div className="coin-left" style={{ flex: 1, minWidth: 0, gap: '12px' }}>
+                  <span className="rank" style={{ minWidth: '20px' }}>#{index + 1}</span>
                   {coin.image ? (
                     <img
                       src={coin.image}
                       className="coin-img"
                       alt={coin.symbol}
+                      style={{ flexShrink: 0 }}
                       onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
                         e.currentTarget.src = DefaultTokenImage
                       }}
                     />
                   ) : (
-                    <div className="coin-circle">
+                    <div className="coin-circle" style={{ flexShrink: 0 }}>
                       <span>{coin.symbol?.charAt(0) || '?'}</span>
                     </div>
                   )}
-                  <div className="coin-info">
-                    <div className="coin-title">
-                      <span className="coin-name">{coin.symbol || 'Unknown'}</span>
-                      <span className="coin-sub">{coin.name || coin.symbol}</span>
-                      <span className="nw-coin-badge">
+                  <div className="coin-info" style={{ flex: 1, minWidth: 0 }}>
+                    <div className="coin-title" style={{ flexWrap: 'nowrap', overflow: 'hidden' }}>
+                      <span className="coin-name" style={{ whiteSpace: 'nowrap' }}>{coin.symbol || 'Unknown'}</span>
+
+                      {/* Name with marquee if long */}
+                      {(coin.name || coin.symbol).length > 20 ? ( // Adjusted threshold
+                        <div className="local-marquee-container" style={{ flex: 1 }}>
+                          <div className="local-marquee-track">
+                            <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || coin.symbol}</span>
+                            <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || coin.symbol}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="coin-sub text-truncate" style={{ maxWidth: '100px' }}>{coin.name || coin.symbol}</span>
+                      )}
+
+                      <span className="nw-coin-badge" style={{ flexShrink: 0 }}>
                         <IoMdTrendingUp /> {coin.hotnessScore || 0}
                       </span>
                     </div>
@@ -1689,12 +1728,13 @@ const RightSidebarNew = ({
                       address: coin.address,
                       symbol: coin.symbol,
                       name: coin.name,
-                      decimals: 9, // Default decimals for Solana tokens
+                      decimals: 9,
                     })
                   }
                   aria-label={`Quick buy ${coin.symbol} token`}
                   title={`Quick buy this token with SOL`}
                   disabled={!wallet.connected}
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                 >
                   QUICK BUY
                 </button>

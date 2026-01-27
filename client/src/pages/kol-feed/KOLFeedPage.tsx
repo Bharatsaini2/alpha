@@ -1054,11 +1054,9 @@ const KOLFeedPage = () => {
 
                     <li onClick={(e) => e.stopPropagation()}>
                       <a href="javascript:void(0)"
-                        className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                        className={`plan-btn ${openDropdown === 'subs' ? 'active' : ''}`}
                         onClick={() => setOpenDropdown(openDropdown === 'subs' ? null : 'subs')}>
-                        {activeFilters.tags.length > 0
-                          ? `Subscription: ${activeFilters.tags.length}`
-                          : 'Subscription'} <HiChevronUpDown />
+                        Subscription <HiChevronUpDown />
                       </a>
                       {openDropdown === 'subs' && (
                         <KOLAlertPopup
@@ -1077,10 +1075,10 @@ const KOLFeedPage = () => {
 
                     <li onClick={(e) => e.stopPropagation()}>
                       <a href="javascript:void(0)"
-                        className={`plan-btn d-block ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                        className={`plan-btn d-block ${(activeFilters.ageMin || activeFilters.ageMax || activeFilters.marketCapMin || activeFilters.marketCapMax) ? 'active' : ''}`}
                         onClick={() => setOpenDropdown(openDropdown === 'newFilter' ? null : 'newFilter')}>
-                        {activeFilters.tags.length > 0
-                          ? `: ${activeFilters.tags.length}`
+                        {[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length > 0
+                          ? `: ${[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length}`
                           : ''} <FontAwesomeIcon icon={faFilter} />
                       </a>
                       {openDropdown === 'newFilter' && (
@@ -1341,7 +1339,7 @@ const KOLFeedPage = () => {
                                 target="_blank"
                                 rel="noreferrer"
                                 className="d-flex align-items-center gap-2 mt-1"
-                                style={{ 
+                                style={{
                                   backgroundColor: '#2A2A2D',
                                   padding: '4px 8px',
                                   width: 'fit-content',

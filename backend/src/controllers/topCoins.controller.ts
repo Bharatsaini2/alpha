@@ -48,6 +48,7 @@ const generateWhaleSummary = async (
       latestTimestamp: number
       tokenAddress: string
       name: string
+      trades: any[]
     }
   > = {}
 
@@ -83,8 +84,10 @@ const generateWhaleSummary = async (
           priceChange24h: 0,
           tokenURI: uri || '',
           tokenAddress: address || '',
+          tokenAddress: address || '',
           latestTimestamp: timestamp,
           name: name || symbol,
+          trades: [],
         }
       }
 
@@ -99,6 +102,19 @@ const generateWhaleSummary = async (
         tokenMap[symbol].totalSells += vol
         tokenMap[symbol].sellCount += 1
         // Do not add sell volume to totalVolume
+      }
+
+      const tradeData = {
+        type: type,
+        amount: vol,
+        whaleAddress: trade.whaleAddress,
+        timestamp: trade.timestamp,
+      }
+
+      tokenMap[symbol].trades.push(tradeData)
+      // Keep only last 50 trades
+      if (tokenMap[symbol].trades.length > 50) {
+        tokenMap[symbol].trades.shift()
       }
 
       // Update latest info if needed
@@ -195,7 +211,10 @@ const generateWhaleSummary = async (
       priceChange24h: data.priceChange24h,
       tokenURI: data.tokenURI,
       tokenAddress: data.tokenAddress,
+      tokenURI: data.tokenURI,
+      tokenAddress: data.tokenAddress,
       lastUpdated: new Date(data.latestTimestamp),
+      trades: data.trades,
     }
 
     // Initial tier assignment based on database market cap
@@ -484,7 +503,15 @@ export const getTokensWithMostWhaleActivityByMarketCap = catchAsyncErrors(
                 tokenAddress: item.tokenAddress || '',
                 lastUpdated: item.lastUpdated || new Date(),
                 marketCapTier: marketCapTier(marketCap), // Add tier info for frontend filtering
-                chartData: [],
+                chartData: [
+                  {
+                    time: new Date().toISOString(),
+                    marketCap: marketCap,
+                    price: price,
+                    volume: totalBuys + totalSells,
+                    trades: (item as any).trades || [],
+                  },
+                ],
               }
             } catch (error) {
               console.error(

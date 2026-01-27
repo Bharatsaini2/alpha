@@ -382,7 +382,7 @@ const HomePageNew = () => {
 
             if (filters.marketCapMin || filters.marketCapMax) {
                 const mcap = getMarketCap(transaction)
-                
+
                 if (filters.marketCapMin) {
                     const minMcap = parseFloat(filters.marketCapMin) * 1000 // Convert K to actual value
                     if (mcap < minMcap) return false
@@ -835,15 +835,15 @@ const HomePageNew = () => {
     const handleSelect = (option: any) => {
         // Save to history if it's not already a history item
         if (!option.isHistory) {
-             saveSearch(option.titles, 'coin', [{
-                 value: option.id,
-                 type: 'coin',
-                 label: option.titles,
-                 symbol: option.titles,
-                 name: option.descriptions,
-                 address: option.id,
-                 imageUrl: option.images
-             }]);
+            saveSearch(option.titles, 'coin', [{
+                value: option.id,
+                type: 'coin',
+                label: option.titles,
+                symbol: option.titles,
+                name: option.descriptions,
+                address: option.id,
+                imageUrl: option.images
+            }]);
         }
 
         // Apply the selected option as a search filter
@@ -1070,7 +1070,7 @@ const HomePageNew = () => {
                                         {/* Only show Clear All if viewing history (empty query) */}
                                         {searchQuery.trim() === "" && filteredOptions.length > 0 && filteredOptions[0].isHistory ? (
                                             <div className="dropdown-header text-end all-data-clear">
-                                                <button 
+                                                <button
                                                     className="quick-nw-btn"
                                                     onClick={(e) => {
                                                         e.preventDefault();
@@ -1088,7 +1088,7 @@ const HomePageNew = () => {
                                                 </div>
                                             )
                                         )}
-                                        
+
                                         <ul className="dropdown-scroll">
                                             {filteredOptions.map((item, index) => (
                                                 <li
@@ -1099,7 +1099,7 @@ const HomePageNew = () => {
                                                     {item.images ? (
                                                         <img src={item.images} alt="" className="dropdown-img" />
                                                     ) : (
-                                                        <div className="dropdown-img d-flex align-items-center justify-content-center" style={{width: '32px', height: '32px', background: '#1a1a1a', borderRadius: '50%', color: '#888'}}>
+                                                        <div className="dropdown-img d-flex align-items-center justify-content-center" style={{ width: '32px', height: '32px', background: '#1a1a1a', borderRadius: '50%', color: '#888' }}>
                                                             <FontAwesomeIcon icon={faClock} />
                                                         </div>
                                                     )}
@@ -1128,7 +1128,7 @@ const HomePageNew = () => {
                                                             }}
                                                             title="Remove from history"
                                                         >
-                                                            <FontAwesomeIcon icon={faTrash} style={{fontSize: '12px'}} />
+                                                            <FontAwesomeIcon icon={faTrash} style={{ fontSize: '12px' }} />
                                                         </button>
                                                     ) : (
                                                         <button
@@ -1318,11 +1318,9 @@ const HomePageNew = () => {
 
                                         <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
-                                                className={`plan-btn ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                                                className={`plan-btn ${openDropdown === 'subs' ? 'active' : ''}`}
                                                 onClick={() => setOpenDropdown(openDropdown === 'subs' ? null : 'subs')}>
-                                                {activeFilters.tags.length > 0
-                                                    ? `Subscription: ${activeFilters.tags.length}`
-                                                    : 'Subscription'} <HiChevronUpDown />
+                                                Subscription <HiChevronUpDown />
                                             </a>
                                             {openDropdown === 'subs' && (
                                                 <div className="filter-dropdown-menu w-sm">
@@ -1569,10 +1567,10 @@ const HomePageNew = () => {
 
                                         <li onClick={(e) => e.stopPropagation()}>
                                             <a href="javascript:void(0)"
-                                                className={`plan-btn d-block ${activeFilters.tags.length > 0 ? 'active' : ''}`}
+                                                className={`plan-btn d-block ${(activeFilters.ageMin || activeFilters.ageMax || activeFilters.marketCapMin || activeFilters.marketCapMax) ? 'active' : ''}`}
                                                 onClick={() => setOpenDropdown(openDropdown === 'newFilter' ? null : 'newFilter')}>
-                                                {activeFilters.tags.length > 0
-                                                    ? `: ${activeFilters.tags.length}`
+                                                {[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length > 0
+                                                    ? `: ${[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length}`
                                                     : ''} <FontAwesomeIcon icon={faFilter} />
                                             </a>
                                             {openDropdown === 'newFilter' && (
