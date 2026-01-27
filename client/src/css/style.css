@@ -1062,13 +1062,9 @@ input[type="number"] {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-<<<<<<< Updated upstream
-  gap: 4px;
-=======
   justify-content: flex-start;
   height: 64px;
   gap: 0px;
->>>>>>> Stashed changes
 }
 
 .hotness-title {

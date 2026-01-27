@@ -22,7 +22,7 @@ async function checkUnknownTokens() {
         ]
       })
       .sort({ createdAt: -1 })
-      .limit(20)
+      .limit(50)
       .lean();
 
     console.log(`\n📊 Found ${unknownTokens.length} transactions with unknown tokens:\n`);

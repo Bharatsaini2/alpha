@@ -3,6 +3,8 @@ import { Document, Schema, model } from 'mongoose'
 export interface ITokenData extends Document {
   tokenAddress: string
   imageUrl: string | null
+  symbol: string | null
+  name: string | null
   lastUpdated: Date
   createdAt: Date
 }
@@ -16,6 +18,14 @@ const tokenDataSchema = new Schema<ITokenData>(
       index: true,
     },
     imageUrl: {
+      type: String,
+      default: null,
+    },
+    symbol: {
+      type: String,
+      default: null,
+    },
+    name: {
       type: String,
       default: null,
     },
