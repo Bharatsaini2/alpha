@@ -2,11 +2,13 @@ import axios from 'axios'
 import WhalesAddressModel from '../models/solana-tokens-whales'
 import InfluencerWhalesAddressModelV2 from '../models/Influencer-wallet-whalesV2'
 import TokenDataModel from '../models/token-data.model'
+import TokenMetadataCacheModel from '../models/token-metadata-cache.model'
 import dotenv from 'dotenv'
 import { Metaplex, PublicKey } from '@metaplex-foundation/js'
 import { Connection } from '@solana/web3.js'
 import logger from '../utils/logger'
 import { redisClient } from './redis'
+import mongoose from 'mongoose'
 dotenv.config()
 
 const BIRD_EYE_API_KEY =
@@ -17,6 +19,10 @@ const birdEyeClient = axios.create({
   baseURL: 'https://public-api.birdeye.so',
   headers: { 'X-API-KEY': BIRD_EYE_API_KEY },
 })
+
+// In-memory cache for token metadata (24 hour TTL)
+const tokenMetadataCache = new Map<string, { symbol?: string; name?: string; timestamp: number }>()
+const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
 
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -381,31 +387,72 @@ export async function getTokenImageUrl(tokenAddress: string) {
 
 // ============ HELPER FUNCTIONS FOR TOKEN METADATA ============
 
-// Helper: Save valid token to database
-async function saveTokenToDatabase(
+// Helper: Save valid token to database cache
+async function saveTokenToCache(
   tokenAddress: string,
   symbol: string,
-  name: string
+  name: string,
+  source: 'rpc' | 'solscan' | 'dexscreener' | 'jupiter' | 'birdeye'
 ): Promise<void> {
-  if (!symbol || symbol === 'Unknown' || symbol.trim() === '') {
+  // ⚠️ CRITICAL: NEVER save "Unknown" or fallback addresses to cache
+  if (!symbol || symbol === 'Unknown' || symbol.trim() === '' || symbol.includes('...')) {
+    console.log(`⚠️ Skipping cache save for invalid symbol: ${symbol}`)
     return // Never save invalid tokens
   }
 
   try {
-    await TokenDataModel.findOneAndUpdate(
+    // Check if mongoose is connected
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      console.log(`⚠️ MongoDB not connected, skipping cache save`)
+      return
+    }
+    
+    await TokenMetadataCacheModel.findOneAndUpdate(
       { tokenAddress },
       {
         $set: {
           symbol,
           name: name || symbol,
+          source,
           lastUpdated: new Date(),
         },
       },
       { upsert: true, new: true }
     )
-    console.log(`💾 Saved to DB: ${tokenAddress} → ${symbol}`)
+    console.log(`💾 Saved to cache: ${tokenAddress} → ${symbol} (source: ${source})`)
   } catch (error) {
-    console.error('Failed to save to DB:', error)
+    console.error('Failed to save to cache:', error)
+  }
+}
+
+// Helper: Get token from database cache
+async function getTokenFromCache(tokenAddress: string): Promise<{ symbol: string; name: string; source: string } | null> {
+  try {
+    // Check if mongoose is connected
+    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
+      console.log(`⚠️ MongoDB not connected, skipping cache`)
+      return null
+    }
+    
+    const cached = await TokenMetadataCacheModel.findOne({ tokenAddress }).lean()
+    
+    if (cached && cached.symbol && !cached.symbol.includes('...') && cached.symbol !== 'Unknown') {
+      console.log(`✅ Cache HIT: ${tokenAddress} → ${cached.symbol} (source: ${cached.source})`)
+      return {
+        symbol: cached.symbol,
+        name: cached.name,
+        source: cached.source
+      }
+    }
+    
+    if (cached) {
+      console.log(`⚠️ Cache has invalid symbol (${cached.symbol}), will re-fetch`)
+    }
+    
+    return null
+  } catch (error) {
+    console.error('Failed to read from cache:', error)
+    return null
   }
 }
 
@@ -425,6 +472,10 @@ async function tryRPCMetadata(tokenAddress: string): Promise<{ symbol: string; n
     
     if (isValidMetadata(metadata.symbol)) {
       console.log(`✅ RPC found: ${metadata.symbol}`)
+      
+      // Save to cache
+      await saveTokenToCache(tokenAddress, metadata.symbol, metadata.name, 'rpc')
+      
       return { symbol: metadata.symbol, name: metadata.name }
     }
     
@@ -437,13 +488,16 @@ async function tryRPCMetadata(tokenAddress: string): Promise<{ symbol: string; n
 
 // Helper: Try DexScreener with retries
 async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  const maxRetries = 5 // Increased from 3
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔄 Trying DexScreener (attempt ${attempt}/3)`)
+      console.log(`🔄 Trying DexScreener (attempt ${attempt}/${maxRetries})`)
       
+      // ✅ CORRECT: Use /dex/tokens/{address} for direct token metadata lookup
       const response = await axios.get(
         `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`,
-        { timeout: 10000 }
+        { timeout: 15000 } // Increased from 10s to 15s
       )
       
       if (response.data?.pairs && response.data.pairs.length > 0) {
@@ -452,68 +506,77 @@ async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; n
         const name = pair.baseToken?.name
         
         if (isValidMetadata(symbol)) {
-          console.log(`✅ DexScreener found: ${symbol}`)
+          console.log(`✅ DexScreener found: ${symbol} (${name})`)
+          
+          // Save to cache
+          await saveTokenToCache(tokenAddress, symbol, name || symbol, 'dexscreener')
+          
           return { symbol, name: name || symbol }
         }
       }
       
       // No valid data, don't retry
+      console.log(`⚠️ DexScreener returned no valid data`)
       return null
     } catch (error: any) {
       console.error(`⚠️ DexScreener attempt ${attempt} failed:`, error.message)
       
-      // Retry on timeout
-      if (error.code === 'ECONNABORTED' && attempt < 3) {
-        console.log(`⏳ Waiting 2 seconds before retry...`)
-        await new Promise(resolve => setTimeout(resolve, 2000))
+      // Retry on timeout or network errors
+      if ((error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') && attempt < maxRetries) {
+        // Exponential backoff: 2s, 4s, 8s, 16s
+        const waitTime = Math.min(2000 * Math.pow(2, attempt - 1), 16000)
+        console.log(`⏳ Waiting ${waitTime/1000}s before retry...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
         continue
       }
       
-      // Don't retry on other errors
+      // Don't retry on other errors (404, 500, etc)
       return null
     }
   }
   
+  console.log(`❌ DexScreener failed after ${maxRetries} attempts`)
   return null
 }
 
-// Helper: Try Birdeye
-async function tryBirdeye(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
+// Helper: Try Jupiter Token List (MOST RELIABLE)
+async function tryJupiterTokenList(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
   try {
-    console.log(`🔄 Trying Birdeye`)
+    console.log(`🔄 Trying Jupiter Token List`)
     
+    // Jupiter has a comprehensive token list that's very reliable
     const response = await axios.get(
-      `https://public-api.birdeye.so/defi/token_overview?address=${tokenAddress}`,
-      {
-        headers: { 'X-API-KEY': BIRD_EYE_API_KEY },
-        timeout: 8000,
-      }
+      'https://token.jup.ag/strict',
+      { timeout: 5000 }
     )
     
-    if (response.data?.data) {
-      const symbol = response.data.data.symbol
-      const name = response.data.data.name
+    if (response.data && Array.isArray(response.data)) {
+      const token = response.data.find((t: any) => t.address === tokenAddress)
       
-      if (isValidMetadata(symbol)) {
-        console.log(`✅ Birdeye found: ${symbol}`)
-        return { symbol, name: name || symbol }
+      if (token && isValidMetadata(token.symbol)) {
+        console.log(`✅ Jupiter found: ${token.symbol} (${token.name})`)
+        
+        // Save to cache
+        await saveTokenToCache(tokenAddress, token.symbol, token.name || token.symbol, 'jupiter')
+        
+        return { symbol: token.symbol, name: token.name || token.symbol }
       }
     }
     
     return null
-  } catch (error) {
-    console.error('Birdeye failed:', error)
+  } catch (error: any) {
+    console.error(`⚠️ Jupiter Token List failed:`, error.message)
     return null
   }
 }
 
-// Helper: Try Jupiter
-async function tryJupiter(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
+// Helper: Try Solscan API (VERY RELIABLE, no rate limits for metadata)
+async function trySolscan(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
   try {
-    console.log(`🔄 Trying Jupiter`)
+    console.log(`🔄 Trying Solscan API`)
     
     const response = await axios.get(
-      `https://tokens.jup.ag/token/${tokenAddress}`,
+      `https://api.solscan.io/token/meta?token=${tokenAddress}`,
       { timeout: 5000 }
     )
     
@@ -522,19 +585,61 @@ async function tryJupiter(tokenAddress: string): Promise<{ symbol: string; name:
       const name = response.data.name
       
       if (isValidMetadata(symbol)) {
-        console.log(`✅ Jupiter found: ${symbol}`)
+        console.log(`✅ Solscan found: ${symbol} (${name})`)
+        
+        // Save to cache
+        await saveTokenToCache(tokenAddress, symbol, name || symbol, 'solscan')
+        
         return { symbol, name: name || symbol }
       }
     }
     
     return null
-  } catch (error) {
-    console.error('Jupiter failed:', error)
+  } catch (error: any) {
+    console.error(`⚠️ Solscan failed:`, error.message)
     return null
   }
 }
 
-// ============ MAIN FUNCTION: CLEAN LINEAR FALLBACK CHAIN ============
+// Helper: Try Birdeye API (requires API key)
+async function tryBirdeye(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
+  try {
+    console.log(`🔄 Trying Birdeye API`)
+    
+    const response = await axios.get(
+      `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${tokenAddress}`,
+      {
+        headers: {
+          'X-API-KEY': BIRD_EYE_API_KEY,
+          'accept': 'application/json',
+          'x-chain': 'solana',
+        },
+        timeout: 5000
+      }
+    )
+    
+    if (response.data?.data) {
+      const symbol = response.data.data.symbol
+      const name = response.data.data.name
+      
+      if (isValidMetadata(symbol)) {
+        console.log(`✅ Birdeye found: ${symbol} (${name})`)
+        
+        // Save to cache
+        await saveTokenToCache(tokenAddress, symbol, name || symbol, 'birdeye' as any)
+        
+        return { symbol, name: name || symbol }
+      }
+    }
+    
+    return null
+  } catch (error: any) {
+    console.error(`⚠️ Birdeye failed:`, error.message)
+    return null
+  }
+}
+
+// ============ MAIN FUNCTION: DB CACHE + FALLBACK CHAIN ============
 
 export async function getTokenMetaDataUsingRPC(
   tokenAddress: string,
@@ -545,49 +650,43 @@ export async function getTokenMetaDataUsingRPC(
 }> {
   console.log(`\n🔍 Resolving token: ${tokenAddress}`)
   
-  // ✅ Fallback 0: Database cache
-  try {
-    const cached = await TokenDataModel.findOne({ tokenAddress }).lean()
-    if (cached && isValidMetadata(cached.symbol)) {
-      console.log(`✅ DB Cache HIT: ${cached.symbol}`)
-      return { 
-        symbol: cached.symbol || undefined, 
-        name: cached.name || cached.symbol || undefined 
-      }
-    }
-  } catch (error) {
-    console.error('DB cache lookup failed:', error)
+  // ✅ Step 1: Check database cache first (fastest!)
+  const cachedResult = await getTokenFromCache(tokenAddress)
+  if (cachedResult) {
+    return cachedResult
   }
   
-  // ✅ Fallback 1: RPC metadata
-  const rpcResult = await tryRPCMetadata(tokenAddress)
-  if (rpcResult) {
-    await saveTokenToDatabase(tokenAddress, rpcResult.symbol, rpcResult.name)
-    return rpcResult
-  }
+  console.log(`⚠️ Cache MISS, trying API sources...`)
   
-  // ✅ Fallback 2: DexScreener (with retries)
+  // ✅ Fallback 2: DexScreener (most reliable, with 5 retries and exponential backoff)
   const dexResult = await tryDexScreener(tokenAddress)
   if (dexResult) {
-    await saveTokenToDatabase(tokenAddress, dexResult.symbol, dexResult.name)
     return dexResult
   }
   
-  // ✅ Fallback 3: Birdeye
-  const birdResult = await tryBirdeye(tokenAddress)
-  if (birdResult) {
-    await saveTokenToDatabase(tokenAddress, birdResult.symbol, birdResult.name)
-    return birdResult
+  // ✅ Fallback 3: Birdeye (if API key is available)
+  if (BIRD_EYE_API_KEY && BIRD_EYE_API_KEY !== '1209ac01dce54f0a97fd6b58c7b9ecb4') {
+    const birdeyeResult = await tryBirdeye(tokenAddress)
+    if (birdeyeResult) {
+      return birdeyeResult
+    }
+  } else {
+    console.log(`⚠️ Birdeye API key not configured, skipping`)
   }
   
-  // ✅ Fallback 4: Jupiter
-  const jupResult = await tryJupiter(tokenAddress)
-  if (jupResult) {
-    await saveTokenToDatabase(tokenAddress, jupResult.symbol, jupResult.name)
-    return jupResult
+  // ✅ Fallback 4: Jupiter Token List (comprehensive but slower)
+  const jupiterResult = await tryJupiterTokenList(tokenAddress)
+  if (jupiterResult) {
+    return jupiterResult
   }
   
-  // ✅ Fallback 5: Shortened address (NEVER saved to DB)
+  // ✅ Fallback 5: RPC metadata (optional, often fails for new tokens)
+  const rpcResult = await tryRPCMetadata(tokenAddress)
+  if (rpcResult) {
+    return rpcResult
+  }
+  
+  // ✅ Fallback 6: Shortened address (last resort - NOT cached)
   const shortAddress = `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`
   console.log(`⚠️ All sources failed, using fallback: ${shortAddress}`)
   
@@ -683,7 +782,7 @@ export const findWhaleTokens = async (whaleAddress: string) => {
     console.error(`Error fetching tokens for ${whaleAddress}:`, error)
     return null
   }
-}
+}c
 
 // find Influencer Name
 export const findInfluencerName = async (whaleAddress: string) => {
