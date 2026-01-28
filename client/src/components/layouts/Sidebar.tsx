@@ -259,7 +259,7 @@ const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
               alt="Telegram"
               className="w-5 h-5 md:w-8 md:h-8 cursor-pointer opacity-70 hover:opacity-100 transition-opacity duration-300"
               onClick={() => {
-                window.open("https://t.me/alphablockai", "_blank")
+                window.open("https://t.me/AlphaBlockAI", "_blank")
               }}
             />
             <span className="border-l border-[#3B3B3D] h-full" />

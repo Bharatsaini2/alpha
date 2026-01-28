@@ -434,7 +434,7 @@ function TopCoinsPage() {
             <div className="tab-content custom-tab-content">
               {activeView === "table" ? (
                 <>
-                  <div className="table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-tab-panel">
+                  <div className="table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-coin-table">
                     <table className="table crypto-table align-middle mb-0 crypto-sub-table">
                       <thead>
                         <tr>
@@ -714,6 +714,109 @@ function TopCoinsPage() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile Card View */}
+                  <div className="mobile-coin-view">
+                    {loading && filteredCoins.length === 0 ? (
+                      // Mobile Skeleton
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <div key={`mobile-skeleton-${i}`} className="mobile-coin-card">
+                          <div className="card-row">
+                            <span className="card-label">RANK:</span>
+                            <div style={{ width: "30px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">COIN:</span>
+                            <div className="d-flex align-items-center gap-2">
+                              <div style={{ width: "24px", height: "24px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                              <div style={{ width: "60px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                            </div>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">NET INFLOW:</span>
+                            <div style={{ width: "50px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">WHALE:</span>
+                            <div style={{ width: "40px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">MARKET CAP:</span>
+                            <div style={{ width: "60px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      filteredCoins.map((coin) => (
+                        <div key={coin.id} className="mobile-coin-card" onClick={() => toggleRow(coin.id)}>
+                          <div className="card-row">
+                            <span className="card-label">RANK:</span>
+                            <span className="card-value">#{coin.rank}</span>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">COIN:</span>
+                            <span className="card-value">
+                              <span className="coin-icon">
+                                <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '24px', height: '24px', borderRadius: '4px' }} />
+                              </span>
+                              {coin.symbol}
+                              <button
+                                className="tb-cpy-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleCopyTokenAddress(coin.tokenAddress)
+                                }}
+                              >
+                                <FaRegCopy />
+                              </button>
+                            </span>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">NET INFLOW:</span>
+                            <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
+                              {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
+                            </span>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">WHALE:</span>
+                            <span className="card-value">{coin.whaleCount}</span>
+                          </div>
+                          <div className="card-row">
+                            <span className="card-label">MARKET CAP:</span>
+                            <span className="card-value">${formatNumber(coin.marketCap)}</span>
+                          </div>
+                          {/* Expandable content for mobile can go here if needed, or we keep it simple for now */}
+                          {openRows[coin.id] && (
+                            <div className="mt-3 pt-3 border-top border-secondary">
+                              <div className="expand-tp-title mb-2">
+                                <p>whale ACTIVITY last {timeframeFilter}</p>
+                              </div>
+                              <div className="whale-quick-buy mb-3" onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }} style={{ cursor: 'pointer' }}>
+                                QUICK BUY
+                              </div>
+                              {/* Simplified Stats for Mobile */}
+                              <div className="whale-stats-box">
+                                <div className="whale-stat-row">
+                                  <span className="whale-stat-label">BUYS:</span>
+                                  <p className="whale-stat-value green">+{formatNumber(coin.totalBuys)} ({coin.buyCount})</p>
+                                </div>
+                                <div className="whale-stat-row">
+                                  <span className="whale-stat-label">SELLS:</span>
+                                  <p className="whale-stat-value red">-{formatNumber(coin.totalSells)} ({coin.sellCount})</p>
+                                </div>
+                                <div className="whale-stat-row">
+                                  <span className="whale-stat-net">NET:</span>
+                                  <p className={`whale-stat-value ${coin.netInflow >= 0 ? 'green' : 'red'}`}>
+                                    {coin.netInflow >= 0 ? '+' : ''}{formatNumber(coin.netInflow)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </>
               ) : (

@@ -268,9 +268,9 @@ const SidebarContent = ({ collapsed, navigate, isActive, onToggle, isMobile = fa
 
                 <div className="flex flex-col gap-2">
                     <ul className="nav-btm-list">
-                        <li><a className="nav-btm-link" href="https://t.me/alphablock" target="_blank" rel="noopener noreferrer">telegram</a></li>
+                        <li><a className="nav-btm-link" href="https://t.me/AlphaBlockAI" target="_blank" rel="noopener noreferrer">telegram</a></li>
                         <li><span className="nw-slash">/</span></li>
-                        <li><a className="nav-btm-link" href="https://x.com/alphablock" target="_blank" rel="noopener noreferrer">x.com</a></li>
+                        <li><a className="nav-btm-link" href="https://x.com/alphablockai?s=21" target="_blank" rel="noopener noreferrer">x.com</a></li>
                     </ul>
                     {!collapsed && <p>© 2025 AlphaBlock AI, All Rights Reserved.</p>}
                 </div>
@@ -429,9 +429,9 @@ function Sidebar({ isOpen = false, onToggle }: SidebarProps) {
 
                 <div className="nav-btm-item mt-auto">
                     <ul className="nav-btm-list">
-                        <li><a className="nav-btm-link" href="https://t.me/alphablock" target="_blank" rel="noopener noreferrer">telegram</a></li>
+                        <li><a className="nav-btm-link" href="https://t.me/AlphaBlockAI" target="_blank" rel="noopener noreferrer">telegram</a></li>
                         <li><span className="nw-slash">/</span></li>
-                        <li><a className="nav-btm-link" href="https://x.com/alphablock" target="_blank" rel="noopener noreferrer">x.com</a></li>
+                        <li><a className="nav-btm-link" href="https://x.com/alphablockai?s=21" target="_blank" rel="noopener noreferrer">x.com</a></li>
                     </ul>
                     {!collapsed && <p>© 2025 AlphaBlock AI, All Rights Reserved.</p>}
                 </div>

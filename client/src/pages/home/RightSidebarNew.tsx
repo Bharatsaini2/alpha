@@ -1700,17 +1700,8 @@ const RightSidebarNew = ({
                     <div className="coin-title" style={{ flexWrap: 'nowrap', overflow: 'hidden' }}>
                       <span className="coin-name" style={{ whiteSpace: 'nowrap' }}>{coin.symbol || 'Unknown'}</span>
 
-                      {/* Name with marquee if long */}
-                      {(coin.name || coin.symbol).length > 20 ? ( // Adjusted threshold
-                        <div className="local-marquee-container" style={{ flex: 1 }}>
-                          <div className="local-marquee-track">
-                            <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || coin.symbol}</span>
-                            <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || coin.symbol}</span>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="coin-sub text-truncate" style={{ maxWidth: '100px' }}>{coin.name || coin.symbol}</span>
-                      )}
+                      {/* Only show symbol for cleaner alignment in sidebar */}
+                      {/* Name rendering removed to fix alignment gap */}
 
                       <span className="nw-coin-badge" style={{ flexShrink: 0 }}>
                         <IoMdTrendingUp /> {coin.hotnessScore || 0}

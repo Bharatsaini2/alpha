@@ -844,3 +844,77 @@
     height: 32px !important;
   }
 }
+
+/* ============================================
+   Wrapper for Swap Interface
+   ============================================ */
+.trade-interface-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  /* Increased gap as requested */
+}
+
+/* Remove default margins from trade boxes inside the wrapper to ensure tight fit */
+.trade-interface-wrapper .trade-box {
+  margin-bottom: 0 !important;
+}
+
+/* Override existing swap icon button styles for centering */
+.swap-toggle-bx {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 20;
+  width: 40px !important;
+  /* Explicit width */
+  height: 40px !important;
+  /* Explicit height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+}
+
+.swap-icon {
+  /* Ensure the button itself looks right */
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 4px !important;
+  /* Square with slight radius */
+  background: #1a1a1a !important;
+  /* Previous darker background */
+  border: 1px solid #2a2a2a !important;
+  /* Previous border */
+  color: #cfcfcf !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.swap-icon:hover {
+  background: #292929 !important;
+  border-color: #3a3a3a !important;
+  color: #fff !important;
+}
+
+.swap-icon-btn {
+  /* Reset top/left/transform from previous styles if needed,
+       but since we are wrapping it in swap-toggle-bx,
+       we can just ensure it doesn't have conflicting absolute positioning
+       OR we can target it directly if the HTML structure is flat */
+
+  /* Actually, looking at the HTML:
+       <div class="swap-toggle-bx"> <button class="swap-icon" ...> </div>
+       So we should style .swap-toggle-bx to be the positioned container 
+       and let the button just be a button inside it. 
+       
+       Wait, the previous CSS had .swap-icon-btn positioning itself. 
+       Let's check the class name in RightSidebarNew.tsx again.
+    */
+}
