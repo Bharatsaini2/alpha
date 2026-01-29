@@ -1271,7 +1271,7 @@ const RightSidebarNew = ({
                               style={{
                                 background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
                                 backgroundSize: '200% 100%',
-                                animation: 'shimmer 2s infinite linear',
+                                animation: 'shimmer 4s infinite linear',
                                 borderRadius: '4px',
                                 height: '28px',
                                 width: '140px'
@@ -1282,7 +1282,7 @@ const RightSidebarNew = ({
                               style={{
                                 background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
                                 backgroundSize: '200% 100%',
-                                animation: 'shimmer 2s infinite linear',
+                                animation: 'shimmer 4s infinite linear',
                                 borderRadius: '4px',
                                 height: '14px',
                                 width: '80px'
@@ -1632,7 +1632,7 @@ const RightSidebarNew = ({
                     className="coin-circle"
                     style={{
                       backgroundColor: '#1a1a1a',
-                      animation: 'shimmer 2s infinite linear',
+                      animation: 'shimmer 4s infinite linear',
                       background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
                       backgroundSize: '200% 100%',
                       border: 'none',

@@ -18,6 +18,7 @@ import { ReactFlowProvider } from "@xyflow/react"
 import RightSidebarNew from "./RightSidebarNew"
 import { faCopy } from "@fortawesome/free-regular-svg-icons";
 import { RiFileCopyLine } from "react-icons/ri";
+import TransactionListSkeleton from "../../components/skeletons/TransactionListSkeleton"
 
 import SwapModal from "../../components/swap/SwapModal"
 import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
@@ -1153,7 +1154,7 @@ const HomePageNew = () => {
                             <div className="custom-frm-bx nw-quick-bx mb-3">
                                 <button
                                     className="quick-btn"
-                                    style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%' }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
                                     onClick={() => quickBuyInputRef.current?.focus()}
                                 >
                                     <img src="/quick-btn.png" alt="" /> quick buy amount
@@ -1785,13 +1786,7 @@ const HomePageNew = () => {
                             {/* Transactions List */}
                             <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
                                 {isAllTxLoading ? (
-                                    <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
-                                        <div className="lds-spinner text-white">
-                                            {Array.from({ length: 12 }).map((_, i) => (
-                                                <div key={i}></div>
-                                            ))}
-                                        </div>
-                                    </div>
+                                    <TransactionListSkeleton variant="kol" count={6} />
                                 ) : transactions.length === 0 ? (
                                     <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
                                         <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>

@@ -18,6 +18,7 @@ import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "
 import SwapModal from "../../components/swap/SwapModal"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 
+
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:9090", {
   transports: ["websocket"],
   reconnection: true,

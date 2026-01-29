@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { io } from "socket.io-client"
 import { useNavigate } from "react-router-dom"
+import TransactionListSkeleton from "../../components/skeletons/TransactionListSkeleton"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
@@ -1225,13 +1226,7 @@ const KOLFeedPage = () => {
               {/* Transactions List */}
               <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
                 {isAllTxLoading ? (
-                  <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
-                    <div className="lds-spinner text-white">
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <div key={i}></div>
-                      ))}
-                    </div>
-                  </div>
+                  <TransactionListSkeleton variant="kol" count={6} />
                 ) : transactions.length === 0 ? (
                   <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
                     <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>
