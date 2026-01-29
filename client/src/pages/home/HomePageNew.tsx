@@ -1786,7 +1786,7 @@ const HomePageNew = () => {
                             {/* Transactions List */}
                             <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
                                 {isAllTxLoading ? (
-                                    <TransactionListSkeleton variant="kol" count={6} />
+                                    <TransactionListSkeleton variant="kol" count={12} />
                                 ) : transactions.length === 0 ? (
                                     <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
                                         <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>

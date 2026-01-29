@@ -59,6 +59,7 @@ function TopKOLCoinsPage() {
   const [error, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdatedTime, setLastUpdatedTime] = useState<Date | null>(null)
+  const [filteringLoading, setFilteringLoading] = useState(false) // Local loading state for filter change
 
   // Filter State
   const [searchQuery, setSearchQuery] = useState("")
@@ -451,17 +452,42 @@ function TopKOLCoinsPage() {
                       href="javascript:void(0)"
                       className="plan-btn"
                       onClick={() => setMarketCapOpen(!marketCapOpen)}
+                      style={{ cursor: 'pointer', textDecoration: 'none' }}
                     >
                       {marketCapTouched
                         ? (marketCapFilter === "small" ? "Small Cap" : marketCapFilter === "medium" ? "Medium Cap" : "Large Cap")
                         : "Market Cap"}
-                      <HiChevronUpDown />
+                      <HiChevronDown />
                     </a>
                     {marketCapOpen && (
-                      <div className="market-dropdown">
-                        <div className="dropdown-item" onClick={() => { setMarketCapFilter("small"); setMarketCapTouched(true); setMarketCapOpen(false); }}>Small Cap</div>
-                        <div className="dropdown-item" onClick={() => { setMarketCapFilter("medium"); setMarketCapTouched(true); setMarketCapOpen(false); }}>Medium Cap</div>
-                        <div className="dropdown-item" onClick={() => { setMarketCapFilter("large"); setMarketCapTouched(true); setMarketCapOpen(false); }}>Large Cap</div>
+                      <div className="subscription-dropdown-menu show" style={{ position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
+                        <div className={`nw-subs-items ${marketCapFilter === "small" ? "active" : ""}`} onClick={() => {
+                          setMarketCapOpen(false);
+                          setMarketCapTouched(true);
+                          setFilteringLoading(true);
+                          setMarketCapFilter("small");
+                          setTimeout(() => setFilteringLoading(false), 500);
+                        }}>
+                          Small Cap
+                        </div>
+                        <div className={`nw-subs-items ${marketCapFilter === "medium" ? "active" : ""}`} onClick={() => {
+                          setMarketCapOpen(false);
+                          setMarketCapTouched(true);
+                          setFilteringLoading(true);
+                          setMarketCapFilter("medium");
+                          setTimeout(() => setFilteringLoading(false), 500);
+                        }}>
+                          Medium Cap
+                        </div>
+                        <div className={`nw-subs-items ${marketCapFilter === "large" ? "active" : ""}`} onClick={() => {
+                          setMarketCapOpen(false);
+                          setMarketCapTouched(true);
+                          setFilteringLoading(true);
+                          setMarketCapFilter("large");
+                          setTimeout(() => setFilteringLoading(false), 500);
+                        }}>
+                          Large Cap
+                        </div>
                       </div>
                     )}
                   </div>
@@ -530,7 +556,7 @@ function TopKOLCoinsPage() {
                       </thead>
 
                       <tbody>
-                        {loading && filteredCoins.length === 0 ? (
+                        {(loading || filteringLoading) && filteredCoins.length === 0 ? (
                           // Loading Skeleton
                           Array.from({ length: 5 }).map((_, i) => (
                             <tr key={`skeleton-${i}`} className="main-row">
@@ -767,7 +793,7 @@ function TopKOLCoinsPage() {
 
                   {/* Mobile Card View */}
                   <div className="mobile-coin-view">
-                    {loading && filteredCoins.length === 0 ? (
+                    {(loading || filteringLoading) && filteredCoins.length === 0 ? (
                       // Mobile Skeleton
                       Array.from({ length: 5 }).map((_, i) => (
                         <div key={`mobile-skeleton-${i}`} className="mobile-coin-card">
