@@ -5,6 +5,20 @@ const SOL_MINT = 'So11111111111111111111111111111111111111112'
 // Note: SHYFT already normalizes WSOL in token_balance_changes
 // We don't need separate WSOL handling - just use SOL_MINT
 
+// Common Solana stablecoins (treat these as "currency" like SOL)
+const STABLECOIN_MINTS = new Set([
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+  '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // PYUSD
+  'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA', // USDS
+  'EjmyN6qEC1Tf1JxiG1ae7UTJhUxSwk1TCWNWqxWV4J6o', // DAI
+])
+
+// Helper: Check if a mint is a "currency" token (SOL or stablecoin)
+function isCurrencyToken(mint: string): boolean {
+  return mint === SOL_MINT || STABLECOIN_MINTS.has(mint)
+}
+
 // Types
 export interface TokenBalanceChange {
   address: string
@@ -268,49 +282,78 @@ function parseBalanceDeltaPath(tx: ShyftTransaction, swapper: string): ParsedSwa
     changesByMint[change.mint].push(change)
   }
 
-  // Normalize SOL - Requirement 1.4
+  // Normalize SOL and stablecoins - Requirement 1.4
   // Note: SHYFT already normalizes WSOL in token_balance_changes, so we only need SOL
   const solNetDelta = netDeltas[SOL_MINT] || 0
+  
+  // Calculate total currency delta (SOL + all stablecoins)
+  let currencyNetDelta = solNetDelta
+  const currencyChanges: { mint: string; delta: number }[] = []
+  
+  if (solNetDelta !== 0) {
+    currencyChanges.push({ mint: SOL_MINT, delta: solNetDelta })
+  }
+  
+  for (const [mint, delta] of Object.entries(netDeltas)) {
+    if (STABLECOIN_MINTS.has(mint) && delta !== 0) {
+      currencyNetDelta += delta
+      currencyChanges.push({ mint, delta })
+    }
+  }
 
   logger.debug(
-    { signature: tx.signature, solNetDelta },
-    'SOL normalization'
+    { signature: tx.signature, solNetDelta, currencyNetDelta, currencyChanges },
+    'Currency normalization (SOL + stablecoins)'
   )
 
-  // Identify non-SOL tokens with non-zero deltas
-  const nonSolTokens = Object.entries(netDeltas)
-    .filter(([mint, delta]) => mint !== SOL_MINT && delta !== 0)
+  // Get ALL tokens with non-zero deltas (including stablecoins)
+  const allTokens = Object.entries(netDeltas)
+    .filter(([mint, delta]) => delta !== 0)
     .map(([mint, delta]) => ({ mint, delta }))
 
   logger.debug(
-    { signature: tx.signature, nonSolTokens, solNetDelta },
-    'Balance delta analysis'
+    { signature: tx.signature, allTokens },
+    'All token balance changes'
   )
 
-  // Classification rules
-  // BUY: non-SOL token inflow + SOL outflow
-  if (nonSolTokens.some((t) => t.delta > 0) && solNetDelta < 0) {
-    const tokenInflow = nonSolTokens.find((t) => t.delta > 0)
-    if (tokenInflow) {
-      const tokenChange = getBestChangeForMint(changesByMint[tokenInflow.mint])
-      const solChange = getBestChangeForMint(changesByMint[SOL_MINT])
+  // ✅ SIMPLE RULE: If there are 2+ different tokens with balance changes, it's a swap
+  // One token goes down (outflow), another goes up (inflow) → SWAP
+  if (allTokens.length >= 2) {
+    const tokenOutflow = allTokens.find((t) => t.delta < 0)  // Token being sent
+    const tokenInflow = allTokens.find((t) => t.delta > 0)   // Token being received
+    
+    if (tokenOutflow && tokenInflow) {
+      const tokenOutChange = getBestChangeForMint(changesByMint[tokenOutflow.mint])
+      const tokenInChange = getBestChangeForMint(changesByMint[tokenInflow.mint])
+
+      // Determine side based on whether currency is involved
+      let side: 'BUY' | 'SELL' | 'SWAP' = 'SWAP'
+      
+      // BUY: Currency out, token in
+      if (isCurrencyToken(tokenOutflow.mint) && !isCurrencyToken(tokenInflow.mint)) {
+        side = 'BUY'
+      }
+      // SELL: Token out, currency in
+      else if (!isCurrencyToken(tokenOutflow.mint) && isCurrencyToken(tokenInflow.mint)) {
+        side = 'SELL'
+      }
 
       return {
         transaction_hash: tx.signature,
         timestamp: tx.timestamp,
         swapper,
-        side: 'BUY',
+        side,
         input: {
-          mint: SOL_MINT,
-          amount_raw: String(Math.abs(solNetDelta)),
-          decimals: solChange?.decimals ?? 9,
-          amount: Math.abs(solNetDelta) / Math.pow(10, solChange?.decimals ?? 9),
+          mint: tokenOutflow.mint,
+          amount_raw: String(Math.abs(tokenOutflow.delta)),
+          decimals: tokenOutChange?.decimals ?? (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0),
+          amount: Math.abs(tokenOutflow.delta) / Math.pow(10, tokenOutChange?.decimals ?? (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0)),
         },
         output: {
           mint: tokenInflow.mint,
           amount_raw: String(tokenInflow.delta),
-          decimals: tokenChange?.decimals ?? 0,
-          amount: tokenInflow.delta / Math.pow(10, tokenChange?.decimals ?? 0),
+          decimals: tokenInChange?.decimals ?? (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0),
+          amount: tokenInflow.delta / Math.pow(10, tokenInChange?.decimals ?? (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0)),
         },
         ata_created: detectATACreation(relevantChanges),
         classification_source: 'token_balance_changes',
@@ -319,33 +362,57 @@ function parseBalanceDeltaPath(tx: ShyftTransaction, swapper: string): ParsedSwa
     }
   }
 
-  // SELL: non-SOL token outflow + SOL inflow
-  if (nonSolTokens.some((t) => t.delta < 0) && solNetDelta > 0) {
-    const tokenOutflow = nonSolTokens.find((t) => t.delta < 0)
-    if (tokenOutflow) {
-      const tokenChange = getBestChangeForMint(changesByMint[tokenOutflow.mint])
-      const solChange = getBestChangeForMint(changesByMint[SOL_MINT])
-
+  // ✅ FALLBACK: Accept one-sided transactions (transfers, receives)
+  // This handles cases where only one token changes (receive/send)
+  if (allTokens.length === 1) {
+    const token = allTokens[0]
+    const tokenChange = getBestChangeForMint(changesByMint[token.mint])
+    
+    if (token.delta > 0) {
+      // Token received (treat as BUY)
+      return {
+        transaction_hash: tx.signature,
+        timestamp: tx.timestamp,
+        swapper,
+        side: 'BUY',
+        input: {
+          mint: 'UNKNOWN',
+          amount_raw: '0',
+          decimals: 0,
+          amount: 0,
+        },
+        output: {
+          mint: token.mint,
+          amount_raw: String(token.delta),
+          decimals: tokenChange?.decimals ?? 0,
+          amount: token.delta / Math.pow(10, tokenChange?.decimals ?? 0),
+        },
+        ata_created: detectATACreation(relevantChanges),
+        classification_source: 'token_balance_changes',
+        confidence: 'LOW',
+      }
+    } else {
+      // Token sent (treat as SELL)
       return {
         transaction_hash: tx.signature,
         timestamp: tx.timestamp,
         swapper,
         side: 'SELL',
         input: {
-          mint: tokenOutflow.mint,
-          amount_raw: String(Math.abs(tokenOutflow.delta)),
+          mint: token.mint,
+          amount_raw: String(Math.abs(token.delta)),
           decimals: tokenChange?.decimals ?? 0,
-          amount: Math.abs(tokenOutflow.delta) / Math.pow(10, tokenChange?.decimals ?? 0),
+          amount: Math.abs(token.delta) / Math.pow(10, tokenChange?.decimals ?? 0),
         },
         output: {
-          mint: SOL_MINT,
-          amount_raw: String(solNetDelta),
-          decimals: solChange?.decimals ?? 9,
-          amount: solNetDelta / Math.pow(10, solChange?.decimals ?? 9),
+          mint: 'UNKNOWN',
+          amount_raw: '0',
+          decimals: 0,
+          amount: 0,
         },
         ata_created: detectATACreation(relevantChanges),
         classification_source: 'token_balance_changes',
-        confidence: 'MEDIUM',
+        confidence: 'LOW',
       }
     }
   }
@@ -488,4 +555,61 @@ function normalizeAmount(amount_raw: string | number, decimals: number): number 
     logger.warn({ amount_raw, decimals, error: error instanceof Error ? error.message : String(error) }, 'Failed to normalize amount')
     return 0
   }
+}
+
+/**
+ * Confidence level ordering for filtering
+ * Task 3.3: Add confidence-based filtering
+ */
+const CONFIDENCE_LEVELS = {
+  MAX: 4,
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1,
+} as const
+
+export type ConfidenceLevel = keyof typeof CONFIDENCE_LEVELS
+
+/**
+ * Check if a parsed swap meets the minimum confidence threshold
+ * Task 3.3: Add confidence-based filtering
+ * 
+ * @param parsedSwap - The parsed swap result from parseShyftTransaction
+ * @param minConfidence - Minimum confidence level (from MIN_ALERT_CONFIDENCE env var)
+ * @returns true if the swap meets or exceeds the minimum confidence, false otherwise
+ * 
+ * @example
+ * // No filtering (default)
+ * meetsMinimumConfidence(swap, undefined) // returns true for all
+ * 
+ * // Filter out LOW confidence
+ * meetsMinimumConfidence(swap, 'MEDIUM') // returns true for MEDIUM, HIGH, MAX
+ * 
+ * // Only accept highest confidence
+ * meetsMinimumConfidence(swap, 'MAX') // returns true only for MAX
+ */
+export function meetsMinimumConfidence(
+  parsedSwap: ParsedSwap | null,
+  minConfidence?: string
+): boolean {
+  // If no swap or no minimum confidence set, accept all
+  if (!parsedSwap || !minConfidence) {
+    return true
+  }
+
+  // Validate minConfidence is a valid level
+  const minLevel = minConfidence.toUpperCase() as ConfidenceLevel
+  if (!(minLevel in CONFIDENCE_LEVELS)) {
+    logger.warn(
+      { minConfidence },
+      'Invalid MIN_ALERT_CONFIDENCE value, accepting all confidence levels'
+    )
+    return true
+  }
+
+  // Compare confidence levels
+  const swapLevel = CONFIDENCE_LEVELS[parsedSwap.confidence]
+  const minLevelValue = CONFIDENCE_LEVELS[minLevel]
+
+  return swapLevel >= minLevelValue
 }

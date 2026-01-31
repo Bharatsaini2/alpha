@@ -649,10 +649,28 @@ export async function getTokenMetaDataUsingRPC(
   name?: string
 }> {
   console.log(`\n🔍 Resolving token: ${tokenAddress}`)
+  
+  // ✅ Step 0: Check in-memory cache FIRST (instant!)
+  const now = Date.now()
+  const memCached = tokenMetadataCache.get(tokenAddress)
+  if (memCached && (now - memCached.timestamp) < CACHE_TTL) {
+    if (memCached.symbol && memCached.symbol !== 'Unknown' && !memCached.symbol.includes('...')) {
+      console.log(`✅ Memory cache HIT: ${tokenAddress} → ${memCached.symbol}`)
+      return { symbol: memCached.symbol, name: memCached.name || memCached.symbol }
+    }
+  }
+  
+  // ✅ Step 1: Check database cache (fast!)
 
   // ✅ Step 1: Check database cache first (fastest!)
   const cachedResult = await getTokenFromCache(tokenAddress)
   if (cachedResult) {
+    // Save to in-memory cache for next time
+    tokenMetadataCache.set(tokenAddress, {
+      symbol: cachedResult.symbol,
+      name: cachedResult.name,
+      timestamp: now
+    })
     return cachedResult
   }
 
@@ -661,6 +679,12 @@ export async function getTokenMetaDataUsingRPC(
   // ✅ Fallback 2: DexScreener (most reliable, with 5 retries and exponential backoff)
   const dexResult = await tryDexScreener(tokenAddress)
   if (dexResult) {
+    // Save to in-memory cache
+    tokenMetadataCache.set(tokenAddress, {
+      symbol: dexResult.symbol,
+      name: dexResult.name,
+      timestamp: now
+    })
     return dexResult
   }
 
@@ -668,6 +692,12 @@ export async function getTokenMetaDataUsingRPC(
   if (BIRD_EYE_API_KEY && BIRD_EYE_API_KEY !== '1209ac01dce54f0a97fd6b58c7b9ecb4') {
     const birdeyeResult = await tryBirdeye(tokenAddress)
     if (birdeyeResult) {
+      // Save to in-memory cache
+      tokenMetadataCache.set(tokenAddress, {
+        symbol: birdeyeResult.symbol,
+        name: birdeyeResult.name,
+        timestamp: now
+      })
       return birdeyeResult
     }
   } else {
@@ -677,12 +707,24 @@ export async function getTokenMetaDataUsingRPC(
   // ✅ Fallback 4: Jupiter Token List (comprehensive but slower)
   const jupiterResult = await tryJupiterTokenList(tokenAddress)
   if (jupiterResult) {
+    // Save to in-memory cache
+    tokenMetadataCache.set(tokenAddress, {
+      symbol: jupiterResult.symbol,
+      name: jupiterResult.name,
+      timestamp: now
+    })
     return jupiterResult
   }
 
   // ✅ Fallback 5: RPC metadata (optional, often fails for new tokens)
   const rpcResult = await tryRPCMetadata(tokenAddress)
   if (rpcResult) {
+    // Save to in-memory cache
+    tokenMetadataCache.set(tokenAddress, {
+      symbol: rpcResult.symbol,
+      name: rpcResult.name,
+      timestamp: now
+    })
     return rpcResult
   }
 

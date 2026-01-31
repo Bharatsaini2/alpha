@@ -15,7 +15,12 @@ const TEST_TOKENS = [
   'kMKX8hBaj3BTRBbeYix9c16EieBP5dih8DTSSwCpump',
   '8Jx8AAHj86wbQgUTjGuj6GTTL5Ps3cqxKRTvpaJApump',
   'aTPu8cDEM7P7ifhoTd6NxaLf42tCiVcMCT3ZEGEpump',
-  'pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn'
+  'pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn',
+  '6zdUYEEVUxB3DrgvrQQs5cAFczXtSdWBos854iQJTRND',
+  'DtR4D9FtVoTX2569gaL837ZgrB6wNjj6tkmnX9Rdk9B2',
+  '9QMJMYayGxjVJNVWKLk6woRJ9Rweh63vjTVsqoBtpump',
+  '9KbgSh6XZaHiDBQE26tGTDuJuUZmVyvJGGabrE7fpump',
+
 ];
 
 async function testToken(tokenAddress) {

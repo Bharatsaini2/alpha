@@ -1261,4 +1261,191 @@ describe('SHYFT Parser - Property-Based Tests', () => {
       { numRuns: 100 }
     )
   })
+
+  describe('Task 3.3: Confidence-based filtering', () => {
+    const { meetsMinimumConfidence } = require('../shyftParser')
+
+    it('should accept all swaps when no minimum confidence is set', () => {
+      const lowConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'events' as const,
+        confidence: 'LOW' as const,
+      }
+
+      expect(meetsMinimumConfidence(lowConfidenceSwap, undefined)).toBe(true)
+      expect(meetsMinimumConfidence(lowConfidenceSwap, '')).toBe(true)
+      expect(meetsMinimumConfidence(lowConfidenceSwap, null)).toBe(true)
+    })
+
+    it('should filter out LOW confidence when minimum is MEDIUM', () => {
+      const lowConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'events' as const,
+        confidence: 'LOW' as const,
+      }
+
+      expect(meetsMinimumConfidence(lowConfidenceSwap, 'MEDIUM')).toBe(false)
+    })
+
+    it('should accept MEDIUM confidence when minimum is MEDIUM', () => {
+      const mediumConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'token_balance_changes' as const,
+        confidence: 'MEDIUM' as const,
+      }
+
+      expect(meetsMinimumConfidence(mediumConfidenceSwap, 'MEDIUM')).toBe(true)
+    })
+
+    it('should accept HIGH confidence when minimum is MEDIUM', () => {
+      const highConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'token_balance_changes' as const,
+        confidence: 'HIGH' as const,
+      }
+
+      expect(meetsMinimumConfidence(highConfidenceSwap, 'MEDIUM')).toBe(true)
+    })
+
+    it('should accept MAX confidence when minimum is MEDIUM', () => {
+      const maxConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'tokens_swapped' as const,
+        confidence: 'MAX' as const,
+      }
+
+      expect(meetsMinimumConfidence(maxConfidenceSwap, 'MEDIUM')).toBe(true)
+    })
+
+    it('should filter out MEDIUM and LOW when minimum is HIGH', () => {
+      const mediumConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'token_balance_changes' as const,
+        confidence: 'MEDIUM' as const,
+      }
+
+      const lowConfidenceSwap = {
+        ...mediumConfidenceSwap,
+        confidence: 'LOW' as const,
+      }
+
+      expect(meetsMinimumConfidence(mediumConfidenceSwap, 'HIGH')).toBe(false)
+      expect(meetsMinimumConfidence(lowConfidenceSwap, 'HIGH')).toBe(false)
+    })
+
+    it('should only accept MAX when minimum is MAX', () => {
+      const maxConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'tokens_swapped' as const,
+        confidence: 'MAX' as const,
+      }
+
+      const highConfidenceSwap = {
+        ...maxConfidenceSwap,
+        confidence: 'HIGH' as const,
+      }
+
+      expect(meetsMinimumConfidence(maxConfidenceSwap, 'MAX')).toBe(true)
+      expect(meetsMinimumConfidence(highConfidenceSwap, 'MAX')).toBe(false)
+    })
+
+    it('should handle case-insensitive minimum confidence values', () => {
+      const mediumConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'token_balance_changes' as const,
+        confidence: 'MEDIUM' as const,
+      }
+
+      expect(meetsMinimumConfidence(mediumConfidenceSwap, 'medium')).toBe(true)
+      expect(meetsMinimumConfidence(mediumConfidenceSwap, 'Medium')).toBe(true)
+      expect(meetsMinimumConfidence(mediumConfidenceSwap, 'MEDIUM')).toBe(true)
+    })
+
+    it('should accept all when invalid minimum confidence is provided', () => {
+      const lowConfidenceSwap = {
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'events' as const,
+        confidence: 'LOW' as const,
+      }
+
+      expect(meetsMinimumConfidence(lowConfidenceSwap, 'INVALID')).toBe(true)
+      expect(meetsMinimumConfidence(lowConfidenceSwap, 'SUPER_HIGH')).toBe(true)
+    })
+
+    it('should return true when parsedSwap is null', () => {
+      expect(meetsMinimumConfidence(null, 'HIGH')).toBe(true)
+    })
+
+    it('should correctly order confidence levels: MAX > HIGH > MEDIUM > LOW', () => {
+      const createSwap = (confidence: 'MAX' | 'HIGH' | 'MEDIUM' | 'LOW') => ({
+        swapper: 'test',
+        side: 'BUY' as const,
+        input: { mint: 'SOL', amount_raw: '1000', decimals: 9, amount: 0.000001 },
+        output: { mint: 'TOKEN', amount_raw: '1000', decimals: 6, amount: 0.001 },
+        ata_created: false,
+        classification_source: 'token_balance_changes' as const,
+        confidence,
+      })
+
+      // Test LOW threshold
+      expect(meetsMinimumConfidence(createSwap('LOW'), 'LOW')).toBe(true)
+      expect(meetsMinimumConfidence(createSwap('MEDIUM'), 'LOW')).toBe(true)
+      expect(meetsMinimumConfidence(createSwap('HIGH'), 'LOW')).toBe(true)
+      expect(meetsMinimumConfidence(createSwap('MAX'), 'LOW')).toBe(true)
+
+      // Test MEDIUM threshold
+      expect(meetsMinimumConfidence(createSwap('LOW'), 'MEDIUM')).toBe(false)
+      expect(meetsMinimumConfidence(createSwap('MEDIUM'), 'MEDIUM')).toBe(true)
+      expect(meetsMinimumConfidence(createSwap('HIGH'), 'MEDIUM')).toBe(true)
+      expect(meetsMinimumConfidence(createSwap('MAX'), 'MEDIUM')).toBe(true)
+
+      // Test HIGH threshold
+      expect(meetsMinimumConfidence(createSwap('LOW'), 'HIGH')).toBe(false)
+      expect(meetsMinimumConfidence(createSwap('MEDIUM'), 'HIGH')).toBe(false)
+      expect(meetsMinimumConfidence(createSwap('HIGH'), 'HIGH')).toBe(true)
+      expect(meetsMinimumConfidence(createSwap('MAX'), 'HIGH')).toBe(true)
+
+      // Test MAX threshold
+      expect(meetsMinimumConfidence(createSwap('LOW'), 'MAX')).toBe(false)
+      expect(meetsMinimumConfidence(createSwap('MEDIUM'), 'MAX')).toBe(false)
+      expect(meetsMinimumConfidence(createSwap('HIGH'), 'MAX')).toBe(false)
+      expect(meetsMinimumConfidence(createSwap('MAX'), 'MAX')).toBe(true)
+    })
+  })
 })

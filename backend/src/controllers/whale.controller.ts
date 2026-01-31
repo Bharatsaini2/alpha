@@ -855,311 +855,92 @@ const processSignature = async (signatureJson: any): Promise<void> => {
 
     logger.info(`TX Type Whale: ${txType}`)
 
-    // Check if transaction succeeded
+    // ✅ Step 1: Status Gate - ONLY check if transaction succeeded
     if (!parsedTx.success) {
       logger.info(`Whale [Filter] Skipping ${signature}: Transaction failed`)
       return
     }
 
-    // Instead of checking transaction type, check for swap indicators
-    const tokenBalanceChanges = parsedTx.result?.token_balance_changes || []
-    const hasSwapIndicators = tokenBalanceChanges.length >= 2
+    // ✅ Step 2: NEVER filter by type - Log it but don't use it as a filter
+    // Types like CREATE_TOKEN_ACCOUNT, TOKEN_TRANSFER, GETACCOUNTDATASIZE can still be swaps
+    logger.info(`📋 Transaction type: ${txType} (informational only, not used for filtering)`)
 
-    if (!hasSwapIndicators) {
+    // ✅ Check if we have ANY balance changes - don't require minimum count
+    const tokenBalanceChanges = parsedTx.result?.token_balance_changes || []
+    
+    if (tokenBalanceChanges.length === 0) {
       logger.info(
-        `Whale [Filter] Skipping ${signature}: No swap indicators found (${tokenBalanceChanges.length} balance changes)`,
+        `Whale [Filter] Skipping ${signature}: No balance changes found`,
       )
       return
     }
 
     logger.info(
-      `✅ Swap detected via token balance changes (${tokenBalanceChanges.length} changes)`,
+      `✅ Found ${tokenBalanceChanges.length} balance changes - proceeding to parser`,
     )
 
-    const actions = parsedTx?.result?.actions
-
-    if (!actions || actions.length === 0) {
-      logger.info(`Whale [Filter] Skipping ${signature}: No actions found.`)
-      return
-    }
-
+    const actions = parsedTx?.result?.actions || []
     const protocolName = parsedTx.result.protocol?.name || 'Unknown'
     const gasFee = parsedTx.result.fee
     const swapper = parsedTx.result.signers[0] || whaleAddress
 
-    let tokenIn: any = null
-    let tokenOut: any = null
-    let swapSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' | 'event_override' =
-      'tokens_swapped'
-
-    const actionInfo = actions[0]?.info
-
-    if (actionInfo?.tokens_swapped) {
-      tokenIn = actionInfo.tokens_swapped.in
-      tokenOut = actionInfo.tokens_swapped.out
-      swapSource = 'tokens_swapped'
-      logger.info(`✅ Swap data extracted from: tokens_swapped`)
-    } else if (
-      parsedTx.result?.token_balance_changes &&
-      parsedTx.result.token_balance_changes.length > 0
-    ) {
+    // ✅ STEP 3: Call SHYFT Parser FIRST (canonical flow)
+    // Parser handles ALL classification logic per SHYFT spec
+    logger.info(pc.cyan('🔍 Calling SHYFT parser for classification...'))
+    const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
+    
+    if (!parsedSwap) {
       logger.info(
-        `⚠️ tokens_swapped not found. Checking token_balance_changes...`,
-      )
-
-      // Log raw balance changes to understand the data structure
-      logger.info(`🔍 Raw balance changes (${parsedTx.result.token_balance_changes.length} total):`)
-      parsedTx.result.token_balance_changes.forEach((change: any, idx: number) => {
-        logger.info(`  [${idx}] mint: ${change.mint?.substring(0, 8)}..., owner: ${change.owner?.substring(0, 8)}..., change_amount: ${change.change_amount}, raw_amount: ${change.raw_amount}`)
-      })
-
-      // Get all non-zero balance changes (don't filter by owner yet)
-      const allBalanceChanges = parsedTx.result.token_balance_changes.filter(
-        (change: any) => change.change_amount !== 0,
-      )
-      
-      logger.info(`📊 Found ${allBalanceChanges.length} non-zero balance changes`)
-      
-      if (allBalanceChanges.length < 2) {
-        logger.info(`⚠️ Not enough non-zero balance changes for a swap (need at least 2, got ${allBalanceChanges.length})`)
-        // Continue to TOKEN_TRANSFER fallback
-      }
-
-      // Group balance changes by mint (token address)
-      const changesByMint = new Map<string, any[]>()
-      allBalanceChanges.forEach((change: any) => {
-        if (!changesByMint.has(change.mint)) {
-          changesByMint.set(change.mint, [])
-        }
-        changesByMint.get(change.mint)!.push(change)
-      })
-      
-      // For a swap, we expect 2 different tokens with opposite changes
-      // Strategy: Find any negative and positive changes across all balance changes
-      // The swapper should have at least one change, but the other might be in a different account
-      let tokenSentChange: any = null
-      let tokenReceivedChange: any = null
-      
-      // First, try to find both changes belonging to the swapper
-      for (const [mint, changes] of changesByMint.entries()) {
-        const swapperChange = changes.find((c: any) => c.owner === swapper)
-        
-        if (swapperChange) {
-          if (swapperChange.change_amount < 0 && !tokenSentChange) {
-            tokenSentChange = swapperChange
-          } else if (swapperChange.change_amount > 0 && !tokenReceivedChange) {
-            tokenReceivedChange = swapperChange
-          }
-        }
-      }
-      
-      // If we didn't find both, look for ANY negative/positive changes in the transaction
-      // This handles cases where tokens go through intermediate accounts
-      if (!tokenSentChange || !tokenReceivedChange) {
-        for (const [mint, changes] of changesByMint.entries()) {
-          // Skip if we already found this token type
-          if (tokenSentChange && changes.some(c => c.mint === tokenSentChange.mint)) continue
-          if (tokenReceivedChange && changes.some(c => c.mint === tokenReceivedChange.mint)) continue
-          
-          // Find any negative change (token sent)
-          if (!tokenSentChange) {
-            const negativeChange = changes.find((c: any) => c.change_amount < 0)
-            if (negativeChange) tokenSentChange = negativeChange
-          }
-          
-          // Find any positive change (token received)
-          if (!tokenReceivedChange) {
-            const positiveChange = changes.find((c: any) => c.change_amount > 0)
-            if (positiveChange) tokenReceivedChange = positiveChange
-          }
-        }
-      }
-      
-      logger.info(`🔍 Token sent: ${tokenSentChange ? 'Found' : 'Not found'}, Token received: ${tokenReceivedChange ? 'Found' : 'Not found'}`)
-
-      // Handle both two-sided swaps and one-sided transfers
-      if (tokenSentChange || tokenReceivedChange) {
-        if (tokenSentChange && tokenReceivedChange) {
-          // Two-sided swap: token sent and token received
-          tokenIn = {
-            token_address: tokenSentChange.mint,
-            amount:
-              Math.abs(tokenSentChange.change_amount) /
-              Math.pow(10, tokenSentChange.decimals),
-            symbol: tokenSentChange.symbol || 'Unknown',
-            name: tokenSentChange.name || 'Unknown',
-          }
-
-          tokenOut = {
-            token_address: tokenReceivedChange.mint,
-            amount:
-              tokenReceivedChange.change_amount /
-              Math.pow(10, tokenReceivedChange.decimals),
-            symbol: tokenReceivedChange.symbol || 'Unknown',
-            name: tokenReceivedChange.name || 'Unknown',
-          }
-          swapSource = 'token_balance'
-          logger.info(`✅ Swap data extracted from: token_balance_changes (two-sided)`)
-        } else if (tokenSentChange) {
-          // One-sided: only token sent (sell)
-          tokenIn = {
-            token_address: tokenSentChange.mint,
-            amount:
-              Math.abs(tokenSentChange.change_amount) /
-              Math.pow(10, tokenSentChange.decimals),
-            symbol: tokenSentChange.symbol || 'Unknown',
-            name: tokenSentChange.name || 'Unknown',
-          }
-          tokenOut = {
-            token_address: 'So11111111111111111111111111111111111111112',
-            amount: 0,
-            symbol: 'SOL',
-            name: 'SOL',
-          }
-          swapSource = 'token_balance'
-          logger.info(`✅ Swap data extracted from: token_balance_changes (sell only)`)
-        } else if (tokenReceivedChange) {
-          // One-sided: only token received (buy)
-          tokenIn = {
-            token_address: 'So11111111111111111111111111111111111111112',
-            amount: 0,
-            symbol: 'SOL',
-            name: 'SOL',
-          }
-          tokenOut = {
-            token_address: tokenReceivedChange.mint,
-            amount:
-              tokenReceivedChange.change_amount /
-              Math.pow(10, tokenReceivedChange.decimals),
-            symbol: tokenReceivedChange.symbol || 'Unknown',
-            name: tokenReceivedChange.name || 'Unknown',
-          }
-          swapSource = 'token_balance'
-          logger.info(`✅ Swap data extracted from: token_balance_changes (buy only)`)
-        }
-      }
-    } else {
-      logger.info(
-        `⚠️ tokens_swapped and token_balance_changes not found. Using TOKEN_TRANSFER fallback...`,
-      )
-
-      const transfers = actions.filter((a: any) => a.type === 'TOKEN_TRANSFER')
-
-      const sentTransfer = transfers.find((t: any) => t.info.sender === swapper)
-      const receivedTransfer = transfers.find(
-        (t: any) => t.info.receiver === swapper,
-      )
-
-      if (sentTransfer && receivedTransfer) {
-        tokenIn = {
-          token_address: sentTransfer.info.token_address,
-          amount: sentTransfer.info.amount,
-          symbol: sentTransfer.info.symbol || 'Unknown',
-          name: sentTransfer.info.name || 'Unknown',
-        }
-
-        tokenOut = {
-          token_address: receivedTransfer.info.token_address,
-          amount: receivedTransfer.info.amount,
-          symbol: receivedTransfer.info.symbol || 'Unknown',
-          name: receivedTransfer.info.name || 'Unknown',
-        }
-        swapSource = 'token_transfer'
-        logger.info(`✅ Swap data extracted from: TOKEN_TRANSFER`)
-      }
-    }
-
-    // Step 6: Event Override (Safety Net) - Per SHYFT Spec
-    // If we still don't have swap data, check for swap events as a fallback
-    if ((!tokenIn || !tokenOut) && parsedTx.result?.events) {
-      const events = parsedTx.result.events
-      const hasSwapEvent = events.some((e: any) => 
-        e.type === 'BuyEvent' || 
-        e.type === 'SellEvent' || 
-        e.type === 'SwapEvent' ||
-        e.type === 'Swap'
-      )
-      
-      if (hasSwapEvent) {
-        logger.info(`🔍 Swap event detected: Using event override as safety net`)
-        // Try to extract from first swap event
-        const swapEvent = events.find((e: any) => 
-          e.type === 'BuyEvent' || 
-          e.type === 'SellEvent' || 
-          e.type === 'SwapEvent' ||
-          e.type === 'Swap'
-        )
-        
-        if (swapEvent?.data) {
-          // Attempt to extract from event data
-          if (swapEvent.data.inputMint && swapEvent.data.outputMint) {
-            tokenIn = {
-              token_address: swapEvent.data.inputMint,
-              amount: swapEvent.data.inputAmount || 0,
-              symbol: swapEvent.data.inputSymbol || 'Unknown',
-              name: swapEvent.data.inputName || 'Unknown',
-            }
-            tokenOut = {
-              token_address: swapEvent.data.outputMint,
-              amount: swapEvent.data.outputAmount || 0,
-              symbol: swapEvent.data.outputSymbol || 'Unknown',
-              name: swapEvent.data.outputName || 'Unknown',
-            }
-            swapSource = 'event_override'
-            logger.info(`✅ Swap data extracted from: event_override (${swapEvent.type})`)
-          }
-        }
-      }
-    }
-
-    if (!tokenIn || !tokenOut) {
-      logger.info(
-        `Whale [Filter] Skipping ${signature}: Unable to extract swap data from any source.`,
+        `Whale [Filter] Skipping ${signature}: Parser could not classify transaction (no swap detected)`,
       )
       return
     }
 
     logger.info(
-      pc.blue(
-        `Swap Source: ${swapSource} | ${tokenIn.symbol || tokenIn.token_address} -> ${tokenOut.symbol || tokenOut.token_address}`,
+      pc.green(
+        `✅ Parser classified: ${parsedSwap.side} | confidence: ${parsedSwap.confidence} | source: ${parsedSwap.classification_source}`,
       ),
     )
 
-    // NEW: Use canonical SHYFT parser for validation and enhanced classification
-    let classificationSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' | 'event_override' = swapSource
-    let confidence: 'MAX' | 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM'
-    
-    try {
-      const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
-      if (parsedSwap) {
-        // Map parser classification_source to controller's expected values
-        if (parsedSwap.classification_source === 'token_balance_changes') {
-          classificationSource = 'token_balance'
-        } else if (parsedSwap.classification_source === 'tokens_swapped') {
-          classificationSource = 'tokens_swapped'
-        } else if (parsedSwap.classification_source === 'events') {
-          classificationSource = 'event_override'
-        }
-        confidence = parsedSwap.confidence
-        logger.info(
-          pc.cyan(
-            `✅ Parser validation: side=${parsedSwap.side}, source=${classificationSource}, confidence=${confidence}`,
-          ),
-        )
-      } else {
+    // ✅ Apply confidence filtering if configured (Task 3.3)
+    const minConfidence = process.env.MIN_ALERT_CONFIDENCE
+    if (minConfidence) {
+      const { meetsMinimumConfidence } = require('../utils/shyftParser')
+      if (!meetsMinimumConfidence(parsedSwap, minConfidence)) {
         logger.info(
           pc.yellow(
-            `⚠️ Parser returned null, using fallback classification`,
+            `Whale [Filter] Skipping ${signature}: Confidence ${parsedSwap.confidence} below minimum ${minConfidence}`,
           ),
         )
+        return
       }
-    } catch (error) {
-      logger.warn(
-        { error: error instanceof Error ? error.message : String(error) },
-        `Parser validation failed, using fallback classification`,
-      )
     }
 
+    // ✅ Extract token data from parser result
+    const tokenIn = {
+      token_address: parsedSwap.input.mint,
+      amount: parsedSwap.input.amount,
+      symbol: parsedSwap.input.symbol || 'Unknown',
+      name: parsedSwap.input.symbol || 'Unknown',
+    }
+
+    const tokenOut = {
+      token_address: parsedSwap.output.mint,
+      amount: parsedSwap.output.amount,
+      symbol: parsedSwap.output.symbol || 'Unknown',
+      name: parsedSwap.output.symbol || 'Unknown',
+    }
+
+    const classificationSource = parsedSwap.classification_source
+    const confidence = parsedSwap.confidence
+
+    logger.info(
+      pc.blue(
+        `Swap: ${tokenIn.symbol || tokenIn.token_address} -> ${tokenOut.symbol || tokenOut.token_address}`,
+      ),
+    )
+
+    // ✅ Resolve token symbols (enhance metadata)
     const [inSymbol, outSymbol] = await Promise.all([
       resolveSymbol(tokenIn),
       resolveSymbol(tokenOut),
@@ -1174,8 +955,7 @@ const processSignature = async (signatureJson: any): Promise<void> => {
         ? { symbol: outSymbol, name: outSymbol }
         : outSymbol
 
-    // Update token symbols if resolved (handle Unknown, null, undefined, empty)
-    // Note: We no longer filter out "Token" as some tokens are legitimately named "Token"
+    // Update token symbols if resolved
     if (!tokenIn.symbol || tokenIn.symbol === 'Unknown' || tokenIn.symbol.trim() === '') {
       tokenIn.symbol = inSymbolData.symbol
       tokenIn.name = inSymbolData.name
@@ -1185,29 +965,18 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       tokenOut.name = outSymbolData.name
     }
 
-    const excludedTokens = ['SOL', 'WSOL', 'USDT', 'USDC', 'USD1']
-    const excludedAddresses = [
-      'So11111111111111111111111111111111111111112', // SOL/WSOL
-      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-      'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
-    ]
+    // ✅ Use parser's classification for isBuy/isSell
+    const isBuy = parsedSwap.side === 'BUY' || parsedSwap.side === 'SWAP'
+    const isSell = parsedSwap.side === 'SELL' || parsedSwap.side === 'SWAP'
 
-    // 1) Basic "excluded" checks
-    const inputExcluded =
-      excludedTokens.includes(tokenIn.symbol) ||
-      excludedAddresses.includes(tokenIn.token_address)
-    const outputExcluded =
-      excludedTokens.includes(tokenOut.symbol) ||
-      excludedAddresses.includes(tokenOut.token_address)
-    const bothNonExcluded = !inputExcluded && !outputExcluded // spl to spl
-
-    // 2) Now classify
-    // Buy: receiving non-excluded token (or both non-excluded)
-    // Sell: selling non-excluded token for excluded token (or both non-excluded)
-    const isBuy = bothNonExcluded || (!outputExcluded && inputExcluded)
-    const isSell = bothNonExcluded || (outputExcluded && !inputExcluded)
-
-    if (!isBuy && !isSell) return
+    if (!isBuy && !isSell) {
+      logger.info(
+        pc.yellow(
+          `Whale [Filter] Skipping ${signature}: Parser classified as non-swap`,
+        ),
+      )
+      return
+    }
 
     logger.info(pc.blue(`Valid swap: ${tokenIn.symbol} -> ${tokenOut.symbol}`))
 
@@ -1520,21 +1289,21 @@ const formatNumber = (value: number): string => {
   return value.toFixed(2)
 }
 
-// 🛠️ Helper: Get symbol safely
+// 🛠️ Helper: Get symbol safely with intelligent caching
 const resolveSymbol = async (token: any) => {
-  // If token already has a valid symbol (not Unknown, not empty), use it
-  // Note: We removed the "Token" check because some tokens are legitimately named "Token"
-  if (token.symbol && token.symbol !== 'Unknown' && token.symbol.trim() !== '') {
-    return { symbol: token.symbol, name: token.name || token.symbol }
-  }
-
   try {
+    // ✅ ALWAYS check cache first (10-50ms if cached, builds cache over time)
+    // The cache function internally checks MongoDB first, then APIs if needed
     const metadata = await getTokenMetaDataUsingRPC(token.token_address)
     
-    // If metadata is found and not 'Unknown', use it
-    // Accept "Token" as a valid symbol since some tokens are actually named that
-    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown' && metadata.symbol.trim() !== '') {
+    // If cache/API returned valid metadata, use it (preferred)
+    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown' && metadata.symbol.trim() !== '' && !metadata.symbol.includes('...')) {
       return metadata
+    }
+    
+    // Cache miss or returned Unknown - fall back to SHYFT symbol if available
+    if (token.symbol && token.symbol !== 'Unknown' && token.symbol.trim() !== '') {
+      return { symbol: token.symbol, name: token.name || token.symbol }
     }
     
     // If still unknown, use contract address as fallback
@@ -1543,7 +1312,12 @@ const resolveSymbol = async (token: any) => {
       symbol: shortAddress,
       name: token.token_address
     }
-  } catch {
+  } catch (error) {
+    // On error, try SHYFT symbol first
+    if (token.symbol && token.symbol !== 'Unknown' && token.symbol.trim() !== '') {
+      return { symbol: token.symbol, name: token.name || token.symbol }
+    }
+    
     // Last resort: use contract address
     const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
     return { 

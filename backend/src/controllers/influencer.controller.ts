@@ -1315,40 +1315,9 @@ const processInfluencerSignature = async (
       ),
     )
 
-    // NEW: Use canonical SHYFT parser for validation and enhanced classification
-    let classificationSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' = swapSource as any
+    // Initialize classification variables (will be set by parser below)
+    let classificationSource: 'tokens_swapped' | 'token_balance' | 'token_transfer' | 'event_override' = swapSource
     let confidence: 'MAX' | 'HIGH' | 'MEDIUM' | 'LOW' = 'MEDIUM'
-    
-    try {
-      const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
-      if (parsedSwap) {
-        // Map parser classification_source to controller's expected values
-        if (parsedSwap.classification_source === 'token_balance_changes') {
-          classificationSource = 'token_balance'
-        } else if (parsedSwap.classification_source === 'tokens_swapped') {
-          classificationSource = 'tokens_swapped'
-        } else if (parsedSwap.classification_source === 'events') {
-          classificationSource = 'token_transfer' // Map events to token_transfer for compatibility
-        }
-        confidence = parsedSwap.confidence
-        logger.info(
-          pc.cyan(
-            `✅ Parser validation: side=${parsedSwap.side}, source=${classificationSource}, confidence=${confidence}`,
-          ),
-        )
-      } else {
-        logger.info(
-          pc.yellow(
-            `⚠️ Parser returned null, using fallback classification`,
-          ),
-        )
-      }
-    } catch (error) {
-      logger.warn(
-        { error: error instanceof Error ? error.message : String(error) },
-        `Parser validation failed, using fallback classification`,
-      )
-    }
 
     const [inSymbol, outSymbol] = await Promise.all([
       resolveSymbol(tokenIn),
@@ -1374,30 +1343,72 @@ const processInfluencerSignature = async (
       tokenOut.name = outSymbolData.name
     }
 
-    const excludedTokens = ['SOL', 'WSOL', 'USDT', 'USDC', 'USD1']
-    const excludedAddresses = [
-      'So11111111111111111111111111111111111111112', // SOL/WSOL
-      'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
-      'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
-    ]
+    // ✅ NEW: Use canonical SHYFT parser for classification (Task 3.2)
+    // Parse the transaction using the new parser to get accurate BUY/SELL classification
+    const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
+    
+    if (!parsedSwap) {
+      logger.info(
+        pc.yellow(
+          `KOL [Filter] Skipping ${signature}: Parser could not classify transaction`,
+        ),
+      )
+      return
+    }
 
+    // ✅ Task 3.3: Apply confidence-based filtering
+    const minConfidence = process.env.MIN_ALERT_CONFIDENCE
+    if (minConfidence) {
+      const { meetsMinimumConfidence } = require('../utils/shyftParser')
+      if (!meetsMinimumConfidence(parsedSwap, minConfidence)) {
+        logger.info(
+          pc.yellow(
+            `KOL [Filter] Skipping ${signature}: Confidence ${parsedSwap.confidence} below minimum ${minConfidence}`,
+          ),
+        )
+        logger.debug(
+          {
+            signature,
+            confidence: parsedSwap.confidence,
+            minConfidence,
+            classification_source: parsedSwap.classification_source,
+            side: parsedSwap.side,
+          },
+          'Transaction filtered by confidence threshold'
+        )
+        return
+      }
+    }
 
-    // 1) Basic "excluded" checks
-    const inputExcluded =
-      excludedTokens.includes(tokenIn.symbol) ||
-      excludedAddresses.includes(tokenIn.token_address)
-    const outputExcluded =
-      excludedTokens.includes(tokenOut.symbol) ||
-      excludedAddresses.includes(tokenOut.token_address)
-    const bothNonExcluded = !inputExcluded && !outputExcluded // spl to spl
+    // Map parser output to isBuy/isSell flags
+    // Parser provides: 'BUY', 'SELL', or 'SWAP'
+    // For 'SWAP', we treat it as both buy and sell (SPL to SPL swap)
+    const isBuy = parsedSwap.side === 'BUY' || parsedSwap.side === 'SWAP'
+    const isSell = parsedSwap.side === 'SELL' || parsedSwap.side === 'SWAP'
 
-    // 2) Now classify
-    // Buy: receiving non-excluded token (or both non-excluded)
-    // Sell: selling non-excluded token for excluded token (or both non-excluded)
-    const isBuy = bothNonExcluded || (!outputExcluded && inputExcluded)
-    const isSell = bothNonExcluded || (outputExcluded && !inputExcluded)
+    // Update classification source and confidence from parser
+    classificationSource = parsedSwap.classification_source === 'token_balance_changes' 
+      ? 'token_balance' 
+      : parsedSwap.classification_source === 'tokens_swapped'
+      ? 'tokens_swapped'
+      : 'event_override'
+    confidence = parsedSwap.confidence
 
-    if (!isBuy && !isSell) return
+    // Log classification details
+    logger.info(
+      pc.cyan(
+        `📊 Parser Classification: side=${parsedSwap.side}, source=${classificationSource}, confidence=${confidence}, ata_created=${parsedSwap.ata_created}`,
+      ),
+    )
+
+    if (!isBuy && !isSell) {
+      logger.info(
+        pc.yellow(
+          `KOL [Filter] Skipping ${signature}: No buy or sell classification`,
+        ),
+      )
+      return
+    }
 
     logger.info(pc.blue(`Valid swap: ${tokenIn.symbol} -> ${tokenOut.symbol}`))
 
