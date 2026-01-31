@@ -1596,7 +1596,9 @@ const RightSidebarNew = ({
         .local-marquee-container {
           position: relative;
           overflow: hidden;
-          max-width: 120px;
+          /* width: 100%; removed to allow flex to control width */
+          flex: 1;
+          min-width: 0;
           mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
           -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
         }
@@ -1605,7 +1607,7 @@ const RightSidebarNew = ({
           display: flex;
           gap: 16px; /* spacing between duplicates */
           width: max-content;
-          animation: scroll-local-marquee 10s linear infinite;
+          animation: scroll-local-marquee 5s linear infinite;
         }
 
         .local-marquee-track:hover {
@@ -1662,18 +1664,12 @@ const RightSidebarNew = ({
                     />
                   </div>
                 </div>
-                <div
+                <button
                   className="quick-buy-btn"
-                  style={{
-                    width: '70px',
-                    height: '28px',
-                    background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'shimmer 2s infinite linear',
-                    border: 'none',
-                    pointerEvents: 'none'
-                  }}
-                />
+                  style={{ whiteSpace: 'nowrap', flexShrink: 0, pointerEvents: 'none' }}
+                >
+                  QUICK BUY
+                </button>
               </div>
             ))
           ) : hotCoins.length > 0 ? (
@@ -1706,6 +1702,15 @@ const RightSidebarNew = ({
                       <span className="nw-coin-badge" style={{ flexShrink: 0 }}>
                         <IoMdTrendingUp /> {coin.hotnessScore || 0}
                       </span>
+
+                      {/* Scrolling Full Name */}
+                      <div className="local-marquee-container" style={{ marginLeft: '8px' }}>
+                        <div className="local-marquee-track">
+                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
+                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
+                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
+                        </div>
+                      </div>
                     </div>
                     <div className="coin-meta">
                       MC: ${coin.marketCap ? (parseFloat(coin.marketCap) / 1000000).toFixed(2) : '0'}M

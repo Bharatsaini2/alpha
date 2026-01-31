@@ -78,7 +78,7 @@ const KOLSkeletonItem = () => (
         </div>
 
         <div className="sell-trade-bx hidden md:block" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-            <ShimmerDiv style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+            <ShimmerDiv style={{ width: '72px', height: '24px', borderRadius: '0' }} />
         </div>
 
         <div className="right-info text-end" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -88,7 +88,7 @@ const KOLSkeletonItem = () => (
                 <ShimmerDiv style={{ height: '10px', width: '140px', borderRadius: '4px' }} />
             </div>
             <div className="right-img">
-                <ShimmerDiv style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                <ShimmerDiv style={{ width: '64px', height: '64px', borderRadius: '0' }} />
             </div>
         </div>
     </div>
