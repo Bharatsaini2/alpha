@@ -1,13 +1,24 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parseShyftTransaction = parseShyftTransaction;
 exports.meetsMinimumConfidence = meetsMinimumConfidence;
-var logger_1 = __importDefault(require("./logger"));
+var logger_1 = require("./logger");
 // Constants
 var SOL_MINT = 'So11111111111111111111111111111111111111112';
+// Note: SHYFT already normalizes WSOL in token_balance_changes
+// We don't need separate WSOL handling - just use SOL_MINT
+// Common Solana stablecoins (treat these as "currency" like SOL)
+var STABLECOIN_MINTS = new Set([
+    'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+    'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+    '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // PYUSD
+    'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA', // USDS
+    'EjmyN6qEC1Tf1JxiG1ae7UTJhUxSwk1TCWNWqxWV4J6o', // DAI
+]);
+// Helper: Check if a mint is a "currency" token (SOL or stablecoin)
+function isCurrencyToken(mint) {
+    return mint === SOL_MINT || STABLECOIN_MINTS.has(mint);
+}
 /**
  * Main parser function following canonical SHYFT specification
  * Requirement 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8
@@ -173,44 +184,68 @@ function parseBalanceDeltaPath(tx, swapper) {
         }
         changesByMint[change.mint].push(change);
     }
-    // Normalize SOL - Requirement 1.4
+    // Normalize SOL and stablecoins - Requirement 1.4
     // Note: SHYFT already normalizes WSOL in token_balance_changes, so we only need SOL
     var solNetDelta = netDeltas[SOL_MINT] || 0;
-    logger_1.default.debug({ signature: tx.signature, solNetDelta: solNetDelta }, 'SOL normalization');
-    // Identify non-SOL tokens with non-zero deltas
-    var nonSolTokens = Object.entries(netDeltas)
+    // Calculate total currency delta (SOL + all stablecoins)
+    var currencyNetDelta = solNetDelta;
+    var currencyChanges = [];
+    if (solNetDelta !== 0) {
+        currencyChanges.push({ mint: SOL_MINT, delta: solNetDelta });
+    }
+    for (var _j = 0, _k = Object.entries(netDeltas); _j < _k.length; _j++) {
+        var _l = _k[_j], mint = _l[0], delta = _l[1];
+        if (STABLECOIN_MINTS.has(mint) && delta !== 0) {
+            currencyNetDelta += delta;
+            currencyChanges.push({ mint: mint, delta: delta });
+        }
+    }
+    logger_1.default.debug({ signature: tx.signature, solNetDelta: solNetDelta, currencyNetDelta: currencyNetDelta, currencyChanges: currencyChanges }, 'Currency normalization (SOL + stablecoins)');
+    // Get ALL tokens with non-zero deltas (including stablecoins)
+    var allTokens = Object.entries(netDeltas)
         .filter(function (_a) {
         var mint = _a[0], delta = _a[1];
-        return mint !== SOL_MINT && delta !== 0;
+        return delta !== 0;
     })
         .map(function (_a) {
         var mint = _a[0], delta = _a[1];
         return ({ mint: mint, delta: delta });
     });
-    logger_1.default.debug({ signature: tx.signature, nonSolTokens: nonSolTokens, solNetDelta: solNetDelta }, 'Balance delta analysis');
-    // Classification rules
-    // BUY: non-SOL token inflow + SOL outflow
-    if (nonSolTokens.some(function (t) { return t.delta > 0; }) && solNetDelta < 0) {
-        var tokenInflow = nonSolTokens.find(function (t) { return t.delta > 0; });
-        if (tokenInflow) {
-            var tokenChange = getBestChangeForMint(changesByMint[tokenInflow.mint]);
-            var solChange = getBestChangeForMint(changesByMint[SOL_MINT]);
+    logger_1.default.debug({ signature: tx.signature, allTokens: allTokens }, 'All token balance changes');
+    // ✅ SIMPLE RULE: If there are 2+ different tokens with balance changes, it's a swap
+    // One token goes down (outflow), another goes up (inflow) → SWAP
+    if (allTokens.length >= 2) {
+        var tokenOutflow = allTokens.find(function (t) { return t.delta < 0; }); // Token being sent
+        var tokenInflow = allTokens.find(function (t) { return t.delta > 0; }); // Token being received
+        if (tokenOutflow && tokenInflow) {
+            var tokenOutChange = getBestChangeForMint(changesByMint[tokenOutflow.mint]);
+            var tokenInChange = getBestChangeForMint(changesByMint[tokenInflow.mint]);
+            // Determine side based on whether currency is involved
+            var side = 'SWAP';
+            // BUY: Currency out, token in
+            if (isCurrencyToken(tokenOutflow.mint) && !isCurrencyToken(tokenInflow.mint)) {
+                side = 'BUY';
+            }
+            // SELL: Token out, currency in
+            else if (!isCurrencyToken(tokenOutflow.mint) && isCurrencyToken(tokenInflow.mint)) {
+                side = 'SELL';
+            }
             return {
                 transaction_hash: tx.signature,
                 timestamp: tx.timestamp,
                 swapper: swapper,
-                side: 'BUY',
+                side: side,
                 input: {
-                    mint: SOL_MINT,
-                    amount_raw: String(Math.abs(solNetDelta)),
-                    decimals: (_a = solChange === null || solChange === void 0 ? void 0 : solChange.decimals) !== null && _a !== void 0 ? _a : 9,
-                    amount: Math.abs(solNetDelta) / Math.pow(10, (_b = solChange === null || solChange === void 0 ? void 0 : solChange.decimals) !== null && _b !== void 0 ? _b : 9),
+                    mint: tokenOutflow.mint,
+                    amount_raw: String(Math.abs(tokenOutflow.delta)),
+                    decimals: (_a = tokenOutChange === null || tokenOutChange === void 0 ? void 0 : tokenOutChange.decimals) !== null && _a !== void 0 ? _a : (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0),
+                    amount: Math.abs(tokenOutflow.delta) / Math.pow(10, (_b = tokenOutChange === null || tokenOutChange === void 0 ? void 0 : tokenOutChange.decimals) !== null && _b !== void 0 ? _b : (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0)),
                 },
                 output: {
                     mint: tokenInflow.mint,
                     amount_raw: String(tokenInflow.delta),
-                    decimals: (_c = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _c !== void 0 ? _c : 0,
-                    amount: tokenInflow.delta / Math.pow(10, (_d = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _d !== void 0 ? _d : 0),
+                    decimals: (_c = tokenInChange === null || tokenInChange === void 0 ? void 0 : tokenInChange.decimals) !== null && _c !== void 0 ? _c : (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0),
+                    amount: tokenInflow.delta / Math.pow(10, (_d = tokenInChange === null || tokenInChange === void 0 ? void 0 : tokenInChange.decimals) !== null && _d !== void 0 ? _d : (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0)),
                 },
                 ata_created: detectATACreation(relevantChanges),
                 classification_source: 'token_balance_changes',
@@ -218,32 +253,57 @@ function parseBalanceDeltaPath(tx, swapper) {
             };
         }
     }
-    // SELL: non-SOL token outflow + SOL inflow
-    if (nonSolTokens.some(function (t) { return t.delta < 0; }) && solNetDelta > 0) {
-        var tokenOutflow = nonSolTokens.find(function (t) { return t.delta < 0; });
-        if (tokenOutflow) {
-            var tokenChange = getBestChangeForMint(changesByMint[tokenOutflow.mint]);
-            var solChange = getBestChangeForMint(changesByMint[SOL_MINT]);
+    // ✅ FALLBACK: Accept one-sided transactions (transfers, receives)
+    // This handles cases where only one token changes (receive/send)
+    if (allTokens.length === 1) {
+        var token = allTokens[0];
+        var tokenChange = getBestChangeForMint(changesByMint[token.mint]);
+        if (token.delta > 0) {
+            // Token received (treat as BUY)
+            return {
+                transaction_hash: tx.signature,
+                timestamp: tx.timestamp,
+                swapper: swapper,
+                side: 'BUY',
+                input: {
+                    mint: 'UNKNOWN',
+                    amount_raw: '0',
+                    decimals: 0,
+                    amount: 0,
+                },
+                output: {
+                    mint: token.mint,
+                    amount_raw: String(token.delta),
+                    decimals: (_e = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _e !== void 0 ? _e : 0,
+                    amount: token.delta / Math.pow(10, (_f = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _f !== void 0 ? _f : 0),
+                },
+                ata_created: detectATACreation(relevantChanges),
+                classification_source: 'token_balance_changes',
+                confidence: 'LOW',
+            };
+        }
+        else {
+            // Token sent (treat as SELL)
             return {
                 transaction_hash: tx.signature,
                 timestamp: tx.timestamp,
                 swapper: swapper,
                 side: 'SELL',
                 input: {
-                    mint: tokenOutflow.mint,
-                    amount_raw: String(Math.abs(tokenOutflow.delta)),
-                    decimals: (_e = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _e !== void 0 ? _e : 0,
-                    amount: Math.abs(tokenOutflow.delta) / Math.pow(10, (_f = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _f !== void 0 ? _f : 0),
+                    mint: token.mint,
+                    amount_raw: String(Math.abs(token.delta)),
+                    decimals: (_g = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _g !== void 0 ? _g : 0,
+                    amount: Math.abs(token.delta) / Math.pow(10, (_h = tokenChange === null || tokenChange === void 0 ? void 0 : tokenChange.decimals) !== null && _h !== void 0 ? _h : 0),
                 },
                 output: {
-                    mint: SOL_MINT,
-                    amount_raw: String(solNetDelta),
-                    decimals: (_g = solChange === null || solChange === void 0 ? void 0 : solChange.decimals) !== null && _g !== void 0 ? _g : 9,
-                    amount: solNetDelta / Math.pow(10, (_h = solChange === null || solChange === void 0 ? void 0 : solChange.decimals) !== null && _h !== void 0 ? _h : 9),
+                    mint: 'UNKNOWN',
+                    amount_raw: '0',
+                    decimals: 0,
+                    amount: 0,
                 },
                 ata_created: detectATACreation(relevantChanges),
                 classification_source: 'token_balance_changes',
-                confidence: 'MEDIUM',
+                confidence: 'LOW',
             };
         }
     }

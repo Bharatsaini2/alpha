@@ -1,0 +1,140 @@
+{
+  "success": true,
+  "message": "Transaction details fetched successfully",
+  "result": {
+    "timestamp": "2026-01-30T16:39:37.000Z",
+    "fee": 0.000035001,
+    "fee_payer": "9ogeCJhwdQ3hLbhSqTterv5nWeetnu9Z2LxjWuN6krhq",
+    "signers": [
+      "9ogeCJhwdQ3hLbhSqTterv5nWeetnu9Z2LxjWuN6krhq"
+    ],
+    "signatures": [
+      "5978zStYaqddPkUZfRh4fmXHVVhofhKDZoNahhb9G73m9tqypnTEJRjhyn1SXN3CRHeTbG3t3u1YFDW7ZCL1vHpx"
+    ],
+    "protocol": {
+      "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "name": "Token Program"
+    },
+    "type": "TOKEN_TRANSFER",
+    "status": "Success",
+    "token_balance_changes": [
+      {
+        "address": "2vyeVAXu2EySgGonpccmYDoJvRo1bbqsfb13y7b4G8Na",
+        "decimals": 9,
+        "change_amount": 26651933514649230,
+        "post_balance": 26651933514649230,
+        "pre_balance": 0,
+        "mint": "5eFQMe51UYtz4DiCzzQeAaffw6tNZyyALRMgPwx7BAGS",
+        "owner": "9ogeCJhwdQ3hLbhSqTterv5nWeetnu9Z2LxjWuN6krhq"
+      },
+      {
+        "address": "6BaorE5twyCc6aj3yBezrKZbJqWSZZHih6qX11KYFDd",
+        "decimals": 9,
+        "change_amount": -26651933514649230,
+        "post_balance": 327484594845087400,
+        "pre_balance": 354136528359736700,
+        "mint": "5eFQMe51UYtz4DiCzzQeAaffw6tNZyyALRMgPwx7BAGS",
+        "owner": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"
+      },
+      {
+        "address": "J1PM2iyTeNf4J6D9EN8eK4dV1V8HBfGzzN3ap2JKWxXH",
+        "decimals": 9,
+        "change_amount": 3700000000,
+        "post_balance": 44888504821,
+        "pre_balance": 41188504821,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM"
+      }
+    ],
+    "actions": [
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "ix_index": 9
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "parent_protocol": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+        "ix_index": 12
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "parent_protocol": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+        "ix_index": 13
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "troY36YiPGqMyAYCNbEqYCdN2tb91Zf7bHcQt7KUi61",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "ix_index": 15
+      },
+      {
+        "info": {
+          "amount": 3.7,
+          "amount_raw": 3700000000,
+          "receiver": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM",
+          "sender": "9ogeCJhwdQ3hLbhSqTterv5nWeetnu9Z2LxjWuN6krhq",
+          "receiver_associated_account": "J1PM2iyTeNf4J6D9EN8eK4dV1V8HBfGzzN3ap2JKWxXH",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+        "ix_index": 10
+      },
+      {
+        "info": {
+          "amount": 26651933.51464923,
+          "amount_raw": 26651933514649230,
+          "receiver": "9ogeCJhwdQ3hLbhSqTterv5nWeetnu9Z2LxjWuN6krhq",
+          "sender": "FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM",
+          "receiver_associated_account": "2vyeVAXu2EySgGonpccmYDoJvRo1bbqsfb13y7b4G8Na",
+          "token_address": "5eFQMe51UYtz4DiCzzQeAaffw6tNZyyALRMgPwx7BAGS"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",
+        "ix_index": 11
+      },
+      {
+        "info": {
+          "sender": "9ogeCJhwdQ3hLbhSqTterv5nWeetnu9Z2LxjWuN6krhq",
+          "receiver": "9yMwSPk9mrXSN7yDHUuZurAh1sjbJsfpUqjZ7SvVtdco",
+          "amount": 0.037,
+          "amount_raw": 37000000
+        },
+        "source_protocol": {
+          "address": "11111111111111111111111111111111",
+          "name": "SYSTEM_PROGRAM"
+        },
+        "type": "SOL_TRANSFER",
+        "parent_protocol": "troY36YiPGqMyAYCNbEqYCdN2tb91Zf7bHcQt7KUi61",
+        "ix_index": 16
+      }
+    ],
+    "events": []
+  }
+}

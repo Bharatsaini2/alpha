@@ -3,6 +3,9 @@
  * 
  * This file contains fast-check arbitraries (test data generators) for property-based testing.
  * These generators create random but valid test data for transactions, balance changes, and asset deltas.
+ * 
+ * Task 1: Set up enhanced parser structure and interfaces
+ * Requirements: 7.2, 7.3, 7.4, 8.1
  */
 
 import * as fc from 'fast-check'
@@ -15,462 +18,507 @@ import {
 } from '../shyftParserV2.types'
 
 // ============================================================================
+// Constants for Test Data Generation
+// ============================================================================
+
+const SOL_MINT = PRIORITY_ASSETS.SOL
+const USDC_MINT = PRIORITY_ASSETS.USDC
+const USDT_MINT = PRIORITY_ASSETS.USDT
+
+// Sample token mints for testing
+const SAMPLE_TOKEN_MINTS = [
+  'TokenMint111111111111111111111111111111111',
+  'TokenMint222222222222222222222222222222222',
+  'TokenMint333333333333333333333333333333333',
+  'WIFMint44444444444444444444444444444444444',
+  'BONKMint5555555555555555555555555555555555',
+]
+
+// Sample wallet addresses
+const SAMPLE_WALLETS = [
+  'Wallet11111111111111111111111111111111111111',
+  'Wallet22222222222222222222222222222222222222',
+  'Wallet33333333333333333333333333333333333333',
+  'Relayer1111111111111111111111111111111111111',
+]
+
+// Known AMM pool addresses (for exclusion testing)
+const SAMPLE_AMM_POOLS = [
+  '675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8', // Raydium
+  '9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP', // Orca
+  'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4', // Jupiter
+]
+
+// ============================================================================
 // Basic Arbitraries
 // ============================================================================
 
 /**
- * Generate a valid Solana address (44 character base58 string)
+ * Generate a random Solana address (wallet or mint)
  */
-export const solanaAddressArbitrary = fc.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/)
-
-/**
- * Generate a valid token mint address
- */
-export const tokenMintArbitrary = fc.oneof(
-  fc.constant(PRIORITY_ASSETS.SOL),
-  fc.constant(PRIORITY_ASSETS.USDC),
-  fc.constant(PRIORITY_ASSETS.USDT),
-  solanaAddressArbitrary
+export const solanaAddressArbitrary = fc.oneof(
+  fc.constantFrom(...SAMPLE_WALLETS),
+  fc.constantFrom(...SAMPLE_TOKEN_MINTS),
+  fc.constantFrom(SOL_MINT, USDC_MINT, USDT_MINT),
+  fc.constantFrom(...SAMPLE_AMM_POOLS)
 )
 
 /**
- * Generate a valid token symbol
+ * Generate a random wallet address (not AMM pool)
+ */
+export const walletAddressArbitrary = fc.constantFrom(...SAMPLE_WALLETS)
+
+/**
+ * Generate a random token mint address
+ */
+export const tokenMintArbitrary = fc.constantFrom(...SAMPLE_TOKEN_MINTS)
+
+/**
+ * Generate a random priority asset mint (SOL, USDC, USDT)
+ */
+export const priorityAssetMintArbitrary = fc.constantFrom(SOL_MINT, USDC_MINT, USDT_MINT)
+
+/**
+ * Generate a random AMM pool address
+ */
+export const ammPoolAddressArbitrary = fc.constantFrom(...SAMPLE_AMM_POOLS)
+
+/**
+ * Generate a random token symbol
  */
 export const tokenSymbolArbitrary = fc.oneof(
   fc.constant('SOL'),
   fc.constant('USDC'),
   fc.constant('USDT'),
-  fc.constant('WSOL'),
-  fc.stringMatching(/^[A-Z]{3,10}$/)
+  fc.constant('WIF'),
+  fc.constant('BONK'),
+  fc.constant('TOKEN'),
+  fc.string({ minLength: 3, maxLength: 5 })
 )
 
 /**
- * Generate valid token decimals (0-18)
+ * Generate a random token decimals (common values: 6, 9)
  */
-export const tokenDecimalsArbitrary = fc.integer({ min: 0, max: 18 })
+export const tokenDecimalsArbitrary = fc.constantFrom(6, 9, 8, 0)
+
+/**
+ * Generate a random balance amount (in raw units)
+ */
+export const balanceAmountArbitrary = fc.nat({ max: 1_000_000_000_000 })
+
+/**
+ * Generate a random delta amount (can be positive or negative)
+ */
+export const deltaAmountArbitrary = fc.integer({ min: -1_000_000_000, max: 1_000_000_000 })
+
+/**
+ * Generate a small positive SOL amount (for rent refunds)
+ */
+export const smallSolAmountArbitrary = fc.integer({ min: 1_000_000, max: 9_000_000 }) // 0.001 to 0.009 SOL
 
 /**
  * Generate a transaction signature
  */
-export const signatureArbitrary = fc.stringMatching(/^[1-9A-HJ-NP-Za-km-z]{64,88}$/)
+export const signatureArbitrary = fc.string({ minLength: 64, maxLength: 88 })
 
 /**
  * Generate a timestamp (Unix timestamp in seconds)
  */
-export const timestampArbitrary = fc.integer({ min: 1600000000, max: 2000000000 })
+export const timestampArbitrary = fc.integer({ min: 1600000000, max: 1800000000 })
 
 // ============================================================================
-// Token Balance Change Arbitraries
+// TokenBalanceChange Arbitraries
 // ============================================================================
 
 /**
  * Generate a single token balance change
  */
-export const tokenBalanceChangeArbitrary = fc.record({
+export const tokenBalanceChangeArbitrary: fc.Arbitrary<TokenBalanceChange> = fc.record({
   address: solanaAddressArbitrary,
   decimals: tokenDecimalsArbitrary,
-  change_amount: fc.integer({ min: -1000000000000, max: 1000000000000 }),
-  post_balance: fc.integer({ min: 0, max: 1000000000000 }),
-  pre_balance: fc.integer({ min: 0, max: 1000000000000 }),
+  change_amount: deltaAmountArbitrary,
+  post_balance: balanceAmountArbitrary,
+  pre_balance: balanceAmountArbitrary,
   mint: tokenMintArbitrary,
-  owner: solanaAddressArbitrary,
+  owner: walletAddressArbitrary,
 })
 
 /**
- * Generate token balance changes for a specific owner
+ * Generate a token balance change with specific owner
  */
-export function tokenBalanceChangesForOwnerArbitrary(owner: string) {
-  return fc.array(
-    fc.record({
-      address: solanaAddressArbitrary,
-      decimals: tokenDecimalsArbitrary,
-      change_amount: fc.integer({ min: -1000000000000, max: 1000000000000 }),
-      post_balance: fc.integer({ min: 0, max: 1000000000000 }),
-      pre_balance: fc.integer({ min: 0, max: 1000000000000 }),
-      mint: tokenMintArbitrary,
-      owner: fc.constant(owner),
-    }),
-    { minLength: 0, maxLength: 10 }
-  )
+export function tokenBalanceChangeForOwnerArbitrary(owner: string): fc.Arbitrary<TokenBalanceChange> {
+  return fc.record({
+    address: solanaAddressArbitrary,
+    decimals: tokenDecimalsArbitrary,
+    change_amount: deltaAmountArbitrary,
+    post_balance: balanceAmountArbitrary,
+    pre_balance: balanceAmountArbitrary,
+    mint: tokenMintArbitrary,
+    owner: fc.constant(owner),
+  })
 }
 
 /**
- * Generate rent noise transaction (small positive SOL delta with non-SOL activity)
+ * Generate a token balance change with specific mint
  */
-export const rentNoiseTransactionArbitrary = fc.tuple(
-  solanaAddressArbitrary,
-  fc.integer({ min: 1, max: 9999999 }) // Less than 0.01 SOL (10000000 lamports)
-).chain(([owner, solDelta]) => {
+export function tokenBalanceChangeForMintArbitrary(mint: string): fc.Arbitrary<TokenBalanceChange> {
   return fc.record({
-    owner: fc.constant(owner),
-    balanceChanges: fc.constant([
-      // Small positive SOL delta (rent refund)
-      {
-        address: 'sol-account',
-        decimals: 9,
-        change_amount: solDelta,
-        post_balance: 1000000000 + solDelta,
-        pre_balance: 1000000000,
-        mint: PRIORITY_ASSETS.SOL,
-        owner,
-      },
-      // Non-SOL activity (token swap)
-      {
-        address: 'token-account',
-        decimals: 6,
-        change_amount: 1000000,
-        post_balance: 1000000,
-        pre_balance: 0,
-        mint: 'TokenMint123',
-        owner,
-      },
-    ] as TokenBalanceChange[]),
+    address: solanaAddressArbitrary,
+    decimals: tokenDecimalsArbitrary,
+    change_amount: deltaAmountArbitrary,
+    post_balance: balanceAmountArbitrary,
+    pre_balance: balanceAmountArbitrary,
+    mint: fc.constant(mint),
+    owner: walletAddressArbitrary,
   })
-})
+}
 
 /**
- * Generate a swap transaction with two assets (one in, one out)
+ * Generate a SOL rent refund balance change (small positive SOL delta)
  */
-export const swapTransactionArbitrary = fc.tuple(
-  solanaAddressArbitrary,
-  tokenMintArbitrary,
-  tokenMintArbitrary,
-  fc.integer({ min: 1000000, max: 1000000000000 }),
-  fc.integer({ min: 1000000, max: 1000000000000 })
-).chain(([owner, mintIn, mintOut, amountIn, amountOut]) => {
+export function rentRefundBalanceChangeArbitrary(owner: string): fc.Arbitrary<TokenBalanceChange> {
   return fc.record({
+    address: solanaAddressArbitrary,
+    decimals: fc.constant(9),
+    change_amount: smallSolAmountArbitrary,
+    post_balance: balanceAmountArbitrary,
+    pre_balance: balanceAmountArbitrary,
+    mint: fc.constant(SOL_MINT),
     owner: fc.constant(owner),
-    balanceChanges: fc.constant([
-      // Outgoing asset (negative delta)
-      {
-        address: 'account-out',
-        decimals: mintOut === PRIORITY_ASSETS.SOL ? 9 : 6,
-        change_amount: -amountOut,
-        post_balance: 0,
-        pre_balance: amountOut,
-        mint: mintOut,
-        owner,
-      },
-      // Incoming asset (positive delta)
-      {
-        address: 'account-in',
-        decimals: mintIn === PRIORITY_ASSETS.SOL ? 9 : 6,
-        change_amount: amountIn,
-        post_balance: amountIn,
-        pre_balance: 0,
-        mint: mintIn,
-        owner,
-      },
-    ] as TokenBalanceChange[]),
   })
-})
+}
 
 /**
- * Generate a multi-hop transaction (e.g., SOL → USDC → TOKEN)
+ * Generate a balance change with positive delta (inflow)
  */
-export const multiHopTransactionArbitrary = fc.tuple(
-  solanaAddressArbitrary,
-  fc.integer({ min: 1000000000, max: 10000000000 }), // SOL amount
-  fc.integer({ min: 1000000, max: 100000000 }), // USDC amount (intermediate)
-  fc.integer({ min: 1000000, max: 1000000000 }) // Token amount
-).chain(([owner, solAmount, usdcAmount, tokenAmount]) => {
+export function positiveBalanceChangeArbitrary(owner: string, mint: string): fc.Arbitrary<TokenBalanceChange> {
   return fc.record({
+    address: solanaAddressArbitrary,
+    decimals: tokenDecimalsArbitrary,
+    change_amount: fc.integer({ min: 1, max: 1_000_000_000 }),
+    post_balance: balanceAmountArbitrary,
+    pre_balance: balanceAmountArbitrary,
+    mint: fc.constant(mint),
     owner: fc.constant(owner),
-    balanceChanges: fc.constant([
-      // SOL out
-      {
-        address: 'sol-account',
-        decimals: 9,
-        change_amount: -solAmount,
-        post_balance: 0,
-        pre_balance: solAmount,
-        mint: PRIORITY_ASSETS.SOL,
-        owner,
-      },
-      // USDC intermediate (net zero - in and out)
-      {
-        address: 'usdc-account-in',
-        decimals: 6,
-        change_amount: usdcAmount,
-        post_balance: usdcAmount,
-        pre_balance: 0,
-        mint: PRIORITY_ASSETS.USDC,
-        owner,
-      },
-      {
-        address: 'usdc-account-out',
-        decimals: 6,
-        change_amount: -usdcAmount,
-        post_balance: 0,
-        pre_balance: usdcAmount,
-        mint: PRIORITY_ASSETS.USDC,
-        owner,
-      },
-      // Token in
-      {
-        address: 'token-account',
-        decimals: 6,
-        change_amount: tokenAmount,
-        post_balance: tokenAmount,
-        pre_balance: 0,
-        mint: 'TokenMintXYZ',
-        owner,
-      },
-    ] as TokenBalanceChange[]),
   })
-})
+}
 
 /**
- * Generate a relayer transaction (fee payer != swapper)
+ * Generate a balance change with negative delta (outflow)
  */
-export const relayerTransactionArbitrary = fc.tuple(
-  solanaAddressArbitrary, // relayer (fee payer)
-  solanaAddressArbitrary, // actual swapper
-  fc.integer({ min: 1000000, max: 1000000000 }),
-  fc.integer({ min: 1000000, max: 1000000000 })
-).chain(([relayer, swapper, amountIn, amountOut]) => {
+export function negativeBalanceChangeArbitrary(owner: string, mint: string): fc.Arbitrary<TokenBalanceChange> {
   return fc.record({
-    feePayer: fc.constant(relayer),
-    swapper: fc.constant(swapper),
-    signers: fc.constant([swapper, relayer]),
-    balanceChanges: fc.constant([
-      // Swapper's token out
-      {
-        address: 'swapper-token-out',
-        decimals: 6,
-        change_amount: -amountOut,
-        post_balance: 0,
-        pre_balance: amountOut,
-        mint: 'TokenMintABC',
-        owner: swapper,
-      },
-      // Swapper's token in
-      {
-        address: 'swapper-token-in',
-        decimals: 6,
-        change_amount: amountIn,
-        post_balance: amountIn,
-        pre_balance: 0,
-        mint: 'TokenMintDEF',
-        owner: swapper,
-      },
-      // Relayer's SOL (fee payment only, no swap activity)
-      {
-        address: 'relayer-sol',
-        decimals: 9,
-        change_amount: -5000000, // 0.005 SOL fee
-        post_balance: 995000000,
-        pre_balance: 1000000000,
-        mint: PRIORITY_ASSETS.SOL,
-        owner: relayer,
-      },
-    ] as TokenBalanceChange[]),
+    address: solanaAddressArbitrary,
+    decimals: tokenDecimalsArbitrary,
+    change_amount: fc.integer({ min: -1_000_000_000, max: -1 }),
+    post_balance: balanceAmountArbitrary,
+    pre_balance: balanceAmountArbitrary,
+    mint: fc.constant(mint),
+    owner: fc.constant(owner),
   })
-})
+}
+
+/**
+ * Generate a balance change with zero delta (no change)
+ */
+export function zeroBalanceChangeArbitrary(owner: string, mint: string): fc.Arbitrary<TokenBalanceChange> {
+  return fc.record({
+    address: solanaAddressArbitrary,
+    decimals: tokenDecimalsArbitrary,
+    change_amount: fc.constant(0),
+    post_balance: balanceAmountArbitrary,
+    pre_balance: balanceAmountArbitrary,
+    mint: fc.constant(mint),
+    owner: fc.constant(owner),
+  })
+}
+
+/**
+ * Generate an array of token balance changes
+ */
+export const tokenBalanceChangesArbitrary: fc.Arbitrary<TokenBalanceChange[]> = fc.array(
+  tokenBalanceChangeArbitrary,
+  { minLength: 1, maxLength: 10 }
+)
 
 // ============================================================================
-// Asset Delta Arbitraries
+// AssetDelta Arbitraries
 // ============================================================================
 
 /**
  * Generate a single asset delta
  */
-export const assetDeltaArbitrary = fc.record({
+export const assetDeltaArbitrary: fc.Arbitrary<AssetDelta> = fc.record({
   mint: tokenMintArbitrary,
   symbol: tokenSymbolArbitrary,
-  netDelta: fc.integer({ min: -1000000000000, max: 1000000000000 }),
+  netDelta: deltaAmountArbitrary,
   decimals: tokenDecimalsArbitrary,
   isIntermediate: fc.boolean(),
 })
 
 /**
- * Generate an asset delta map with exactly 2 active assets
+ * Generate an asset delta with positive net delta
  */
-export const twoAssetDeltaMapArbitrary = fc.tuple(
-  tokenMintArbitrary,
-  tokenMintArbitrary,
-  fc.integer({ min: 1000000, max: 1000000000 }),
-  fc.integer({ min: 1000000, max: 1000000000 })
-).chain(([mint1, mint2, amount1, amount2]) => {
-  const deltaMap: AssetDeltaMap = {
-    [mint1]: {
-      mint: mint1,
-      symbol: mint1 === PRIORITY_ASSETS.SOL ? 'SOL' : 'TOKEN1',
-      netDelta: -amount1, // Outgoing
-      decimals: mint1 === PRIORITY_ASSETS.SOL ? 9 : 6,
-      isIntermediate: false,
-    },
-    [mint2]: {
-      mint: mint2,
-      symbol: mint2 === PRIORITY_ASSETS.SOL ? 'SOL' : 'TOKEN2',
-      netDelta: amount2, // Incoming
-      decimals: mint2 === PRIORITY_ASSETS.SOL ? 9 : 6,
-      isIntermediate: false,
-    },
-  }
-  return fc.constant(deltaMap)
+export const positiveAssetDeltaArbitrary: fc.Arbitrary<AssetDelta> = fc.record({
+  mint: tokenMintArbitrary,
+  symbol: tokenSymbolArbitrary,
+  netDelta: fc.integer({ min: 1, max: 1_000_000_000 }),
+  decimals: tokenDecimalsArbitrary,
+  isIntermediate: fc.constant(false),
 })
 
 /**
- * Generate an asset delta map with intermediate assets (multi-hop)
+ * Generate an asset delta with negative net delta
  */
-export const multiHopAssetDeltaMapArbitrary = fc.tuple(
-  tokenMintArbitrary,
-  tokenMintArbitrary,
-  fc.integer({ min: 1000000, max: 1000000000 }),
-  fc.integer({ min: 1000000, max: 1000000000 })
-).chain(([mintStart, mintEnd, amountStart, amountEnd]) => {
-  const deltaMap: AssetDeltaMap = {
-    [mintStart]: {
-      mint: mintStart,
-      symbol: mintStart === PRIORITY_ASSETS.SOL ? 'SOL' : 'TOKEN_START',
-      netDelta: -amountStart, // Outgoing
-      decimals: mintStart === PRIORITY_ASSETS.SOL ? 9 : 6,
-      isIntermediate: false,
-    },
-    [PRIORITY_ASSETS.USDC]: {
-      mint: PRIORITY_ASSETS.USDC,
-      symbol: 'USDC',
-      netDelta: 0, // Intermediate (net zero)
-      decimals: 6,
-      isIntermediate: true,
-    },
-    [mintEnd]: {
-      mint: mintEnd,
-      symbol: mintEnd === PRIORITY_ASSETS.SOL ? 'SOL' : 'TOKEN_END',
-      netDelta: amountEnd, // Incoming
-      decimals: mintEnd === PRIORITY_ASSETS.SOL ? 9 : 6,
-      isIntermediate: false,
-    },
-  }
-  return fc.constant(deltaMap)
+export const negativeAssetDeltaArbitrary: fc.Arbitrary<AssetDelta> = fc.record({
+  mint: tokenMintArbitrary,
+  symbol: tokenSymbolArbitrary,
+  netDelta: fc.integer({ min: -1_000_000_000, max: -1 }),
+  decimals: tokenDecimalsArbitrary,
+  isIntermediate: fc.constant(false),
 })
 
+/**
+ * Generate an asset delta with zero net delta (intermediate)
+ */
+export const intermediateAssetDeltaArbitrary: fc.Arbitrary<AssetDelta> = fc.record({
+  mint: tokenMintArbitrary,
+  symbol: tokenSymbolArbitrary,
+  netDelta: fc.constant(0),
+  decimals: tokenDecimalsArbitrary,
+  isIntermediate: fc.constant(true),
+})
+
+/**
+ * Generate an AssetDeltaMap with exactly 2 active assets (for swap detection)
+ */
+export const twoAssetDeltaMapArbitrary: fc.Arbitrary<AssetDeltaMap> = fc
+  .tuple(
+    positiveAssetDeltaArbitrary,
+    negativeAssetDeltaArbitrary,
+    tokenMintArbitrary,
+    tokenMintArbitrary
+  )
+  .filter(([positive, negative, mint1, mint2]) => mint1 !== mint2)
+  .map(([positive, negative, mint1, mint2]) => ({
+    [mint1]: { ...positive, mint: mint1 },
+    [mint2]: { ...negative, mint: mint2 },
+  }))
+
+/**
+ * Generate an AssetDeltaMap with intermediate assets (multi-hop)
+ */
+export const multiHopAssetDeltaMapArbitrary: fc.Arbitrary<AssetDeltaMap> = fc
+  .tuple(
+    positiveAssetDeltaArbitrary,
+    negativeAssetDeltaArbitrary,
+    fc.array(intermediateAssetDeltaArbitrary, { minLength: 1, maxLength: 3 }),
+    tokenMintArbitrary,
+    tokenMintArbitrary
+  )
+  .filter(([positive, negative, intermediates, mint1, mint2]) => mint1 !== mint2)
+  .map(([positive, negative, intermediates, mint1, mint2]) => {
+    const map: AssetDeltaMap = {
+      [mint1]: { ...positive, mint: mint1 },
+      [mint2]: { ...negative, mint: mint2 },
+    }
+    intermediates.forEach((intermediate, index) => {
+      map[`intermediate_${index}`] = intermediate
+    })
+    return map
+  })
+
 // ============================================================================
-// Fee Data Arbitraries
+// FeeData Arbitraries
 // ============================================================================
 
 /**
  * Generate fee data
  */
-export const feeDataArbitrary = fc.record({
-  transactionFee: fc.integer({ min: 5000, max: 10000 }).map(n => n / 1e9), // 0.000005 - 0.00001 SOL
-  platformFee: fc.option(fc.integer({ min: 0, max: 1000000 }), { nil: undefined }),
-  priorityFee: fc.option(fc.integer({ min: 0, max: 100000 }).map(n => n / 1e9), { nil: undefined }),
-})
-
-// ============================================================================
-// ERASE Transaction Arbitraries
-// ============================================================================
-
-/**
- * Generate a transaction that should be classified as ERASE (both positive deltas)
- */
-export const bothPositiveEraseArbitrary = fc.tuple(
-  solanaAddressArbitrary,
-  fc.integer({ min: 1000000, max: 1000000000 }),
-  fc.integer({ min: 1000000, max: 1000000000 })
-).chain(([owner, amount1, amount2]) => {
-  return fc.record({
-    owner: fc.constant(owner),
-    balanceChanges: fc.constant([
-      {
-        address: 'account-1',
-        decimals: 6,
-        change_amount: amount1, // Positive
-        post_balance: amount1,
-        pre_balance: 0,
-        mint: 'TokenMint1',
-        owner,
-      },
-      {
-        address: 'account-2',
-        decimals: 6,
-        change_amount: amount2, // Positive
-        post_balance: amount2,
-        pre_balance: 0,
-        mint: 'TokenMint2',
-        owner,
-      },
-    ] as TokenBalanceChange[]),
-  })
+export const feeDataArbitrary: fc.Arbitrary<FeeData> = fc.record({
+  transactionFee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
+  platformFee: fc.option(fc.double({ min: 0, max: 100, noNaN: true })),
+  priorityFee: fc.option(fc.double({ min: 0, max: 0.001, noNaN: true })),
 })
 
 /**
- * Generate a transaction that should be classified as ERASE (both negative deltas)
+ * Generate fee data with zero fees
  */
-export const bothNegativeEraseArbitrary = fc.tuple(
-  solanaAddressArbitrary,
-  fc.integer({ min: 1000000, max: 1000000000 }),
-  fc.integer({ min: 1000000, max: 1000000000 })
-).chain(([owner, amount1, amount2]) => {
-  return fc.record({
-    owner: fc.constant(owner),
-    balanceChanges: fc.constant([
-      {
-        address: 'account-1',
-        decimals: 6,
-        change_amount: -amount1, // Negative
-        post_balance: 0,
-        pre_balance: amount1,
-        mint: 'TokenMint1',
-        owner,
-      },
-      {
-        address: 'account-2',
-        decimals: 6,
-        change_amount: -amount2, // Negative
-        post_balance: 0,
-        pre_balance: amount2,
-        mint: 'TokenMint2',
-        owner,
-      },
-    ] as TokenBalanceChange[]),
-  })
+export const zeroFeeDataArbitrary: fc.Arbitrary<FeeData> = fc.constant({
+  transactionFee: 0,
+  platformFee: 0,
+  priorityFee: 0,
 })
 
 // ============================================================================
-// Helper Functions
+// Transaction Arbitraries
 // ============================================================================
 
 /**
- * Create a token balance change with specific parameters
+ * Generate a basic transaction structure with balance changes
  */
-export function createTokenBalanceChange(
-  owner: string,
-  mint: string,
-  delta: number,
-  decimals: number = 6
-): TokenBalanceChange {
-  const preBalance = delta < 0 ? Math.abs(delta) : 0
-  const postBalance = delta > 0 ? delta : 0
-  
-  return {
-    address: `account-${mint.substring(0, 8)}`,
-    decimals,
-    change_amount: delta,
-    post_balance: postBalance,
-    pre_balance: preBalance,
-    mint,
-    owner,
-  }
+export interface TransactionArbitrary {
+  signature: string
+  timestamp: number
+  feePayer: string
+  signers: string[]
+  tokenBalanceChanges: TokenBalanceChange[]
+  fee: number
 }
 
 /**
- * Create an asset delta with specific parameters
+ * Generate a transaction with random balance changes
  */
-export function createAssetDelta(
-  mint: string,
-  symbol: string,
-  netDelta: number,
-  decimals: number = 6,
-  isIntermediate: boolean = false
-): AssetDelta {
-  return {
-    mint,
-    symbol,
-    netDelta,
-    decimals,
-    isIntermediate,
-  }
+export const transactionArbitrary: fc.Arbitrary<TransactionArbitrary> = fc.record({
+  signature: signatureArbitrary,
+  timestamp: timestampArbitrary,
+  feePayer: walletAddressArbitrary,
+  signers: fc.array(walletAddressArbitrary, { minLength: 1, maxLength: 3 }),
+  tokenBalanceChanges: tokenBalanceChangesArbitrary,
+  fee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
+})
+
+/**
+ * Generate a transaction with rent noise (small SOL refund + non-SOL activity)
+ */
+export const rentNoiseTransactionArbitrary: fc.Arbitrary<TransactionArbitrary> = fc
+  .tuple(
+    signatureArbitrary,
+    timestampArbitrary,
+    walletAddressArbitrary,
+    fc.array(walletAddressArbitrary, { minLength: 1, maxLength: 3 })
+  )
+  .chain(([signature, timestamp, feePayer, signers]) =>
+    fc.record({
+      signature: fc.constant(signature),
+      timestamp: fc.constant(timestamp),
+      feePayer: fc.constant(feePayer),
+      signers: fc.constant(signers),
+      tokenBalanceChanges: fc
+        .tuple(
+          rentRefundBalanceChangeArbitrary(feePayer),
+          negativeBalanceChangeArbitrary(feePayer, SAMPLE_TOKEN_MINTS[0]),
+          positiveBalanceChangeArbitrary(feePayer, SAMPLE_TOKEN_MINTS[1])
+        )
+        .map(([rentRefund, tokenOut, tokenIn]) => [rentRefund, tokenOut, tokenIn]),
+      fee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
+    })
+  )
+
+/**
+ * Generate a relayer transaction (fee payer != actual swapper)
+ */
+export const relayerTransactionArbitrary: fc.Arbitrary<TransactionArbitrary> = fc
+  .tuple(
+    signatureArbitrary,
+    timestampArbitrary,
+    fc.constant(SAMPLE_WALLETS[3]), // Relayer as fee payer
+    fc.constant([SAMPLE_WALLETS[0]] as string[]) // Actual swapper as signer
+  )
+  .chain(([signature, timestamp, feePayer, signers]) =>
+    fc.record({
+      signature: fc.constant(signature),
+      timestamp: fc.constant(timestamp),
+      feePayer: fc.constant(feePayer),
+      signers: fc.constant(signers),
+      tokenBalanceChanges: fc
+        .tuple(
+          negativeBalanceChangeArbitrary(signers[0], SOL_MINT),
+          positiveBalanceChangeArbitrary(signers[0], SAMPLE_TOKEN_MINTS[0])
+        )
+        .map(([solOut, tokenIn]) => [solOut, tokenIn]),
+      fee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
+    })
+  )
+
+/**
+ * Generate a multi-hop transaction (SOL → USDC → TOKEN)
+ */
+export const multiHopTransactionArbitrary: fc.Arbitrary<TransactionArbitrary> = fc
+  .tuple(signatureArbitrary, timestampArbitrary, walletAddressArbitrary)
+  .chain(([signature, timestamp, feePayer]) =>
+    fc.record({
+      signature: fc.constant(signature),
+      timestamp: fc.constant(timestamp),
+      feePayer: fc.constant(feePayer),
+      signers: fc.constant([feePayer] as string[]),
+      tokenBalanceChanges: fc
+        .tuple(
+          negativeBalanceChangeArbitrary(feePayer, SOL_MINT),
+          zeroBalanceChangeArbitrary(feePayer, USDC_MINT), // Intermediate (net zero)
+          positiveBalanceChangeArbitrary(feePayer, SAMPLE_TOKEN_MINTS[0])
+        )
+        .map(([solOut, usdcIntermediate, tokenIn]) => [solOut, usdcIntermediate, tokenIn]),
+      fee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
+    })
+  )
+
+/**
+ * Generate a token-to-token swap transaction (no priority assets)
+ */
+export const tokenToTokenTransactionArbitrary: fc.Arbitrary<TransactionArbitrary> = fc
+  .tuple(signatureArbitrary, timestampArbitrary, walletAddressArbitrary)
+  .chain(([signature, timestamp, feePayer]) =>
+    fc.record({
+      signature: fc.constant(signature),
+      timestamp: fc.constant(timestamp),
+      feePayer: fc.constant(feePayer),
+      signers: fc.constant([feePayer] as string[]),
+      tokenBalanceChanges: fc
+        .tuple(
+          negativeBalanceChangeArbitrary(feePayer, SAMPLE_TOKEN_MINTS[0]),
+          positiveBalanceChangeArbitrary(feePayer, SAMPLE_TOKEN_MINTS[1])
+        )
+        .map(([tokenOut, tokenIn]) => [tokenOut, tokenIn]),
+      fee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
+    })
+  )
+
+// ============================================================================
+// Export all arbitraries
+// ============================================================================
+
+export const arbitraries = {
+  // Basic
+  solanaAddress: solanaAddressArbitrary,
+  walletAddress: walletAddressArbitrary,
+  tokenMint: tokenMintArbitrary,
+  priorityAssetMint: priorityAssetMintArbitrary,
+  ammPoolAddress: ammPoolAddressArbitrary,
+  tokenSymbol: tokenSymbolArbitrary,
+  tokenDecimals: tokenDecimalsArbitrary,
+  balanceAmount: balanceAmountArbitrary,
+  deltaAmount: deltaAmountArbitrary,
+  smallSolAmount: smallSolAmountArbitrary,
+  signature: signatureArbitrary,
+  timestamp: timestampArbitrary,
+
+  // TokenBalanceChange
+  tokenBalanceChange: tokenBalanceChangeArbitrary,
+  tokenBalanceChangeForOwner: tokenBalanceChangeForOwnerArbitrary,
+  tokenBalanceChangeForMint: tokenBalanceChangeForMintArbitrary,
+  rentRefundBalanceChange: rentRefundBalanceChangeArbitrary,
+  positiveBalanceChange: positiveBalanceChangeArbitrary,
+  negativeBalanceChange: negativeBalanceChangeArbitrary,
+  zeroBalanceChange: zeroBalanceChangeArbitrary,
+  tokenBalanceChanges: tokenBalanceChangesArbitrary,
+
+  // AssetDelta
+  assetDelta: assetDeltaArbitrary,
+  positiveAssetDelta: positiveAssetDeltaArbitrary,
+  negativeAssetDelta: negativeAssetDeltaArbitrary,
+  intermediateAssetDelta: intermediateAssetDeltaArbitrary,
+  twoAssetDeltaMap: twoAssetDeltaMapArbitrary,
+  multiHopAssetDeltaMap: multiHopAssetDeltaMapArbitrary,
+
+  // FeeData
+  feeData: feeDataArbitrary,
+  zeroFeeData: zeroFeeDataArbitrary,
+
+  // Transaction
+  transaction: transactionArbitrary,
+  rentNoiseTransaction: rentNoiseTransactionArbitrary,
+  relayerTransaction: relayerTransactionArbitrary,
+  multiHopTransaction: multiHopTransactionArbitrary,
+  tokenToTokenTransaction: tokenToTokenTransactionArbitrary,
 }

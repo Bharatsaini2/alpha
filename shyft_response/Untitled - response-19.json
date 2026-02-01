@@ -1,0 +1,281 @@
+{
+  "success": true,
+  "message": "Transaction details fetched successfully",
+  "result": {
+    "timestamp": "2026-01-30T16:44:44.000Z",
+    "fee": 0.005005,
+    "fee_payer": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+    "signers": [
+      "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC"
+    ],
+    "signatures": [
+      "i5cfingUUKpyZG1NcZvL6rVBLgziMr5pfpwZnv83B6Yx762Xb13qS8suAxdybBJ7eUaawmZYbtD8djVX9uXEwEN"
+    ],
+    "protocol": {
+      "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "name": "TOKEN_2022_PROGRAM"
+    },
+    "type": "GETACCOUNTDATASIZE",
+    "status": "Success",
+    "token_balance_changes": [
+      {
+        "address": "4eGazNTkeHwhm6t8qPvkjU81kC69xWcuge7oG1uMJvvW",
+        "decimals": 6,
+        "change_amount": 14913294586258,
+        "post_balance": 14913294586258,
+        "pre_balance": 0,
+        "mint": "GxY1tDopabyoD3WMN6PfTMtaC9Z4KekUoCaYxz3xpump",
+        "owner": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC"
+      },
+      {
+        "address": "Ai2JiVT1KJuakwMudYjNvTgLMbf74ZvqsTx1HmAuhZ3H",
+        "decimals": 6,
+        "change_amount": -14913294586258,
+        "post_balance": 156568803234935,
+        "pre_balance": 171482097821193,
+        "mint": "GxY1tDopabyoD3WMN6PfTMtaC9Z4KekUoCaYxz3xpump",
+        "owner": "BTMvExf1AbTjuKU52aG3anTxycM6NqwNABureW3EWeFi"
+      },
+      {
+        "address": "GedrmwvtVrBsnbeRtTnbcLao92cbGhnutyMkxBiX792q",
+        "decimals": 9,
+        "change_amount": 9802173912,
+        "post_balance": 112505927715,
+        "pre_balance": 102703753803,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "BTMvExf1AbTjuKU52aG3anTxycM6NqwNABureW3EWeFi"
+      },
+      {
+        "address": "3mqA19yL7ZoNS1FSJpd2CxybBJTHWjfuCarsEkNhKX6d",
+        "decimals": 9,
+        "change_amount": 92934783,
+        "post_balance": 816705099,
+        "pre_balance": 723770316,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "2oikpztUR26nrn7yK38ajpKejwwboCqfrMBQNRdiPwPh"
+      },
+      {
+        "address": "DWpvfqzGWuVy9jVSKSShdM2733nrEsnnhsUStYbkj6Nn",
+        "decimals": 9,
+        "change_amount": 4891305,
+        "post_balance": 461505581793,
+        "pre_balance": 461500690488,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU"
+      }
+    ],
+    "actions": [
+      {
+        "info": {
+          "mint": "GxY1tDopabyoD3WMN6PfTMtaC9Z4KekUoCaYxz3xpump",
+          "extensionTypes": [
+            {
+              "ImmutableOwner": {}
+            }
+          ]
+        },
+        "source_protocol": {
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+          "name": "TOKEN_2022_PROGRAM"
+        },
+        "type": "GETACCOUNTDATASIZE",
+        "parent_protocol": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        "ix_index": 3
+      },
+      {
+        "info": {
+          "tokenAccount": "4eGazNTkeHwhm6t8qPvkjU81kC69xWcuge7oG1uMJvvW"
+        },
+        "source_protocol": {
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+          "name": "TOKEN_2022_PROGRAM"
+        },
+        "type": "INITIALIZEIMMUTABLEOWNER",
+        "parent_protocol": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+        "ix_index": 5
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "ix_index": 7
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "ix_index": 11
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+          "name": "PUMP_FUN_AMM"
+        },
+        "type": "UNKNOWN",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 12
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "pfeeUxB6jkeY1Hxd7CsFCAjcbHA9rWtchMGdZ6VojVZ",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 13
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+          "name": "PUMP_FUN_AMM"
+        },
+        "type": "UNKNOWN",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 18
+      },
+      {
+        "info": {
+          "amount": 14913294.586258,
+          "amount_raw": 14913294586258,
+          "receiver": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "sender": "BTMvExf1AbTjuKU52aG3anTxycM6NqwNABureW3EWeFi",
+          "receiver_associated_account": "4eGazNTkeHwhm6t8qPvkjU81kC69xWcuge7oG1uMJvvW",
+          "token_address": "GxY1tDopabyoD3WMN6PfTMtaC9Z4KekUoCaYxz3xpump"
+        },
+        "source_protocol": {
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+          "name": "TOKEN_2022_PROGRAM"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 14
+      },
+      {
+        "info": {
+          "amount": 9.802173912,
+          "amount_raw": 9802173912,
+          "receiver": "BTMvExf1AbTjuKU52aG3anTxycM6NqwNABureW3EWeFi",
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver_associated_account": "GedrmwvtVrBsnbeRtTnbcLao92cbGhnutyMkxBiX792q",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 15
+      },
+      {
+        "info": {
+          "amount": 0.004891305,
+          "amount_raw": 4891305,
+          "receiver": "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU",
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver_associated_account": "DWpvfqzGWuVy9jVSKSShdM2733nrEsnnhsUStYbkj6Nn",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 16
+      },
+      {
+        "info": {
+          "amount": 0.092934783,
+          "amount_raw": 92934783,
+          "receiver": "2oikpztUR26nrn7yK38ajpKejwwboCqfrMBQNRdiPwPh",
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver_associated_account": "3mqA19yL7ZoNS1FSJpd2CxybBJTHWjfuCarsEkNhKX6d",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 17
+      },
+      {
+        "info": {
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver": "EqGzowSp6cKAsMSRyyrFTaBxnZEVeNY81LC18YFy8Cx9",
+          "amount": 0.1,
+          "amount_raw": 100000000
+        },
+        "source_protocol": {
+          "address": "11111111111111111111111111111111",
+          "name": "SYSTEM_PROGRAM"
+        },
+        "type": "SOL_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 20
+      },
+      {
+        "info": {
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver": "axmYVq9b1ABYqtyizMtyfJppPTPxZGXPLctB3hV6W5b",
+          "amount": 0.01,
+          "amount_raw": 10000000
+        },
+        "source_protocol": {
+          "address": "11111111111111111111111111111111",
+          "name": "SYSTEM_PROGRAM"
+        },
+        "type": "SOL_TRANSFER",
+        "ix_index": 21
+      }
+    ],
+    "events": [
+      {
+        "data": {
+          "timestamp": 1769791484,
+          "base_amount_out": 14913294586258,
+          "max_quote_amount_in": 9900000000,
+          "user_base_token_reserves": 0,
+          "user_quote_token_reserves": 10000000002,
+          "pool_base_token_reserves": 171482097821193,
+          "pool_quote_token_reserves": 102703753803,
+          "quote_amount_in": 9900000000,
+          "lp_fee_basis_points": 20,
+          "lp_fee": 19565218,
+          "protocol_fee_basis_points": 5,
+          "protocol_fee": 4891305,
+          "quote_amount_in_with_lp_fee": 9802173912,
+          "user_quote_amount_in": 9782608694,
+          "pool": "BTMvExf1AbTjuKU52aG3anTxycM6NqwNABureW3EWeFi",
+          "user": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "user_base_token_account": "4eGazNTkeHwhm6t8qPvkjU81kC69xWcuge7oG1uMJvvW",
+          "user_quote_token_account": "GxMXgqw41BbdbXr4f4gPstJeRcTCjE4TFZ3485CtDquZ",
+          "protocol_fee_recipient": "JCRGumoE9Qi5BBgULTgdgTLjSgkCMSbF62ZZfGs84JeU",
+          "protocol_fee_recipient_token_account": "DWpvfqzGWuVy9jVSKSShdM2733nrEsnnhsUStYbkj6Nn",
+          "coin_creator": "ETNdYKctTxHjEVwaY6wtWcNw18TqFMZ1LmRGpQF5At5R",
+          "coin_creator_fee_basis_points": 95,
+          "coin_creator_fee": 92934783,
+          "track_volume": false,
+          "total_unclaimed_tokens": 0,
+          "total_claimed_tokens": 0,
+          "current_sol_volume": 0,
+          "last_update_timestamp": 0,
+          "min_base_amount_out": 256,
+          "ix_name": "buy_exact_quote_in"
+        },
+        "name": "BuyEvent"
+      }
+    ]
+  }
+}

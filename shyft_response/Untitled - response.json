@@ -1,0 +1,250 @@
+{
+  "success": true,
+  "message": "Transaction details fetched successfully",
+  "result": {
+    "timestamp": "2026-01-29T16:38:19.000Z",
+    "fee": 0.000080001,
+    "fee_payer": "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv",
+    "signers": [
+      "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv"
+    ],
+    "signatures": [
+      "3ELrWVoXdR2yu72GeuHjxQKnuDDBVDpLgpCRGuxHkbZa5anbQmZJhTr9AN6jSVjMZZ8H4TkmAKMLHPbY9HWkCcjA"
+    ],
+    "protocol": {
+      "address": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      "name": "PUMP_FUN_AMM"
+    },
+    "type": "SWAP",
+    "status": "Success",
+    "token_balance_changes": [
+      {
+        "address": "6Wzuv7vLc6Vq8HJcHwwSCE9SKcdJiuoJmJm3EMFkWERN",
+        "decimals": 9,
+        "change_amount": 31201465,
+        "post_balance": 35789331589,
+        "pre_balance": 35758130124,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "9yj3zvLS3fDMqi1F8zhkaWfq8TZpZWHe6cz1Sgt7djXf"
+      },
+      {
+        "address": "BWXT6RUhit9FfJQM3pBmqeFLPYmuxgmyhMGC5sGr8RbA",
+        "decimals": 9,
+        "change_amount": 1854857,
+        "post_balance": 712911917299,
+        "pre_balance": 712910062442,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP"
+      },
+      {
+        "address": "E2bvxQvZQry4jrzj5ribdUYV2AFmi1W8HUjALjDSDDiN",
+        "decimals": 6,
+        "change_amount": -967801608859,
+        "post_balance": 0,
+        "pre_balance": 967801608859,
+        "mint": "3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump",
+        "owner": "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv"
+      },
+      {
+        "address": "4zVcgaCPCDoGNJ8JToE2dkUorv9NruK5VWxf7cQxdp3m",
+        "decimals": 9,
+        "change_amount": 29677702,
+        "post_balance": 102532208,
+        "pre_balance": 72854506,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "AVEsxt68dMej1ixEfmt2KrwHRRD6UxdBHyLr5ScuPq5M"
+      },
+      {
+        "address": "56V7hgV6UVfFBVzYvmyzeyoa9fPLdx5LDAjsDuQXp8Zj",
+        "decimals": 9,
+        "change_amount": -3702293237,
+        "post_balance": 271181905912,
+        "pre_balance": 274884199149,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc"
+      },
+      {
+        "address": "ANiTcnB5jRF1vDgrYZZFuoCpcTbUafUwkRyGdUdSAytz",
+        "decimals": 6,
+        "change_amount": 967801608859,
+        "post_balance": 71712661952366,
+        "pre_balance": 70744860343507,
+        "mint": "3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump",
+        "owner": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc"
+      }
+    ],
+    "actions": [
+      {
+        "info": {
+          "swapper": "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv",
+          "tokens_swapped": {
+            "in": {
+              "token_address": "3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump",
+              "name": "AlphaBlock AI",
+              "symbol": "ALPHA",
+              "image_uri": "https://ipfs.io/ipfs/bafybeiendt6mzu453gjngx7rnlhyr2gis7zjekqxmgy7e5tdhnn5ojtu7m",
+              "amount": 967801.608859,
+              "amount_raw": 967801608859
+            },
+            "out": {
+              "token_address": "So11111111111111111111111111111111111111112",
+              "name": "Wrapped SOL",
+              "symbol": "SOL",
+              "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+              "amount": 3.670760678,
+              "amount_raw": 3670760678
+            }
+          },
+          "swaps": [
+            {
+              "liquidity_pool_address": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc",
+              "name": "ALPHA-SOL",
+              "source": "Pump.fun AMM",
+              "in": {
+                "token_address": "3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump",
+                "name": "AlphaBlock AI",
+                "symbol": "ALPHA",
+                "image_uri": "https://ipfs.io/ipfs/bafybeiendt6mzu453gjngx7rnlhyr2gis7zjekqxmgy7e5tdhnn5ojtu7m",
+                "amount": 967801.608859,
+                "amount_raw": 967801608859
+              },
+              "out": {
+                "token_address": "So11111111111111111111111111111111111111112",
+                "name": "Wrapped SOL",
+                "symbol": "SOL",
+                "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+                "amount": 3.670760678,
+                "amount_raw": 3670760678
+              }
+            }
+          ],
+          "slippage_in_percent": null,
+          "quoted_out_amount": null,
+          "slippage_paid": null
+        },
+        "source_protocol": {
+          "address": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+          "name": "PUMP_FUN_AMM"
+        },
+        "parent_protocol": "DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH",
+        "type": "SWAP",
+        "ix_index": 8
+      },
+      {
+        "info": {
+          "amount": 967801.608859,
+          "amount_raw": 967801608859,
+          "receiver": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc",
+          "sender": "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv",
+          "receiver_associated_account": "ANiTcnB5jRF1vDgrYZZFuoCpcTbUafUwkRyGdUdSAytz",
+          "token_address": "3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH",
+        "ix_index": 10
+      },
+      {
+        "info": {
+          "amount": 3.670760678,
+          "amount_raw": 3670760678,
+          "receiver": "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv",
+          "sender": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc",
+          "receiver_associated_account": "EDeCgGiQL7uR9XLUCSoathw5Lwu5t1C2H5MHW4vtKnuH",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH",
+        "ix_index": 11
+      },
+      {
+        "info": {
+          "amount": 0.001854857,
+          "amount_raw": 1854857,
+          "receiver": "G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP",
+          "sender": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc",
+          "receiver_associated_account": "BWXT6RUhit9FfJQM3pBmqeFLPYmuxgmyhMGC5sGr8RbA",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH",
+        "ix_index": 12
+      },
+      {
+        "info": {
+          "amount": 0.029677702,
+          "amount_raw": 29677702,
+          "receiver": "AVEsxt68dMej1ixEfmt2KrwHRRD6UxdBHyLr5ScuPq5M",
+          "sender": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc",
+          "receiver_associated_account": "4zVcgaCPCDoGNJ8JToE2dkUorv9NruK5VWxf7cQxdp3m",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH",
+        "ix_index": 13
+      },
+      {
+        "info": {
+          "amount": 0.031201465,
+          "amount_raw": 31201465,
+          "sender": "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv",
+          "receiver_associated_account": "6Wzuv7vLc6Vq8HJcHwwSCE9SKcdJiuoJmJm3EMFkWERN",
+          "receiver": "9yj3zvLS3fDMqi1F8zhkaWfq8TZpZWHe6cz1Sgt7djXf",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "DF1ow4tspfHX9JwWJsAb9epbkA8hmpSEAtxXy1V27QBH",
+        "ix_index": 16
+      }
+    ],
+    "events": [
+      {
+        "data": {
+          "timestamp": 1769704699,
+          "base_amount_in": 967801608859,
+          "min_quote_amount_out": 0,
+          "user_base_token_reserves": 967801608859,
+          "user_quote_token_reserves": 0,
+          "pool_base_token_reserves": 70744860343507,
+          "pool_quote_token_reserves": 274884199149,
+          "quote_amount_out": 3709712663,
+          "lp_fee_basis_points": 20,
+          "lp_fee": 7419426,
+          "protocol_fee_basis_points": 5,
+          "protocol_fee": 1854857,
+          "quote_amount_out_without_lp_fee": 3702293237,
+          "user_quote_amount_out": 3670760678,
+          "pool": "H6gcHGx6HrDtwjBLfcRrNvp1yqNnXsYCwaNVhcSSnLdc",
+          "user": "6iiH77nFnd7DXDfze2tDZ8ELDkQ2dZYAPust8vSrmiuv",
+          "user_base_token_account": "E2bvxQvZQry4jrzj5ribdUYV2AFmi1W8HUjALjDSDDiN",
+          "user_quote_token_account": "EDeCgGiQL7uR9XLUCSoathw5Lwu5t1C2H5MHW4vtKnuH",
+          "protocol_fee_recipient": "G5UZAVbAf46s7cKWoyKu8kYTip9DGTpbLZ2qa9Aq69dP",
+          "protocol_fee_recipient_token_account": "BWXT6RUhit9FfJQM3pBmqeFLPYmuxgmyhMGC5sGr8RbA",
+          "coin_creator": "58iKecnNfoiQTN7Wv5YyYPipHnfmWDThvj7tKq5AAtc3",
+          "coin_creator_fee_basis_points": 80,
+          "coin_creator_fee": 29677702
+        },
+        "name": "SellEvent"
+      }
+    ]
+  }
+}

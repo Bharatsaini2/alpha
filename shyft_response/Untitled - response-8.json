@@ -1,0 +1,354 @@
+{
+  "success": true,
+  "message": "Transaction details fetched successfully",
+  "result": {
+    "timestamp": "2026-01-30T00:39:54.000Z",
+    "fee": 0.008005,
+    "fee_payer": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+    "signers": [
+      "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk"
+    ],
+    "signatures": [
+      "2iKiKuwu92zDxciob1BVMAyxeJgqhoerymahC121qUxQ2eK9fBVLw565WcxZHAixDGGDMLD29GeDA86cdrc97yev"
+    ],
+    "protocol": {
+      "address": "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj",
+      "name": "RAYDIUM_LAUNCHPAD"
+    },
+    "type": "SWAP",
+    "status": "Success",
+    "token_balance_changes": [
+      {
+        "address": "6hHYgNycDp1FwdGKPLGatHzFSFhLPCwXLFM7sDe7T7Y1",
+        "decimals": 6,
+        "change_amount": -36775305195498,
+        "post_balance": 0,
+        "pre_balance": 36775305195498,
+        "mint": "GeNDS1SAbavf77RpF1sQNBPC29nmyKsWdGjX48vQbonk",
+        "owner": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk"
+      },
+      {
+        "address": "6V72Z6iZzH8CUKzcPGnf2qDNHYsH5rPZAZd6oN8KeaDc",
+        "decimals": 6,
+        "change_amount": 0,
+        "post_balance": 612858370,
+        "pre_balance": 612858370,
+        "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "owner": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk"
+      },
+      {
+        "address": "61XZptv8QNCC8LbyAGpg6whTxB7V5yNs7eRy77G1pQyA",
+        "decimals": 6,
+        "change_amount": 36775305195498,
+        "post_balance": 494747105357981,
+        "pre_balance": 457971800162483,
+        "mint": "GeNDS1SAbavf77RpF1sQNBPC29nmyKsWdGjX48vQbonk",
+        "owner": "WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh"
+      },
+      {
+        "address": "G4p5aZWB3WgPJ66q6pywmUHfGQy5fTxWVxMCymSacZps",
+        "decimals": 6,
+        "change_amount": -576019327,
+        "post_balance": 4024818459,
+        "pre_balance": 4600837786,
+        "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "owner": "WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh"
+      },
+      {
+        "address": "Cyu7XFTGSHSwFtsghriq9DfGVMehrdCaepFefFKNdcKB",
+        "decimals": 6,
+        "change_amount": 5774630,
+        "post_balance": 923212983,
+        "pre_balance": 917438353,
+        "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "owner": "56XVRVAsgWv6ADaxzoNnbL38LMoWKM5WiSAhrAWUbd2p"
+      },
+      {
+        "address": "4H3yn3ettrEvKZ2BF4vuaSCeANQN2CA7LQhj3s5ysQGR",
+        "decimals": 6,
+        "change_amount": 288731,
+        "post_balance": 19827936,
+        "pre_balance": 19539205,
+        "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "owner": "9sHpTfmVpCfP2zexRNK6j38NBchMv1RWpdXPK5NEcZan"
+      },
+      {
+        "address": "DHY2efKhMcZyAgmPw82C2Gez1e98Ab7oWcXfxz9frUCr",
+        "decimals": 6,
+        "change_amount": 569955966,
+        "post_balance": 7659067439313,
+        "pre_balance": 7658497483347,
+        "mint": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+        "owner": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS"
+      },
+      {
+        "address": "5QpMZ6MuyKjg8Qa1X8gM5G3YMsd43rpHb2iQ6hdcRM7m",
+        "decimals": 9,
+        "change_amount": -4832791604,
+        "post_balance": 84289687570288,
+        "pre_balance": 84294520361892,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS"
+      }
+    ],
+    "actions": [
+      {
+        "info": {
+          "swapper": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "tokens_swapped": {
+            "in": {
+              "token_address": "GeNDS1SAbavf77RpF1sQNBPC29nmyKsWdGjX48vQbonk",
+              "name": "SAM BANKMAN FRIED COIN",
+              "symbol": "SBF",
+              "image_uri": "https://ipfs.io/ipfs/bafkreiaj367p53uo5xjzhjuustewljziatonn6jglxwelaaox26fgo7ooy",
+              "amount": 36775305.195498,
+              "amount_raw": 36775305195498
+            },
+            "out": {
+              "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+              "name": "World Liberty Financial USD",
+              "symbol": "USD1",
+              "image_uri": "https://raw.githubusercontent.com/worldliberty/usd1-metadata/refs/heads/main/logo.png",
+              "amount": 569.955966,
+              "amount_raw": 569955966
+            }
+          },
+          "swaps": [
+            {
+              "liquidity_pool_address": "QRqyggaeanDj9xp1vNDoN3hyUNvTzzMqUNNxGsytgGK",
+              "name": "SAM BANKMAN FRIED COIN-World Liberty Financial USD",
+              "source": "raydiumLaunchpad",
+              "in": {
+                "token_address": "GeNDS1SAbavf77RpF1sQNBPC29nmyKsWdGjX48vQbonk",
+                "name": "SAM BANKMAN FRIED COIN",
+                "symbol": "SBF",
+                "image_uri": "https://ipfs.io/ipfs/bafkreiaj367p53uo5xjzhjuustewljziatonn6jglxwelaaox26fgo7ooy",
+                "amount": 36775305.195498,
+                "amount_raw": 36775305195498
+              },
+              "out": {
+                "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+                "name": "World Liberty Financial USD",
+                "symbol": "USD1",
+                "image_uri": "https://raw.githubusercontent.com/worldliberty/usd1-metadata/refs/heads/main/logo.png",
+                "amount": 569.955966,
+                "amount_raw": 569955966
+              }
+            }
+          ],
+          "slippage_in_percent": null,
+          "quoted_out_amount": null,
+          "slippage_paid": null
+        },
+        "source_protocol": {
+          "address": "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj",
+          "name": "RAYDIUM_LAUNCHPAD"
+        },
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "type": "SWAP",
+        "ix_index": 6
+      },
+      {
+        "info": {
+          "swapper": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "tokens_swapped": {
+            "in": {
+              "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+              "name": "World Liberty Financial USD",
+              "symbol": "USD1",
+              "image_uri": "https://raw.githubusercontent.com/worldliberty/usd1-metadata/refs/heads/main/logo.png",
+              "amount": 569.955966,
+              "amount_raw": 569955966
+            },
+            "out": {
+              "token_address": "So11111111111111111111111111111111111111112",
+              "name": "Wrapped SOL",
+              "symbol": "SOL",
+              "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+              "amount": 4.832791604,
+              "amount_raw": 4832791604
+            }
+          },
+          "swaps": [
+            {
+              "liquidity_pool_address": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+              "name": "World Liberty Financial USD-Wrapped SOL",
+              "source": "raydiumClmm",
+              "in": {
+                "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB",
+                "name": "World Liberty Financial USD",
+                "symbol": "USD1",
+                "image_uri": "https://raw.githubusercontent.com/worldliberty/usd1-metadata/refs/heads/main/logo.png",
+                "amount": 569.955966,
+                "amount_raw": 569955966
+              },
+              "out": {
+                "token_address": "So11111111111111111111111111111111111111112",
+                "name": "Wrapped SOL",
+                "symbol": "SOL",
+                "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+                "amount": 4.832791604,
+                "amount_raw": 4832791604
+              }
+            }
+          ],
+          "slippage_in_percent": null,
+          "quoted_out_amount": null,
+          "slippage_paid": null
+        },
+        "source_protocol": {
+          "address": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+          "name": "RAYDIUM_CLMM"
+        },
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "type": "SWAP",
+        "ix_index": 12
+      },
+      {
+        "info": {
+          "amount": 36775305.195498,
+          "amount_raw": 36775305195498,
+          "receiver": "WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh",
+          "sender": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "receiver_associated_account": "61XZptv8QNCC8LbyAGpg6whTxB7V5yNs7eRy77G1pQyA",
+          "token_address": "GeNDS1SAbavf77RpF1sQNBPC29nmyKsWdGjX48vQbonk"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 8
+      },
+      {
+        "info": {
+          "amount": 569.955966,
+          "amount_raw": 569955966,
+          "receiver": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "sender": "WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh",
+          "receiver_associated_account": "6V72Z6iZzH8CUKzcPGnf2qDNHYsH5rPZAZd6oN8KeaDc",
+          "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 9
+      },
+      {
+        "info": {
+          "amount": 5.77463,
+          "amount_raw": 5774630,
+          "receiver": "56XVRVAsgWv6ADaxzoNnbL38LMoWKM5WiSAhrAWUbd2p",
+          "sender": "WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh",
+          "receiver_associated_account": "Cyu7XFTGSHSwFtsghriq9DfGVMehrdCaepFefFKNdcKB",
+          "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 10
+      },
+      {
+        "info": {
+          "amount": 0.288731,
+          "amount_raw": 288731,
+          "receiver": "9sHpTfmVpCfP2zexRNK6j38NBchMv1RWpdXPK5NEcZan",
+          "sender": "WLHv2UAZm6z4KyaaELi5pjdbJh6RESMva1Rnn8pJVVh",
+          "receiver_associated_account": "4H3yn3ettrEvKZ2BF4vuaSCeANQN2CA7LQhj3s5ysQGR",
+          "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 11
+      },
+      {
+        "info": {
+          "amount": 569.955966,
+          "amount_raw": 569955966,
+          "receiver": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+          "sender": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "receiver_associated_account": "DHY2efKhMcZyAgmPw82C2Gez1e98Ab7oWcXfxz9frUCr",
+          "token_address": "USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 13
+      },
+      {
+        "info": {
+          "amount": 4.832791604,
+          "amount_raw": 4832791604,
+          "receiver": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "sender": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+          "receiver_associated_account": "9Q7JwM9ojPe6pvdA7zDmam1vgJqUW5XTdz7362jyoXW2",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 14
+      }
+    ],
+    "events": [
+      {
+        "data": {
+          "poolState": "AQAGYQsdU853WAKhXM79CgNdoyhrRwXvYHX6qrDyC1FS",
+          "sender": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "tokenAccount0": "9Q7JwM9ojPe6pvdA7zDmam1vgJqUW5XTdz7362jyoXW2",
+          "tokenAccount1": "6V72Z6iZzH8CUKzcPGnf2qDNHYsH5rPZAZd6oN8KeaDc",
+          "amount0": 4832791604,
+          "transferFee0": 0,
+          "amount1": 569955966,
+          "transferFee1": 0,
+          "zeroForOne": false,
+          "sqrtPriceX64": 6327015407998820000,
+          "liquidity": 327344873533052,
+          "tick": -21403
+        },
+        "name": "SwapEvent"
+      },
+      {
+        "data": {
+          "pool_state": "QRqyggaeanDj9xp1vNDoN3hyUNvTzzMqUNNxGsytgGK",
+          "total_base_sell": 793100000000000,
+          "virtual_base": 1073025605595491,
+          "virtual_quote": 4411890139,
+          "real_base_before": 542028199837517,
+          "real_quote_before": 4503541644,
+          "real_base_after": 505252894642019,
+          "real_quote_after": 3926078659,
+          "amount_in": 36775305195498,
+          "amount_out": 569955966,
+          "protocol_fee": 1443658,
+          "platform_fee": 5774630,
+          "share_fee": 288731,
+          "trade_direction": {
+            "Buy": {}
+          },
+          "pool_status": {
+            "Fund": {}
+          }
+        },
+        "name": "TradeEvent"
+      }
+    ]
+  }
+}

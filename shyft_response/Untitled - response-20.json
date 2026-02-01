@@ -1,0 +1,177 @@
+{
+  "success": true,
+  "message": "Transaction details fetched successfully",
+  "result": {
+    "timestamp": "2026-01-30T15:34:53.000Z",
+    "fee": 0.001005,
+    "fee_payer": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+    "signers": [
+      "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC"
+    ],
+    "signatures": [
+      "3DXfGQ6vDdUgC4DrrgPLWZyVgYmSYcLpf3kAmPuBfYrgmchb67GMRsErRZpc45KuJRki474Fwx81uGB5hHf2YZXH"
+    ],
+    "protocol": {
+      "address": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+      "name": "RAYDIUM_CP_SWAP"
+    },
+    "type": "SWAP_BASE_INPUT",
+    "status": "Success",
+    "token_balance_changes": [
+      {
+        "address": "2PDwyTc6Woa9veV9mJDFkFgPbJgvfYg5yRPk4saJF1kS",
+        "decimals": 6,
+        "change_amount": 6718437151947,
+        "post_balance": 6718437151947,
+        "pre_balance": 0,
+        "mint": "9F31LUeLH3TrLWmEtsPe67KLsw7nZndBJUPJxNzdsurg",
+        "owner": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC"
+      },
+      {
+        "address": "ABtfYws53cVERBEVhamTXz3APgJ7usLhL7CBH3VRnaB3",
+        "decimals": 9,
+        "change_amount": 14850000000,
+        "post_balance": 201954916111,
+        "pre_balance": 187104916111,
+        "mint": "So11111111111111111111111111111111111111112",
+        "owner": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
+      },
+      {
+        "address": "FvQV2oHxoyERtQ2o4XboCkGmSDXsDwKps9F2dPwMcQDT",
+        "decimals": 6,
+        "change_amount": -6718437151947,
+        "post_balance": 84840305128681,
+        "pre_balance": 91558742280628,
+        "mint": "9F31LUeLH3TrLWmEtsPe67KLsw7nZndBJUPJxNzdsurg",
+        "owner": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL"
+      }
+    ],
+    "actions": [
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "ix_index": 8
+      },
+      {
+        "info": {},
+        "source_protocol": {
+          "address": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+          "name": ""
+        },
+        "type": "UNKNOWN",
+        "ix_index": 12
+      },
+      {
+        "info": {
+          "swapper": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "authority": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL",
+          "amm_config": "D4FPEruKEHrG5TenZ2mpDGEfu1iUvTiqBxvpU8HLBvC2",
+          "liquidity_pool_address": "9FvD5R2QjnAAgj5iLmo9mmH2dBpf9n1CYdz2eBtmn1gx",
+          "input_token_account": "GxMXgqw41BbdbXr4f4gPstJeRcTCjE4TFZ3485CtDquZ",
+          "output_token_account": "2PDwyTc6Woa9veV9mJDFkFgPbJgvfYg5yRPk4saJF1kS",
+          "input_vault": "ABtfYws53cVERBEVhamTXz3APgJ7usLhL7CBH3VRnaB3",
+          "output_vault": "FvQV2oHxoyERtQ2o4XboCkGmSDXsDwKps9F2dPwMcQDT",
+          "input_token_mint": "So11111111111111111111111111111111111111112",
+          "output_token_mint": "9F31LUeLH3TrLWmEtsPe67KLsw7nZndBJUPJxNzdsurg",
+          "observation_state": "7SA7NZb7fKTRJkqSEh77yTbBiWK82avrttibaP7BrE76",
+          "amount_in": 14850000000,
+          "minimum_amount_out": 0
+        },
+        "source_protocol": {
+          "address": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+          "name": "RAYDIUM_CP_SWAP"
+        },
+        "type": "SWAP_BASE_INPUT",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 13
+      },
+      {
+        "info": {
+          "amount": 14.85,
+          "amount_raw": 14850000000,
+          "receiver": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL",
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver_associated_account": "ABtfYws53cVERBEVhamTXz3APgJ7usLhL7CBH3VRnaB3",
+          "token_address": "So11111111111111111111111111111111111111112"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 14
+      },
+      {
+        "info": {
+          "amount": 6718437.151947,
+          "amount_raw": 6718437151947,
+          "receiver": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "sender": "GpMZbSM2GgvTKHJirzeGfMFoaZ8UR2X7F4v8vHTvxFbL",
+          "receiver_associated_account": "2PDwyTc6Woa9veV9mJDFkFgPbJgvfYg5yRPk4saJF1kS",
+          "token_address": "9F31LUeLH3TrLWmEtsPe67KLsw7nZndBJUPJxNzdsurg"
+        },
+        "source_protocol": {
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "Token Program"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 15
+      },
+      {
+        "info": {
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver": "EqGzowSp6cKAsMSRyyrFTaBxnZEVeNY81LC18YFy8Cx9",
+          "amount": 0.15,
+          "amount_raw": 150000000
+        },
+        "source_protocol": {
+          "address": "11111111111111111111111111111111",
+          "name": "SYSTEM_PROGRAM"
+        },
+        "type": "SOL_TRANSFER",
+        "parent_protocol": "FLASHX8DrLbgeR8FcfNV1F5krxYcYMUdBkrP1EPBtxB9",
+        "ix_index": 17
+      },
+      {
+        "info": {
+          "sender": "6S8GezkxYUfZy9JPtYnanbcZTMB87Wjt1qx3c6ELajKC",
+          "receiver": "axmFmfqQwZGEUZeF3i3MqbRCDiGPfshtbdoBjk41k88",
+          "amount": 0.001,
+          "amount_raw": 1000000
+        },
+        "source_protocol": {
+          "address": "11111111111111111111111111111111",
+          "name": "SYSTEM_PROGRAM"
+        },
+        "type": "SOL_TRANSFER",
+        "ix_index": 18
+      }
+    ],
+    "events": [
+      {
+        "data": {
+          "pool_id": "9FvD5R2QjnAAgj5iLmo9mmH2dBpf9n1CYdz2eBtmn1gx",
+          "input_vault_before": 186842330809,
+          "output_vault_before": 91504003066099,
+          "input_amount": 14850000000,
+          "output_amount": 6718437151947,
+          "input_transfer_fee": 0,
+          "output_transfer_fee": 0,
+          "base_input": true,
+          "input_mint": "So11111111111111111111111111111111111111112",
+          "output_mint": "9F31LUeLH3TrLWmEtsPe67KLsw7nZndBJUPJxNzdsurg",
+          "trade_fee": 37125000,
+          "creator_fee": 7425000,
+          "creator_fee_on_input": true
+        },
+        "name": "SwapEvent"
+      }
+    ]
+  }
+}

@@ -266,6 +266,7 @@ export interface EraseResult {
     feePayer: string
     signers: string[]
     assetDeltas: AssetDeltaMap
+    [key: string]: any  // Allow additional debug fields like validationError, error, etc.
   }
 }
 
@@ -283,6 +284,15 @@ export interface ParserResult {
   data?: ParsedSwap | SplitSwapPair
   erase?: EraseResult
   processingTimeMs: number
+  performanceMetrics?: {
+    totalMs: number
+    components: Array<{
+      component: string
+      durationMs: number
+    }>
+    signature: string
+    timestamp: number
+  }
 }
 
 // ============================================================================

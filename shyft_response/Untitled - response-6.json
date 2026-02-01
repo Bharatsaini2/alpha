@@ -1,0 +1,174 @@
+{
+  "success": true,
+  "message": "Transaction details fetched successfully",
+  "result": {
+    "timestamp": "2026-01-30T17:36:32.000Z",
+    "fee": 0.010005,
+    "fee_payer": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+    "signers": [
+      "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk"
+    ],
+    "signatures": [
+      "5FDkPPRZvCUoo9JNXLyApwtcqDQj3p9U5jLAxRmpikbNEXNT1YmZVyz86se7XDe6CiyD7tWPyiXAX26PvYdcnk9n"
+    ],
+    "protocol": {
+      "address": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+      "name": "PUMP"
+    },
+    "type": "SWAP",
+    "status": "Success",
+    "token_balance_changes": [
+      {
+        "address": "CCRLhBJV6CpoDxg1EpiRPqMecxJ3ifoe41J23TEiz4BW",
+        "decimals": 6,
+        "change_amount": 40929375194946,
+        "post_balance": 516603143280164,
+        "pre_balance": 475673768085218,
+        "mint": "GC9XZeX7DGahhYFDvVmfWCdBxEhaXeqQnttuUzGypump",
+        "owner": "6ivRWcubhbaFRwRbkkfysamB6g2KyhGCFfegvxyrFDSB"
+      },
+      {
+        "address": "842ANaNBTvyMXBBEbjihYDZTokUCqm66ZTW3BGMnDia2",
+        "decimals": 6,
+        "change_amount": -40929375194946,
+        "post_balance": 0,
+        "pre_balance": 40929375194946,
+        "mint": "GC9XZeX7DGahhYFDvVmfWCdBxEhaXeqQnttuUzGypump",
+        "owner": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk"
+      }
+    ],
+    "actions": [
+      {
+        "info": {
+          "swapper": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "tokens_swapped": {
+            "in": {
+              "token_address": "GC9XZeX7DGahhYFDvVmfWCdBxEhaXeqQnttuUzGypump",
+              "name": "Agent Liberation Front",
+              "symbol": "liberation ",
+              "image_uri": "https://metadata.rapidlaunch.io/images/84f9ee5f-ab3e-4a39-86c9-142ead52095a.png",
+              "amount": 40929375.194946,
+              "amount_raw": 40929375194946
+            },
+            "out": {
+              "token_address": "So11111111111111111111111111111111111111112",
+              "name": "Wrapped SOL",
+              "symbol": "SOL",
+              "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+              "amount": 4.072697035,
+              "amount_raw": 4072697035
+            }
+          },
+          "swaps": [
+            {
+              "liquidity_pool_address": "",
+              "name": "liberation -SOL",
+              "source": "pump",
+              "in": {
+                "token_address": "GC9XZeX7DGahhYFDvVmfWCdBxEhaXeqQnttuUzGypump",
+                "name": "Agent Liberation Front",
+                "symbol": "liberation ",
+                "image_uri": "https://metadata.rapidlaunch.io/images/84f9ee5f-ab3e-4a39-86c9-142ead52095a.png",
+                "amount": 40929375.194946,
+                "amount_raw": 40929375194946
+              },
+              "out": {
+                "token_address": "So11111111111111111111111111111111111111112",
+                "name": "Wrapped SOL",
+                "symbol": "SOL",
+                "image_uri": "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+                "amount": 4.072697035,
+                "amount_raw": 4072697035
+              }
+            }
+          ],
+          "slippage_in_percent": null,
+          "quoted_out_amount": null,
+          "slippage_paid": null
+        },
+        "source_protocol": {
+          "address": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+          "name": "PUMP"
+        },
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "type": "SWAP",
+        "ix_index": 4
+      },
+      {
+        "info": {
+          "amount": 40929375.194946,
+          "amount_raw": 40929375194946,
+          "receiver": "6ivRWcubhbaFRwRbkkfysamB6g2KyhGCFfegvxyrFDSB",
+          "sender": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "receiver_associated_account": "CCRLhBJV6CpoDxg1EpiRPqMecxJ3ifoe41J23TEiz4BW",
+          "token_address": "GC9XZeX7DGahhYFDvVmfWCdBxEhaXeqQnttuUzGypump"
+        },
+        "source_protocol": {
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+          "name": "TOKEN_2022_PROGRAM"
+        },
+        "type": "TOKEN_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 6
+      },
+      {
+        "info": {
+          "sender": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "receiver": "AVUCZyuT35YSuj4RH7fwiyPu82Djn2Hfg7y2ND2XcnZH",
+          "amount": 0.04072697,
+          "amount_raw": 40726970
+        },
+        "source_protocol": {
+          "address": "11111111111111111111111111111111",
+          "name": "SYSTEM_PROGRAM"
+        },
+        "type": "SOL_TRANSFER",
+        "parent_protocol": "BSfD6SHZigAfDWSjzD5Q41jw8LmKwtmjskPH9XW1mrRW",
+        "ix_index": 8
+      },
+      {
+        "info": {
+          "sender": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "receiver": "9Y6UXhkaf5vJGhsmdWYitceaEkRDsvVNTgtVp4acu57S",
+          "amount": 0.012,
+          "amount_raw": 12000000
+        },
+        "source_protocol": {
+          "address": "11111111111111111111111111111111",
+          "name": "SYSTEM_PROGRAM"
+        },
+        "type": "SOL_TRANSFER",
+        "ix_index": 9
+      }
+    ],
+    "events": [
+      {
+        "data": {
+          "mint": "GC9XZeX7DGahhYFDvVmfWCdBxEhaXeqQnttuUzGypump",
+          "sol_amount": 4072697035,
+          "token_amount": 40929375194946,
+          "is_buy": false,
+          "user": "4BdKaxN8G6ka4GYtQQWk4G4dZRUTX2vQH9GcXdBREFUk",
+          "timestamp": 1769794592,
+          "virtual_sol_reserves": 54596045464,
+          "virtual_token_reserves": 589603143280164,
+          "real_sol_reserves": 24596045464,
+          "real_token_reserves": 309703143280164,
+          "fee_recipient": "CebN5WGQ4jvEPvsVU4EoHEpgzq1VV7AbicfhtW4xC9iM",
+          "fee_basis_points": 95,
+          "fee": 38690622,
+          "creator": "GpTXmkdvrTajqkzX1fBmC4BUjSboF9dHgfnqPqj8WAc4",
+          "creator_fee_basis_points": 30,
+          "creator_fee": 12218092,
+          "track_volume": false,
+          "total_unclaimed_tokens": 0,
+          "total_claimed_tokens": 0,
+          "current_sol_volume": 0,
+          "last_update_timestamp": 0,
+          "ix_name": "sell"
+        },
+        "name": "TradeEvent"
+      }
+    ]
+  }
+}
