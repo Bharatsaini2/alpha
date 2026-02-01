@@ -1357,7 +1357,7 @@ const KOLFeedPage = () => {
                                 <span className="tag-title">+{(tx.whaleLabel || []).length - 2}</span>
                               )}
                             </div>
-                            <div className={`sold-out-title ${tx.type === 'buy' ? 'sold-title' : ''}`}>
+                            <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`}>
                               {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </div>
