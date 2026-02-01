@@ -1896,6 +1896,9 @@ const HomePageNew = () => {
                                                         <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`}>
                                                             {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </div>
+                                                        {(!tx.whaleLabel || tx.whaleLabel.length === 0) && (
+                                                            <div style={{ height: '23px' }}></div>
+                                                        )}
                                                     </div>
                                                 </div>
 

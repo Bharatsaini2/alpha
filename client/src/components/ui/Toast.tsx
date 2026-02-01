@@ -1,39 +1,37 @@
-import React, { useEffect, useState, useCallback } from "react"
-
+import React, { useEffect, useState, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { XIcon } from "lucide-react"
 import { createPortal } from "react-dom"
-import { FaRegCheckSquare } from "react-icons/fa";
-import { ImSpinner4 } from "react-icons/im";
-import { MdOutlineCheckBox } from "react-icons/md";
+import { FaRegCheckSquare } from "react-icons/fa"
+import { ToastContext } from "../../contexts/ToastContext"
+
+export interface ToastOptions {
+    duration?: number
+    txSignature?: string
+    title?: string
+    icon?: string
+    actionLabel?: string
+    onAction?: () => void
+}
 
 export interface ToastProps {
     id: string
     message: string
-    title?: string
-    icon?: string
-    type?: "success" | "error" | "info"
-    variant?: "standard" | "processing" | "transaction" | "wallet"
-    txSignature?: string
-    duration?: number
+    type?: "success" | "error" | "info" | "warning"
+    variant?: "default" | "wallet" | "simple"
+    options?: ToastOptions
     onClose: (id: string) => void
-    actionLabel?: string
-    onAction?: () => void
 }
 
 const Toast: React.FC<ToastProps> = ({
     id,
     message,
-
-    icon,
-    type = "success",
-    variant = "standard",
-    txSignature,
-    duration = 3000,
+    type,
+    variant,
+    options,
     onClose,
-    ...props
 }) => {
-    // Single timer: after duration, ask manager to remove this toast.
+    const duration = options?.duration ?? 3000
+
     useEffect(() => {
         if (duration > 0) {
             const t = setTimeout(() => onClose(id), duration)
@@ -41,42 +39,21 @@ const Toast: React.FC<ToastProps> = ({
         }
     }, [id, duration, onClose])
 
-    // Processing state
-    if (variant === "processing") {
-        return (
-            <div className="coppied-address connecting-bx">
-                <div className="coppied-content">
-                    <span className="coppied-icon text-white spinner-rotate"><ImSpinner4 /></span>
-                    <p>{message}</p>
-                    <div className="three-dots">
-                        <span></span>
-                        <span></span>
-                        <span></span>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    // Wallet state
+    // Custom rendering for "wallet" variant or others if needed
     if (variant === "wallet") {
         return (
-            <div className="coppied-address">
+            <div className="coppied-address" style={{ minWidth: '300px' }}>
                 <div className="coppied-content">
-                    <span className="coppied-icon">
-                        {icon ? (
-                            <img src={icon} alt="" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
-                        ) : type === 'info' ? (
-                            <ImSpinner4 className="spinner-rotate" />
-                        ) : (
-                            <MdOutlineCheckBox />
-                        )}
-                    </span>
-                    <p>{message}</p>
-                    <button
-                        onClick={() => onClose(id)}
-                        className="coppied-btn"
-                    >
+                    {options?.icon && (
+                        <img src={options.icon} alt="icon" className="w-6 h-6 rounded-full" />
+                    )}
+                    {!options?.icon && <span className="coppied-icon"><FaRegCheckSquare /></span>}
+                    <div>
+                        {options?.title && <h4 className="font-bold text-sm text-white">{options.title}</h4>}
+                        <p className="text-gray-300 text-xs">{message}</p>
+                    </div>
+
+                    <button onClick={() => onClose(id)} className="coppied-btn ml-auto">
                         Close
                     </button>
                 </div>
@@ -84,94 +61,27 @@ const Toast: React.FC<ToastProps> = ({
         )
     }
 
-    // Transaction state
-    if (variant === "transaction") {
-        return (
-            <div className="nw-sign-frm " style={{ background: '#0a0a0a', border: '1px solid #292929', padding: '12px', borderRadius: '8px' }}>
-                <div className="swap-transition-bx">
-                    <span className="swap-check"><MdOutlineCheckBox /></span>
-                    <div>
-                        <h5>Transaction confirmed</h5>
-                        <p>{message}</p>
-                        <div className="d-flex align-items-center gap-2 mt-2">
-                            {txSignature && (
-                                <a
-                                    href={`https://solscan.io/tx/${txSignature}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="coppied-btn"
-                                    style={{ textDecoration: 'none' }}
-                                >
-                                    view tx
-                                </a>
-                            )}
-                            <button className="coppied-btn" onClick={() => onClose(id)}>close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    // Standard state (default)
+    // Default implementation (from previous step)
     return (
         <div className="coppied-address">
             <div className="coppied-content">
-                <span className={`coppied-icon ${type === 'error' ? 'text-red-500' : ''}`}>
-                    {type === 'error' ? <XIcon size={21} /> : <FaRegCheckSquare />}
-                </span>
+                <span className="coppied-icon"><FaRegCheckSquare /></span>
                 <p>{message}</p>
                 <button
                     onClick={() => onClose(id)}
-                    className="coppied-btn text-[10px] px-2 py-1"
+                    className="coppied-btn"
                 >
                     Close
                 </button>
-                {/* Action Button */}
-                {(props.actionLabel && props.onAction) && (
-                    <button
-                        onClick={() => {
-                            props.onAction?.()
-                            onClose(id)
-                        }}
-                        className="connect-wallet-btn"
-                        style={{
-                            width: 'auto',
-                            padding: '6px 14px',
-                            marginLeft: '12px',
-                            whiteSpace: 'nowrap',
-                            backgroundColor: '#162ECD',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            letterSpacing: '1px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minHeight: 'unset',
-                            height: 'auto'
-                        }}
-                    >
-                        {props.actionLabel}
-                        <span className="corner top-right"></span>
-                        <span className="corner bottom-left"></span>
-                    </button>
-                )}
             </div>
         </div>
     )
 }
 
-// Toast Context
-
-
-import { ToastContext } from "../../contexts/ToastContext"
+const animatedOnce = new Set<string>()
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<ToastProps[]>([])
-    const [isDebouncing, setIsDebouncing] = useState(false)
-
-    // Set to track animated toasts to prevent re-animation
-    const [animatedOnce] = useState(() => new Set<string>())
 
     const removeToast = useCallback((id: string) => {
         setToasts((prev) => prev.filter((t) => t.id !== id))
@@ -180,62 +90,31 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const showToast = useCallback((
         message: string,
         type: ToastProps["type"] = "success",
-        variant: ToastProps["variant"] = "standard",
-        options?: {
-            duration?: number
-            txSignature?: string
-            title?: string
-            icon?: string
-            actionLabel?: string
-            onAction?: () => void
-        }
+        variant: ToastProps["variant"] = "default",
+        options: ToastOptions = {}
     ) => {
-        // Only debounce standard messages to prevent spam, allow important updates
-        if (isDebouncing && variant === "standard") return null
-        if (variant === "standard") {
-            setIsDebouncing(true)
-            setTimeout(() => setIsDebouncing(false), 1000)
-        }
-
-        const id =
-            globalThis.crypto?.randomUUID?.() ??
-            Math.random().toString(36).slice(2, 11)
-
-        // Default duration depends on variant
-        let duration = options?.duration ?? 3000
-        if (variant === "processing") duration = 0 // Don't auto-close processing toasts
-        if (variant === "transaction") duration = 0 // Don't auto-close transaction toasts - user closes manually
+        // rudimentary deduping or limiting could go here if needed
+        const id = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2, 11)
 
         setToasts((prev) => [
             ...prev,
-            {
-                id,
-                message,
-                type,
-                variant,
-                txSignature: options?.txSignature,
-                title: options?.title,
-                icon: options?.icon,
-                duration,
-                onClose: removeToast,
-                actionLabel: options?.actionLabel,
-                onAction: options?.onAction
-            },
+            { id, message, type, variant, options, onClose: removeToast }
         ])
 
         return id
-    }, [isDebouncing, removeToast])
+    }, [removeToast])
+
+    const contextValue = useMemo(() => ({ showToast, removeToast }), [showToast, removeToast])
 
     return (
-        <ToastContext.Provider value={{ showToast, removeToast }}>
+        <ToastContext.Provider value={contextValue}>
             {children}
             {createPortal(
                 <div
                     className="
-            fixed bottom-3 right-3 lg:bottom-5 lg:right-5 z-[10000]
+            fixed bottom-5 right-5 z-[10000]
             flex flex-col items-end space-y-2
             pointer-events-none
-            max-w-[calc(100vw-24px)] lg:max-w-md
           "
                 >
                     <AnimatePresence>
@@ -267,3 +146,13 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         </ToastContext.Provider>
     )
 }
+
+// Re-export useToast from context to maintain compatibility if anyone imports it from here
+// although typically they should import from context. 
+// But just in case, let's allow it if it doesn't conflict. 
+// Actually, `ToastContext.tsx` imports `ToastProps` from here. 
+// If we import `useToast` from `ToastContext`, we create a cycle?
+// ToastContext imports ToastProps (Type) -> Safe.
+// Toast.tsx imports ToastContext (Value) -> Safe.
+// We can re-export useToast.
+export { useToast } from '../../contexts/ToastContext';
