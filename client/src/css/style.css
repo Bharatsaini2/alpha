@@ -1046,6 +1046,11 @@ input[type="number"] {
   color: #df2a4e;
   margin-top: 4px;
   /* Reduced margin to remove gap when tags are missing */
+  /* Reduced margin to remove gap when tags are missing */
+}
+
+.sold-out-title.buy-transaction {
+  color: #14904d !important;
 }
 
 .sold-title {

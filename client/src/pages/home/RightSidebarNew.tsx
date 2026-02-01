@@ -1646,7 +1646,7 @@ const RightSidebarNew = ({
                       style={{
                         height: '14px',
                         width: '80px',
-                        borderRadius: '3px',
+                        borderRadius: '0',
                         background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
                         backgroundSize: '200% 100%',
                         animation: 'shimmer 2s infinite linear'
@@ -1656,7 +1656,7 @@ const RightSidebarNew = ({
                       style={{
                         height: '10px',
                         width: '50px',
-                        borderRadius: '2px',
+                        borderRadius: '0',
                         background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
                         backgroundSize: '200% 100%',
                         animation: 'shimmer 2s infinite linear'
