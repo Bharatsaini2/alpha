@@ -1,28 +1,7 @@
 /* Styling for Visualize Modal */
 .nw-visual-modal {
-    /* Custom background effect */
     position: fixed;
     z-index: 1050;
-}
-
-.nw-visual-modal:after {
-    content: "";
-    z-index: -1;
-    background: radial-gradient(circle, rgba(20, 20, 20, 1) 0%, rgba(0, 0, 0, 1) 100%);
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    opacity: 0.8;
-}
-
-/* Plan Button */
-.plan-btn {
-    display: flex;
-    align-items: center;
-    background-color: #0a0a0a;
-    border: 1px solid #3d3d3d;
     padding: 6px 8px;
     font-weight: 400;
     font-size: 12px;

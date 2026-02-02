@@ -1217,6 +1217,15 @@ const WhaleNetworkGraph: React.FC<{
             </div>
           )}
 
+          {/* Vignette Overlay to create the "gradient type thing" */}
+          <div
+            className="absolute inset-0 pointer-events-none z-10"
+            style={{
+              background: 'radial-gradient(circle at center, transparent 30%, black 100%)',
+              opacity: 0.8
+            }}
+          />
+
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="animate-spin rounded-full h-12 w-12 border-2 border-[#06DF73] border-t-transparent"></div>
@@ -1237,10 +1246,12 @@ const WhaleNetworkGraph: React.FC<{
               edgeTypes={edgeTypes}
               fitView
               className="bg-black"
-              defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               onConnect={onConnect}
+              minZoom={0.5}
+              maxZoom={2}
             >
-              <Background color="#333" gap={20} variant={BackgroundVariant.Dots} size={1} />
+              <Background color="#333" gap={12} size={1} variant={BackgroundVariant.Dots} />
               <MiniMap style={{ background: '#111', border: '1px solid #333' }} nodeColor={() => '#333'} maskColor="rgba(0,0,0,0.5)" />
               <DownloadButton />
               {tooltipAnchor && (
