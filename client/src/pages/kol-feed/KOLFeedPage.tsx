@@ -918,7 +918,7 @@ const KOLFeedPage = () => {
               <div className="custom-frm-bx nw-quick-bx mb-3">
                 <button
                   className="quick-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
                   onClick={() => quickBuyInputRef.current?.focus()}
                 >
                   <img src="/quick-btn.png" alt="" /> quick buy amount
@@ -1410,7 +1410,7 @@ const KOLFeedPage = () => {
       </section>
 
       <ReactFlowProvider>
-        <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+        <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} type="kol" />
       </ReactFlowProvider>
 
       <SwapModal

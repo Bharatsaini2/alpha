@@ -1704,8 +1704,12 @@ const RightSidebarNew = ({
                       </span>
 
                       {/* Scrolling Full Name */}
-                      <div className="local-marquee-container" style={{ marginLeft: '8px' }}>
-                        <div className="local-marquee-track">
+                      <div className="local-marquee-container" style={{ marginLeft: '8px', width: '100px', flex: 'none' }}>
+                        <div
+                          className="local-marquee-track"
+                          style={{ animationDelay: `-${Math.random() * 5}s` }}
+                        >
+                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
                           <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
                           <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
                           <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>

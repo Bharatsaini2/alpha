@@ -1989,7 +1989,7 @@ const HomePageNew = () => {
             </section >
 
             <ReactFlowProvider>
-                <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+                <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} type="whale" />
             </ReactFlowProvider>
 
             <SwapModal
