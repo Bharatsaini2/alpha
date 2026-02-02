@@ -17,7 +17,7 @@ export interface ToastProps {
     id: string
     message: string
     type?: "success" | "error" | "info" | "warning"
-    variant?: "default" | "wallet" | "simple"
+    variant?: "default" | "wallet" | "simple" | "standard"
     options?: ToastOptions
     onClose: (id: string) => void
 }
@@ -42,7 +42,7 @@ const Toast: React.FC<ToastProps> = ({
     // Custom rendering for "wallet" variant or others if needed
     if (variant === "wallet") {
         return (
-            <div className="coppied-address" style={{ minWidth: '300px' }}>
+            <div className="coppied-address toast-wallet">
                 <div className="coppied-content">
                     {options?.icon && (
                         <img src={options.icon} alt="icon" className="w-6 h-6 rounded-full" />
@@ -61,15 +61,31 @@ const Toast: React.FC<ToastProps> = ({
         )
     }
 
-    // Default implementation (from previous step)
+    // Default implementation (handles "default", "simple", "standard", etc.)
     return (
-        <div className="coppied-address">
+        <div className="coppied-address toast-warning">
             <div className="coppied-content">
                 <span className="coppied-icon"><FaRegCheckSquare /></span>
                 <p>{message}</p>
+
+                {/* Action Button */}
+                {options?.actionLabel && options?.onAction && (
+                    <button
+                        onClick={() => {
+                            options.onAction?.()
+                            onClose(id)
+                        }}
+                        className="toast-btn ml-2"
+                    >
+                        {options.actionLabel}
+                        <span className="corner top-right"></span>
+                        <span className="corner bottom-left"></span>
+                    </button>
+                )}
+
                 <button
                     onClick={() => onClose(id)}
-                    className="coppied-btn"
+                    className="toast-close-btn ml-2"
                 >
                     Close
                 </button>

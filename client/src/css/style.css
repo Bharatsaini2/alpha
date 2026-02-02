@@ -2210,8 +2210,135 @@ font-size: 16px;
   color: #8f8f8f;
 }
 
+/* Toast Button (replicates connect-wallet-btn) */
+.toast-btn {
+  display: inline-flex;
+  /* Align contents */
+  align-items: center;
+  justify-content: center;
+  background: #0d2dcd;
+  border: none;
+  padding: 6px 16px;
+  /* Slightly smaller padding for toast */
+  letter-spacing: 2px;
+  box-shadow: 0px 4px 4px 0px #ffffff1f inset;
+  font-weight: 400;
+  font-size: 12px;
+  /* Smaller font for toast */
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  text-transform: uppercase;
+  margin-left: 12px;
+  /* Spacing from text */
+  cursor: pointer;
+}
+
+.toast-btn:hover {
+  background: #1538e5;
+}
+
+/* Toast Button Corners */
+.toast-btn::before {
+  content: "";
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width: 3px;
+  height: 3px;
+  border-top: 1px solid #7b91fe;
+  border-left: 1px solid #7b91fe;
+}
+
+.toast-btn::after {
+  content: "";
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 3px;
+  height: 3px;
+  border-bottom: 1px solid #7b91fe;
+  border-right: 1px solid #7b91fe;
+}
+
+.toast-btn span.corner {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+}
+
+.toast-btn span.corner.top-right {
+  top: 0px;
+  right: 0px;
+  border-top: 1px solid #7b91fe;
+  border-right: 1px solid #7b91fe;
+}
+
+.toast-btn span.corner.bottom-left {
+  bottom: 0px;
+  left: 0px;
+  border-bottom: 1px solid #7b91fe;
+  border-left: 1px solid #7b91fe;
+}
+
+/* Warning Toast (Bigger) */
+.toast-warning {
+  padding: 12px 20px;
+  /* Increased padding */
+  font-size: 14px;
+  /* Increased font size */
+}
+
+.toast-warning p {
+  font-size: 13px !important;
+  /* Force larger text */
+}
+
+/* Wallet Toast (Smaller) */
+.toast-wallet {
+  padding: 6px 12px;
+  /* Decreased padding */
+  max-width: 350px;
+  /* constrain width */
+}
+
+.toast-wallet p {
+  font-size: 11px !important;
+}
+
+.toast-wallet h4 {
+  font-size: 12px !important;
+}
+
 .coppied-btn:hover {
   background-color: #3d3d3d;
+}
+
+/* Close Button matching Buy Now size */
+.toast-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #141414;
+  border: 1px solid #3d3d3d;
+  padding: 6px 16px;
+  /* Matches .toast-btn padding */
+  font-size: 12px;
+  /* Matches .toast-btn font size */
+  font-weight: 500;
+  color: #8f8f8f;
+  text-transform: uppercase;
+  margin-left: 12px;
+  cursor: pointer;
+  height: 29px;
+  /* Ensure same height as toast-btn roughly (12 font + 12 padding + 2 border + etc) -> actually let's just rely on padding/font */
+  /* .toast-btn has 6px padding top/bottom and 12px font => ~24-26px box height plus 3px border stuff? */
+  /* .toast-btn has 12px font, 6px padding. Total height roughly 24px content box + borders. */
+}
+
+.toast-close-btn:hover {
+  background-color: #3d3d3d;
+  color: #fff;
 }
 
 .three-dots {
