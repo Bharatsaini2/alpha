@@ -11,7 +11,7 @@
 import * as dotenv from 'dotenv'
 import axios from 'axios'
 import mongoose from 'mongoose'
-import { parseShyftTransaction } from './src/utils/shyftParser'
+import { parseShyftTransactionV2 } from './dist/utils/shyftParserV2'
 import whaleAllTransactionModelV2 from './src/models/whaleAllTransactionsV2.model'
 import * as fs from 'fs'
 
@@ -55,6 +55,7 @@ interface V2Detection {
 let startTime: Date
 let endTime: Date
 const v2Detections: V2Detection[] = []
+const v2Rejections: any[] = [] // Track rejected transactions with reasons
 let ws: any = null
 let testTimeout: NodeJS.Timeout
 
@@ -90,44 +91,115 @@ async function handleTransaction(tx: any) {
     const shyftResponse = await fetchShyftTransaction(signature)
     if (!shyftResponse) return
 
-    const parseResult = parseShyftTransaction(shyftResponse)
+    // Map SHYFT API response to V2 parser input format
+    const v2Input = {
+      signature: signature,
+      timestamp: shyftResponse.timestamp ? new Date(shyftResponse.timestamp).getTime() : Date.now(),
+      status: shyftResponse.status || 'Success',
+      fee: shyftResponse.fee || 0,
+      fee_payer: shyftResponse.fee_payer || '',
+      signers: shyftResponse.signers || [],
+      protocol: shyftResponse.protocol,
+      token_balance_changes: shyftResponse.token_balance_changes || [],
+      actions: shyftResponse.actions || []
+    }
 
-    if (parseResult) {
-      // Normalize amounts (divide by 10^decimals to get human-readable)
-      const inputNormalized = parseResult.input.decimals 
-        ? (parseResult.input.amount / Math.pow(10, parseResult.input.decimals)).toFixed(6)
-        : parseResult.input.amount.toString()
-      
-      const outputNormalized = parseResult.output.decimals
-        ? (parseResult.output.amount / Math.pow(10, parseResult.output.decimals)).toFixed(6)
-        : parseResult.output.amount.toString()
+    const parseResult = parseShyftTransactionV2(v2Input)
 
-      const detection: V2Detection = {
-        signature,
-        timestamp: new Date(),
-        side: parseResult.side,
-        inputToken: parseResult.input.symbol || 'UNKNOWN',
-        outputToken: parseResult.output.symbol || 'UNKNOWN',
-        inputMint: parseResult.input.mint,
-        outputMint: parseResult.output.mint,
-        inputAmount: parseResult.input.amount,
-        outputAmount: parseResult.output.amount,
-        inputAmountNormalized: inputNormalized,
-        outputAmountNormalized: outputNormalized,
-        whaleAddress: parseResult.swapper || 'UNKNOWN',
-        confidence: parseResult.confidence,
-        source: parseResult.classification_source
+    if (parseResult.success && parseResult.data) {
+      const swapData = parseResult.data
+      let inputAmount: number, outputAmount: number, inputDecimals: number, outputDecimals: number
+      let inputNormalized: string, outputNormalized: string
+
+      // Handle both ParsedSwap and SplitSwapPair
+      if ('sellRecord' in swapData) {
+        // SplitSwapPair - use sellRecord for display
+        const sellRecord = swapData.sellRecord
+        
+        // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
+        inputAmount = sellRecord.amounts.baseAmount || sellRecord.amounts.swapInputAmount || 0
+        outputAmount = sellRecord.amounts.swapOutputAmount || sellRecord.amounts.netWalletReceived || 0
+        
+        // These are already normalized amounts from the V2 parser
+        inputNormalized = inputAmount.toFixed(6)
+        outputNormalized = outputAmount.toFixed(6)
+          
+        const detection: V2Detection = {
+          signature: signature,
+          timestamp: new Date(),
+          side: sellRecord.direction || 'SELL',
+          inputToken: sellRecord.quoteAsset.symbol || 'UNKNOWN',
+          outputToken: sellRecord.baseAsset.symbol || 'UNKNOWN',
+          inputMint: sellRecord.quoteAsset.mint,
+          outputMint: sellRecord.baseAsset.mint,
+          inputAmount: inputAmount,
+          outputAmount: outputAmount,
+          inputAmountNormalized: inputNormalized,
+          outputAmountNormalized: outputNormalized,
+          whaleAddress: sellRecord.swapper || 'UNKNOWN',
+          confidence: sellRecord.confidence,
+          source: 'v2_parser_split'
+        }
+        
+        v2Detections.push(detection)
+      } else {
+        // ParsedSwap
+        if (swapData.direction === 'BUY') {
+          // BUY: spending quote asset to get base asset
+          inputAmount = swapData.amounts.swapInputAmount || swapData.amounts.totalWalletCost || 0
+          outputAmount = swapData.amounts.baseAmount || 0
+        } else {
+          // SELL: spending base asset to get quote asset
+          inputAmount = swapData.amounts.baseAmount || 0
+          outputAmount = swapData.amounts.swapOutputAmount || swapData.amounts.netWalletReceived || 0
+        }
+        
+        // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
+        inputNormalized = inputAmount.toFixed(6)
+        outputNormalized = outputAmount.toFixed(6)
+          
+        const detection: V2Detection = {
+          signature: signature,
+          timestamp: new Date(),
+          side: swapData.direction || 'UNKNOWN',
+          inputToken: swapData.direction === 'BUY' ? (swapData.quoteAsset.symbol || 'UNKNOWN') : (swapData.baseAsset.symbol || 'UNKNOWN'),
+          outputToken: swapData.direction === 'BUY' ? (swapData.baseAsset.symbol || 'UNKNOWN') : (swapData.quoteAsset.symbol || 'UNKNOWN'),
+          inputMint: swapData.direction === 'BUY' ? swapData.quoteAsset.mint : swapData.baseAsset.mint,
+          outputMint: swapData.direction === 'BUY' ? swapData.baseAsset.mint : swapData.quoteAsset.mint,
+          inputAmount: inputAmount,
+          outputAmount: outputAmount,
+          inputAmountNormalized: inputNormalized,
+          outputAmountNormalized: outputNormalized,
+          whaleAddress: swapData.swapper || 'UNKNOWN',
+          confidence: swapData.confidence,
+          source: 'v2_parser'
+        }
+        
+        v2Detections.push(detection)
       }
 
-      v2Detections.push(detection)
-
-      console.log(colors.green(`\n✅ V2 DETECTED: ${parseResult.side}`))
+      console.log(colors.green(`\n✅ V2 DETECTED: ${swapData.direction || 'UNKNOWN'}`))
       console.log(colors.gray(`   Signature: ${signature}`))
-      console.log(colors.gray(`   Whale: ${detection.whaleAddress.substring(0, 8)}...`))
-      console.log(colors.gray(`   ${detection.inputToken} (${inputNormalized}) → ${detection.outputToken} (${outputNormalized})`))
-      console.log(colors.gray(`   Input Mint:  ${detection.inputMint.substring(0, 8)}...`))
-      console.log(colors.gray(`   Output Mint: ${detection.outputMint.substring(0, 8)}...`))
-      console.log(colors.gray(`   Confidence: ${detection.confidence} | Source: ${detection.source}`))
+      console.log(colors.gray(`   Whale: ${v2Detections[v2Detections.length - 1].whaleAddress.substring(0, 8)}...`))
+      console.log(colors.gray(`   ${v2Detections[v2Detections.length - 1].inputToken} (${inputNormalized}) → ${v2Detections[v2Detections.length - 1].outputToken} (${outputNormalized})`))
+      console.log(colors.gray(`   Input Mint:  ${v2Detections[v2Detections.length - 1].inputMint.substring(0, 8)}...`))
+      console.log(colors.gray(`   Output Mint: ${v2Detections[v2Detections.length - 1].outputMint.substring(0, 8)}...`))
+      console.log(colors.gray(`   Confidence: ${v2Detections[v2Detections.length - 1].confidence} | Source: ${v2Detections[v2Detections.length - 1].source}`))
+    } else {
+      // Track rejected transactions with reasons
+      const rejection = {
+        signature: signature,
+        timestamp: new Date(),
+        reason: parseResult.data || 'Unknown rejection reason',
+        success: parseResult.success,
+        whaleAddress: shyftResponse.fee_payer || 'UNKNOWN'
+      }
+      
+      v2Rejections.push(rejection)
+      
+      console.log(colors.red(`\n❌ V2 REJECTED: ${signature.substring(0, 20)}...`))
+      console.log(colors.gray(`   Reason: ${rejection.reason}`))
+      console.log(colors.gray(`   Whale: ${rejection.whaleAddress.substring(0, 8)}...`))
     }
   } catch (error: any) {
     // Silent errors to keep output clean
@@ -217,7 +289,8 @@ async function compareResults() {
   }).lean()
 
   console.log(colors.white(`V1 (Database) found: ${v1Transactions.length} transactions`))
-  console.log(colors.white(`V2 (Live Parser) found: ${v2Detections.length} transactions\n`))
+  console.log(colors.white(`V2 (Live Parser) found: ${v2Detections.length} transactions`))
+  console.log(colors.white(`V2 (Live Parser) rejected: ${v2Rejections.length} transactions\n`))
 
   // Create signature sets for comparison
   const v1Signatures = new Set(v1Transactions.map((tx: any) => tx.transaction?.signature).filter(Boolean))
@@ -233,6 +306,7 @@ async function compareResults() {
   console.log(colors.green(`✅ Matches (Both V1 and V2): ${matches.length}`))
   console.log(colors.yellow(`🎯 V2 Extras (V2 found, V1 missed): ${v2Extras.length}`))
   console.log(colors.red(`❌ V1 Extras (V1 found, V2 missed): ${v1Extras.length}`))
+  console.log(colors.magenta(`🚫 V2 Rejections (V2 filtered out): ${v2Rejections.length}`))
   console.log(colors.cyan('─'.repeat(80)))
 
   // Detailed breakdown
@@ -290,6 +364,38 @@ async function compareResults() {
     }
   }
 
+  // Show rejection analysis
+  if (v2Rejections.length > 0) {
+    console.log(colors.magenta(`\n🚫 V2 REJECTED ${v2Rejections.length} TRANSACTIONS:\n`))
+    
+    // Group rejections by reason
+    const rejectionReasons: { [key: string]: number } = {}
+    for (const rejection of v2Rejections) {
+      const reason = rejection.reason || 'Unknown'
+      rejectionReasons[reason] = (rejectionReasons[reason] || 0) + 1
+    }
+    
+    console.log(colors.magenta('Rejection Reasons:'))
+    Object.entries(rejectionReasons)
+      .sort((a, b) => b[1] - a[1])
+      .forEach(([reason, count]) => {
+        const pct = ((count / v2Rejections.length) * 100).toFixed(1)
+        console.log(colors.gray(`  ${reason}: ${count} (${pct}%)`))
+      })
+    
+    // Show sample rejections
+    console.log(colors.magenta(`\nSample Rejections (first 10):`))
+    v2Rejections.slice(0, 10).forEach((rejection, i) => {
+      console.log(colors.magenta(`${i + 1}. ${rejection.signature.substring(0, 20)}...`))
+      console.log(colors.gray(`   Reason: ${rejection.reason}`))
+      console.log(colors.gray(`   Whale: ${rejection.whaleAddress.substring(0, 8)}...\n`))
+    })
+    
+    if (v2Rejections.length > 10) {
+      console.log(colors.gray(`   ... and ${v2Rejections.length - 10} more rejections\n`))
+    }
+  }
+
   // Final verdict
   console.log(colors.cyan('\n' + '═'.repeat(80)))
   console.log(colors.cyan(colors.bold('VERDICT')))
@@ -328,6 +434,10 @@ async function compareResults() {
       total: v2Detections.length,
       signatures: Array.from(v2Signatures),
       detections: v2Detections
+    },
+    v2Rejections: {
+      total: v2Rejections.length,
+      rejections: v2Rejections
     },
     comparison: {
       matches: matches.length,

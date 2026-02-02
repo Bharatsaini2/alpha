@@ -50,14 +50,15 @@ export class AssetDeltaCollectorImpl implements AssetDeltaCollector {
       'AssetDeltaCollector: Starting delta aggregation'
     )
 
-    // DON'T filter by owner - collect ALL economic changes
-    // The swapper identification (Stage 1) and rent filtering (Stage 2) already happened
-    // Balance changes can have different owners (pools, AMMs, relayers, etc.)
-    // This is the key fix for AMM swap detection - V1 bug was filtering by owner
-    const relevantChanges = economicChanges
+    // CRITICAL FIX: Filter by swapper owner only
+    // The spec says "economic balance changes define truth" but we need to focus on the swapper's changes
+    // Other balance changes (pools, AMMs, etc.) are not relevant for the swapper's trade
+    const relevantChanges = economicChanges.filter(
+      (change) => change.owner === swapper
+    )
 
     if (relevantChanges.length === 0) {
-      logger.debug({ swapper }, 'AssetDeltaCollector: No economic changes')
+      logger.debug({ swapper }, 'AssetDeltaCollector: No economic changes for swapper')
       return {}
     }
 

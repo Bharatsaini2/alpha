@@ -1,0 +1,41 @@
+{
+  "testWindow": {
+    "start": "2026-02-02T17:04:23.520Z",
+    "end": "2026-02-02T17:06:09.197Z",
+    "durationMinutes": 1.7612833333333335
+  },
+  "v1Kol": {
+    "total": 8,
+    "signatures": [
+      "42dFQuQLdmkbJYoWi3xquUXdi8rDFmmDcd3SuWyjm1RJ2Mm4GnrfG7hcGJ6MtuPMxhEr73gAAybWixsmkszRUALW",
+      "5bozbeat6Ghg5VPyC9q77kS7Pa6UHabrrb8rtJhU1tLX955X9nfh7ekDApzj7u2BeWSxLgtNyn2uQLXo5L7SkLjC",
+      "2umgMw5xgYaoEowjwtmdU86ucGnW6sFnwGWuG9H7ViN5wFYsi3nhhsSDFzcJGyCT9re56JvahmZTJJ7aUHASpxw",
+      "2zwPCkPEZ5N9H4SmwLxVM1BtQPUwFhhTid4JL6aZcBsr5otqjU2kopCpX9QiabQZE6256FCnsTEHxJZCmu2YHbPw",
+      "2NyaGHBGKd5aicA87SMzC23cJKE1z88TkLifU8KhgZ3MnvLxhCL3LXHxCuULKzGJhDPwddmZ9CsvhSDavR8QhfKC",
+      "3DARtqR1XycCrqp92Y8RF4A4anndQoB1ipzSwgdsoH6HSsfTkpfeRX4JiViFz6VdfELVLjqCPKaWuRZ4iGM3RnTu",
+      "be5BzJmJMxVxNAudoBXNCvaWV46hgiZ7tUV63We7pJemx6dE642iNmbFHJ7QqhMLHVg1m2BVcv7vtHxLkvAi8HD",
+      "5jK33EzTWLkWmmNLoXn9wCFf9NdZawXWpXkH6zC1Du2riGzRfFQUWmjua7chp14D1LLUwtu18xqVpUYopGMPPmhw"
+    ]
+  },
+  "v2Kol": {
+    "total": 0,
+    "signatures": [],
+    "detections": []
+  },
+  "comparison": {
+    "matches": 0,
+    "v2Extras": 0,
+    "v1Extras": 8,
+    "v2ExtraSignatures": [],
+    "v1ExtraSignatures": [
+      "42dFQuQLdmkbJYoWi3xquUXdi8rDFmmDcd3SuWyjm1RJ2Mm4GnrfG7hcGJ6MtuPMxhEr73gAAybWixsmkszRUALW",
+      "5bozbeat6Ghg5VPyC9q77kS7Pa6UHabrrb8rtJhU1tLX955X9nfh7ekDApzj7u2BeWSxLgtNyn2uQLXo5L7SkLjC",
+      "2umgMw5xgYaoEowjwtmdU86ucGnW6sFnwGWuG9H7ViN5wFYsi3nhhsSDFzcJGyCT9re56JvahmZTJJ7aUHASpxw",
+      "2zwPCkPEZ5N9H4SmwLxVM1BtQPUwFhhTid4JL6aZcBsr5otqjU2kopCpX9QiabQZE6256FCnsTEHxJZCmu2YHbPw",
+      "2NyaGHBGKd5aicA87SMzC23cJKE1z88TkLifU8KhgZ3MnvLxhCL3LXHxCuULKzGJhDPwddmZ9CsvhSDavR8QhfKC",
+      "3DARtqR1XycCrqp92Y8RF4A4anndQoB1ipzSwgdsoH6HSsfTkpfeRX4JiViFz6VdfELVLjqCPKaWuRZ4iGM3RnTu",
+      "be5BzJmJMxVxNAudoBXNCvaWV46hgiZ7tUV63We7pJemx6dE642iNmbFHJ7QqhMLHVg1m2BVcv7vtHxLkvAi8HD",
+      "5jK33EzTWLkWmmNLoXn9wCFf9NdZawXWpXkH6zC1Du2riGzRfFQUWmjua7chp14D1LLUwtu18xqVpUYopGMPPmhw"
+    ]
+  }
+}

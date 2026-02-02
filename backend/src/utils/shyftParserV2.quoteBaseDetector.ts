@@ -102,6 +102,47 @@ export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
       }
     }
 
+    // Gate 3: Same token validation (CRITICAL FIX)
+    // Reject transactions where input and output tokens are the same
+    if (asset1.mint === asset2.mint) {
+      logger.debug(
+        {
+          mint: asset1.mint,
+          asset1Delta: asset1.netDelta,
+          asset2Delta: asset2.netDelta,
+        },
+        'QuoteBaseDetector: Same input/output token detected - not a swap'
+      )
+      return {
+        quote: null,
+        base: null,
+        direction: null,
+        eraseReason: 'same_input_output_token',
+      }
+    }
+
+    // Gate 4: Meaningful amounts required (NEW FIX)
+    const DUST_THRESHOLD = 0.000001
+    const asset1Meaningful = Math.abs(asset1.netDelta) > DUST_THRESHOLD
+    const asset2Meaningful = Math.abs(asset2.netDelta) > DUST_THRESHOLD
+
+    if (!asset1Meaningful || !asset2Meaningful) {
+      logger.debug(
+        {
+          asset1Delta: asset1.netDelta,
+          asset2Delta: asset2.netDelta,
+          dustThreshold: DUST_THRESHOLD,
+        },
+        'QuoteBaseDetector: One or both assets have dust amounts'
+      )
+      return {
+        quote: null,
+        base: null,
+        direction: null,
+        eraseReason: 'dust_amounts_detected',
+      }
+    }
+
     // Check for priority assets (SOL, WSOL, USDC, USDT)
     const priorityMints = new Set<string>(Object.values(PRIORITY_ASSETS))
     const asset1IsPriority = priorityMints.has(asset1.mint)

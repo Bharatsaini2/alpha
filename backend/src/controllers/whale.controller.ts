@@ -943,11 +943,17 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       ),
     )
 
+    // ✅ DEBUG: Log before resolveSymbol calls
+    logger.info(`🔍 About to resolve symbols for tokenIn: ${tokenIn.token_address} (${tokenIn.symbol}) and tokenOut: ${tokenOut.token_address} (${tokenOut.symbol})`)
+
     // ✅ Resolve token symbols (enhance metadata)
     const [inSymbol, outSymbol] = await Promise.all([
       resolveSymbol(tokenIn),
       resolveSymbol(tokenOut),
     ])
+
+    // ✅ DEBUG: Log after resolveSymbol calls
+    logger.info(`🔍 Resolved symbols - tokenIn: ${JSON.stringify(inSymbol)}, tokenOut: ${JSON.stringify(outSymbol)}`)
 
     const inSymbolData =
       typeof inSymbol === 'string'
@@ -1321,10 +1327,22 @@ const formatNumber = (value: number): string => {
 
 // 🛠️ Helper: Get symbol safely with intelligent caching
 const resolveSymbol = async (token: any) => {
+  // ✅ DEBUG: Log function entry
+  logger.info(`🔍 [resolveSymbol] Called for token: ${token.token_address} with symbol: ${token.symbol}`)
+  
   try {
     // ✅ STEP 1: Check if SHYFT already provided valid symbol (FASTEST - no API call!)
     if (isValidMetadata(token.symbol)) {
       logger.info(`✅ Using SHYFT symbol: ${token.symbol} (no API call needed)`)
+      
+      // ✅ FIXED: Cache SHYFT symbols too!
+      try {
+        await saveTokenToCache(token.token_address, token.symbol, token.name || token.symbol, 'shyft')
+        logger.info(`💾 Cached SHYFT symbol: ${token.symbol} for ${token.token_address.slice(0, 8)}...`)
+      } catch (err) {
+        logger.error({ err }, `❌ Failed to cache SHYFT symbol: ${token.token_address}`)
+      }
+      
       return { symbol: token.symbol, name: token.name || token.symbol }
     }
     
@@ -1727,7 +1745,7 @@ const storeTransactionInDB = async (
   }
 
   const transactionData = {
-    signature,
+    signature, // ✅ FIX: Add signature to the transaction data
     amount: {
       buyAmount: details.tokenOutUsdAmount || 0,
       sellAmount: details.tokenInUsdAmount || 0,

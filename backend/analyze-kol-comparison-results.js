@@ -1,3 +1,9 @@
+/**
+ * Analyze KOL V1 vs V2 Comparison Results
+ * 
+ * This script analyzes the KOL comparison results and generates detailed CSV reports
+ */
+
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
 const fs = require('fs');
@@ -5,7 +11,7 @@ const fs = require('fs');
 const MONGODB_URI = process.env.MONGO_URI;
 const DB_NAME = 'alpha-whale-tracker';
 
-async function analyzeResults() {
+async function analyzeKolResults() {
   const client = new MongoClient(MONGODB_URI);
   
   try {
@@ -14,37 +20,40 @@ async function analyzeResults() {
     
     const db = client.db(DB_NAME);
     
-    // Read the comparison report
-    const report = require('./v1-v2-comparison-report.json');
+    // Read the KOL comparison report
+    const report = require('./v1-v2-kol-comparison-report.json');
     
     const startTime = new Date(report.testWindow.start);
     const endTime = new Date(report.testWindow.end);
     
-    console.log('📊 Analysis Report');
+    console.log('📊 KOL Analysis Report');
     console.log('═══════════════════════════════════════════════════════════════\n');
     console.log(`Test Window: ${startTime.toISOString()} to ${endTime.toISOString()}`);
     console.log(`Duration: ${report.testWindow.durationMinutes.toFixed(2)} minutes\n`);
     
-    // Get V1 transactions
-    const v1Transactions = await db.collection('whalealltransactionv2').find({
+    // Get V1 KOL transactions
+    const v1KolTransactions = await db.collection('influencerwhaletransactionsv2').find({
       'transaction.timestamp': {
         $gte: startTime,
         $lte: endTime
       }
     }).toArray();
     
-    console.log(`V1 Transactions: ${v1Transactions.length}`);
-    console.log(`V2 Detections: ${report.v2.total}\n`);
+    console.log(`V1 KOL Transactions: ${v1KolTransactions.length}`);
+    console.log(`V2 KOL Detections: ${report.v2Kol.total}\n`);
     
-    // Create CSV for V1 transactions
-    const v1Csv = ['Signature,Timestamp,Type,Whale,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmount,OutputAmount,InputUSD,OutputUSD'];
+    // Create CSV for V1 KOL transactions
+    const v1KolCsv = ['Signature,Timestamp,Type,KOL_Address,Influencer_Name,Influencer_Username,Followers,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmount,OutputAmount,InputUSD,OutputUSD,HotnessScore'];
     
-    for (const tx of v1Transactions) {
+    for (const tx of v1KolTransactions) {
       const row = [
         tx.signature || '',
         tx.transaction?.timestamp || tx.timestamp || '',
         tx.type || '',
-        tx.whale?.address || tx.whaleAddress || '',
+        tx.whaleAddress || '',
+        tx.influencerName || '',
+        tx.influencerUsername || '',
+        tx.influencerFollowerCount || '',
         tx.transaction?.tokenIn?.address || tx.tokenInAddress || '',
         tx.transaction?.tokenOut?.address || tx.tokenOutAddress || '',
         tx.transaction?.tokenIn?.symbol || tx.tokenInSymbol || '',
@@ -52,18 +61,19 @@ async function analyzeResults() {
         tx.transaction?.tokenIn?.amount || tx.tokenAmount?.sellTokenAmount || '',
         tx.transaction?.tokenOut?.amount || tx.tokenAmount?.buyTokenAmount || '',
         tx.transaction?.tokenIn?.usdAmount || tx.amount?.sellAmount || '',
-        tx.transaction?.tokenOut?.usdAmount || tx.amount?.buyAmount || ''
+        tx.transaction?.tokenOut?.usdAmount || tx.amount?.buyAmount || '',
+        tx.hotnessScore || ''
       ];
-      v1Csv.push(row.join(','));
+      v1KolCsv.push(row.join(','));
     }
     
-    fs.writeFileSync('v1-transactions.csv', v1Csv.join('\n'));
-    console.log('✅ V1 transactions exported to: v1-transactions.csv');
+    fs.writeFileSync('v1-kol-transactions.csv', v1KolCsv.join('\n'));
+    console.log('✅ V1 KOL transactions exported to: v1-kol-transactions.csv');
     
-    // Create CSV for V2 detections
-    const v2Csv = ['Signature,Timestamp,Side,Whale,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmountRaw,OutputAmountRaw,InputAmountNormalized,OutputAmountNormalized,Confidence,Source'];
+    // Create CSV for V2 KOL detections
+    const v2KolCsv = ['Signature,Timestamp,Side,KOL_Address,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmountRaw,OutputAmountRaw,InputAmountNormalized,OutputAmountNormalized,Confidence,Source'];
     
-    for (const detection of report.v2.detections) {
+    for (const detection of report.v2Kol.detections) {
       const row = [
         detection.signature || '',
         detection.timestamp || '',
@@ -80,107 +90,88 @@ async function analyzeResults() {
         detection.confidence || '',
         detection.source || ''
       ];
-      v2Csv.push(row.join(','));
+      v2KolCsv.push(row.join(','));
     }
     
-    fs.writeFileSync('v2-detections.csv', v2Csv.join('\n'));
-    console.log('✅ V2 detections exported to: v2-detections.csv\n');
+    fs.writeFileSync('v2-kol-detections.csv', v2KolCsv.join('\n'));
+    console.log('✅ V2 KOL detections exported to: v2-kol-detections.csv\n');
     
-    // Create CSV for V2 rejections
-    if (report.v2Rejections && report.v2Rejections.rejections) {
-      const v2RejectionsCsv = ['Signature,Timestamp,Whale,Reason,Success'];
-      
-      for (const rejection of report.v2Rejections.rejections) {
-        const row = [
-          rejection.signature || '',
-          rejection.timestamp || '',
-          rejection.whaleAddress || '',
-          rejection.reason || '',
-          rejection.success || ''
-        ];
-        v2RejectionsCsv.push(row.join(','));
-      }
-      
-      fs.writeFileSync('v2-rejections.csv', v2RejectionsCsv.join('\n'));
-      console.log('✅ V2 rejections exported to: v2-rejections.csv');
-    }
-    
-    // Analyze V2 detections
+    // Analyze V2 KOL detections
     console.log('═══════════════════════════════════════════════════════════════');
-    console.log('V2 DETECTION ANALYSIS:');
+    console.log('V2 KOL DETECTION ANALYSIS:');
     console.log('═══════════════════════════════════════════════════════════════\n');
     
     // Group by confidence
     const byConfidence = {};
-    for (const d of report.v2.detections) {
+    for (const d of report.v2Kol.detections) {
       byConfidence[d.confidence] = (byConfidence[d.confidence] || 0) + 1;
     }
     
     console.log('By Confidence Level:');
     for (const [conf, count] of Object.entries(byConfidence).sort((a, b) => b[1] - a[1])) {
-      const pct = ((count / report.v2.total) * 100).toFixed(1);
+      const pct = ((count / report.v2Kol.total) * 100).toFixed(1);
       console.log(`  ${conf}: ${count} (${pct}%)`);
     }
     console.log('');
     
     // Group by source
     const bySource = {};
-    for (const d of report.v2.detections) {
+    for (const d of report.v2Kol.detections) {
       bySource[d.source] = (bySource[d.source] || 0) + 1;
     }
     
     console.log('By Classification Source:');
     for (const [source, count] of Object.entries(bySource).sort((a, b) => b[1] - a[1])) {
-      const pct = ((count / report.v2.total) * 100).toFixed(1);
+      const pct = ((count / report.v2Kol.total) * 100).toFixed(1);
       console.log(`  ${source}: ${count} (${pct}%)`);
     }
     console.log('');
     
     // Group by side
     const bySide = {};
-    for (const d of report.v2.detections) {
+    for (const d of report.v2Kol.detections) {
       bySide[d.side] = (bySide[d.side] || 0) + 1;
     }
     
     console.log('By Transaction Side:');
     for (const [side, count] of Object.entries(bySide).sort((a, b) => b[1] - a[1])) {
-      const pct = ((count / report.v2.total) * 100).toFixed(1);
+      const pct = ((count / report.v2Kol.total) * 100).toFixed(1);
       console.log(`  ${side}: ${count} (${pct}%)`);
     }
     console.log('');
     
-    // Find unique whales
-    const uniqueWhales = new Set(report.v2.detections.map(d => d.whaleAddress));
-    console.log(`Unique Whale Addresses: ${uniqueWhales.size}`);
+    // Find unique KOL addresses
+    const uniqueKols = new Set(report.v2Kol.detections.map(d => d.whaleAddress));
+    console.log(`Unique KOL Addresses: ${uniqueKols.size}`);
     
-    // Top whales by transaction count
-    const whaleCount = {};
-    for (const d of report.v2.detections) {
-      whaleCount[d.whaleAddress] = (whaleCount[d.whaleAddress] || 0) + 1;
+    // Top KOLs by transaction count
+    const kolCount = {};
+    for (const d of report.v2Kol.detections) {
+      kolCount[d.whaleAddress] = (kolCount[d.whaleAddress] || 0) + 1;
     }
     
-    const topWhales = Object.entries(whaleCount)
+    const topKols = Object.entries(kolCount)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10);
     
-    console.log('\nTop 10 Most Active Whales:');
-    topWhales.forEach(([whale, count], i) => {
-      console.log(`  ${i + 1}. ${whale.substring(0, 8)}... : ${count} transactions`);
+    console.log('\nTop 10 Most Active KOLs:');
+    topKols.forEach(([kol, count], i) => {
+      console.log(`  ${i + 1}. ${kol.substring(0, 8)}... : ${count} transactions`);
     });
     console.log('');
     
     // Create matches analysis
-    const v1Sigs = new Set(v1Transactions.map(tx => tx.signature).filter(Boolean));
-    const v2Sigs = new Set(report.v2.detections.map(d => d.signature));
+    const v1Sigs = new Set(v1KolTransactions.map(tx => tx.signature).filter(Boolean));
+    const v2Sigs = new Set(report.v2Kol.detections.map(d => d.signature));
     
     const matches = [];
     const v1Only = [];
     const v2Only = [];
     
-    for (const tx of v1Transactions) {
+    for (const tx of v1KolTransactions) {
       if (tx.signature) {
         if (v2Sigs.has(tx.signature)) {
-          const v2Detection = report.v2.detections.find(d => d.signature === tx.signature);
+          const v2Detection = report.v2Kol.detections.find(d => d.signature === tx.signature);
           matches.push({ v1: tx, v2: v2Detection });
         } else {
           v1Only.push(tx);
@@ -188,51 +179,28 @@ async function analyzeResults() {
       }
     }
     
-    for (const detection of report.v2.detections) {
+    for (const detection of report.v2Kol.detections) {
       if (!v1Sigs.has(detection.signature)) {
         v2Only.push(detection);
       }
     }
     
     console.log('═══════════════════════════════════════════════════════════════');
-    console.log('COMPARISON SUMMARY:');
+    console.log('KOL COMPARISON SUMMARY:');
     console.log('═══════════════════════════════════════════════════════════════\n');
-    console.log(`Total Matches: ${matches.length}`);
-    console.log(`V1 Only (V2 missed): ${v1Only.length}`);
-    console.log(`V2 Only (V1 missed): ${v2Only.length}\n`);
+    console.log(`Total KOL Matches: ${matches.length}`);
+    console.log(`V1 KOL Only (V2 missed): ${v1Only.length}`);
+    console.log(`V2 KOL Only (V1 missed): ${v2Only.length}\n`);
     
     if (matches.length > 0) {
-      console.log(`V2 Coverage: ${((matches.length / v1Transactions.length) * 100).toFixed(1)}%`);
+      console.log(`V2 KOL Coverage: ${((matches.length / v1KolTransactions.length) * 100).toFixed(1)}%`);
     }
     
-    console.log(`V2 Additional Detections: ${v2Only.length} (${((v2Only.length / report.v2.total) * 100).toFixed(1)}% of V2 total)\n`);
+    console.log(`V2 Additional KOL Detections: ${v2Only.length} (${((v2Only.length / report.v2Kol.total) * 100).toFixed(1)}% of V2 total)\n`);
     
-    // Analyze V2 rejections
-    if (report.v2Rejections && report.v2Rejections.rejections) {
-      console.log('═══════════════════════════════════════════════════════════════');
-      console.log('V2 REJECTION ANALYSIS:');
-      console.log('═══════════════════════════════════════════════════════════════\n');
-      
-      console.log(`Total V2 Rejections: ${report.v2Rejections.total}`);
-      
-      // Group by rejection reason
-      const byReason = {};
-      for (const r of report.v2Rejections.rejections) {
-        const reason = r.reason || 'Unknown';
-        byReason[reason] = (byReason[reason] || 0) + 1;
-      }
-      
-      console.log('\nBy Rejection Reason:');
-      for (const [reason, count] of Object.entries(byReason).sort((a, b) => b[1] - a[1])) {
-        const pct = ((count / report.v2Rejections.total) * 100).toFixed(1);
-        console.log(`  ${reason}: ${count} (${pct}%)`);
-      }
-      console.log('');
-    }
-    
-    // Export matches
+    // Export KOL matches
     if (matches.length > 0) {
-      const matchesCsv = ['Signature,V1_Type,V2_Side,V1_InputSymbol,V1_OutputSymbol,V2_InputSymbol,V2_OutputSymbol,V1_InputAmount,V1_OutputAmount,V2_InputAmountNormalized,V2_OutputAmountNormalized,V2_Confidence'];
+      const kolMatchesCsv = ['Signature,V1_Type,V2_Side,V1_InputSymbol,V1_OutputSymbol,V2_InputSymbol,V2_OutputSymbol,V1_InputAmount,V1_OutputAmount,V2_InputAmountNormalized,V2_OutputAmountNormalized,V2_Confidence,Influencer_Name,Influencer_Username,Followers,HotnessScore'];
       
       for (const match of matches) {
         const row = [
@@ -247,41 +215,49 @@ async function analyzeResults() {
           match.v1.transaction?.tokenOut?.amount || match.v1.tokenAmount?.buyTokenAmount || '',
           match.v2.inputAmountNormalized || '',
           match.v2.outputAmountNormalized || '',
-          match.v2.confidence || ''
+          match.v2.confidence || '',
+          match.v1.influencerName || '',
+          match.v1.influencerUsername || '',
+          match.v1.influencerFollowerCount || '',
+          match.v1.hotnessScore || ''
         ];
-        matchesCsv.push(row.join(','));
+        kolMatchesCsv.push(row.join(','));
       }
       
-      fs.writeFileSync('matches.csv', matchesCsv.join('\n'));
-      console.log('✅ Matches exported to: matches.csv');
+      fs.writeFileSync('kol-matches.csv', kolMatchesCsv.join('\n'));
+      console.log('✅ KOL matches exported to: kol-matches.csv');
     }
     
-    // Export V1 only (V2 missed)
+    // Export V1 KOL only (V2 missed)
     if (v1Only.length > 0) {
-      const v1OnlyCsv = ['Signature,Type,Whale,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmount,OutputAmount'];
+      const v1KolOnlyCsv = ['Signature,Type,KOL_Address,Influencer_Name,Influencer_Username,Followers,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmount,OutputAmount,HotnessScore'];
       
       for (const tx of v1Only) {
         const row = [
           tx.signature,
           tx.type || '',
-          tx.whale?.address || tx.whaleAddress || '',
+          tx.whaleAddress || '',
+          tx.influencerName || '',
+          tx.influencerUsername || '',
+          tx.influencerFollowerCount || '',
           tx.transaction?.tokenIn?.address || tx.tokenInAddress || '',
           tx.transaction?.tokenOut?.address || tx.tokenOutAddress || '',
           tx.transaction?.tokenIn?.symbol || tx.tokenInSymbol || '',
           tx.transaction?.tokenOut?.symbol || tx.tokenOutSymbol || '',
           tx.transaction?.tokenIn?.amount || tx.tokenAmount?.sellTokenAmount || '',
-          tx.transaction?.tokenOut?.amount || tx.tokenAmount?.buyTokenAmount || ''
+          tx.transaction?.tokenOut?.amount || tx.tokenAmount?.buyTokenAmount || '',
+          tx.hotnessScore || ''
         ];
-        v1OnlyCsv.push(row.join(','));
+        v1KolOnlyCsv.push(row.join(','));
       }
       
-      fs.writeFileSync('v1-only-v2-missed.csv', v1OnlyCsv.join('\n'));
-      console.log('✅ V1 only (V2 missed) exported to: v1-only-v2-missed.csv');
+      fs.writeFileSync('v1-kol-only-v2-missed.csv', v1KolOnlyCsv.join('\n'));
+      console.log('✅ V1 KOL only (V2 missed) exported to: v1-kol-only-v2-missed.csv');
     }
     
-    // Export V2 only (first 100 for manual review)
+    // Export V2 KOL only (first 100 for manual review)
     if (v2Only.length > 0) {
-      const v2OnlyCsv = ['Signature,Side,Whale,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmountNormalized,OutputAmountNormalized,Confidence,Source'];
+      const v2KolOnlyCsv = ['Signature,Side,KOL_Address,InputMint,OutputMint,InputSymbol,OutputSymbol,InputAmountNormalized,OutputAmountNormalized,Confidence,Source'];
       
       for (const detection of v2Only.slice(0, 100)) {
         const row = [
@@ -297,32 +273,29 @@ async function analyzeResults() {
           detection.confidence || '',
           detection.source || ''
         ];
-        v2OnlyCsv.push(row.join(','));
+        v2KolOnlyCsv.push(row.join(','));
       }
       
-      fs.writeFileSync('v2-only-sample-100.csv', v2OnlyCsv.join('\n'));
-      console.log('✅ V2 only (first 100) exported to: v2-only-sample-100.csv');
+      fs.writeFileSync('v2-kol-only-sample-100.csv', v2KolOnlyCsv.join('\n'));
+      console.log('✅ V2 KOL only (first 100) exported to: v2-kol-only-sample-100.csv');
     }
     
     console.log('\n═══════════════════════════════════════════════════════════════');
-    console.log('ANALYSIS COMPLETE!');
+    console.log('KOL ANALYSIS COMPLETE!');
     console.log('═══════════════════════════════════════════════════════════════\n');
-    console.log('Files created:');
-    console.log('  1. v1-transactions.csv - All V1 transactions');
-    console.log('  2. v2-detections.csv - All V2 detections');
-    if (report.v2Rejections && report.v2Rejections.rejections) {
-      console.log('  3. v2-rejections.csv - All V2 rejections with reasons');
-    }
+    console.log('KOL Files created:');
+    console.log('  1. v1-kol-transactions.csv - All V1 KOL transactions');
+    console.log('  2. v2-kol-detections.csv - All V2 KOL detections');
     if (matches.length > 0) {
-      console.log('  4. matches.csv - Transactions detected by both');
+      console.log('  3. kol-matches.csv - KOL transactions detected by both');
     }
     if (v1Only.length > 0) {
-      console.log('  5. v1-only-v2-missed.csv - Transactions V2 missed');
+      console.log('  4. v1-kol-only-v2-missed.csv - KOL transactions V2 missed');
     }
     if (v2Only.length > 0) {
-      console.log('  6. v2-only-sample-100.csv - Sample of V2 extras (first 100)');
+      console.log('  5. v2-kol-only-sample-100.csv - Sample of V2 KOL extras (first 100)');
     }
-    console.log('  7. v1-v2-comparison-report.json - Full JSON report\n');
+    console.log('  6. v1-v2-kol-comparison-report.json - Full KOL JSON report\n');
     
   } catch (error) {
     console.error('❌ Error:', error);
@@ -331,4 +304,4 @@ async function analyzeResults() {
   }
 }
 
-analyzeResults();
+analyzeKolResults();

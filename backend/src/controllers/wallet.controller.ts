@@ -10,6 +10,7 @@ import {
   getTokenPrice,
   isTokenResolutionFailed,
   isValidMetadata,
+  saveTokenToCache,
 } from '../config/solana-tokens-config'
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import WalletTradeModel from '../models/WalletTrade.model'
@@ -1513,6 +1514,15 @@ const resolveSymbol = async (token: any) => {
     // ✅ STEP 1: Check if SHYFT already provided valid symbol (FASTEST - no API call!)
     if (isValidMetadata(token.symbol)) {
       logger.info(`✅ Using SHYFT symbol: ${token.symbol} (no API call needed)`)
+      
+      // ✅ FIXED: Cache SHYFT symbols too!
+      try {
+        await saveTokenToCache(token.token_address, token.symbol, token.name || token.symbol, 'shyft')
+        logger.info(`💾 Cached SHYFT symbol: ${token.symbol} for ${token.token_address.slice(0, 8)}...`)
+      } catch (err) {
+        logger.error({ err }, `❌ Failed to cache SHYFT symbol: ${token.token_address}`)
+      }
+      
       return { symbol: token.symbol, name: token.name || token.symbol }
     }
     

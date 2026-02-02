@@ -65,10 +65,11 @@ export class AmountNormalizerImpl implements AmountNormalizer {
     base: AssetDelta,
     fees: FeeData
   ): NormalizedAmounts {
-    const swapInputAmount = Math.abs(quote.netDelta)
+    // CRITICAL FIX: Normalize raw amounts using decimals
+    const swapInputAmount = Math.abs(quote.netDelta) / Math.pow(10, quote.decimals)
     const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
     const totalWalletCost = swapInputAmount + feeBreakdown.totalFeeQuote
-    const baseAmount = Math.abs(base.netDelta)
+    const baseAmount = Math.abs(base.netDelta) / Math.pow(10, base.decimals)
 
     return {
       swapInputAmount,
@@ -83,10 +84,11 @@ export class AmountNormalizerImpl implements AmountNormalizer {
     base: AssetDelta,
     fees: FeeData
   ): NormalizedAmounts {
-    const swapOutputAmount = Math.abs(quote.netDelta)
+    // CRITICAL FIX: Normalize raw amounts using decimals
+    const swapOutputAmount = Math.abs(quote.netDelta) / Math.pow(10, quote.decimals)
     const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
     const netWalletReceived = swapOutputAmount - feeBreakdown.totalFeeQuote
-    const baseAmount = Math.abs(base.netDelta)
+    const baseAmount = Math.abs(base.netDelta) / Math.pow(10, base.decimals)
 
     return {
       swapOutputAmount,

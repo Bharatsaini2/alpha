@@ -228,6 +228,33 @@ export class ShyftParserV2 {
         'ShyftParserV2: Asset deltas collected'
       )
 
+      // Stage 3.5: Transfer Detection Gate (NEW FIX)
+      perfTracker?.startComponent('transfer_detection')
+      const transferCheck = this.detectSimpleTransfer(
+        filteredChanges.economicChanges,
+        tx.actions || [],
+        swapper
+      )
+      perfTracker?.endComponent('transfer_detection')
+
+      if (transferCheck.isTransfer) {
+        logger.info(
+          {
+            signature: tx.signature,
+            reason: transferCheck.reason,
+            transferType: transferCheck.transferType,
+          },
+          'ShyftParserV2: Simple transfer detected, returning ERASE'
+        )
+        return this.createEraseResult(
+          tx,
+          transferCheck.reason || 'simple_transfer_detected',
+          { transferType: transferCheck.transferType, assetDeltas },
+          Date.now() - startTime,
+          perfTracker
+        )
+      }
+
       // Stage 4: Detect Quote/Base
       perfTracker?.startComponent('quote_base_detection')
       const quoteBaseResult = this.quoteBaseDetector.detectQuoteBase(assetDeltas)
@@ -292,7 +319,7 @@ export class ShyftParserV2 {
 
       // Stage 6: Handle Split Protocol or Standard Swap
       if (quoteBaseResult.splitRequired) {
-        // Token-to-token split protocol
+        // Token-to-token split protocol (no minimum value filter for swaps)
         perfTracker?.startComponent('split_swap_creation')
         const splitResult = this.createSplitSwapPair(
           tx,
@@ -338,7 +365,7 @@ export class ShyftParserV2 {
           performanceMetrics: perfTracker?.getMetrics(),
         }
       } else {
-        // Standard swap
+        // Standard swap (BUY/SELL) - apply minimum value filter
         perfTracker?.startComponent('swap_creation')
         const direction = quoteBaseResult.direction!
         const swapResult = this.createParsedSwap(
@@ -352,6 +379,34 @@ export class ShyftParserV2 {
           intermediateAssets
         )
         perfTracker?.endComponent('swap_creation')
+
+        // Stage 6.5: Apply minimum value filter for BUY/SELL (not for token-to-token swaps)
+        perfTracker?.startComponent('minimum_value_validation')
+        const minimumValueCheck = this.validateMinimumValue(swapResult, direction)
+        perfTracker?.endComponent('minimum_value_validation')
+
+        if (!minimumValueCheck.isValid) {
+          logger.info(
+            {
+              signature: tx.signature,
+              direction,
+              reason: minimumValueCheck.reason,
+              usdValue: minimumValueCheck.usdValue,
+            },
+            'ShyftParserV2: Transaction below minimum value threshold, returning ERASE'
+          )
+          return this.createEraseResult(
+            tx,
+            minimumValueCheck.reason || 'below_minimum_value',
+            { 
+              direction,
+              usdValue: minimumValueCheck.usdValue,
+              minimumRequired: 2.0
+            },
+            Date.now() - startTime,
+            perfTracker
+          )
+        }
 
         const processingTime = Date.now() - startTime
         
@@ -600,6 +655,116 @@ export class ShyftParserV2 {
   }
 
   /**
+   * Detect if this is a simple transfer (not a swap)
+   * 
+   * A transaction is a simple transfer if:
+   * 1. Only transfer actions (no SWAP actions)
+   * 2. Only one meaningful token change (no counter-asset gained)
+   * 3. No opposite deltas indicating exchange
+   * 
+   * @param economicChanges - Filtered balance changes
+   * @param actions - Transaction actions
+   * @param swapper - Identified swapper address
+   * @returns Transfer detection result
+   */
+  private detectSimpleTransfer(
+    economicChanges: TokenBalanceChange[],
+    actions: Array<{
+      type: string
+      info?: any
+    }>,
+    swapper: string
+  ): { isTransfer: boolean; reason?: string; transferType?: string } {
+    
+    // Check 1: If there are SWAP actions, this is likely a real swap
+    const hasSwapActions = actions.some(action => 
+      action.type === 'SWAP' || 
+      action.type === 'JUPITER_SWAP' ||
+      action.type === 'RAYDIUM_SWAP' ||
+      action.type === 'ORCA_SWAP'
+    )
+    
+    if (hasSwapActions) {
+      logger.debug({ swapper }, 'Transfer detection: Has swap actions, not a transfer')
+      return { isTransfer: false }
+    }
+    
+    // Check 2: Only transfer actions
+    const onlyTransferActions = actions.length > 0 && actions.every(action =>
+      action.type === 'TOKEN_TRANSFER' ||
+      action.type === 'SOL_TRANSFER' ||
+      action.type === 'TRANSFER'
+    )
+    
+    if (onlyTransferActions) {
+      logger.debug({ swapper }, 'Transfer detection: Only transfer actions detected')
+      return { 
+        isTransfer: true, 
+        reason: 'only_transfer_actions',
+        transferType: 'simple_transfer'
+      }
+    }
+    
+    // Check 3: Single meaningful token change (no counter-asset)
+    const meaningfulChanges = economicChanges.filter(change => 
+      Math.abs(change.change_amount) > 0.000001 // Filter out dust
+    )
+    
+    if (meaningfulChanges.length === 1) {
+      logger.debug(
+        { 
+          swapper, 
+          changeCount: meaningfulChanges.length,
+          change: meaningfulChanges[0]
+        }, 
+        'Transfer detection: Only one meaningful change, likely transfer'
+      )
+      return { 
+        isTransfer: true, 
+        reason: 'single_meaningful_change',
+        transferType: 'single_token_transfer'
+      }
+    }
+    
+    // Check 4: No opposite deltas (all changes same direction)
+    const positiveChanges = meaningfulChanges.filter(c => c.change_amount > 0)
+    const negativeChanges = meaningfulChanges.filter(c => c.change_amount < 0)
+    
+    if (positiveChanges.length === 0 || negativeChanges.length === 0) {
+      logger.debug(
+        { 
+          swapper,
+          positiveCount: positiveChanges.length,
+          negativeCount: negativeChanges.length
+        }, 
+        'Transfer detection: No opposite deltas, likely transfer'
+      )
+      return { 
+        isTransfer: true, 
+        reason: 'no_opposite_deltas',
+        transferType: 'unidirectional_transfer'
+      }
+    }
+    
+    // Check 5: All changes for same owner (simple wallet-to-wallet transfer)
+    const uniqueOwners = new Set(meaningfulChanges.map(c => c.owner))
+    if (uniqueOwners.size === 1 && meaningfulChanges.length === 1) {
+      logger.debug(
+        { swapper, owner: meaningfulChanges[0].owner }, 
+        'Transfer detection: Single owner, single change, likely transfer'
+      )
+      return { 
+        isTransfer: true, 
+        reason: 'single_owner_single_change',
+        transferType: 'wallet_transfer'
+      }
+    }
+    
+    logger.debug({ swapper }, 'Transfer detection: Appears to be a real swap')
+    return { isTransfer: false }
+  }
+
+  /**
    * Augment balance changes with SOL transfers from actions
    * 
    * This fixes the AMM swap detection bug where SOL goes to pool/AMM address
@@ -831,6 +996,73 @@ export class ShyftParserV2 {
       processingTimeMs,
       performanceMetrics: perfTracker?.getMetrics(),
     }
+  }
+
+  /**
+   * Validate minimum value threshold for BUY/SELL transactions
+   * 
+   * Filters out micro-transactions under $2 USD value for BUY/SELL operations.
+   * Token-to-token swaps are exempt from this filter.
+   * 
+   * @param swapResult - The parsed swap result
+   * @param direction - BUY or SELL direction
+   * @returns Validation result with USD value estimate
+   */
+  private validateMinimumValue(
+    swapResult: ParsedSwap,
+    direction: 'BUY' | 'SELL'
+  ): { isValid: boolean; reason?: string; usdValue?: number } {
+    const MINIMUM_USD_VALUE = 2.0 // $2 minimum threshold
+    
+    // Estimate USD value based on the transaction
+    let estimatedUsdValue = 0
+    
+    if (direction === 'BUY') {
+      // For BUY: use the input amount (what user spent)
+      const inputAmount = swapResult.amounts.swapInputAmount || swapResult.amounts.totalWalletCost || 0
+      
+      // If quote asset is SOL, estimate USD value (assume ~$240 SOL for rough estimate)
+      if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.SOL) {
+        estimatedUsdValue = inputAmount * 240 // Rough SOL price estimate
+      }
+      // If quote asset is USDC/USDT, use direct value
+      else if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.USDC || 
+               swapResult.quoteAsset.mint === PRIORITY_ASSETS.USDT) {
+        estimatedUsdValue = inputAmount
+      }
+      // For other tokens, we can't easily estimate - allow them through
+      else {
+        return { isValid: true }
+      }
+    } else {
+      // For SELL: use the output amount (what user received)
+      const outputAmount = swapResult.amounts.swapOutputAmount || swapResult.amounts.netWalletReceived || 0
+      
+      // If quote asset is SOL, estimate USD value
+      if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.SOL) {
+        estimatedUsdValue = outputAmount * 240 // Rough SOL price estimate
+      }
+      // If quote asset is USDC/USDT, use direct value
+      else if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.USDC || 
+               swapResult.quoteAsset.mint === PRIORITY_ASSETS.USDT) {
+        estimatedUsdValue = outputAmount
+      }
+      // For other tokens, we can't easily estimate - allow them through
+      else {
+        return { isValid: true }
+      }
+    }
+    
+    // Check if estimated value meets minimum threshold
+    if (estimatedUsdValue < MINIMUM_USD_VALUE) {
+      return {
+        isValid: false,
+        reason: 'below_minimum_value_threshold',
+        usdValue: estimatedUsdValue
+      }
+    }
+    
+    return { isValid: true, usdValue: estimatedUsdValue }
   }
 
   /**

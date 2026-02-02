@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var mongoose_1 = require("mongoose");
-var whaleAddressSchemaV2 = new mongoose_1.Schema({
+const mongoose_1 = require("mongoose");
+const whaleAddressSchemaV2 = new mongoose_1.Schema({
     signature: { type: String, unique: true, required: true },
     amount: {
         buyAmount: { type: String },
@@ -87,7 +87,7 @@ var whaleAddressSchemaV2 = new mongoose_1.Schema({
     tokenInAge: Date,
     tokenOutAge: Date,
 }, { timestamps: true });
-var whaleAllTransactionModelV2 = (0, mongoose_1.model)('whaleAllTransactionV2', whaleAddressSchemaV2);
+const whaleAllTransactionModelV2 = (0, mongoose_1.model)('whaleAllTransactionV2', whaleAddressSchemaV2);
 // Enhanced indexes for better query performance
 whaleAllTransactionModelV2.schema.index({ whaleAddress: 1, timestamp: -1 });
 whaleAllTransactionModelV2.schema.index({ 'whale.address': 1, timestamp: -1 });
