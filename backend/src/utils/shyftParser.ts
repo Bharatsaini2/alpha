@@ -199,6 +199,10 @@ function parseFastPath(tx: ShyftTransaction, tokensSwapped: any, swapper: string
   const outputAmountRaw = output.amount_raw
   const inputDecimals = input.decimals ?? 0
   const outputDecimals = output.decimals ?? 0
+  
+  // ✅ NEW: Extract symbols from SHYFT if available
+  const inputSymbol = input.symbol
+  const outputSymbol = output.symbol
 
   if (!inputMint || !outputMint || inputAmountRaw === undefined || outputAmountRaw === undefined) {
     logger.debug({ signature: tx.signature }, 'Fast path: missing required fields')
@@ -215,12 +219,14 @@ function parseFastPath(tx: ShyftTransaction, tokensSwapped: any, swapper: string
     side: 'SWAP',
     input: {
       mint: inputMint,
+      symbol: inputSymbol, // ✅ NEW: Include symbol from SHYFT
       amount_raw: String(inputAmountRaw),
       decimals: inputDecimals,
       amount: inputAmount,
     },
     output: {
       mint: outputMint,
+      symbol: outputSymbol, // ✅ NEW: Include symbol from SHYFT
       amount_raw: String(outputAmountRaw),
       decimals: outputDecimals,
       amount: outputAmount,
@@ -244,6 +250,9 @@ function parseFastPath(tx: ShyftTransaction, tokensSwapped: any, swapper: string
  * - The decimals and pre_balance must come from the swapper's account
  * 
  * The fix: For each mint, track ALL the swapper's changes and use them correctly
+ * 
+ * SYMBOL EXTRACTION: Extract symbols from SHYFT's token_balance_changes
+ * SHYFT provides symbol/name in token_balance_changes - we should use it!
  */
 function parseBalanceDeltaPath(tx: ShyftTransaction, swapper: string): ParsedSwap | null {
   const changes = tx.token_balance_changes || []
@@ -259,6 +268,7 @@ function parseBalanceDeltaPath(tx: ShyftTransaction, swapper: string): ParsedSwa
   // Aggregate by mint - track BOTH the net delta AND all changes for that mint
   const netDeltas: { [mint: string]: number } = {}
   const changesByMint: { [mint: string]: TokenBalanceChange[] } = {}
+  const symbolsByMint: { [mint: string]: { symbol?: string; name?: string } } = {} // ✅ NEW: Track symbols
 
   for (const change of relevantChanges) {
     const delta = change.post_balance - change.pre_balance
@@ -280,6 +290,14 @@ function parseBalanceDeltaPath(tx: ShyftTransaction, swapper: string): ParsedSwa
       changesByMint[change.mint] = []
     }
     changesByMint[change.mint].push(change)
+    
+    // ✅ NEW: Extract symbol/name from SHYFT if available
+    if (!symbolsByMint[change.mint]) {
+      symbolsByMint[change.mint] = {
+        symbol: (change as any).symbol,
+        name: (change as any).name
+      }
+    }
   }
 
   // Normalize SOL and stablecoins - Requirement 1.4
@@ -316,108 +334,71 @@ function parseBalanceDeltaPath(tx: ShyftTransaction, swapper: string): ParsedSwa
     'All token balance changes'
   )
 
-  // ✅ SIMPLE RULE: If there are 2+ different tokens with balance changes, it's a swap
-  // One token goes down (outflow), another goes up (inflow) → SWAP
-  if (allTokens.length >= 2) {
-    const tokenOutflow = allTokens.find((t) => t.delta < 0)  // Token being sent
-    const tokenInflow = allTokens.find((t) => t.delta > 0)   // Token being received
-    
-    if (tokenOutflow && tokenInflow) {
-      const tokenOutChange = getBestChangeForMint(changesByMint[tokenOutflow.mint])
-      const tokenInChange = getBestChangeForMint(changesByMint[tokenInflow.mint])
-
-      // Determine side based on whether currency is involved
-      let side: 'BUY' | 'SELL' | 'SWAP' = 'SWAP'
-      
-      // BUY: Currency out, token in
-      if (isCurrencyToken(tokenOutflow.mint) && !isCurrencyToken(tokenInflow.mint)) {
-        side = 'BUY'
-      }
-      // SELL: Token out, currency in
-      else if (!isCurrencyToken(tokenOutflow.mint) && isCurrencyToken(tokenInflow.mint)) {
-        side = 'SELL'
-      }
-
-      return {
-        transaction_hash: tx.signature,
-        timestamp: tx.timestamp,
-        swapper,
-        side,
-        input: {
-          mint: tokenOutflow.mint,
-          amount_raw: String(Math.abs(tokenOutflow.delta)),
-          decimals: tokenOutChange?.decimals ?? (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0),
-          amount: Math.abs(tokenOutflow.delta) / Math.pow(10, tokenOutChange?.decimals ?? (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0)),
-        },
-        output: {
-          mint: tokenInflow.mint,
-          amount_raw: String(tokenInflow.delta),
-          decimals: tokenInChange?.decimals ?? (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0),
-          amount: tokenInflow.delta / Math.pow(10, tokenInChange?.decimals ?? (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0)),
-        },
-        ata_created: detectATACreation(relevantChanges),
-        classification_source: 'token_balance_changes',
-        confidence: 'MEDIUM',
-      }
-    }
+  // ✅ Quote/Base Gate Rule: Must have at least 2 assets with delta
+  // IF number_of_assets_with_delta < 2 → ERASE ❌
+  // One-sided transactions are NOT swaps (they're transfers/receives)
+  if (allTokens.length < 2) {
+    logger.debug(
+      { signature: tx.signature, tokenCount: allTokens.length },
+      'Quote/Base gate: Less than 2 assets with delta - not a swap'
+    )
+    return null
   }
 
-  // ✅ FALLBACK: Accept one-sided transactions (transfers, receives)
-  // This handles cases where only one token changes (receive/send)
-  if (allTokens.length === 1) {
-    const token = allTokens[0]
-    const tokenChange = getBestChangeForMint(changesByMint[token.mint])
-    
-    if (token.delta > 0) {
-      // Token received (treat as BUY)
-      return {
-        transaction_hash: tx.signature,
-        timestamp: tx.timestamp,
-        swapper,
-        side: 'BUY',
-        input: {
-          mint: 'UNKNOWN',
-          amount_raw: '0',
-          decimals: 0,
-          amount: 0,
-        },
-        output: {
-          mint: token.mint,
-          amount_raw: String(token.delta),
-          decimals: tokenChange?.decimals ?? 0,
-          amount: token.delta / Math.pow(10, tokenChange?.decimals ?? 0),
-        },
-        ata_created: detectATACreation(relevantChanges),
-        classification_source: 'token_balance_changes',
-        confidence: 'LOW',
-      }
-    } else {
-      // Token sent (treat as SELL)
-      return {
-        transaction_hash: tx.signature,
-        timestamp: tx.timestamp,
-        swapper,
-        side: 'SELL',
-        input: {
-          mint: token.mint,
-          amount_raw: String(Math.abs(token.delta)),
-          decimals: tokenChange?.decimals ?? 0,
-          amount: Math.abs(token.delta) / Math.pow(10, tokenChange?.decimals ?? 0),
-        },
-        output: {
-          mint: 'UNKNOWN',
-          amount_raw: '0',
-          decimals: 0,
-          amount: 0,
-        },
-        ata_created: detectATACreation(relevantChanges),
-        classification_source: 'token_balance_changes',
-        confidence: 'LOW',
-      }
-    }
+  // At this point we have 2+ tokens with balance changes
+  const tokenOutflow = allTokens.find((t) => t.delta < 0)  // Token being sent
+  const tokenInflow = allTokens.find((t) => t.delta > 0)   // Token being received
+  
+  if (!tokenOutflow || !tokenInflow) {
+    logger.debug(
+      { signature: tx.signature, allTokens },
+      'No clear inflow/outflow pair - not a swap'
+    )
+    return null
   }
 
-  return null
+  const tokenOutChange = getBestChangeForMint(changesByMint[tokenOutflow.mint])
+  const tokenInChange = getBestChangeForMint(changesByMint[tokenInflow.mint])
+
+  // ✅ NEW: Get symbols from SHYFT if available
+  const tokenOutSymbol = symbolsByMint[tokenOutflow.mint]
+  const tokenInSymbol = symbolsByMint[tokenInflow.mint]
+
+  // Determine side based on whether currency is involved
+  let side: 'BUY' | 'SELL' | 'SWAP' = 'SWAP'
+  
+  // BUY: Currency out, token in
+  if (isCurrencyToken(tokenOutflow.mint) && !isCurrencyToken(tokenInflow.mint)) {
+    side = 'BUY'
+  }
+  // SELL: Token out, currency in
+  else if (!isCurrencyToken(tokenOutflow.mint) && isCurrencyToken(tokenInflow.mint)) {
+    side = 'SELL'
+  }
+
+  return {
+    transaction_hash: tx.signature,
+    timestamp: tx.timestamp,
+    swapper,
+    side,
+    input: {
+      mint: tokenOutflow.mint,
+      symbol: tokenOutSymbol?.symbol, // ✅ NEW: Include symbol from SHYFT
+      amount_raw: String(Math.abs(tokenOutflow.delta)),
+      decimals: tokenOutChange?.decimals ?? (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0),
+      amount: Math.abs(tokenOutflow.delta) / Math.pow(10, tokenOutChange?.decimals ?? (isCurrencyToken(tokenOutflow.mint) ? (tokenOutflow.mint === SOL_MINT ? 9 : 6) : 0)),
+    },
+    output: {
+      mint: tokenInflow.mint,
+      symbol: tokenInSymbol?.symbol, // ✅ NEW: Include symbol from SHYFT
+      amount_raw: String(tokenInflow.delta),
+      decimals: tokenInChange?.decimals ?? (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0),
+      amount: tokenInflow.delta / Math.pow(10, tokenInChange?.decimals ?? (isCurrencyToken(tokenInflow.mint) ? (tokenInflow.mint === SOL_MINT ? 9 : 6) : 0)),
+    },
+    ata_created: detectATACreation(relevantChanges),
+    classification_source: 'token_balance_changes',
+    confidence: 'MEDIUM',
+  }
 }
 
 /**

@@ -8,6 +8,8 @@ import {
   getTokenData,
   getTokenMetaDataUsingRPC,
   getTokenPrice,
+  isTokenResolutionFailed,
+  isValidMetadata,
 } from '../config/solana-tokens-config'
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import WalletTradeModel from '../models/WalletTrade.model'
@@ -1507,30 +1509,52 @@ const formatNumber = (value: number): string => {
 
 // Helper to resolve symbol
 const resolveSymbol = async (token: any) => {
-  if (token.symbol && token.symbol !== 'Unknown' && token.symbol !== 'Token') {
-    return { symbol: token.symbol, name: token.name || token.symbol }
-  }
-
   try {
+    // ✅ STEP 1: Check if SHYFT already provided valid symbol (FASTEST - no API call!)
+    if (isValidMetadata(token.symbol)) {
+      logger.info(`✅ Using SHYFT symbol: ${token.symbol} (no API call needed)`)
+      return { symbol: token.symbol, name: token.name || token.symbol }
+    }
+    
+    logger.info(`⚠️ SHYFT symbol missing or invalid (${token.symbol}), checking cache/API for ${token.token_address}...`)
+    
+    // ✅ STEP 1.5: Check if resolution previously failed
+    if (await isTokenResolutionFailed(token.token_address)) {
+      logger.info(`⚠️ Token resolution previously failed, using shortened address`)
+      const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
+      return { symbol: shortAddress, name: token.token_address, _isShortened: true }
+    }
+    
+    // ✅ STEP 2: SHYFT doesn't have it - check cache/API (fallback)
     const metadata = await getTokenMetaDataUsingRPC(token.token_address)
     
-    // If metadata is found and not 'Unknown', use it
-    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown') {
+    // ✅ FIXED: Better validation for resolved metadata
+    if (metadata && !metadata._isShortened && isValidMetadata(metadata.symbol)) {
+      logger.info(`✅ Resolved symbol: ${metadata.symbol} for ${token.token_address}`)
       return metadata
     }
     
-    // If still unknown, use contract address as fallback
+    // ✅ STEP 3: Last resort - shortened contract address
     const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
+    logger.info(`⚠️ All sources failed, using fallback: ${shortAddress} for ${token.token_address}`)
     return { 
       symbol: shortAddress,
-      name: token.token_address
+      name: token.token_address,
+      _isShortened: true
     }
-  } catch {
+  } catch (error) {
+    logger.error({ error }, `❌ Error in resolveSymbol for ${token.token_address}`)
+    // On error, try SHYFT symbol first
+    if (isValidMetadata(token.symbol)) {
+      return { symbol: token.symbol, name: token.name || token.symbol }
+    }
+    
     // Last resort: use contract address
     const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
     return { 
       symbol: shortAddress,
-      name: token.token_address
+      name: token.token_address,
+      _isShortened: true
     }
   }
 }

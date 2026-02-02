@@ -4,7 +4,7 @@ export interface ITokenMetadataCache extends Document {
   tokenAddress: string;
   symbol: string;
   name: string;
-  source: 'rpc' | 'solscan' | 'dexscreener' | 'jupiter';
+  source: 'rpc' | 'helius' | 'coingecko' | 'solscan' | 'dexscreener' | 'jupiter' | 'birdeye' | 'shyft';
   lastUpdated: Date;
   createdAt: Date;
 }
@@ -27,7 +27,7 @@ const tokenMetadataCacheSchema = new Schema<ITokenMetadataCache>(
     },
     source: {
       type: String,
-      enum: ['rpc', 'solscan', 'dexscreener', 'jupiter', 'birdeye'],
+      enum: ['rpc', 'helius', 'coingecko', 'solscan', 'dexscreener', 'jupiter', 'birdeye', 'shyft'],
       required: true,
     },
     lastUpdated: {
@@ -44,8 +44,9 @@ const tokenMetadataCacheSchema = new Schema<ITokenMetadataCache>(
 // Index for efficient lookups
 tokenMetadataCacheSchema.index({ tokenAddress: 1 });
 
-// TTL index: automatically delete entries older than 7 days
-tokenMetadataCacheSchema.index({ lastUpdated: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
+// ✅ NO TTL INDEX - Cache tokens forever!
+// Token symbols/names don't change, so we keep them permanently
+// This eliminates repeated API calls for the same tokens
 
 const TokenMetadataCacheModel = mongoose.model<ITokenMetadataCache>(
   'TokenMetadataCache',

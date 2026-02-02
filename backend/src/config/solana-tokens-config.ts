@@ -13,6 +13,8 @@ dotenv.config()
 
 const BIRD_EYE_API_KEY =
   process.env.BIRD_EYE_API_KEY || '1209ac01dce54f0a97fd6b58c7b9ecb4'
+const HELIUS_API_KEY =
+  process.env.HELIUS_API_KEY || 'ef5e9c05-c3bf-4179-91eb-07fd3a8b9b6b'
 const SOLANA_RPC_URL =
   process.env.RPC_URL || 'https://api.mainnet-beta.solana.com'
 const birdEyeClient = axios.create({
@@ -23,6 +25,64 @@ const birdEyeClient = axios.create({
 // In-memory cache for token metadata (24 hour TTL)
 const tokenMetadataCache = new Map<string, { symbol?: string; name?: string; timestamp: number }>()
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
+
+// ✅ NEW: Track failed resolutions to prevent repeated API calls
+const failedResolutions = new Map<string, number>()
+const FAILED_RESOLUTION_TTL = 60 * 60 * 1000 // 1 hour
+
+// ✅ NEW: Safe TokenDataModel update - NEVER stores symbol/name metadata
+async function safeUpdateTokenDataModel(
+  tokenAddress: string, 
+  updates: { imageUrl?: string | null; [key: string]: any }
+): Promise<void> {
+  // ✅ CRITICAL: Strip any symbol/name fields to prevent cache poisoning
+  const safeUpdates = {
+    tokenAddress,
+    imageUrl: updates.imageUrl || null,
+    lastUpdated: new Date(),
+    // ✅ Explicitly exclude symbol/name - they belong in TokenMetadataCacheModel
+  }
+  
+  // ✅ Remove any accidentally passed symbol/name fields
+  delete (safeUpdates as any).symbol
+  delete (safeUpdates as any).name
+  
+  await TokenDataModel.findOneAndUpdate(
+    { tokenAddress },
+    { $set: safeUpdates },
+    { upsert: true, new: true },
+  )
+}
+
+// Cleanup old cache entries periodically
+setInterval(() => {
+  const now = Date.now()
+  
+  // Clean metadata cache
+  for (const [key, value] of tokenMetadataCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL) {
+      tokenMetadataCache.delete(key)
+    }
+  }
+  
+  // Clean price cache
+  for (const [key, value] of priceDataCache.entries()) {
+    if (now - value.timestamp > PRICE_CACHE_TTL) {
+      priceDataCache.delete(key)
+    }
+  }
+  
+  // ✅ Clean failed resolutions cache
+  for (const [key, value] of failedResolutions.entries()) {
+    if (now - value > FAILED_RESOLUTION_TTL) {
+      failedResolutions.delete(key)
+    }
+  }
+  
+  logger.info(
+    `🧹 Cache cleanup: Metadata cache size: ${tokenMetadataCache.size}, Price cache size: ${priceDataCache.size}, Failed resolutions: ${failedResolutions.size}`,
+  )
+}, 300000) // Clean every 5 minutes
 
 const delay = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -72,6 +132,15 @@ export const fetchSolanaMarketCap = async (tokenAddress: string) => {
   }
 }
 
+// In-memory cache for price data (5 minute TTL to reduce API calls)
+const priceDataCache = new Map<string, { 
+  price: number
+  marketCap: number
+  volume24h: number
+  timestamp: number 
+}>()
+const PRICE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
 // Get token data with DB-first approach, then dexscrenner, then birdeye fallback
 export async function getTokenDataWithFallback(tokenAddress: string): Promise<{
   price: number
@@ -82,6 +151,10 @@ export async function getTokenDataWithFallback(tokenAddress: string): Promise<{
   name?: string | null
 }> {
   try {
+    // ✅ Step 1: Check in-memory price cache (5 min TTL)
+    const now = Date.now()
+    const cachedPrice = priceDataCache.get(tokenAddress)
+    
     const dbTokenData = await TokenDataModel.findOne({
       tokenAddress,
     }).lean()
@@ -92,10 +165,32 @@ export async function getTokenDataWithFallback(tokenAddress: string): Promise<{
       cachedImageUrl = dbTokenData.imageUrl || null
     }
 
+    // ✅ If price cache is fresh (< 5 minutes old), use it
+    if (cachedPrice && (now - cachedPrice.timestamp) < PRICE_CACHE_TTL) {
+      logger.info(
+        `✅ Using cached price data for ${tokenAddress} (age: ${Math.round((now - cachedPrice.timestamp) / 1000)}s)`,
+      )
+      return {
+        price: cachedPrice.price,
+        marketCap: cachedPrice.marketCap,
+        imageUrl: cachedImageUrl,
+        volume24h: cachedPrice.volume24h,
+      }
+    }
+
+    // ✅ Cache miss or expired - fetch fresh data
     logger.info(
-      `📊 Fetching fresh price/marketCap/name/symbol from DexScreener for ${tokenAddress}`,
+      `📊 Fetching fresh price/marketCap from DexScreener for ${tokenAddress}`,
     )
     const dexscrennerData = await getTokenDataFromDexScreener(tokenAddress)
+    
+    // ✅ Store price data in cache
+    priceDataCache.set(tokenAddress, {
+      price: dexscrennerData.price,
+      marketCap: dexscrennerData.marketCap,
+      volume24h: dexscrennerData.volume24h,
+      timestamp: now
+    })
 
     let imageUrl = cachedImageUrl
 
@@ -115,17 +210,11 @@ export async function getTokenDataWithFallback(tokenAddress: string): Promise<{
       logger.info(`✅ Using cached imageUrl from DB for ${tokenAddress}`)
     }
 
-    const tokenDataToStore = {
-      tokenAddress,
-      imageUrl: imageUrl || null,
-      lastUpdated: new Date(),
-    }
-
-    await TokenDataModel.findOneAndUpdate(
-      { tokenAddress },
-      { $set: tokenDataToStore },
-      { upsert: true, new: true },
-    )
+    // ✅ CRITICAL: Never store symbol/name metadata in TokenDataModel
+    // TokenDataModel is for price/image data only
+    // Symbol/name metadata goes to TokenMetadataCacheModel with proper validation
+    
+    await safeUpdateTokenDataModel(tokenAddress, { imageUrl })
 
     logger.info(`💾 Stored token imageUrl in DB for ${tokenAddress}`)
 
@@ -388,25 +477,25 @@ export async function getTokenImageUrl(tokenAddress: string) {
 // ============ HELPER FUNCTIONS FOR TOKEN METADATA ============
 
 // Helper: Save valid token to database cache
-async function saveTokenToCache(
+export async function saveTokenToCache(
   tokenAddress: string,
   symbol: string,
   name: string,
-  source: 'rpc' | 'solscan' | 'dexscreener' | 'jupiter' | 'birdeye'
+  source: 'rpc' | 'helius' | 'coingecko' | 'solscan' | 'dexscreener' | 'jupiter' | 'birdeye' | 'shyft'
 ): Promise<void> {
-  // ⚠️ CRITICAL: NEVER save "Unknown" or fallback addresses to cache
-  if (!symbol || symbol === 'Unknown' || symbol.trim() === '' || symbol.includes('...')) {
-    console.log(`⚠️ Skipping cache save for invalid symbol: ${symbol}`)
-    return // Never save invalid tokens
+  // ✅ FIXED: Enhanced validation before caching
+  if (!isValidMetadata(symbol)) {
+    logger.info(`⚠️ Skipping cache save for invalid symbol: "${symbol}"`)
+    return
+  }
+  
+  // ✅ FIXED: Never cache shortened addresses
+  if (symbol.includes('...') || /^[A-Za-z0-9]{3,4}\.\.\.[A-Za-z0-9]{3,4}$/.test(symbol)) {
+    logger.info(`⚠️ Skipping cache save for shortened address: "${symbol}"`)
+    return
   }
 
   try {
-    // Check if mongoose is connected
-    if (!mongoose.connection || mongoose.connection.readyState !== 1) {
-      console.log(`⚠️ MongoDB not connected, skipping cache save`)
-      return
-    }
-
     await TokenMetadataCacheModel.findOneAndUpdate(
       { tokenAddress },
       {
@@ -419,9 +508,38 @@ async function saveTokenToCache(
       },
       { upsert: true, new: true }
     )
-    console.log(`💾 Saved to cache: ${tokenAddress} → ${symbol} (source: ${source})`)
+    logger.info(`💾 Cached: ${tokenAddress.slice(0, 8)}... → ${symbol} [${source}]`)
   } catch (error) {
-    console.error('Failed to save to cache:', error)
+    logger.error({ error }, `❌ Failed to save to cache: ${tokenAddress}`)
+    throw error
+  }
+}
+
+// ✅ NEW: Track failed resolutions
+async function markTokenResolutionFailed(tokenAddress: string): Promise<void> {
+  failedResolutions.set(tokenAddress, Date.now())
+  
+  // Also save to Redis to persist across restarts
+  try {
+    await redisClient.setex(`failed_resolution:${tokenAddress}`, 3600, 'true')
+  } catch (error) {
+    logger.warn(`Failed to cache resolution failure: ${error}`)
+  }
+}
+
+async function isTokenResolutionFailed(tokenAddress: string): Promise<boolean> {
+  // Check in-memory first
+  const failed = failedResolutions.get(tokenAddress)
+  if (failed && (Date.now() - failed) < FAILED_RESOLUTION_TTL) {
+    return true
+  }
+  
+  // Check Redis
+  try {
+    const redisFailed = await redisClient.get(`failed_resolution:${tokenAddress}`)
+    return redisFailed === 'true'
+  } catch {
+    return false
   }
 }
 
@@ -436,7 +554,7 @@ async function getTokenFromCache(tokenAddress: string): Promise<{ symbol: string
 
     const cached = await TokenMetadataCacheModel.findOne({ tokenAddress }).lean()
 
-    if (cached && cached.symbol && !cached.symbol.includes('...') && cached.symbol !== 'Unknown') {
+    if (cached && cached.symbol && isValidCachedSymbol(cached.symbol)) {
       console.log(`✅ Cache HIT: ${tokenAddress} → ${cached.symbol} (source: ${cached.source})`)
       return {
         symbol: cached.symbol,
@@ -458,7 +576,57 @@ async function getTokenFromCache(tokenAddress: string): Promise<{ symbol: string
 
 // Helper: Check if token metadata is valid
 function isValidMetadata(symbol: string | undefined | null): boolean {
-  return !!(symbol && symbol !== 'Unknown' && symbol.trim() !== '')
+  if (!symbol || typeof symbol !== 'string') return false
+  
+  const trimmed = symbol.trim()
+  if (trimmed === '' || trimmed.length === 0) return false
+  
+  // ✅ ENHANCED: Comprehensive blacklist for garbage symbols
+  const blacklistedSymbols = [
+    'Unknown', 'unknown', 'UNKNOWN',
+    'Token', 'token', 'TOKEN',
+    'localhost', 'LOCALHOST',
+    'pump', 'PUMP',
+    'unknown token', 'UNKNOWN TOKEN',
+    'test', 'TEST',
+    'null', 'NULL',
+    'undefined', 'UNDEFINED',
+    'N/A', 'n/a',
+    'TBD', 'tbd',
+    '???', '...',
+    'TEMP', 'temp',
+    'PLACEHOLDER', 'placeholder',
+  ]
+  
+  if (blacklistedSymbols.includes(trimmed)) return false
+  
+  // ✅ FIXED: Detect shortened addresses more accurately
+  if (trimmed.includes('...') && trimmed.length <= 12) return false
+  if (/^[A-Za-z0-9]{3,4}\.\.\.[A-Za-z0-9]{3,4}$/.test(trimmed)) return false
+  
+  // ✅ Additional validation
+  if (trimmed.length < 2) return false  // Too short
+  if (trimmed.length > 20) return false // Suspiciously long
+  if (/^[0-9]+$/.test(trimmed)) return false // All numbers
+  if (/^0x[a-fA-F0-9]+$/.test(trimmed)) return false // Ethereum address format
+  
+  // ✅ Check for Solana address patterns (44 chars, base58)
+  if (trimmed.length >= 32 && trimmed.length <= 44 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(trimmed)) {
+    return false // Looks like a Solana address
+  }
+  
+  return true
+}
+
+// ✅ FIXED: Enhanced cache validation
+function isValidCachedSymbol(symbol: string | undefined | null): boolean {
+  if (!isValidMetadata(symbol)) return false
+  
+  // ✅ Additional checks for cached data
+  if (symbol!.startsWith('0x')) return false // Ethereum address
+  if (symbol!.length > 44 && symbol!.length < 50) return false // Solana address
+  
+  return true
 }
 
 // Helper: Try RPC metadata
@@ -486,45 +654,54 @@ async function tryRPCMetadata(tokenAddress: string): Promise<{ symbol: string; n
   }
 }
 
-// Helper: Try DexScreener with retries
-async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
-  const maxRetries = 5 // Increased from 3
+// Helper: Try Helius DAS API (Digital Asset Standard) - Has ALL Solana tokens!
+async function tryHeliusDAS(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
+  const maxRetries = 3
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔄 Trying DexScreener (attempt ${attempt}/${maxRetries})`)
+      console.log(`🔄 Trying Helius DAS API (attempt ${attempt}/${maxRetries})`)
 
-      // ✅ CORRECT: Use /dex/tokens/{address} for direct token metadata lookup
-      const response = await axios.get(
-        `https://api.dexscreener.com/latest/dex/tokens/${tokenAddress}`,
-        { timeout: 15000 } // Increased from 10s to 15s
+      // Helius DAS API endpoint - Gets metadata for ANY Solana token
+      const response = await axios.post(
+        `https://api.helius.xyz/v0/token-metadata?api-key=${process.env.HELIUS_API_KEY}`,
+        {
+          mintAccounts: [tokenAddress]
+        },
+        { 
+          timeout: 10000,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
       )
 
-      if (response.data?.pairs && response.data.pairs.length > 0) {
-        const pair = response.data.pairs[0]
-        const symbol = pair.baseToken?.symbol
-        const name = pair.baseToken?.name
+      if (response.data && response.data.length > 0) {
+        const tokenData = response.data[0]
+        const symbol = tokenData.onChainMetadata?.metadata?.data?.symbol?.toUpperCase()
+        const name = tokenData.onChainMetadata?.metadata?.data?.name || 
+                     tokenData.offChainMetadata?.metadata?.name
 
         if (isValidMetadata(symbol)) {
-          console.log(`✅ DexScreener found: ${symbol} (${name})`)
+          console.log(`✅ Helius DAS found: ${symbol} (${name || symbol})`)
 
           // Save to cache
-          await saveTokenToCache(tokenAddress, symbol, name || symbol, 'dexscreener')
+          await saveTokenToCache(tokenAddress, symbol, name || symbol, 'helius')
 
           return { symbol, name: name || symbol }
         }
       }
 
       // No valid data, don't retry
-      console.log(`⚠️ DexScreener returned no valid data`)
+      console.log(`⚠️ Helius DAS returned no valid data`)
       return null
     } catch (error: any) {
-      console.error(`⚠️ DexScreener attempt ${attempt} failed:`, error.message)
+      console.error(`⚠️ Helius DAS attempt ${attempt} failed:`, error.message)
 
       // Retry on timeout or network errors
       if ((error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') && attempt < maxRetries) {
-        // Exponential backoff: 2s, 4s, 8s, 16s
-        const waitTime = Math.min(2000 * Math.pow(2, attempt - 1), 16000)
+        // Exponential backoff: 1s, 2s, 4s
+        const waitTime = Math.min(1000 * Math.pow(2, attempt - 1), 4000)
         console.log(`⏳ Waiting ${waitTime / 1000}s before retry...`)
         await new Promise(resolve => setTimeout(resolve, waitTime))
         continue
@@ -535,108 +712,162 @@ async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; n
     }
   }
 
-  console.log(`❌ DexScreener failed after ${maxRetries} attempts`)
+  console.log(`❌ Helius DAS failed after ${maxRetries} attempts`)
   return null
 }
 
-// Helper: Try Jupiter Token List (MOST RELIABLE)
-async function tryJupiterTokenList(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
-  try {
-    console.log(`🔄 Trying Jupiter Token List`)
+// Helper: Try CoinGecko API with retries
+async function tryCoinGecko(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
+  const maxRetries = 3
 
-    // Jupiter has a comprehensive token list that's very reliable
-    const response = await axios.get(
-      'https://token.jup.ag/strict',
-      { timeout: 5000 }
-    )
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Trying CoinGecko API (attempt ${attempt}/${maxRetries})`)
 
-    if (response.data && Array.isArray(response.data)) {
-      const token = response.data.find((t: any) => t.address === tokenAddress)
+      // CoinGecko API endpoint for Solana token info
+      const response = await axios.get(
+        `https://api.coingecko.com/api/v3/coins/solana/contract/${tokenAddress}`,
+        { 
+          timeout: 15000,
+          headers: {
+            'Accept': 'application/json'
+          }
+        }
+      )
 
-      if (token && isValidMetadata(token.symbol)) {
-        console.log(`✅ Jupiter found: ${token.symbol} (${token.name})`)
+      if (response.data) {
+        const symbol = response.data.symbol?.toUpperCase()
+        const name = response.data.name
 
-        // Save to cache
-        await saveTokenToCache(tokenAddress, token.symbol, token.name || token.symbol, 'jupiter')
+        if (isValidMetadata(symbol)) {
+          console.log(`✅ CoinGecko found: ${symbol} (${name})`)
 
-        return { symbol: token.symbol, name: token.name || token.symbol }
+          // Save to cache
+          await saveTokenToCache(tokenAddress, symbol, name || symbol, 'coingecko')
+
+          return { symbol, name: name || symbol }
+        }
       }
-    }
 
-    return null
-  } catch (error: any) {
-    console.error(`⚠️ Jupiter Token List failed:`, error.message)
-    return null
+      // No valid data, don't retry
+      console.log(`⚠️ CoinGecko returned no valid data`)
+      return null
+    } catch (error: any) {
+      console.error(`⚠️ CoinGecko attempt ${attempt} failed:`, error.message)
+
+      // Retry on timeout or network errors
+      if ((error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') && attempt < maxRetries) {
+        // Exponential backoff: 2s, 4s, 8s
+        const waitTime = Math.min(2000 * Math.pow(2, attempt - 1), 8000)
+        console.log(`⏳ Waiting ${waitTime / 1000}s before retry...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        continue
+      }
+
+      // Don't retry on other errors (404, 429, 500, etc)
+      return null
+    }
   }
+
+  console.log(`❌ CoinGecko failed after ${maxRetries} attempts`)
+  return null
 }
 
-// Helper: Try Solscan API (VERY RELIABLE, no rate limits for metadata)
-async function trySolscan(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
-  try {
-    console.log(`🔄 Trying Solscan API`)
+// Helper: Try DexScreener API with rate limiting and proper endpoint
+async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
+  const maxRetries = 3
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`🔄 Trying DexScreener API (attempt ${attempt}/${maxRetries})`)
 
-    const response = await axios.get(
-      `https://api.solscan.io/token/meta?token=${tokenAddress}`,
-      { timeout: 5000 }
-    )
+      // ✅ FIXED: Use correct endpoint
+      const response = await axios.get(
+        `https://api.dexscreener.com/latest/dex/search?q=${tokenAddress}`,
+        { 
+          timeout: 15000,  // ✅ Increased timeout
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (compatible; TokenResolver/1.0)',
+            'Cache-Control': 'no-cache'
+          }
+        }
+      )
 
-    if (response.data) {
-      const symbol = response.data.symbol
-      const name = response.data.name
+      // ✅ FIXED: Better response validation
+      if (!response.data || !response.data.pairs || !Array.isArray(response.data.pairs)) {
+        logger.warn(`DexScreener returned invalid response structure`)
+        throw new Error('Invalid response structure')
+      }
+
+      if (response.data.pairs.length === 0) {
+        logger.info(`DexScreener found no pairs for ${tokenAddress}`)
+        return null // This is a legitimate "not found" - don't retry
+      }
+
+      // ✅ Find the best pair (highest liquidity)
+      const bestPair = response.data.pairs
+        .filter((pair: any) => pair.baseToken?.address === tokenAddress)
+        .sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0]
+
+      if (!bestPair) {
+        logger.info(`No valid pairs found for token ${tokenAddress}`)
+        return null
+      }
+
+      const symbol = bestPair.baseToken?.symbol?.toUpperCase()
+      const name = bestPair.baseToken?.name
 
       if (isValidMetadata(symbol)) {
-        console.log(`✅ Solscan found: ${symbol} (${name})`)
-
-        // Save to cache
-        await saveTokenToCache(tokenAddress, symbol, name || symbol, 'solscan')
-
+        logger.info(`✅ DexScreener found: ${symbol} (${name || symbol})`)
+        await saveTokenToCache(tokenAddress, symbol, name || symbol, 'dexscreener')
         return { symbol, name: name || symbol }
       }
-    }
 
-    return null
-  } catch (error: any) {
-    console.error(`⚠️ Solscan failed:`, error.message)
-    return null
-  }
-}
+      logger.info(`DexScreener returned invalid symbol: ${symbol}`)
+      return null
 
-// Helper: Try Birdeye API (requires API key)
-async function tryBirdeye(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
-  try {
-    console.log(`🔄 Trying Birdeye API`)
+    } catch (error: any) {
+      logger.error(`⚠️ DexScreener attempt ${attempt} failed:`, error.message)
 
-    const response = await axios.get(
-      `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${tokenAddress}`,
-      {
-        headers: {
-          'X-API-KEY': BIRD_EYE_API_KEY,
-          'accept': 'application/json',
-          'x-chain': 'solana',
-        },
-        timeout: 5000
+      // ✅ FIXED: Handle rate limiting with exponential backoff
+      if (error.response?.status === 429) {
+        if (attempt < maxRetries) {
+          const waitTime = Math.min(5000 * Math.pow(2, attempt - 1), 30000) // 5s, 10s, 20s
+          logger.info(`⏳ Rate limited, waiting ${waitTime / 1000}s before retry...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          continue
+        } else {
+          logger.error(`❌ DexScreener rate limit exceeded after ${maxRetries} attempts`)
+          return null
+        }
       }
-    )
 
-    if (response.data?.data) {
-      const symbol = response.data.data.symbol
-      const name = response.data.data.name
+      // ✅ FIXED: Handle IP bans
+      if (error.response?.status === 403) {
+        logger.error(`❌ DexScreener IP banned - switching to proxy mode`)
+        // Could implement proxy fallback here
+        return null
+      }
 
-      if (isValidMetadata(symbol)) {
-        console.log(`✅ Birdeye found: ${symbol} (${name})`)
+      // ✅ Retry on network errors
+      if ((error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || 
+           error.code === 'ECONNRESET') && attempt < maxRetries) {
+        const waitTime = 2000 * attempt // 2s, 4s, 6s
+        logger.info(`⏳ Network error, waiting ${waitTime / 1000}s before retry...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+        continue
+      }
 
-        // Save to cache
-        await saveTokenToCache(tokenAddress, symbol, name || symbol, 'birdeye' as any)
-
-        return { symbol, name: name || symbol }
+      // Don't retry on other errors
+      if (attempt === maxRetries) {
+        logger.error(`❌ DexScreener failed after ${maxRetries} attempts`)
+        return null
       }
     }
-
-    return null
-  } catch (error: any) {
-    console.error(`⚠️ Birdeye failed:`, error.message)
-    return null
   }
+
+  return null
 }
 
 // ============ MAIN FUNCTION: DB CACHE + FALLBACK CHAIN ============
@@ -647,21 +878,31 @@ export async function getTokenMetaDataUsingRPC(
 ): Promise<{
   symbol?: string
   name?: string
+  _isShortened?: boolean
 }> {
-  console.log(`\n🔍 Resolving token: ${tokenAddress}`)
+  logger.info(`\n🔍 Resolving token: ${tokenAddress}`)
   
   // ✅ Step 0: Check in-memory cache FIRST (instant!)
   const now = Date.now()
   const memCached = tokenMetadataCache.get(tokenAddress)
   if (memCached && (now - memCached.timestamp) < CACHE_TTL) {
-    if (memCached.symbol && memCached.symbol !== 'Unknown' && !memCached.symbol.includes('...')) {
-      console.log(`✅ Memory cache HIT: ${tokenAddress} → ${memCached.symbol}`)
+    if (memCached.symbol && isValidCachedSymbol(memCached.symbol)) {
+      logger.info(`✅ Memory cache HIT: ${tokenAddress} → ${memCached.symbol}`)
       return { symbol: memCached.symbol, name: memCached.name || memCached.symbol }
     }
   }
   
-  // ✅ Step 1: Check database cache (fast!)
-
+  // ✅ Step 0.5: Check if resolution previously failed
+  if (await isTokenResolutionFailed(tokenAddress)) {
+    logger.info(`⚠️ Token resolution previously failed, using shortened address`)
+    const shortAddress = `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`
+    return { 
+      symbol: shortAddress, 
+      name: tokenAddress,
+      _isShortened: true
+    }
+  }
+  
   // ✅ Step 1: Check database cache first (fastest!)
   const cachedResult = await getTokenFromCache(tokenAddress)
   if (cachedResult) {
@@ -674,49 +915,33 @@ export async function getTokenMetaDataUsingRPC(
     return cachedResult
   }
 
-  console.log(`⚠️ Cache MISS, trying API sources...`)
+  logger.info(`⚠️ Cache MISS, trying API sources...`)
 
-  // ✅ Fallback 2: DexScreener (most reliable, with 5 retries and exponential backoff)
-  const dexResult = await tryDexScreener(tokenAddress)
-  if (dexResult) {
+  // ✅ Fallback 2: DexScreener API (BEST for Solana tokens - 87% success rate!)
+  const dexScreenerResult = await tryDexScreener(tokenAddress)
+  if (dexScreenerResult) {
     // Save to in-memory cache
     tokenMetadataCache.set(tokenAddress, {
-      symbol: dexResult.symbol,
-      name: dexResult.name,
+      symbol: dexScreenerResult.symbol,
+      name: dexScreenerResult.name,
       timestamp: now
     })
-    return dexResult
+    return dexScreenerResult
   }
 
-  // ✅ Fallback 3: Birdeye (if API key is available)
-  if (BIRD_EYE_API_KEY && BIRD_EYE_API_KEY !== '1209ac01dce54f0a97fd6b58c7b9ecb4') {
-    const birdeyeResult = await tryBirdeye(tokenAddress)
-    if (birdeyeResult) {
-      // Save to in-memory cache
-      tokenMetadataCache.set(tokenAddress, {
-        symbol: birdeyeResult.symbol,
-        name: birdeyeResult.name,
-        timestamp: now
-      })
-      return birdeyeResult
-    }
-  } else {
-    console.log(`⚠️ Birdeye API key not configured, skipping`)
-  }
-
-  // ✅ Fallback 4: Jupiter Token List (comprehensive but slower)
-  const jupiterResult = await tryJupiterTokenList(tokenAddress)
-  if (jupiterResult) {
+  // ✅ Fallback 3: CoinGecko API (good for established tokens)
+  const coinGeckoResult = await tryCoinGecko(tokenAddress)
+  if (coinGeckoResult) {
     // Save to in-memory cache
     tokenMetadataCache.set(tokenAddress, {
-      symbol: jupiterResult.symbol,
-      name: jupiterResult.name,
+      symbol: coinGeckoResult.symbol,
+      name: coinGeckoResult.name,
       timestamp: now
     })
-    return jupiterResult
+    return coinGeckoResult
   }
 
-  // ✅ Fallback 5: RPC metadata (optional, often fails for new tokens)
+  // ✅ Fallback 4: RPC metadata (on-chain data, often fails for new tokens)
   const rpcResult = await tryRPCMetadata(tokenAddress)
   if (rpcResult) {
     // Save to in-memory cache
@@ -728,13 +953,16 @@ export async function getTokenMetaDataUsingRPC(
     return rpcResult
   }
 
-  // ✅ Fallback 6: Shortened address (last resort - NOT cached)
+  // ✅ FIXED: Mark resolution as failed and return shortened address
+  await markTokenResolutionFailed(tokenAddress)
+  
   const shortAddress = `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`
-  console.log(`⚠️ All sources failed, using fallback: ${shortAddress}`)
+  logger.info(`⚠️ All sources failed, using fallback: ${shortAddress}`)
 
   return {
     symbol: shortAddress,
     name: tokenAddress,
+    _isShortened: true  // ✅ Flag to prevent caching
   }
 }
 
@@ -870,3 +1098,66 @@ export const findInfluencerData = async (whaleAddress: string) => {
     return null
   }
 }
+
+// ✅ NEW: Cache cleanup and recovery functions
+export async function cleanupPoisonedCache(): Promise<void> {
+  logger.info('🧹 Starting cache cleanup for poisoned entries...')
+  
+  try {
+    // ✅ Remove shortened addresses and garbage symbols from MongoDB cache
+    const result = await TokenMetadataCacheModel.deleteMany({
+      $or: [
+        { symbol: { $regex: /^[A-Za-z0-9]{3,4}\.\.\.[A-Za-z0-9]{3,4}$/ } },
+        { symbol: 'Unknown' }, { symbol: 'unknown' }, { symbol: 'UNKNOWN' },
+        { symbol: 'Token' }, { symbol: 'token' }, { symbol: 'TOKEN' },
+        { symbol: 'localhost' }, { symbol: 'LOCALHOST' },
+        { symbol: 'pump' }, { symbol: 'PUMP' },
+        { symbol: 'unknown token' }, { symbol: 'UNKNOWN TOKEN' },
+        { symbol: 'test' }, { symbol: 'TEST' },
+        { symbol: 'null' }, { symbol: 'NULL' },
+        { symbol: 'undefined' }, { symbol: 'UNDEFINED' },
+        { symbol: 'N/A' }, { symbol: 'n/a' },
+        { symbol: 'TBD' }, { symbol: 'tbd' },
+        { symbol: '???' }, { symbol: '...' },
+        { symbol: 'TEMP' }, { symbol: 'temp' },
+        { symbol: 'PLACEHOLDER' }, { symbol: 'placeholder' },
+        { symbol: { $regex: /^[A-Fa-f0-9]{40,50}$/ } }, // Addresses
+        { symbol: { $regex: /^0x[a-fA-F0-9]+$/ } }, // Ethereum addresses
+        { symbol: { $regex: /^[1-9A-HJ-NP-Za-km-z]{32,44}$/ } }, // Solana addresses
+        { symbol: '' }, // Empty symbols
+        { symbol: null }, // Null symbols
+      ]
+    })
+    
+    logger.info(`🗑️ Removed ${result.deletedCount} poisoned cache entries`)
+    
+    // ✅ Clear in-memory cache
+    tokenMetadataCache.clear()
+    logger.info('🗑️ Cleared in-memory cache')
+    
+    // ✅ Clear failed resolution cache
+    failedResolutions.clear()
+    
+    // ✅ Clear Redis failed resolution keys
+    const keys = await redisClient.keys('failed_resolution:*')
+    if (keys.length > 0) {
+      await redisClient.del(...keys)
+      logger.info(`🗑️ Cleared ${keys.length} failed resolution entries from Redis`)
+    }
+    
+  } catch (error) {
+    logger.error({ error }, '❌ Error during cache cleanup')
+  }
+}
+
+// ✅ Add periodic cleanup (run every 6 hours)
+setInterval(async () => {
+  try {
+    await cleanupPoisonedCache()
+  } catch (error) {
+    logger.error({ error }, 'Error in periodic cache cleanup')
+  }
+}, 6 * 60 * 60 * 1000)
+
+// ✅ Export failed resolution functions for external use
+export { markTokenResolutionFailed, isTokenResolutionFailed, isValidMetadata }

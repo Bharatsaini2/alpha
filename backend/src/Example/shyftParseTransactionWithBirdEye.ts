@@ -41,12 +41,24 @@ export const getParsedTransaction = async () => {
 
 // 🛠️ Helper: Get symbol safely
 const resolveSymbol = async (token: any) => {
-  if (token.symbol !== 'Token') return token.symbol
   try {
+    // ✅ STEP 1: Check if SHYFT already provided valid symbol
+    if (token.symbol && token.symbol !== 'Unknown' && token.symbol !== 'Token' && token.symbol.trim() !== '') {
+      return { symbol: token.symbol, name: token.name || token.symbol }
+    }
+    
+    // ✅ STEP 2: Try cache/API fallback
     const metadata = await getTokenMetaDataUsingRPC(token.token_address)
-    return metadata.symbol || 'Unknown'
+    
+    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown' && !metadata._isShortened) {
+      return metadata
+    }
+    
+    // ✅ STEP 3: Last resort
+    const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
+    return { symbol: shortAddress, name: token.token_address }
   } catch {
-    return 'Unknown'
+    return { symbol: 'Unknown', name: 'Unknown' }
   }
 }
 

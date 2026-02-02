@@ -12,6 +12,9 @@ import {
   getTokenCreationInfo,
   getTokenPrice,
   fetchSolanaMarketCap,
+  saveTokenToCache,
+  isTokenResolutionFailed,
+  isValidMetadata,
 } from '../config/solana-tokens-config'
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import { postKOLAlertToTwitter } from '../services/insight-posts'
@@ -669,30 +672,52 @@ export const getInfluencerWhaleLatestTransactions = catchAsyncErrors(
 
 // 🛠️ Helper: Get symbol safely
 const resolveSymbol = async (token: any) => {
-  if (token.symbol && token.symbol !== 'Unknown' && token.symbol !== 'Token') {
-    return { symbol: token.symbol, name: token.name || token.symbol }
-  }
-
   try {
+    // ✅ STEP 1: Check if SHYFT already provided valid symbol (FASTEST - no API call!)
+    if (isValidMetadata(token.symbol)) {
+      logger.info(`✅ Using SHYFT symbol: ${token.symbol} (no API call needed)`)
+      return { symbol: token.symbol, name: token.name || token.symbol }
+    }
+    
+    logger.info(`⚠️ SHYFT symbol missing or invalid (${token.symbol}), checking cache/API for ${token.token_address}...`)
+    
+    // ✅ STEP 1.5: Check if resolution previously failed
+    if (await isTokenResolutionFailed(token.token_address)) {
+      logger.info(`⚠️ Token resolution previously failed, using shortened address`)
+      const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
+      return { symbol: shortAddress, name: token.token_address, _isShortened: true }
+    }
+    
+    // ✅ STEP 2: SHYFT doesn't have it - check cache/API (fallback)
     const metadata = await getTokenMetaDataUsingRPC(token.token_address)
     
-    // If metadata is found and not 'Unknown', use it
-    if (metadata && metadata.symbol && metadata.symbol !== 'Unknown') {
+    // ✅ FIXED: Better validation for resolved metadata
+    if (metadata && !metadata._isShortened && isValidMetadata(metadata.symbol)) {
+      logger.info(`✅ Resolved symbol: ${metadata.symbol} for ${token.token_address}`)
       return metadata
     }
     
-    // If still unknown, use contract address as fallback
+    // ✅ STEP 3: Last resort - shortened contract address
     const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
+    logger.info(`⚠️ All sources failed, using fallback: ${shortAddress} for ${token.token_address}`)
     return { 
       symbol: shortAddress,
-      name: token.token_address
+      name: token.token_address,
+      _isShortened: true
     }
-  } catch {
+  } catch (error) {
+    logger.error({ error }, `❌ Error in resolveSymbol for ${token.token_address}`)
+    // On error, try SHYFT symbol first
+    if (isValidMetadata(token.symbol)) {
+      return { symbol: token.symbol, name: token.name || token.symbol }
+    }
+    
     // Last resort: use contract address
     const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
     return { 
       symbol: shortAddress,
-      name: token.token_address
+      name: token.token_address,
+      _isShortened: true
     }
   }
 }
@@ -1354,6 +1379,29 @@ const processInfluencerSignature = async (
         ),
       )
       return
+    }
+
+    // ✅ FIXED: Cache tokens only if valid (enhanced validation)
+    // Cache tokenIn (if valid and not shortened)
+    if (inSymbolData.symbol && !inSymbolData._isShortened && isValidMetadata(inSymbolData.symbol)) {
+      const source = (parsedSwap.input.symbol && parsedSwap.input.symbol === inSymbolData.symbol) ? 'shyft' : 'dexscreener'
+      logger.info(`💾 Caching tokenIn: ${inSymbolData.symbol} (${tokenIn.token_address.slice(0, 8)}...) [${source}]`)
+      await saveTokenToCache(tokenIn.token_address, inSymbolData.symbol, inSymbolData.name, source).catch((err) => {
+        logger.error({ err }, `❌ Failed to cache tokenIn: ${tokenIn.token_address}`)
+      })
+    } else {
+      logger.info(`⚠️ Skipping cache for tokenIn: ${inSymbolData.symbol} (invalid or shortened)`)
+    }
+    
+    // Cache tokenOut (if valid and not shortened)
+    if (outSymbolData.symbol && !outSymbolData._isShortened && isValidMetadata(outSymbolData.symbol)) {
+      const source = (parsedSwap.output.symbol && parsedSwap.output.symbol === outSymbolData.symbol) ? 'shyft' : 'dexscreener'
+      logger.info(`💾 Caching tokenOut: ${outSymbolData.symbol} (${tokenOut.token_address.slice(0, 8)}...) [${source}]`)
+      await saveTokenToCache(tokenOut.token_address, outSymbolData.symbol, outSymbolData.name, source).catch((err) => {
+        logger.error({ err }, `❌ Failed to cache tokenOut: ${tokenOut.token_address}`)
+      })
+    } else {
+      logger.info(`⚠️ Skipping cache for tokenOut: ${outSymbolData.symbol} (invalid or shortened)`)
     }
 
     // ✅ Task 3.3: Apply confidence-based filtering
