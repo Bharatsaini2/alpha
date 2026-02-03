@@ -40,7 +40,7 @@ export const useBubbleAnimation = (config: BubbleAnimationConfig = {}) => {
       const progress = (elapsed % duration) / duration
       const t = progress * 2 * Math.PI
 
-      let newState: BubbleAnimationState = {
+      const newState: BubbleAnimationState = {
         x: 0,
         y: 0,
         scale: 1,

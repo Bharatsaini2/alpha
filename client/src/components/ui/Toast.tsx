@@ -17,7 +17,7 @@ export interface ToastProps {
     id: string
     message: string
     type?: "success" | "error" | "info" | "warning"
-    variant?: "default" | "wallet" | "simple" | "standard"
+    variant?: "default" | "wallet" | "simple" | "standard" | "transaction"
     options?: ToastOptions
     onClose: (id: string) => void
 }
@@ -25,7 +25,6 @@ export interface ToastProps {
 const Toast: React.FC<ToastProps> = ({
     id,
     message,
-    type,
     variant,
     options,
     onClose,
@@ -171,4 +170,4 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 // ToastContext imports ToastProps (Type) -> Safe.
 // Toast.tsx imports ToastContext (Value) -> Safe.
 // We can re-export useToast.
-export { useToast } from '../../contexts/ToastContext';
+

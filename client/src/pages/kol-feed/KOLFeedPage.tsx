@@ -8,7 +8,7 @@ import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
 import { faArrowRight, faArrowTrendDown, faClose, faFilter, faSearch } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
-import { FaXTwitter } from "react-icons/fa6"
+
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import { useToast } from "../../contexts/ToastContext"

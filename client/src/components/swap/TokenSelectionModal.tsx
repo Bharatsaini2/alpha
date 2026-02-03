@@ -43,7 +43,7 @@ const TokenItem = memo<{
     navigator.clipboard.writeText(text)
   }
 
-  const totalValue = (balance || 0) * (token.usdPrice || 0)
+
 
   const formatBalance = (bal: number) => {
     if (bal === 0) return "0"
@@ -607,7 +607,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
                 <div className="grid grid-cols-2 gap-2 w-full">
                   {topWalletTokens.map((token) => {
                     const balance = userBalances[token.address] || 0
-                    const usdValue = balance * (token.usdPrice || 0)
+
 
                     const formatBalance = (bal: number): string => {
                       if (bal === 0) return "0"

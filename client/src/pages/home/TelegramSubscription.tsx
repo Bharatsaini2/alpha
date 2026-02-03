@@ -87,12 +87,12 @@ function TelegramSubscription() {
         try {
             const response = await api.get('/auth/me');
             console.log('📡 Auth response:', response.data);
-            
+
             if (response.data.success && response.data.data?.user) {
                 const updatedUser = response.data.data.user;
                 console.log('👤 Current user telegramChatId:', user?.telegramChatId);
                 console.log('👤 Updated user telegramChatId:', updatedUser.telegramChatId);
-                
+
                 // If user now has telegramChatId but didn't before, update the auth context
                 if (updatedUser.telegramChatId && !user?.telegramChatId) {
                     console.log('✅ Telegram connected! Refreshing user data...');
@@ -332,8 +332,8 @@ function TelegramSubscription() {
 
         // KOL Profile specific fields
         if (config.targetKolUsername) {
-            const username = config.targetKolUsername.startsWith('@') 
-                ? config.targetKolUsername 
+            const username = config.targetKolUsername.startsWith('@')
+                ? config.targetKolUsername
                 : `@${config.targetKolUsername}`;
             parts.push(`KOL: ${username}`);
         }
@@ -364,14 +364,7 @@ function TelegramSubscription() {
         });
     };
 
-    const getPriorityColor = (priority: string) => {
-        switch (priority.toLowerCase()) {
-            case 'high': return '#df2a4e';
-            case 'medium': return '#ffa502';
-            case 'low': return '#14904d';
-            default: return '#8f8f8f';
-        }
-    };
+
 
     return (
         <section className="telegram-subscription-section">
@@ -424,7 +417,7 @@ function TelegramSubscription() {
                                             </button>
                                         </div>
                                     </div>
-                                    
+
                                     {/* Disconnect Section */}
                                     <div className="mt-3" style={{ borderTop: '1px solid #292929', paddingTop: '12px' }}>
                                         {showDisconnectConfirm ? (
@@ -437,8 +430,8 @@ function TelegramSubscription() {
                                                         className="alpha-edit-btn"
                                                         onClick={handleDisconnectTelegram}
                                                         disabled={disconnecting}
-                                                        style={{ 
-                                                            backgroundColor: '#df2a4e', 
+                                                        style={{
+                                                            backgroundColor: '#df2a4e',
                                                             borderColor: '#df2a4e',
                                                             padding: '5px 10px',
                                                             fontSize: '10px'
@@ -450,7 +443,7 @@ function TelegramSubscription() {
                                                         className="alpha-edit-btn"
                                                         onClick={() => setShowDisconnectConfirm(false)}
                                                         disabled={disconnecting}
-                                                        style={{ 
+                                                        style={{
                                                             padding: '5px 10px',
                                                             fontSize: '10px'
                                                         }}
@@ -463,8 +456,8 @@ function TelegramSubscription() {
                                             <button
                                                 className="alpha-edit-btn"
                                                 onClick={() => setShowDisconnectConfirm(true)}
-                                                style={{ 
-                                                    backgroundColor: '#0a0a0a', 
+                                                style={{
+                                                    backgroundColor: '#0a0a0a',
                                                     borderColor: '#3d3d3d',
                                                     padding: '5px 10px',
                                                     fontSize: '10px',
@@ -600,11 +593,11 @@ function TelegramSubscription() {
                                         {openId === subscription.id && (
                                             <div className="accordion-collapse show">
                                                 <div className="accordion-body" style={{ backgroundColor: '#0a0a0a', border: '1px solid #292929', borderTop: 'none', padding: '10px' }}>
-                                                    <div style={{ 
-                                                        display: 'flex', 
-                                                        flexDirection: 'row', 
-                                                        alignItems: 'flex-start', 
-                                                        gap: '20px', 
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        flexDirection: 'row',
+                                                        alignItems: 'flex-start',
+                                                        gap: '20px',
                                                         marginBottom: '10px'
                                                     }}>
                                                         <div style={{ flex: '1' }}>
@@ -614,7 +607,7 @@ function TelegramSubscription() {
 
                                                         <div style={{ minWidth: '70px' }}>
                                                             <h6 style={{ fontSize: '9px', marginBottom: '3px', color: '#8f8f8f', textTransform: 'uppercase', fontWeight: 400 }}>Status</h6>
-                                                            <p style={{ 
+                                                            <p style={{
                                                                 color: subscription.enabled ? '#14904d' : '#8f8f8f',
                                                                 fontSize: '10px',
                                                                 margin: '0',
@@ -627,62 +620,62 @@ function TelegramSubscription() {
                                                     </div>
 
                                                     <div style={{ borderTop: '1px solid #292929', paddingTop: '10px' }}>
-                                                            {deleteConfirmId === subscription.id ? (
-                                                                <div className="text-center">
-                                                                    <p style={{ color: '#ebebeb', fontSize: '10px', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 500 }}>
-                                                                        Are you sure?
-                                                                    </p>
-                                                                    <div className="d-flex gap-2 justify-content-center">
-                                                                        <button
-                                                                            className="alpha-edit-btn"
-                                                                            onClick={(e) => handleDeleteConfirm(e)}
-                                                                            disabled={deleting}
-                                                                            style={{ 
-                                                                                backgroundColor: '#df2a4e', 
-                                                                                borderColor: '#df2a4e',
-                                                                                padding: '5px 10px',
-                                                                                fontSize: '10px'
-                                                                            }}
-                                                                        >
-                                                                            {deleting ? 'Deleting...' : 'Yes'}
-                                                                        </button>
-                                                                        <button
-                                                                            className="alpha-edit-btn"
-                                                                            onClick={(e) => handleDeleteCancel(e)}
-                                                                            disabled={deleting}
-                                                                            style={{ 
-                                                                                padding: '5px 10px',
-                                                                                fontSize: '10px'
-                                                                            }}
-                                                                        >
-                                                                            Cancel
-                                                                        </button>
-                                                                    </div>
+                                                        {deleteConfirmId === subscription.id ? (
+                                                            <div className="text-center">
+                                                                <p style={{ color: '#ebebeb', fontSize: '10px', textTransform: 'uppercase', marginBottom: '10px', fontWeight: 500 }}>
+                                                                    Are you sure?
+                                                                </p>
+                                                                <div className="d-flex gap-2 justify-content-center">
+                                                                    <button
+                                                                        className="alpha-edit-btn"
+                                                                        onClick={(e) => handleDeleteConfirm(e)}
+                                                                        disabled={deleting}
+                                                                        style={{
+                                                                            backgroundColor: '#df2a4e',
+                                                                            borderColor: '#df2a4e',
+                                                                            padding: '5px 10px',
+                                                                            fontSize: '10px'
+                                                                        }}
+                                                                    >
+                                                                        {deleting ? 'Deleting...' : 'Yes'}
+                                                                    </button>
+                                                                    <button
+                                                                        className="alpha-edit-btn"
+                                                                        onClick={(e) => handleDeleteCancel(e)}
+                                                                        disabled={deleting}
+                                                                        style={{
+                                                                            padding: '5px 10px',
+                                                                            fontSize: '10px'
+                                                                        }}
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
                                                                 </div>
-                                                            ) : (
-                                                                <button
-                                                                    className="alpha-edit-btn"
-                                                                    onClick={(e) => handleDeleteClick(subscription.id, e)}
-                                                                    style={{ 
-                                                                        backgroundColor: '#df2a4e', 
-                                                                        borderColor: '#df2a4e', 
-                                                                        display: 'flex', 
-                                                                        alignItems: 'center', 
-                                                                        gap: '4px',
-                                                                        padding: '5px 10px',
-                                                                        fontSize: '10px',
-                                                                        width: '100%',
-                                                                        justifyContent: 'center'
-                                                                    }}
-                                                                >
-                                                                    <MdDelete style={{ fontSize: '12px' }} />
-                                                                    Delete
-                                                                </button>
-                                                            )}
-                                                        </div>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                className="alpha-edit-btn"
+                                                                onClick={(e) => handleDeleteClick(subscription.id, e)}
+                                                                style={{
+                                                                    backgroundColor: '#df2a4e',
+                                                                    borderColor: '#df2a4e',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px',
+                                                                    padding: '5px 10px',
+                                                                    fontSize: '10px',
+                                                                    width: '100%',
+                                                                    justifyContent: 'center'
+                                                                }}
+                                                            >
+                                                                <MdDelete style={{ fontSize: '12px' }} />
+                                                                Delete
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            )}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
 

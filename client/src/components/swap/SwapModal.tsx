@@ -498,15 +498,7 @@ export const SwapModal: React.FC<SwapModalProps> = ({
     }
   }
 
-  const copySignatureToClipboard = async () => {
-    try {
-      await navigator.clipboard.writeText(transactionSignature)
-      showToast('Transaction signature copied to clipboard', 'success')
-    } catch (error) {
-      console.error('Failed to copy signature to clipboard:', error)
-      showToast('Failed to copy. Please copy manually from the text below.', 'error')
-    }
-  }
+
 
   const platformFeeInSOL = useMemo(() => {
     if (!quote || !outputAmount) return 0

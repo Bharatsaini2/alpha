@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import React, { useCallback, useEffect, useMemo, useState } from "react"
 import {
   ReactFlow,
@@ -105,7 +105,6 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       className={`rf-circle-wrap relative ${selected ? "ring-2 ring-[#06DF73]" : ""}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ borderRadius: '0px !important' }} /* Force Override */
       animate={{
         scale: isHovered ? 1.05 : 1 + bubbleAnimation.scale - 1,
         opacity: 1,
@@ -118,7 +117,7 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       }}
       exit={{ scale: 0, opacity: 0 }}
       transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      style={{ willChange: "transform" }}
+      style={{ borderRadius: '0px', willChange: "transform" }}
     >
       <Handle
         type="source"
@@ -329,8 +328,7 @@ const CustomEdge: React.FC<EdgeProps> = ({
   // 6. Draw BEZIER CURVE (Q)
   // Instead of straight lines, we use a quadratic bezier or cubic bezier to "pinch" them.
   // We want them to start at source, curve towards the center pinch point, then curve to target.
-  const centerX = (sourceX + targetX) / 2
-  const centerY = (sourceY + targetY) / 2
+
 
   // Control Point 1: Near Source but shifted
   const cp1X = sourceX + (dx * 0.4) + (nx * spread * 0.5)

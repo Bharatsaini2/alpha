@@ -55,7 +55,7 @@ function TopCoinsPage() {
     all: [],
   })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [, setError] = useState<string | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [lastUpdatedTime, setLastUpdatedTime] = useState<Date | null>(null)
   const [filteringLoading, setFilteringLoading] = useState(false) // Local loading state for filter change
