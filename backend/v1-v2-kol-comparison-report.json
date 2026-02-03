@@ -1,41 +1,1004 @@
 {
   "testWindow": {
-    "start": "2026-02-02T17:04:23.520Z",
-    "end": "2026-02-02T17:06:09.197Z",
-    "durationMinutes": 1.7612833333333335
+    "start": "2026-02-03T16:51:41.438Z",
+    "end": "2026-02-03T16:56:41.467Z",
+    "durationMinutes": 5.000483333333333
   },
   "v1Kol": {
-    "total": 8,
-    "signatures": [
-      "42dFQuQLdmkbJYoWi3xquUXdi8rDFmmDcd3SuWyjm1RJ2Mm4GnrfG7hcGJ6MtuPMxhEr73gAAybWixsmkszRUALW",
-      "5bozbeat6Ghg5VPyC9q77kS7Pa6UHabrrb8rtJhU1tLX955X9nfh7ekDApzj7u2BeWSxLgtNyn2uQLXo5L7SkLjC",
-      "2umgMw5xgYaoEowjwtmdU86ucGnW6sFnwGWuG9H7ViN5wFYsi3nhhsSDFzcJGyCT9re56JvahmZTJJ7aUHASpxw",
-      "2zwPCkPEZ5N9H4SmwLxVM1BtQPUwFhhTid4JL6aZcBsr5otqjU2kopCpX9QiabQZE6256FCnsTEHxJZCmu2YHbPw",
-      "2NyaGHBGKd5aicA87SMzC23cJKE1z88TkLifU8KhgZ3MnvLxhCL3LXHxCuULKzGJhDPwddmZ9CsvhSDavR8QhfKC",
-      "3DARtqR1XycCrqp92Y8RF4A4anndQoB1ipzSwgdsoH6HSsfTkpfeRX4JiViFz6VdfELVLjqCPKaWuRZ4iGM3RnTu",
-      "be5BzJmJMxVxNAudoBXNCvaWV46hgiZ7tUV63We7pJemx6dE642iNmbFHJ7QqhMLHVg1m2BVcv7vtHxLkvAi8HD",
-      "5jK33EzTWLkWmmNLoXn9wCFf9NdZawXWpXkH6zC1Du2riGzRfFQUWmjua7chp14D1LLUwtu18xqVpUYopGMPPmhw"
-    ]
+    "total": 83,
+    "signatures": []
   },
   "v2Kol": {
-    "total": 0,
-    "signatures": [],
-    "detections": []
+    "total": 21,
+    "signatures": [
+      "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"
+    ],
+    "detections": [
+      {
+        "signature": "2HMquznhTU9GQ37H4DZzkmFrsCdCtKkGdNMfjsjEMKojcQZ23mDKL9At1hndqbQsGnxdaicQWduhyyx3JYtaRQJA",
+        "timestamp": "2026-02-03T16:51:45.014Z",
+        "side": "SELL",
+        "inputToken": "6itV...pEXN",
+        "outputToken": "SOL",
+        "inputMint": "6itVUJAqmCQ41Z3tQB5F9dzAEAN5UmCUvk6A6AuNpEXN",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 33530773.818886,
+        "outputAmount": 1.381166744,
+        "inputAmountNormalized": "33530773.818886",
+        "outputAmountNormalized": "1.381167",
+        "kolAddress": "BQVz7fQ1WsQmSTMY3umdPEPPTm1sdcBcX9sP7o6kPRmB",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "4aZJvzhxqDFGXw8oxV9pbpMusQrQr9fqTXKTnHUZK24FSRBiWRad6hbEPXD3fN2VodqStnn2S7RRYajHcoKBofRw",
+        "timestamp": "2026-02-03T16:51:51.831Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "2mtn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "2mtnQMS4tqMCcEW2CoikAKwmsLZrj4KJnhQeNyGYpump",
+        "inputAmount": 0.04888125,
+        "outputAmount": 614693.389563,
+        "inputAmountNormalized": "0.048881",
+        "outputAmountNormalized": "614693.389563",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "3ZwYTyFmuDzYqb6TY4xUU43Boc6ea2vk4W9Wz4M4Vd9FngRowa76YH8351QjJYx2wP2tXPB5zMiBcx3frqLhENmr",
+        "timestamp": "2026-02-03T16:51:53.326Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Cbnn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "inputAmount": 4.889866666,
+        "outputAmount": 18117320.278349,
+        "inputAmountNormalized": "4.889867",
+        "outputAmountNormalized": "18117320.278349",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "36f5KYRs5DiwW4wq5QvSE7FrxpmDEPtZk3xFF9WgahNv4VxPWn8JHaUrpSAkKVfaSZCGrA3z3AETtD8FmSc1su4L",
+        "timestamp": "2026-02-03T16:51:58.104Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Cbnn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "inputAmount": 0.244493332,
+        "outputAmount": 1409491.844602,
+        "inputAmountNormalized": "0.244493",
+        "outputAmountNormalized": "1409491.844602",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "5LppXCFfV4zVKnJyw3riC1vk2KJ6P8PDQTEefmVVTXhh1L5Ff2HPjwdEmjzQcKR85WKxJB6E6EdRzLpxSc7R4Le7",
+        "timestamp": "2026-02-03T16:51:58.552Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Cbnn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "inputAmount": 0.244493332,
+        "outputAmount": 1320886.232671,
+        "inputAmountNormalized": "0.244493",
+        "outputAmountNormalized": "1320886.232671",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "3LCjpDc8Kw6FyGLGDZj2gcwUVDXzWnTsbJWtwmdUhcpbkHCSUv1JW3uofrfKWQrGP7kejudA5iSR2vmYhQ2NdTmK",
+        "timestamp": "2026-02-03T16:52:00.575Z",
+        "side": "SELL",
+        "inputToken": "Cbnn...pump",
+        "outputToken": "SOL",
+        "inputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 20847698.355622,
+        "outputAmount": 3.461972485,
+        "inputAmountNormalized": "20847698.355622",
+        "outputAmountNormalized": "3.461972",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "3idD9CLc9Yj7Hn7aNL9YmPy5oAUKyvi6kysPCN1XrWVQx3MFeiegUu8Hy1UxTx2gH8qY9XRD7MykYwcymnLRZpN4",
+        "timestamp": "2026-02-03T16:52:07.380Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Cbnn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "inputAmount": 2.469629629,
+        "outputAmount": 21404731.293013,
+        "inputAmountNormalized": "2.469630",
+        "outputAmountNormalized": "21404731.293013",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "2sHQVQ6DKeFEXorbnANhv9uhpDp2WMyZYaMG1RKEgTDHcsrTzrRZcdTFyEkjuJ8WrdJbFR92GmdVa5YvcdXNYK5p",
+        "timestamp": "2026-02-03T16:52:09.807Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Cbnn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "inputAmount": 4.889866666,
+        "outputAmount": 30693320.956508,
+        "inputAmountNormalized": "4.889867",
+        "outputAmountNormalized": "30693320.956508",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "59NXDYM2ndyd2bsnTfiZgbafaHKVUV64CpLUeKpniAvyATy6vMb3JECPH1D97zAAuBzmh4PSKAsvtFzvK4AKpZy8",
+        "timestamp": "2026-02-03T16:52:17.260Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Cbnn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "inputAmount": 0.244493332,
+        "outputAmount": 1623353.553606,
+        "inputAmountNormalized": "0.244493",
+        "outputAmountNormalized": "1623353.553606",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "2AoJnxqxVqSh4MGNH3cmQ9kgBvjLHYZjbF7YB8qPpSYeD6tW42taevvMx6naqPPdD2L9t89iJMze9qvuTstSLinr",
+        "timestamp": "2026-02-03T16:52:17.267Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Cbnn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "inputAmount": 0.244493332,
+        "outputAmount": 1638875.159287,
+        "inputAmountNormalized": "0.244493",
+        "outputAmountNormalized": "1638875.159287",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "tNQoqKboPEGSE14DZdxyXhEV5tuFRkFhuw8bhPVi1Ja5FEGWgGjpdMCvTLhkjRpECbJL2xYcou2K8vGYtV9uNfN",
+        "timestamp": "2026-02-03T16:52:27.919Z",
+        "side": "SELL",
+        "inputToken": "Cbnn...pump",
+        "outputToken": "SOL",
+        "inputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 21404731.293013,
+        "outputAmount": 2.482589425,
+        "inputAmountNormalized": "21404731.293013",
+        "outputAmountNormalized": "2.482589",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "n7kFUc9S7MA9PTJ4mZyZmRYubaM956d2BboFB2rcxv9RHddgahYtjo2FquMTfqsQmEhV2Zvw4ALYRWUcfoSbLfc",
+        "timestamp": "2026-02-03T16:52:28.709Z",
+        "side": "SELL",
+        "inputToken": "Cbnn...pump",
+        "outputToken": "SOL",
+        "inputMint": "Cbnn6KzqXYQQPx9sXdzA7xfNUXKwnzShxVCbEyPWpump",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 33955549.669401,
+        "outputAmount": 2.889068325,
+        "inputAmountNormalized": "33955549.669401",
+        "outputAmountNormalized": "2.889068",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "2mmNUbTDKkvZyopx1PQXhMUyUrTenfjs89f1DPXQQVwWEng46z2BC3PNQth4oEsDNGxUpqW4yZDHf4aX7CnCZQrU",
+        "timestamp": "2026-02-03T16:52:36.904Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Hgg3...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Hgg3ighNvb2buKQ1H4eTJwWiW85C1YNGzAk9aWpBpump",
+        "inputAmount": 4.950592885,
+        "outputAmount": 5147572.005387,
+        "inputAmountNormalized": "4.950593",
+        "outputAmountNormalized": "5147572.005387",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "SUz4vYttE3NDh4P91Q4vPU8sZN9SUT72QPnymAuLr6YCzPhBXRC79GQtougZMRz7dyP81rCpxEqvXyEYmpbSmXh",
+        "timestamp": "2026-02-03T16:52:49.539Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "3F3U...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "3F3UU9L6afip8mdWRAJiaEkkTkeEy2MsSUUWZKotpump",
+        "inputAmount": 0.366609375,
+        "outputAmount": 7640298.927056,
+        "inputAmountNormalized": "0.366609",
+        "outputAmountNormalized": "7640298.927056",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "35epdPXJSuM5Xo3JwxnnVm5PGSxAttYdrvbcjTC9t8mzQWkQCMwXnM8oZ7kXNPEVHwqhEJna4n78qxDhGmwAMmXP",
+        "timestamp": "2026-02-03T16:52:56.813Z",
+        "side": "SELL",
+        "inputToken": "3F3U...pump",
+        "outputToken": "SOL",
+        "inputMint": "3F3UU9L6afip8mdWRAJiaEkkTkeEy2MsSUUWZKotpump",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 7640298.927056,
+        "outputAmount": 0.366625704,
+        "inputAmountNormalized": "7640298.927056",
+        "outputAmountNormalized": "0.366626",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "Z6LrK4GbSNcerxtUz4gLN6a76VUso1cETRAwQ28SXiqycCacr96BwZpDkB8YK8QSrB8n4rCkViBpqUg8gRooYZV",
+        "timestamp": "2026-02-03T16:52:59.511Z",
+        "side": "SELL",
+        "inputToken": "ADAK...pump",
+        "outputToken": "SOL",
+        "inputMint": "ADAKaSCy495haZyvqPFV4qfd6oJRAWJdySDpxZh8pump",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 4398779.255816,
+        "outputAmount": 2.822257072,
+        "inputAmountNormalized": "4398779.255816",
+        "outputAmountNormalized": "2.822257",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "2B2khgDgoBsMmCtDUK2fFxixrHYhS3Sof5rd4JWNPpYU9MLV3omBSpKGAzPZtC6XGJCjB3zSFwF2csxrQ1AeQbKW",
+        "timestamp": "2026-02-03T16:53:28.710Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Hgg3...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Hgg3ighNvb2buKQ1H4eTJwWiW85C1YNGzAk9aWpBpump",
+        "inputAmount": 4.901086955,
+        "outputAmount": 3610328.627298,
+        "inputAmountNormalized": "4.901087",
+        "outputAmountNormalized": "3610328.627298",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "4ybmmu53bBqRHkKmuEcfZgYEauFuM53nVhvfZSWm2iL5cdsFpbAR6hDw9nsXPUgL5rXLiCbQ1rqtMFycgFi9vAsC",
+        "timestamp": "2026-02-03T16:53:28.951Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "Hgg3...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "Hgg3ighNvb2buKQ1H4eTJwWiW85C1YNGzAk9aWpBpump",
+        "inputAmount": 4.901086955,
+        "outputAmount": 4281911.314909,
+        "inputAmountNormalized": "4.901087",
+        "outputAmountNormalized": "4281911.314909",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "67NZmXL4weYDi9e5pSZUCzHYNXA8W4chXApdSjWkxREvTrbM26kvdAdTr4Qg4W7nxGMVar2d6bywhG2KsYe7iqag",
+        "timestamp": "2026-02-03T16:54:50.056Z",
+        "side": "SELL",
+        "inputToken": "Hgg3...pump",
+        "outputToken": "SOL",
+        "inputMint": "Hgg3ighNvb2buKQ1H4eTJwWiW85C1YNGzAk9aWpBpump",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 7911237.114065,
+        "outputAmount": 11.597935037,
+        "inputAmountNormalized": "7911237.114065",
+        "outputAmountNormalized": "11.597935",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "3hdvjbrzKxTnex8TCX5t2xN2nmp4XMWpRhivNkwzoaSMfUWwEY6ySbji95cTExry4NHDSTvYciw8YXXSJ59vqv27",
+        "timestamp": "2026-02-03T16:54:50.513Z",
+        "side": "BUY",
+        "inputToken": "SOL",
+        "outputToken": "2mtn...pump",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "2mtnQMS4tqMCcEW2CoikAKwmsLZrj4KJnhQeNyGYpump",
+        "inputAmount": 0.14664375,
+        "outputAmount": 2093728.064851,
+        "inputAmountNormalized": "0.146644",
+        "outputAmountNormalized": "2093728.064851",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "confidence": 100,
+        "source": "v2_parser"
+      },
+      {
+        "signature": "5mfJw89RiRci9FGZuzz79NsydXnv9No9CsEk7PV41mdPWWy4Wn2JWoQ86uJAru45wceKLtDSPNZ82sxRMY49GU1",
+        "timestamp": "2026-02-03T16:54:54.189Z",
+        "side": "SELL",
+        "inputToken": "2mtn...pump",
+        "outputToken": "SOL",
+        "inputMint": "2mtnQMS4tqMCcEW2CoikAKwmsLZrj4KJnhQeNyGYpump",
+        "outputMint": "So11111111111111111111111111111111111111112",
+        "inputAmount": 21032022.305285,
+        "outputAmount": 1.435383308,
+        "inputAmountNormalized": "21032022.305285",
+        "outputAmountNormalized": "1.435383",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "confidence": 100,
+        "source": "v2_parser"
+      }
+    ]
+  },
+  "v2KolRejections": {
+    "total": 85,
+    "rejections": [
+      {
+        "signature": "NJ2Qc2VLmiiuftVxDPPZS66CAMYSunb682jCwqeQ7qfdC3apwdwkB3TG57ufH8fY96HKY1kRtyKirUU7pgCkqfk",
+        "timestamp": "2026-02-03T16:51:43.698Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "below_minimum_value_threshold",
+        "success": false
+      },
+      {
+        "signature": "4Fkoio7vJXeu3CksRj7ZmQXH9NPmdWQ46N67UA8jBdebG7xq6xbKeQ5WYcXJSCc75mrCSocyE5PBS3SC16VvXJ9D",
+        "timestamp": "2026-02-03T16:51:43.864Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "rcqw2ojFDf5kh7HRaekUr51Ab7PWeHbzkCQuh8CLFcfFzWjrXng12EA956Z3Suu3GoYpTKJYg1Z8DUL43JiHd6i",
+        "timestamp": "2026-02-03T16:51:44.356Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5hY3UD5TVKTS3aGAvrWJKj5NWw9Nw4GabY2Xnvtcvih9i2aP6QnLT6SzMkdgGXLKkTBFJ9ZEazsyHTGtspfwHh5c",
+        "timestamp": "2026-02-03T16:51:46.168Z",
+        "kolAddress": "HugksxcSGZnhfTuLuwnP38E94FX3HjWZfiNjiXSdx6Yh",
+        "reason": "invalid_asset_count",
+        "success": false
+      },
+      {
+        "signature": "4F3Hocm2FdL647xkTernjeKxJ8m5gfBNgzc4M52Cir2YjeWBx6a1P9SYkWFnhyqHWwEM2UbxabTxdZWFwuSdhkXD",
+        "timestamp": "2026-02-03T16:51:50.951Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "invalid_asset_count",
+        "success": false
+      },
+      {
+        "signature": "jDLKTxsnzhwuhqxAFvUbwJeAtZEmp2EHHyBirAfRMKCGNjQxFQJobxX5NYYrPaPzZo2oQzjmMK8zBEZjvKovJzF",
+        "timestamp": "2026-02-03T16:51:51.683Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2NU8WBJVa3GHnETmzBJL9U7v5byDgmpaEuVt8m29ZrKndBecUXt6qVeLxYUF9YZ3GzVKddnVHXf1khaq6gYYfLuU",
+        "timestamp": "2026-02-03T16:51:51.746Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "3SMPiLPFezWQKUyrRqMtHrUxunw2HH1qhdScvURaqFFysaB2QEwKL3ogfzfMWW8XP5YVaET4WgYcshCtAmYUkK6V",
+        "timestamp": "2026-02-03T16:51:51.886Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "36wzmVX8rqptMgz9dTE5Rp6VKpEbp1M89TS8q6XY1hq3rLeLdkxhqZEHkPAxnxPNYJiX3TBE2xmYgyditNVkzw3b",
+        "timestamp": "2026-02-03T16:51:51.896Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5zT9vKn3TJM6yxh1DFhwvaZvUeWQpSmbfWBt8aWFCPoXLAsCecJPmNVoAcr44TzCttjeYu58ziw7WegbtMaPZ6pm",
+        "timestamp": "2026-02-03T16:51:52.167Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "4evS5aWbYh8CtjCt1FZtXUy2rL7DdNtyY7F5J7usZ2ipu7hjCa1xepyohJGTD7y3jkqfQH3CsLggsvZxBd1REKNr",
+        "timestamp": "2026-02-03T16:51:52.428Z",
+        "kolAddress": "HugksxcSGZnhfTuLuwnP38E94FX3HjWZfiNjiXSdx6Yh",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5nBVGptLxCXyo58SUG3wuCTmgpsRi2r4p238s2rHxdDa6bDvSxejfwnBWLjrM3MpDJNnfNuizBggye3GuGpRc6hm",
+        "timestamp": "2026-02-03T16:52:03.332Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "invalid_asset_count",
+        "success": false
+      },
+      {
+        "signature": "5qp3RcCncJtdWFdpEDdHrCiBWBnfgDyNECEArYuAZqYghVsDwNXDUhKyaYuagyeHBeXX5Q4gGTxaqqxWrQ3x18Tr",
+        "timestamp": "2026-02-03T16:52:03.742Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5c8yogRQR7jJNXWDnrxLKxEEmBm1uPZnjnNSAmgDA1Yqo2xQcDqRGRYLDa997QFAYwq6G7jFunxWzHeMfqrUjpRM",
+        "timestamp": "2026-02-03T16:52:03.942Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "12664cgUF2vsPjScQe9PVoPz9tAbJdSrcKg8Sv23yoJZF9PGnhwdxmy342P2kTNkfk49oGJvRS5DMVsJN7Kn8B7T",
+        "timestamp": "2026-02-03T16:52:04.292Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "vsnwFvNGyzmTxUpeHMBfCLmKnjuQXUKdrqzMru9cwzHi6r6CpQv9VcuZijrrviUUjEV2x5wFinxZhSm93Wxzbhq",
+        "timestamp": "2026-02-03T16:52:07.156Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2ayrPdjUkNiXrrZ7oUKTL9G86tscetHZ7ADraNgGa1RUQFbar7uSrYvRot8QgGNkDMw3jqjAiQ47TKcVtuYcNzjg",
+        "timestamp": "2026-02-03T16:52:07.383Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5W25yPuPdbEVJSSifeE9aZCD5MAwY3uNcMrtFBYdZWduZD3zrkMyQxEzdfpWWfAJjZWCKAwvZqNs2A458uf6gU82",
+        "timestamp": "2026-02-03T16:52:07.724Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "41s2nibwpkhqRSXnudQmZz4D3B5GC5XxdQHXvTpsfsravpTXcXNYrSMokmxht5pidm4BrEd8ieiVZFNRsuKL5QbA",
+        "timestamp": "2026-02-03T16:52:27.768Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2LEou2KZakhzBGzupwoTa4YvVBraSMU6FeUyCn3SA57YK975CnKhhJcerzxFHcsqw2nWx9vjokBqXqMH1CCX7hJP",
+        "timestamp": "2026-02-03T16:52:28.093Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "23s3i68zM6tZW5Q1h3CThBRhTyFzuKfgAnHJSRBn7SxaTZ1WhsGqg9rDCL1Et9nmoghPNSEtvJSSKHWni6HJ7G65",
+        "timestamp": "2026-02-03T16:52:28.143Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "3Z7F7rnq4FexDRF9MkBeeaoVkTW9nbGDGx6wfZu9bNQRMqnbDm9eeL4rsdDCkUpzoUK1UFFbWbBQFUrF2Mjx7arp",
+        "timestamp": "2026-02-03T16:52:36.362Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "4ewHjZh29XXKXsvqiqJcWyajHTEedo7J2T3ps9KjjA5JaQYCEvUAFt5wv5KY4689EAo9Af26sVzTnejxwBXWAYKT",
+        "timestamp": "2026-02-03T16:52:36.549Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "3H1rnG9YvmSfPg64w4G36aUw5q8DHm5i5TBiBSCuNajgH87VSJocEBuy2gPV3aB7bi5uNeumXNU3WFnhUZnMEegP",
+        "timestamp": "2026-02-03T16:52:36.677Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2NxFfx8DaXEzyouqajBmJ6mS7dJG49UaysNju4EcfX9Nkx5VwWA27ZpcNiuuc3VezYgeW4othG2DDCRj3QKbsy6W",
+        "timestamp": "2026-02-03T16:52:36.879Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "33y7ugo2wqiNgVb4m8JJj4Ft6uD7uu9d4S6UWmoZjR4mpA8anBqHfCmu4cJaQ1gnce4jG5hn6knAbuE8rFGBN3Vf",
+        "timestamp": "2026-02-03T16:52:36.959Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5tQ3FjGL9iExoJuSMxRTo7FNUvtE7D9LDpnrK6gvJZKwFRLZxud68ug1f5JZb41SBkfL26cap6hmeHhoGeDmn4aS",
+        "timestamp": "2026-02-03T16:52:37.536Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2z5tU9S4V58hWhSKGGejjkkfswKS3iWfFEMAKqWU1aKsPFDFZJ37goNRozeru7nu2HoGtuzcUu6obw22fZ5KTM7o",
+        "timestamp": "2026-02-03T16:52:50.053Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2UDawoWC7h9bf9MQYPz15AubYx4HTBZUPLff75STkghUMmyAmDTFcUL3LEtRngxAvEXiWnnSDjvJb4oxA3YhVMc4",
+        "timestamp": "2026-02-03T16:52:50.189Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "4XL3hmT52FHRHTqqBowXnWXH9cPvtRj2s9X7E4y9WUpyTbQSxupzoAk3FSybBeGdgehpwPeeb2RW1NdXAqTMiSh5",
+        "timestamp": "2026-02-03T16:52:50.721Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "ri6XrQFPih9HrihEKvREdH1ucBwe1AycMRNHfJ8TsXFVjPhMWGSbaNPaDbXjrpBesvS6rJte8K2Q3yJ73VYQMHC",
+        "timestamp": "2026-02-03T16:52:51.092Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "51c18YSp6XdB1GHkpSzAXmnjq5dAT4RDuDhBCjY9rbwvLVGChyT1RJczS7c5BX9C61mPqcoa8sJWHCHATAmuFPHU",
+        "timestamp": "2026-02-03T16:52:52.100Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "CqNgNFPFCtRRGhrbAr1JragwNyFKo8ktN7gQCCZkysPQaCjHy4RDi7bMF82nKRNKCLHiufna3pPifZDWASxJv5x",
+        "timestamp": "2026-02-03T16:52:52.870Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5czCWqLZfpGK83u2FUGcpczzDzTev3y3M6YKobGUL5BmD1kB7m2BizrV4Rbmp59e1KB4j8xBirFMVrKQBUppo521",
+        "timestamp": "2026-02-03T16:52:53.009Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2wRY4gbDAT4kz6mn5gyiuP7Q2AmdC6pcm9Y6qHyudccsmUBy7zZhEbijUp6rAPBwBG7GdP2cWPHhU7Jay9E3ndMk",
+        "timestamp": "2026-02-03T16:52:54.593Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2VPCeWjMz3kB3Ap6ifx3u6KgQfpaS319irPUC5pFhr4u4yvXqdrTCgY5P9kEY74uPmk2jM9iYiQWdevVkQs6EFhc",
+        "timestamp": "2026-02-03T16:52:56.812Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "3ES8Ysodroh4HCPvTBjXyGn3VsWwRioT75tZWGMZLAKTTaZxVcxycjZzkZNuJyufz4Y5nUp3wk54d9ScPEZPo4bK",
+        "timestamp": "2026-02-03T16:52:57.535Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2b8bgcfkemRhniaEF39cP1EHnhWvHu27U4NAjx5VShQRSVwpr63EadpNwnH9HfVYkXZzQoUEXqH7CGa9PGxtF2Fy",
+        "timestamp": "2026-02-03T16:52:57.586Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "4NeYkAeZorQjLX8MpF1MGjvejMMt2ThNUa5sqFo3goN13micieLJCvns2eqcG2P7s3aqnUnSHa37tQNUtu3AxEi5",
+        "timestamp": "2026-02-03T16:52:59.473Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "34cS9NTWeYpKG4sVFWKWvmet2kZLdZpvuQaq61mPnqBb9cM1rPmAyoVVsqUiUQBNXZVxEiWxCEpMKxix26BobNuc",
+        "timestamp": "2026-02-03T16:52:59.480Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2JuaitiuZpRykdQbNxoczeaX4q76ZnEtxTDZM8XHMvnuRTordUHnGF7B8R4z8RrYpCdhLw3mkcetENNfczUdae91",
+        "timestamp": "2026-02-03T16:52:59.496Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "273oiDLgDVQHPPmgy8emCLmiHmQAYTWGPmvT6v2FrBUadnWgvdqX8V68C4CfckVP1D2AhcXFPfppRdsd85mdYt8g",
+        "timestamp": "2026-02-03T16:53:38.892Z",
+        "kolAddress": "6Nwqn5XLEak79vZMtanGedEhuBv6UYDXPqVHZu37q4zR",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "3sCFKBgBRJ5bJgZnMDVDN6hRkdp7PUupVB2FjEYckXWeFKKKcdAbS1bqEFDc3erxvoqt14Qegvv4fqcDLucqF5w",
+        "timestamp": "2026-02-03T16:53:38.893Z",
+        "kolAddress": "6Nwqn5XLEak79vZMtanGedEhuBv6UYDXPqVHZu37q4zR",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "31t66YvMFPT7erMunk3BqTrbbBHsCArbk4dzb5iV8FD4YA7W3L68EoCc3ajCqguEiGnv19f89UJHhwiLKDKGUc8Y",
+        "timestamp": "2026-02-03T16:53:39.260Z",
+        "kolAddress": "6Nwqn5XLEak79vZMtanGedEhuBv6UYDXPqVHZu37q4zR",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "4ERnGeUftFpiswuJHS4BSujhHYp5A41ks5YBeqSEQcs9S6bhsNa5ZUZ9z24tJWALFj8bUinFNYYFkLmdR1m2thyv",
+        "timestamp": "2026-02-03T16:53:40.295Z",
+        "kolAddress": "D8UR9EtBoqCRwbinHEUcpDLS8RvGRE7FTZHe4a48vYnW",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5AySdnsVDYTSuSAdWzet5rmPHhcJQ4GM2KziemGUBBgTbMWX1wVqUQdisMNEJQoj5Q3dgYycFVXoHp5AQLE3MD4F",
+        "timestamp": "2026-02-03T16:53:43.088Z",
+        "kolAddress": "D8UR9EtBoqCRwbinHEUcpDLS8RvGRE7FTZHe4a48vYnW",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "yvjEhj4YYJ4i5MswbFpQCawanHbaMsF8bXUvGVvN4YK2Lvhrb8dSgM7rLgedm248TwWbrD4ZBfUnifrcoAKZeqz",
+        "timestamp": "2026-02-03T16:54:15.194Z",
+        "kolAddress": "HHASXvWLFRSwRBNQgEuhU3d3x2GU63y2crpJcwBKtppX",
+        "reason": "only_transfer_actions",
+        "success": false
+      },
+      {
+        "signature": "2nSYhbNHqKLZ26xciPosRaJcHfoRu6VkfeiUryDPE79tLxpubYU5fLXr2Ghd26vmXsL8RThZXkdXaB4wNvcybiSd",
+        "timestamp": "2026-02-03T16:54:19.443Z",
+        "kolAddress": "719sfKUjiMThumTt2u39VMGn612BZyCcwbM5Pe8SqFYz",
+        "reason": "only_transfer_actions",
+        "success": false
+      },
+      {
+        "signature": "A5dYQ6wZbFm6rMt3YWawn3KnVxfkqkWJJJBTWJDb59Rk8keFKBSfofYPrp9ZXy8HE4q21Xj6x3x28U7AA2B1hws",
+        "timestamp": "2026-02-03T16:54:26.652Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "below_minimum_value_threshold",
+        "success": false
+      },
+      {
+        "signature": "2RTJzkzq3Ys641B7EJu3pLE627vr8WSfSBET639HPh1UEhchQn6uincY8tmtE9PNCRL26xibPfk1g1WdWesqQcVs",
+        "timestamp": "2026-02-03T16:54:26.691Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "4Wtp5bYgis3YvTJeosLxfqPvewNLECvuQFSVtzuXShv2CtTwJP7yU91B2jXLWfEp9Xstuz9ua6Etpb4frXbGPtnD",
+        "timestamp": "2026-02-03T16:54:26.719Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "66NDndSiwDatXJxQU6NDt2nAb7rTLr1R8KBxAqdzBHydgjjP8RZfPUJqF5pAux6sDEkZmf3a4gvRrATfezq7iXrp",
+        "timestamp": "2026-02-03T16:54:31.526Z",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "reason": "below_minimum_value_threshold",
+        "success": false
+      },
+      {
+        "signature": "4iGbgTsLQdJ64CLa7btZacPHSPmdT1qYPXExa8f8P5WBDuSRw7wFQRRauWAGcB5qLZpR9DUHkK9iafK2z5ft5rh5",
+        "timestamp": "2026-02-03T16:54:31.936Z",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "reason": "below_minimum_value_threshold",
+        "success": false
+      },
+      {
+        "signature": "4pLAcmN3oWKUzjyhg2JWxCyscCKx4CMoMAGwed5PKP8KLsdiDz7UreCYdDsncYmKbXouf5UnVGwyhCWHjdW1zkga",
+        "timestamp": "2026-02-03T16:54:31.937Z",
+        "kolAddress": "CyaE1VxvBrahnPWkqm5VsdCvyS2QmNht2UFrKJHga54o",
+        "reason": "below_minimum_value_threshold",
+        "success": false
+      },
+      {
+        "signature": "2oE7v3bAVhypwvCmc2CzQSkFGALSwNgJRBhXn4Hj97h8tQVpZRFHAxLXdHQgi4b8XXYzjUD1PYUEcvW37JVaJpNx",
+        "timestamp": "2026-02-03T16:54:32.549Z",
+        "kolAddress": "D8UR9EtBoqCRwbinHEUcpDLS8RvGRE7FTZHe4a48vYnW",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "2Kk5z1MkZ19MAZ8rGuUnm9YRViB5vwg3dZeWaKzGEm2oDxHUrZy1mGe2nxdzoxxz1fPedhqqzjNq6Y3mLarzSkd3",
+        "timestamp": "2026-02-03T16:54:33.723Z",
+        "kolAddress": "D8UR9EtBoqCRwbinHEUcpDLS8RvGRE7FTZHe4a48vYnW",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5D1NNxeSQFWVFYthmXvCL8iVxqkHphYZ4KMCYQzJeq5ptHHVCmV1SbAhThyip22Hqe8T6zCCyMjjigfvqHLBevZ6",
+        "timestamp": "2026-02-03T16:54:50.453Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "46M3U5B78xPwUDVv8WSed5XDPjEuJ4Tj8xvcwZBoSToRmZhSN2DzjCM2mEBTVkyGpgWZpzR9zqxxcbe3TM3Dfvxm",
+        "timestamp": "2026-02-03T16:54:52.230Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "xwmYgiCB4ZGyq8jE9fenF9WmFkM6wFwPvY3qT6Vpg249E5uf3ytoJ2a9RPdRoUt5brw1hGfYLU4oPBJ7rBUW8ZG",
+        "timestamp": "2026-02-03T16:54:52.391Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "below_minimum_value_threshold",
+        "success": false
+      },
+      {
+        "signature": "2e3aJJLB6Gt3EJEsszuV2CGG382mkiDzvfM96Ry49KZZzwgFN7abvxeqQcr11yZ42AokFQDBrQQ4oNEi5wYzRACV",
+        "timestamp": "2026-02-03T16:54:52.711Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "4Ep6TovpgdgH2h4wPxXQ87rhwaaL5Rshb6bfvPvvsYTENa4wWzvmhpKbxqTmmHKUTsUWbsfmWAnG2ZawCZiGeo4G",
+        "timestamp": "2026-02-03T16:54:54.152Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "5BWQbqqFFsdkxiv1fubxmQFcf4xdwgVZgGFBAQvuDeuijrWEeMLhRB7Dh4B4iXYtVPhVuLBGJVnns28Mj2ZQMaxP",
+        "timestamp": "2026-02-03T16:54:54.154Z",
+        "kolAddress": "2G6CNJqfvGP3KWZXtV8rQHra3kxGK28nvzT6TjyWNtiJ",
+        "reason": "transaction_failed",
+        "success": false
+      },
+      {
+        "signature": "39HPQiXizFKmW41ocd8pENJikiQvEhcZbvwiyAFAiNEpnb5nZX6Gz333HzdCnjWZnPhzMysgSY5Q5Y4URwd4DGHv",
+        "timestamp": "2026-02-03T16:55:39.314Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "4DEn5q5jyxL8S3Gzim5swZCLAe6qPUD2jzpZ6HceksLhBTuTtwdX9SkRAUN3K12Z8vbn3dor8Xu9fSjS1ntqL6As",
+        "timestamp": "2026-02-03T16:55:39.330Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "2p1Y5M3L63d9mNA3XQHJguaD9jPUM6J9Guo78UYHGpqDEMEUJ5PgXtqFrTWUciZFkdsBq7S6yM4H3pn6B9petf5b",
+        "timestamp": "2026-02-03T16:55:43.421Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "4SVVccwYxUJ5JGR8EWU4Z9QUgxUjFCyhb2X4QFuZNE7DV4Myrnaocf45Qe1ysGwAYUbh2C6usRHwon1xvDH9bBBC",
+        "timestamp": "2026-02-03T16:55:46.393Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "5Rqk2VDzJPvyvbnuMPGvZoG9G5osLCCqCKWQ8xHaek2UoS2Ktrouk13BwTtQYkPyrdC3HTGDvd4VfijNUCVkuqMi",
+        "timestamp": "2026-02-03T16:55:46.801Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "AGnM6a6UN3Z7nMsq2KEEecou6kDHHqoZsJu1eZwhZ6CXYxgy67gUPrUetjgV9wni1LaXHYAAM6oLfG6jE2esFmX",
+        "timestamp": "2026-02-03T16:55:49.061Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "618cNkN7eoERg6GRr9mFnbJ5ugYypUKYQUNUMEbRhp1C7CUkiyMgFKgs3kMf9ntRdV2emCiDeQ82vE5kuELkLdn2",
+        "timestamp": "2026-02-03T16:55:49.987Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "5Ce4gqUBzJ34138qVN3FEib53CepVFEcbcwvfT7w6koTPuA5R3hg618byBMwT3m3YYLJGgbiQYrBA8yToCfKPE1Y",
+        "timestamp": "2026-02-03T16:55:51.008Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "doKjFFnei8YU2hzjygiF5CpxdNLc7Vt8mr5fXzide1423WVFDi3ERYRzUoaFCJWgKtvLubKstUn4kvNTYXeDQcm",
+        "timestamp": "2026-02-03T16:55:51.019Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "5sWnv7wPwgJ3ejMMmUi5ELQYJkXxMd197LwBUvQGEnfd3YnLE77au68RnW5pnaK2gkEHrZaUzkVeBeGLofgkpkh2",
+        "timestamp": "2026-02-03T16:55:51.023Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "2BpwsvxYwihd15QKSbNRegE9gyS9DHPp1oTrFigsCAHYuY8jemDxMXrp4zCP9LuJhzEwRVYAuHWhTuJZMLvy82LQ",
+        "timestamp": "2026-02-03T16:55:51.150Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "3EodBZvtwSHpR6BrH1rieyp8mpfXBC9Vdqg8R6SQ12iLYtPFpT3GZk2uHP2z8EUmtGWUynbtpye7nsXA9hXFDbpQ",
+        "timestamp": "2026-02-03T16:55:51.357Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "n1aFTehLvQYPBReQ1jqQNcKZxvSyXmUFF7emfDDjySkYF1FrVDCva1Qot5EJtRvKjqaPFwe9oPZxReQ3Tt22tw8",
+        "timestamp": "2026-02-03T16:55:51.923Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "4x6skwL8DoLFnuEK446QeDZUSuGKpKgnWdHHyuFYkYo7H7gNjQ9cvdvaLPxPtMhge2j4Dg1mJaJRcxsULJb9SMDW",
+        "timestamp": "2026-02-03T16:55:52.045Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "5RrRGZV6BhpmchsBHBt1JxVbraFWgfxWcnUimzXtbgSMsccVkBh6huoBKfaHynva4ctWLKJMcUHmbZGQyCBmaPcT",
+        "timestamp": "2026-02-03T16:55:52.045Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "3KbZuxxXgFuvDXoUp1cfXWYEaKuHDViAPpWWxpfrfFV8t9qg8VLYsxhPqWQrChzzpNvuYViMHemxWcc9fvjKjwvx",
+        "timestamp": "2026-02-03T16:55:52.068Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "3Ku5Rz82C8vk5EGnR1Z8cmjgQLVQt3JviT2GXieFmehDPSfZRovqKAaxZFAMAxGVLDvye3iejxXFEsxBw9Qj71zt",
+        "timestamp": "2026-02-03T16:55:52.107Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "5B1bWMXmT5MghH75qdQjK6hMxwhLtBzA3fQHDKqfTjqftXSPyDmKtwkqqVwdoEbbjuHFUXHr37c7B5n2RSdo2bZv",
+        "timestamp": "2026-02-03T16:55:52.169Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "jvq8m6huxrUNLGNC2agmZeNZTEezjDvm8txxHnuTu9usGYqhCvWvxNgSoyswiYkApRZRjqZXSk353EdAKnYNKEx",
+        "timestamp": "2026-02-03T16:55:52.580Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "3fdUEzFRy46ZGtEhwjgUi4uG2c2j6VUimfUp7QT2NNCLt4SauMhtxfqMVdTBuG1L3DafUYSnRK66tm5ZbSssRwPQ",
+        "timestamp": "2026-02-03T16:55:53.718Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "32JmWcuj94FYDC6wnji8MSaC9FjkYNLZZM1WyTLsLTN5xYhY77thjbvAX6mG2g827UGubVrrvbQaNSoS8Ync9MVK",
+        "timestamp": "2026-02-03T16:55:56.328Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "3FcPZcNE6g6yty8UFxN4JnRBEB9FnLDW5QujDsNqePrgLzNM48pVZ4f5o5pxNzoGNiWCW3peaWWHuxJnMrkw2ZJ9",
+        "timestamp": "2026-02-03T16:56:03.599Z",
+        "kolAddress": "FEkNW12BfGMPpWyCzjwz8xnkFNmbE8R6MPEYGkAwUTxC",
+        "reason": "swapper_identification_failed",
+        "success": false
+      },
+      {
+        "signature": "5G93qWYsZHS3GUd9rqbMr1v3Huj7xTBYR3GnodxAAfba3fHiQmpyhgCfbFUahXhqgaSm48C59vu7XjSANdGMFMkp",
+        "timestamp": "2026-02-03T16:56:25.983Z",
+        "kolAddress": "27nwDq3gvYrCgWmgDPt6LJ5gcX6vs5Qwb8rUcezDYtBa",
+        "reason": "transaction_failed",
+        "success": false
+      }
+    ]
   },
   "comparison": {
     "matches": 0,
-    "v2Extras": 0,
-    "v1Extras": 8,
-    "v2ExtraSignatures": [],
-    "v1ExtraSignatures": [
-      "42dFQuQLdmkbJYoWi3xquUXdi8rDFmmDcd3SuWyjm1RJ2Mm4GnrfG7hcGJ6MtuPMxhEr73gAAybWixsmkszRUALW",
-      "5bozbeat6Ghg5VPyC9q77kS7Pa6UHabrrb8rtJhU1tLX955X9nfh7ekDApzj7u2BeWSxLgtNyn2uQLXo5L7SkLjC",
-      "2umgMw5xgYaoEowjwtmdU86ucGnW6sFnwGWuG9H7ViN5wFYsi3nhhsSDFzcJGyCT9re56JvahmZTJJ7aUHASpxw",
-      "2zwPCkPEZ5N9H4SmwLxVM1BtQPUwFhhTid4JL6aZcBsr5otqjU2kopCpX9QiabQZE6256FCnsTEHxJZCmu2YHbPw",
-      "2NyaGHBGKd5aicA87SMzC23cJKE1z88TkLifU8KhgZ3MnvLxhCL3LXHxCuULKzGJhDPwddmZ9CsvhSDavR8QhfKC",
-      "3DARtqR1XycCrqp92Y8RF4A4anndQoB1ipzSwgdsoH6HSsfTkpfeRX4JiViFz6VdfELVLjqCPKaWuRZ4iGM3RnTu",
-      "be5BzJmJMxVxNAudoBXNCvaWV46hgiZ7tUV63We7pJemx6dE642iNmbFHJ7QqhMLHVg1m2BVcv7vtHxLkvAi8HD",
-      "5jK33EzTWLkWmmNLoXn9wCFf9NdZawXWpXkH6zC1Du2riGzRfFQUWmjua7chp14D1LLUwtu18xqVpUYopGMPPmhw"
-    ]
+    "v2Extras": 21,
+    "v1Extras": 0,
+    "v2ExtraSignatures": [
+      "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"
+    ],
+    "v1ExtraSignatures": []
   }
 }

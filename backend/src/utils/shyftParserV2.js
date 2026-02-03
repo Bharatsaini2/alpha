@@ -163,6 +163,7 @@ var ShyftParserV2 = /** @class */ (function () {
                 base: { mint: base.mint, delta: base.netDelta },
                 splitRequired: quoteBaseResult.splitRequired,
             }, 'ShyftParserV2: Quote/base detected');
+
             // Stage 5: Validate ERASE Rules (only for standard swaps, not splits)
             if (!quoteBaseResult.splitRequired) {
                 perfTracker === null || perfTracker === void 0 ? void 0 : perfTracker.startComponent('erase_validation');
@@ -178,7 +179,7 @@ var ShyftParserV2 = /** @class */ (function () {
                     return this.createEraseResult(tx, validationResult.eraseReason || 'erase_validation_failed', { assetDeltas: assetDeltas }, Date.now() - startTime, perfTracker);
                 }
             }
-            // Stage 6: Handle Split Protocol or Standard Swap
+            // Stage 7: Handle Split Protocol or Standard Swap
             if (quoteBaseResult.splitRequired) {
                 // Token-to-token split protocol
                 perfTracker === null || perfTracker === void 0 ? void 0 : perfTracker.startComponent('split_swap_creation');
@@ -209,11 +210,31 @@ var ShyftParserV2 = /** @class */ (function () {
                 };
             }
             else {
-                // Standard swap
+                // Standard swap (BUY/SELL) - apply minimum value filter
                 perfTracker === null || perfTracker === void 0 ? void 0 : perfTracker.startComponent('swap_creation');
                 var direction = quoteBaseResult.direction;
                 var swapResult = this.createParsedSwap(tx, swapper, swapperMethod, direction, quote, base, filteredChanges.rentRefunds.length, intermediateAssets);
                 perfTracker === null || perfTracker === void 0 ? void 0 : perfTracker.endComponent('swap_creation');
+                
+                // Stage 7.5: Apply minimum value filter for BUY/SELL (not for token-to-token swaps)
+                perfTracker === null || perfTracker === void 0 ? void 0 : perfTracker.startComponent('minimum_value_validation');
+                var minimumValueCheck = this.validateMinimumValue(swapResult, direction);
+                perfTracker === null || perfTracker === void 0 ? void 0 : perfTracker.endComponent('minimum_value_validation');
+                
+                if (!minimumValueCheck.isValid) {
+                    logger_1.default.info({
+                        signature: tx.signature,
+                        direction: direction,
+                        reason: minimumValueCheck.reason,
+                        usdValue: minimumValueCheck.usdValue,
+                    }, 'ShyftParserV2: Transaction below minimum value threshold, returning ERASE');
+                    return this.createEraseResult(tx, minimumValueCheck.reason || 'below_minimum_value', {
+                        direction: direction,
+                        usdValue: minimumValueCheck.usdValue,
+                        minimumRequired: 5.0
+                    }, Date.now() - startTime, perfTracker);
+                }
+                
                 var processingTime = Date.now() - startTime;
                 // Check for performance timeout
                 if (processingTime > 100) {
@@ -589,6 +610,70 @@ var ShyftParserV2 = /** @class */ (function () {
             default:
                 return 50; // fallback
         }
+    };
+    
+    /**
+     * Validate minimum value threshold for BUY/SELL transactions
+     *
+     * Filters out micro-transactions under $5 USD value for BUY/SELL operations.
+     * Token-to-token swaps are exempt from this filter.
+     *
+     * @param swapResult - The parsed swap result
+     * @param direction - BUY or SELL direction
+     * @returns Validation result with USD value estimate
+     */
+    ShyftParserV2.prototype.validateMinimumValue = function (swapResult, direction) {
+        var MINIMUM_USD_VALUE = 5.0; // $5 minimum threshold (increased from $2)
+        
+        // Estimate USD value based on the transaction
+        var estimatedUsdValue = 0;
+        
+        if (direction === 'BUY') {
+            // For BUY: use the input amount (what user spent)
+            var inputAmount = swapResult.amounts.swapInputAmount || swapResult.amounts.totalWalletCost || 0;
+            
+            // If quote asset is SOL, estimate USD value (assume ~$240 SOL for rough estimate)
+            if (swapResult.quoteAsset.mint === shyftParserV2_types_1.PRIORITY_ASSETS.SOL) {
+                estimatedUsdValue = inputAmount * 240; // Rough SOL price estimate
+            }
+            // If quote asset is USDC/USDT, use direct value
+            else if (swapResult.quoteAsset.mint === shyftParserV2_types_1.PRIORITY_ASSETS.USDC ||
+                     swapResult.quoteAsset.mint === shyftParserV2_types_1.PRIORITY_ASSETS.USDT) {
+                estimatedUsdValue = inputAmount;
+            }
+            // For other tokens, we can't easily estimate - allow them through
+            else {
+                return { isValid: true };
+            }
+        } else {
+            // For SELL: use the output amount (what user received)
+            var outputAmount = swapResult.amounts.swapOutputAmount || swapResult.amounts.netWalletReceived || 0;
+            
+            // If quote asset is SOL, estimate USD value
+            if (swapResult.quoteAsset.mint === shyftParserV2_types_1.PRIORITY_ASSETS.SOL) {
+                estimatedUsdValue = outputAmount * 240; // Rough SOL price estimate
+            }
+            // If quote asset is USDC/USDT, use direct value
+            else if (swapResult.quoteAsset.mint === shyftParserV2_types_1.PRIORITY_ASSETS.USDC ||
+                     swapResult.quoteAsset.mint === shyftParserV2_types_1.PRIORITY_ASSETS.USDT) {
+                estimatedUsdValue = outputAmount;
+            }
+            // For other tokens, we can't easily estimate - allow them through
+            else {
+                return { isValid: true };
+            }
+        }
+        
+        // Check if estimated value meets minimum threshold
+        if (estimatedUsdValue < MINIMUM_USD_VALUE) {
+            return {
+                isValid: false,
+                reason: 'below_minimum_value_threshold',
+                usdValue: estimatedUsdValue
+            };
+        }
+        
+        return { isValid: true, usdValue: estimatedUsdValue };
     };
     return ShyftParserV2;
 }());

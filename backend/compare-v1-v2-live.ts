@@ -121,8 +121,8 @@ async function handleTransaction(tx: any) {
         outputAmount = sellRecord.amounts.swapOutputAmount || sellRecord.amounts.netWalletReceived || 0
         
         // These are already normalized amounts from the V2 parser
-        inputNormalized = inputAmount.toFixed(6)
-        outputNormalized = outputAmount.toFixed(6)
+        inputNormalized = Math.abs(inputAmount).toFixed(6)
+        outputNormalized = Math.abs(outputAmount).toFixed(6)
           
         const detection: V2Detection = {
           signature: signature,
@@ -144,6 +144,7 @@ async function handleTransaction(tx: any) {
         v2Detections.push(detection)
       } else {
         // ParsedSwap
+        // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
         if (swapData.direction === 'BUY') {
           // BUY: spending quote asset to get base asset
           inputAmount = swapData.amounts.swapInputAmount || swapData.amounts.totalWalletCost || 0
@@ -154,9 +155,9 @@ async function handleTransaction(tx: any) {
           outputAmount = swapData.amounts.swapOutputAmount || swapData.amounts.netWalletReceived || 0
         }
         
-        // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
-        inputNormalized = inputAmount.toFixed(6)
-        outputNormalized = outputAmount.toFixed(6)
+        // These are already normalized amounts from the V2 parser
+        inputNormalized = Math.abs(inputAmount).toFixed(6)
+        outputNormalized = Math.abs(outputAmount).toFixed(6)
           
         const detection: V2Detection = {
           signature: signature,

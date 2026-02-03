@@ -50,6 +50,7 @@ const axios_1 = __importDefault(require("axios"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const shyftParserV2_1 = require("./dist/utils/shyftParserV2");
 const whaleAllTransactionsV2_model_1 = __importDefault(require("./src/models/whaleAllTransactionsV2.model"));
+const whalesAddress_model_1 = __importDefault(require("./src/models/solana-tokens-whales"));
 const fs = __importStar(require("fs"));
 dotenv.config();
 const SHYFT_API_KEY = process.env.SHYFT_API_KEY || '';
@@ -125,17 +126,14 @@ async function handleTransaction(tx) {
             if ('sellRecord' in swapData) {
                 // SplitSwapPair - use sellRecord for display
                 const sellRecord = swapData.sellRecord;
-                // For SELL: user spends quote asset to get base asset
+                
+                // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
                 inputAmount = sellRecord.amounts.baseAmount || sellRecord.amounts.swapInputAmount || 0;
                 outputAmount = sellRecord.amounts.swapOutputAmount || sellRecord.amounts.netWalletReceived || 0;
-                inputDecimals = sellRecord.quoteAsset.decimals || 9;
-                outputDecimals = sellRecord.baseAsset.decimals || 9;
-                inputNormalized = inputAmount > 0
-                    ? (Math.abs(inputAmount) / Math.pow(10, inputDecimals)).toFixed(6)
-                    : '0';
-                outputNormalized = outputAmount > 0
-                    ? (Math.abs(outputAmount) / Math.pow(10, outputDecimals)).toFixed(6)
-                    : '0';
+                
+                // These are already normalized amounts from the V2 parser
+                inputNormalized = Math.abs(inputAmount).toFixed(6);
+                outputNormalized = Math.abs(outputAmount).toFixed(6);
                 const detection = {
                     signature: signature,
                     timestamp: new Date(),
@@ -156,28 +154,21 @@ async function handleTransaction(tx) {
             }
             else {
                 // ParsedSwap
-                // For BUY: user spends quote (SOL/USDC) to get base (token)
-                // For SELL: user spends base (token) to get quote (SOL/USDC)
+                // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
                 if (swapData.direction === 'BUY') {
                     // BUY: spending quote asset to get base asset
                     inputAmount = swapData.amounts.swapInputAmount || swapData.amounts.totalWalletCost || 0;
                     outputAmount = swapData.amounts.baseAmount || 0;
-                    inputDecimals = swapData.quoteAsset.decimals || 9;
-                    outputDecimals = swapData.baseAsset.decimals || 9;
                 }
                 else {
                     // SELL: spending base asset to get quote asset
                     inputAmount = swapData.amounts.baseAmount || 0;
                     outputAmount = swapData.amounts.swapOutputAmount || swapData.amounts.netWalletReceived || 0;
-                    inputDecimals = swapData.baseAsset.decimals || 9;
-                    outputDecimals = swapData.quoteAsset.decimals || 9;
                 }
-                inputNormalized = inputAmount > 0
-                    ? (Math.abs(inputAmount) / Math.pow(10, inputDecimals)).toFixed(6)
-                    : '0';
-                outputNormalized = outputAmount > 0
-                    ? (Math.abs(outputAmount) / Math.pow(10, outputDecimals)).toFixed(6)
-                    : '0';
+                
+                // These are already normalized amounts from the V2 parser
+                inputNormalized = Math.abs(inputAmount).toFixed(6);
+                outputNormalized = Math.abs(outputAmount).toFixed(6);
                 const detection = {
                     signature: signature,
                     timestamp: new Date(),
@@ -425,10 +416,11 @@ async function main() {
     console.log(colors.cyan('📊 Connecting to MongoDB...'));
     await mongoose_1.default.connect(MONGO_URI);
     console.log(colors.green('✅ Connected to MongoDB\n'));
-    // Fetch whale addresses
-    console.log(colors.cyan('📊 Fetching whale addresses...'));
-    const whaleAddresses = await whaleAllTransactionsV2_model_1.default.distinct('whale.address');
-    console.log(colors.green(`✅ Found ${whaleAddresses.length} whale addresses\n`));
+    // Fetch whale addresses from dedicated whale collection
+    console.log(colors.cyan('📊 Fetching whale addresses from WhalesAddress collection...'));
+    const whales = await whalesAddress_model_1.default.find({}).lean();
+    const whaleAddresses = whales.flatMap((doc) => doc.whalesAddress);
+    console.log(colors.green(`✅ Found ${whaleAddresses.length} whale addresses from ${whales.length} token records\n`));
     // Connect WebSocket and start test
     connectWebSocket(whaleAddresses);
     // Handle graceful shutdown
