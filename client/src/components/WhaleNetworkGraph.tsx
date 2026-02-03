@@ -123,14 +123,17 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     >
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Left}
         style={{
+          top: "50%",
+          left: "50%",
           background: "transparent",
           border: "none",
           width: "0px",
           height: "0px",
           minWidth: "0px",
           minHeight: "0px",
+          transform: "translate(-50%, -50%)",
         }}
       />
       <div className="relative">
@@ -228,14 +231,17 @@ const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     >
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Right}
         style={{
+          top: "50%",
+          left: "50%",
           background: "transparent",
           border: "none",
           width: "0px",
           height: "0px",
           minWidth: "0px",
           minHeight: "0px",
+          transform: "translate(-50%, -50%)",
         }}
       />
       <div className="relative">
@@ -293,20 +299,34 @@ const CustomEdge: React.FC<EdgeProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false)
 
+  // 1. Get the offset (e.g. -5, 0, 5) from the data
   const edgeOffset = (data?.edgeOffset as number) ?? 0
 
-  const midX = (sourceX + targetX) / 2
-  const midY = (sourceY + targetY) / 2
+  // 2. Calculate Geometry
   const dx = targetX - sourceX
   const dy = targetY - sourceY
   const len = Math.sqrt(dx * dx + dy * dy) || 1
 
-  // Create perpendicular offset for multiple edges
-  const perpX = (-dy / len) * edgeOffset
-  const perpY = (dx / len) * edgeOffset
-  const controlX = midX + perpX
-  const controlY = midY + perpY
-  const edgePath = `M ${sourceX} ${sourceY} Q ${controlX} ${controlY} ${targetX} ${targetY}`
+  // 3. Normal Vector (Perpendicular direction)
+  const nx = -dy / len
+  const ny = dx / len
+
+  // 4. Spread Multiplier
+  // Increase '4' to '6' or '8' if you want a wider X shape
+  const spread = edgeOffset * 4
+
+  // 5. CRISS-CROSS LOGIC
+  // Start Point: Shift Positive
+  const startX = sourceX + nx * spread
+  const startY = sourceY + ny * spread
+
+  // End Point: Shift NEGATIVE (Inverted)
+  // This causes the line to aim for the "opposite" side, forcing a cross in the center.
+  const endX = targetX - nx * spread
+  const endY = targetY - ny * spread
+
+  // 6. Draw STRAIGHT LINE (L)
+  const edgePath = `M ${startX} ${startY} L ${endX} ${endY}`
 
   return (
     <motion.g
@@ -317,18 +337,19 @@ const CustomEdge: React.FC<EdgeProps> = ({
         id={id}
         d={edgePath}
         stroke={data?.type === "buy" ? "#06DF73" : "#FF6467"}
-        strokeWidth={isHovered ? 1 : 0.5}
+        strokeWidth={isHovered ? 1.5 : 0.8}
         fill="none"
         style={{
           strokeDasharray: "none",
           strokeLinecap: "round",
           strokeLinejoin: "round",
         }}
+        initial={{ pathLength: 0, opacity: 0 }}
         animate={{
-          strokeWidth: isHovered ? 1 : 0.5,
-          opacity: isHovered ? 1 : 0.7,
+          pathLength: 1,
+          opacity: isHovered ? 1 : 0.6,
         }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.5 }}
       />
     </motion.g>
   )

@@ -283,3 +283,25 @@ input[type="number"] {
   will-change: auto !important;
   box-shadow: none !important;
 }
+
+body {
+  background-color: #000;
+  color: white;
+}
+
+/* Ensure images are clipped to perfect circles (Critical for Safari/iOS) */
+.rf-circle-wrap,
+.rf-circle-wrap img {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  clip-path: circle(50% at 50% 50%) !important;
+  -webkit-mask-image: radial-gradient(circle, #000 99.9%, transparent 100%) !important;
+  mask-image: radial-gradient(circle, #000 99.9%, transparent 100%) !important;
+}
+
+/* Fixes for dark mode inputs if missing */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

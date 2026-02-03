@@ -14,7 +14,7 @@ const ErrorPopup: React.FC<ErrorPopupProps> = ({
   isOpen,
   onClose,
   title = "Download Failed",
-  message = "We encountered an issue while generating your screenshot. This might be due to browser security restrictions or network issues.",
+  message = "We encountered an issue while generating your screenshot.",
   onRetry,
 }) => {
   return (
@@ -41,33 +41,16 @@ const ErrorPopup: React.FC<ErrorPopupProps> = ({
                 </div>
                 <h3 className="text-lg font-semibold text-white">{title}</h3>
               </div>
-              <button
-                onClick={onClose}
-                className="p-1 hover:bg-gray-800 rounded-lg transition-colors"
-              >
+              <button onClick={onClose} className="p-1 hover:bg-gray-800 rounded-lg transition-colors">
                 <X className="w-5 h-5 text-gray-400 hover:text-white" />
               </button>
             </div>
-
             <p className="text-gray-300 mb-6 leading-relaxed">{message}</p>
-
             <div className="flex gap-3 justify-end">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-              >
-                Close
-              </button>
+              <button onClick={onClose} className="px-4 py-2 text-gray-400 hover:text-white transition-colors">Close</button>
               {onRetry && (
-                <button
-                  onClick={() => {
-                    onRetry()
-                    onClose()
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Try Again
+                <button onClick={() => { onRetry(); onClose(); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Try Again
                 </button>
               )}
             </div>
@@ -77,5 +60,4 @@ const ErrorPopup: React.FC<ErrorPopupProps> = ({
     </AnimatePresence>
   )
 }
-
 export default ErrorPopup
