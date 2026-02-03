@@ -1811,127 +1811,139 @@ const HomePageNew = () => {
 
 
 
-                                            <div className="d-flex align-items-center justify-content-between nw-btm-brd">
-                                                <div>
-                                                    <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
+                                                <div className="d-flex align-items-center justify-content-between nw-btm-brd">
+                                                    <div>
+                                                        <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
+                                                    </div>
+                                                    <div>
+                                                        <ul className="quick-list">
+                                                            {tx.hotnessScore > 0 && (
+                                                                <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
+                                                            )}
+                                                            <li className="quick-item">
+                                                                <a
+                                                                    href="javascript:void(0)"
+                                                                    className="quick-nw-btn"
+                                                                    onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
+                                                                    role="button"
+                                                                    tabIndex={0}
+                                                                    onKeyDown={(e) => {
+                                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                                            e.preventDefault()
+                                                                            e.stopPropagation()
+                                                                            handleQuickBuy(tx)
+                                                                        }
+                                                                    }}
+                                                                    aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
+                                                                    title="Quick buy this token"
+                                                                >
+                                                                    quick buy
+                                                                </a>
+                                                            </li>
+                                                            <li className="quick-item">
+                                                                <a
+                                                                    href="javascript:void(0)"
+                                                                    className="quick-nw-btn quick-copy-btn"
+
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
+                                                                    }}
+                                                                >
+                                                                    {/* <FontAwesomeIcon icon={faCopy} /> */}
+
+
+                                                                    <RiFileCopyLine />
+                                                                </a>
+                                                            </li>
+                                                            <li className="quick-item">
+                                                                <a
+                                                                    href="javascript:void(0)"
+                                                                    className="quick-nw-btn quick-arrow-btn"
+                                                                    onClick={(e) => { e.stopPropagation(); handleTransactionInfoNewTab(tx.signature, tx.type) }}
+                                                                >
+                                                                    <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <ul className="quick-list">
-                                                        {tx.hotnessScore > 0 && (
-                                                            <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
+
+
+
+
+                                                {/* <div className="custom-card"> */}
+                                                <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
+
+                                                    <div className="left-item-bx">
+                                                        <img
+                                                            src={tx.whaleTokenURL || DefaultTokenImage}
+                                                            alt="whale"
+                                                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                                                        />
+                                                        <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px', justifyContent: 'space-between' }}>
+                                                            {/* Top: Name */}
+                                                            <h4 className="username" style={{ margin: 0, lineHeight: '1.2' }}>{tx.whaleTokenSymbol} Whale ({tx.whaleAddress?.slice(0, 4)}..) </h4>
+
+                                                            {/* Middle: Tags OR Amount */}
+                                                            {((tx.whaleLabel || []).length > 0) ? (
+                                                                <div className="tags" style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                                                                    {(tx.whaleLabel || []).slice(0, 1).map((tag: string, i: number) => (
+                                                                        <span key={i} className="tag-title">{tag}</span>
+                                                                    ))}
+                                                                    {(tx.whaleLabel || []).length > 1 && (
+                                                                        <span className="tag-title">+{(tx.whaleLabel || []).length - 1}</span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ margin: 0, lineHeight: '1.2' }}>
+                                                                    {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Bottom: Amount OR Empty */}
+                                                            {((tx.whaleLabel || []).length > 0) ? (
+                                                                <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ margin: 0, lineHeight: '1.2' }}>
+                                                                    {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                </div>
+                                                            ) : (
+                                                                <div></div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+
+                                                    <div className="sell-trade-bx">
+                                                        {tx.type === 'sell' ? (
+                                                            <span className="sell-title">
+                                                                <FontAwesomeIcon icon={faArrowTrendDown} /> SELL
+                                                            </span>
+                                                        ) : (
+                                                            <span className="buy-trade-title">
+                                                                <IoMdTrendingUp /> BUY
+                                                            </span>
                                                         )}
-                                                        <li className="quick-item">
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                className="quick-nw-btn"
-                                                                onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
-                                                                role="button"
-                                                                tabIndex={0}
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter' || e.key === ' ') {
-                                                                        e.preventDefault()
-                                                                        e.stopPropagation()
-                                                                        handleQuickBuy(tx)
-                                                                    }
-                                                                }}
-                                                                aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
-                                                                title="Quick buy this token"
-                                                            >
-                                                                quick buy
-                                                            </a>
-                                                        </li>
-                                                        <li className="quick-item">
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                className="quick-nw-btn quick-copy-btn"
-
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
-                                                                }}
-                                                            >
-                                                                {/* <FontAwesomeIcon icon={faCopy} /> */}
+                                                    </div>
 
 
-                                                                <RiFileCopyLine />
-                                                            </a>
-                                                        </li>
-                                                        <li className="quick-item">
-                                                            <a
-                                                                href="javascript:void(0)"
-                                                                className="quick-nw-btn quick-arrow-btn"
-                                                                onClick={(e) => { e.stopPropagation(); handleTransactionInfoNewTab(tx.signature, tx.type) }}
-                                                            >
-                                                                <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
-                                                            </a>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-
-
-
-
-                                            {/* <div className="custom-card"> */}
-                                            <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
-
-                                                <div className="left-item-bx">
-                                                    <img
-                                                        src={tx.whaleTokenURL || DefaultTokenImage}
-                                                        alt="whale"
-                                                        onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
-                                                    />
-                                                    <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px' }}>
-                                                        <h4 className="username" style={{ marginBottom: '4px' }}>{tx.whaleTokenSymbol} Whale ({tx.whaleAddress?.slice(0, 4)}..) </h4>
-                                                        {/* Conditionally render tags container only if tags exist */}
-                                                        {((tx.whaleLabel || []).length > 0) && (
-                                                            <div className="tags" style={{ marginBottom: '4px' }}>
-                                                                {(tx.whaleLabel || []).slice(0, 1).map((tag: string, i: number) => (
-                                                                    <span key={i} className="tag-title">{tag}</span>
-                                                                ))}
-                                                                {(tx.whaleLabel || []).length > 1 && (
-                                                                    <span className="tag-title">+{(tx.whaleLabel || []).length - 1}</span>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                        <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ marginTop: 'auto' }}>
-                                                            {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    <div className="right-info text-end">
+                                                        <div className="left-crd-content">
+                                                            <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
+                                                            <p>{tx.type === 'sell' ? tx.transaction?.tokenIn?.name?.substring(0, 20) : tx.transaction?.tokenOut?.name?.substring(0, 20)}</p>
+                                                            <small className="mc-title">MC: ${formatNumber(getMarketCap(tx))} / AGE: {tx.age}</small>
+                                                        </div>
+                                                        <div className="right-img">
+                                                            <img
+                                                                src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
+                                                                alt="token"
+                                                                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>
 
-
-                                                <div className="sell-trade-bx">
-                                                    {tx.type === 'sell' ? (
-                                                        <span className="sell-title">
-                                                            <FontAwesomeIcon icon={faArrowTrendDown} /> SELL
-                                                        </span>
-                                                    ) : (
-                                                        <span className="buy-trade-title">
-                                                            <IoMdTrendingUp /> BUY
-                                                        </span>
-                                                    )}
-                                                </div>
-
-
-                                                <div className="right-info text-end">
-                                                    <div className="left-crd-content">
-                                                        <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
-                                                        <p>{tx.type === 'sell' ? tx.transaction?.tokenIn?.name?.substring(0, 20) : tx.transaction?.tokenOut?.name?.substring(0, 20)}</p>
-                                                        <small className="mc-title">MC: ${formatNumber(getMarketCap(tx))} / AGE: {tx.age}</small>
-                                                    </div>
-                                                    <div className="right-img">
-                                                        <img
-                                                            src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
-                                                            alt="token"
-                                                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
-                                                        />
-                                                    </div>
-                                                </div>
                                             </div>
-
-                                        </div>
-                                    ))}
+                                        ))}
                                     </div>
                                 )}
 

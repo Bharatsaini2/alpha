@@ -521,11 +521,11 @@ function TopKOLCoinsPage() {
                           key={time}
                           href="#"
                           className={`time-item ${timeframeFilter === time ? "active" : ""}`}
-                          onClick={(e) => { 
-                            e.preventDefault(); 
+                          onClick={(e) => {
+                            e.preventDefault();
                             if (timeframeFilter !== time) {
                               setFilteringLoading(true);
-                              setTimeframeFilter(time); 
+                              setTimeframeFilter(time);
                               setTimeout(() => setFilteringLoading(false), 1000);
                             } else {
                               setTimeframeFilter(time);
@@ -594,25 +594,25 @@ function TopKOLCoinsPage() {
                           Array.from({ length: 5 }).map((_, i) => (
                             <tr key={`skeleton-${i}`} className="main-row">
                               <td className="expand-col">
-                                <div style={{ width: "16px", height: "16px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                                <div className="w-4 h-4 bg-[#1a1a1a] animate-pulse"></div>
                               </td>
-                              <td><div style={{ width: "20px", height: "14px", borderRadius: "3px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div></td>
+                              <td><div className="w-5 h-4 bg-[#1a1a1a] animate-pulse"></div></td>
                               <td>
                                 <div className="coin-cell">
                                   <span className="coin-icon">
-                                    <div style={{ width: "24px", height: "24px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)", flexShrink: 0 }}></div>
+                                    <div className="w-6 h-6 bg-[#1a1a1a] animate-pulse" style={{ flexShrink: 0 }}></div>
                                   </span>
-                                  <div style={{ width: "80px", height: "16px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                                  <div className="w-20 h-4 bg-[#1a1a1a] animate-pulse"></div>
                                 </div>
                               </td>
                               <td>
-                                <div style={{ width: "60px", height: "16px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                                <div className="w-16 h-4 bg-[#1a1a1a] animate-pulse"></div>
                               </td>
                               <td>
-                                <div style={{ width: "40px", height: "16px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                                <div className="w-10 h-4 bg-[#1a1a1a] animate-pulse"></div>
                               </td>
                               <td>
-                                <div style={{ width: "70px", height: "16px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                                <div className="w-18 h-4 bg-[#1a1a1a] animate-pulse"></div>
                               </td>
                             </tr>
                           ))
@@ -832,26 +832,26 @@ function TopKOLCoinsPage() {
                         <div key={`mobile-skeleton-${i}`} className="mobile-coin-card">
                           <div className="card-row">
                             <span className="card-label">RANK:</span>
-                            <div style={{ width: "30px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                            <div className="w-8 h-4 bg-[#1a1a1a] animate-pulse"></div>
                           </div>
                           <div className="card-row">
                             <span className="card-label">COIN:</span>
                             <div className="d-flex align-items-center gap-2">
-                              <div style={{ width: "24px", height: "24px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
-                              <div style={{ width: "60px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                              <div className="w-6 h-6 bg-[#1a1a1a] animate-pulse"></div>
+                              <div className="w-16 h-4 bg-[#1a1a1a] animate-pulse"></div>
                             </div>
                           </div>
                           <div className="card-row">
                             <span className="card-label">NET INFLOW:</span>
-                            <div style={{ width: "50px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                            <div className="w-12 h-4 bg-[#1a1a1a] animate-pulse"></div>
                           </div>
                           <div className="card-row">
                             <span className="card-label">WHALE:</span>
-                            <div style={{ width: "40px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                            <div className="w-10 h-4 bg-[#1a1a1a] animate-pulse"></div>
                           </div>
                           <div className="card-row">
                             <span className="card-label">MARKET CAP:</span>
-                            <div style={{ width: "60px", height: "14px", borderRadius: "4px", background: "#1a1a1a", animation: "shimmer 3s infinite linear", backgroundSize: "200% 100%", backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)" }}></div>
+                            <div className="w-16 h-4 bg-[#1a1a1a] animate-pulse"></div>
                           </div>
                         </div>
                       ))

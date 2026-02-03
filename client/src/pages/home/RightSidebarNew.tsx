@@ -1267,28 +1267,8 @@ const RightSidebarNew = ({
                       <div className="amount-box">
                         {isLoadingQuote || isLoading ? (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                            <div
-                              style={{
-                                background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                                backgroundSize: '200% 100%',
-                                animation: 'shimmer 4s infinite linear',
-                                borderRadius: '4px',
-                                height: '28px',
-                                width: '140px'
-                              }}
-                              aria-hidden="true"
-                            />
-                            <div
-                              style={{
-                                background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                                backgroundSize: '200% 100%',
-                                animation: 'shimmer 4s infinite linear',
-                                borderRadius: '4px',
-                                height: '14px',
-                                width: '80px'
-                              }}
-                              aria-hidden="true"
-                            />
+                            <div className="h-7 w-36 bg-[#1a1a1a] animate-pulse" />
+                            <div className="h-4 w-20 bg-[#1a1a1a] animate-pulse" />
                           </div>
                         ) : (
                           <>
@@ -1630,38 +1610,10 @@ const RightSidebarNew = ({
               <div className="coin-row" key={`skeleton-${i}`}>
                 <div className="coin-left">
                   <span className="rank" style={{ opacity: 0.3 }}>#{i + 1}</span>
-                  <div
-                    className="coin-circle"
-                    style={{
-                      backgroundColor: '#1a1a1a',
-                      animation: 'shimmer 4s infinite linear',
-                      background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                      backgroundSize: '200% 100%',
-                      border: 'none',
-                      flexShrink: 0
-                    }}
-                  />
+                  <div className="coin-circle bg-[#1a1a1a] animate-pulse" style={{ border: 'none', flexShrink: 0, background: '#1a1a1a' }} />
                   <div className="coin-info" style={{ gap: '6px' }}>
-                    <div
-                      style={{
-                        height: '14px',
-                        width: '80px',
-                        borderRadius: '0',
-                        background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                        backgroundSize: '200% 100%',
-                        animation: 'shimmer 2s infinite linear'
-                      }}
-                    />
-                    <div
-                      style={{
-                        height: '10px',
-                        width: '50px',
-                        borderRadius: '0',
-                        background: 'linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
-                        backgroundSize: '200% 100%',
-                        animation: 'shimmer 2s infinite linear'
-                      }}
-                    />
+                    <div className="h-4 w-20 bg-[#1a1a1a] animate-pulse" />
+                    <div className="h-3 w-12 bg-[#1a1a1a] animate-pulse" />
                   </div>
                 </div>
                 <button

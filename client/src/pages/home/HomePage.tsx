@@ -2730,44 +2730,40 @@ const HomePage = () => {
                             className="w-14 h-14 rounded-full flex-shrink-0 border-2 border-[#2A2A2D]"
                             onError={(e) => { e.currentTarget.src = DefaultTokenImage }}
                           />
-                          <div className="flex flex-col gap-1.5">
-                            {/* Whale Name in Cyan */}
-                            <h4 className="text-[#00D9AC] font-bold text-sm uppercase tracking-wide">
+                          <div className="grid grid-rows-3 h-14 flex-1">
+                            {/* TOP: Whale Name */}
+                            <h4 className="text-[#00D9AC] font-bold text-sm uppercase tracking-wide leading-none self-start">
                               {tx.whaleTokenSymbol}
                             </h4>
 
-                            {/* Tags Row */}
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
-                                <span key={i} className="px-2 py-0.5 bg-[#2A2A2D] text-[9px] text-gray-300 rounded uppercase tracking-wide font-medium">
-                                  {tag}
-                                </span>
-                              ))}
-                              {(tx.whaleLabel || []).length > 2 && (
-                                <span className="px-2 py-0.5 bg-[#2A2A2D] text-[9px] text-gray-400 rounded font-medium">
-                                  +{(tx.whaleLabel || []).length - 2}
-                                </span>
-                              )}
-                            </div>
+                            {/* MIDDLE: Tags (if exist) OR Amount (if no tags) */}
+                            {(!tx.whaleLabel || tx.whaleLabel.length === 0) ? (
+                              <span className={`text-sm font-bold uppercase leading-none self-center ${tx.type === "sell" ? "text-[#EF4444]" : "text-[#22C55E]"}`}>
+                                {tx.type === "sell" ? "SOLD" : "BOUGHT"} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-1.5 self-center">
+                                {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
+                                  <span key={i} className="px-2 py-0.5 bg-[#2A2A2D] text-[9px] text-gray-300 rounded uppercase tracking-wide font-medium leading-none">
+                                    {tag}
+                                  </span>
+                                ))}
+                                {(tx.whaleLabel || []).length > 2 && (
+                                  <span className="px-2 py-0.5 bg-[#2A2A2D] text-[9px] text-gray-400 rounded font-medium leading-none">
+                                    +{(tx.whaleLabel || []).length - 2}
+                                  </span>
+                                )}
+                              </div>
+                            )}
 
-                            {/* BUY/SELL Button with Arrow */}
-                            <div className="flex items-center gap-2 mt-1">
-                              <button
-                                className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold uppercase tracking-wide ${tx.type === "sell"
-                                  ? "bg-[#EF4444]/20 text-[#EF4444] border border-[#EF4444]/30"
-                                  : "bg-[#22C55E]/20 text-[#22C55E] border border-[#22C55E]/30"
-                                  }`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <span className="text-lg leading-none">{tx.type === "sell" ? "→" : "→"}</span>
-                                {tx.type.toUpperCase()}
-                              </button>
-                            </div>
-
-                            {/* Transaction Amount */}
-                            <span className={`text-sm font-bold uppercase ${tx.type === "sell" ? "text-[#EF4444]" : "text-[#22C55E]"}`}>
-                              {tx.type === "sell" ? "SOLD" : "BOUGHT"} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </span>
+                            {/* BOTTOM: Amount (if tags) OR Empty (if no tags) */}
+                            {(!tx.whaleLabel || tx.whaleLabel.length === 0) ? (
+                              <div className="self-end"></div>
+                            ) : (
+                              <span className={`text-sm font-bold uppercase leading-none self-end ${tx.type === "sell" ? "text-[#EF4444]" : "text-[#22C55E]"}`}>
+                                {tx.type === "sell" ? "SOLD" : "BOUGHT"} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </span>
+                            )}
                           </div>
                         </div>
 
