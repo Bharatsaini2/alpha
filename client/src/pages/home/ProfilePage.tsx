@@ -172,23 +172,30 @@ function ProfilePage() {
               <div className="alpha-profile-card mb-3">
                 <div className="alpha-profile-title-bx nw-kol-profile">
                   <div>
-                    <h6>Telegram account</h6>
+                    <h6>TELEGRAM ALERTS</h6>
                   </div>
 
                   <div>
                     <button
-                      className="btn btn-primary btn-sm"
+                      className="quick-nw-btn"
                       onClick={() => validateAccess(() => navigate('/telegram-subscription'))}
                     >
-                      Connect Telegram
+                      CONNECT
                     </button>
                   </div>
                 </div>
 
                 <div className="alpha-profile-content nw-kol-profile">
-                  <div className="text-center py-3">
-                    <p className="text-muted">No Telegram account connected</p>
-                    <p className="small">Connect to receive whale alerts</p>
+                  <div style={{ padding: '12px', borderLeft: '3px solid #3d3d3d' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                      <div style={{ width: '6px', height: '6px', backgroundColor: '#df2a4e', borderRadius: '0' }}></div>
+                      <span style={{ color: '#8f8f8f', fontSize: '11px', textTransform: 'uppercase', fontWeight: '500', letterSpacing: '0.5px' }}>
+                        DISCONNECTED
+                      </span>
+                    </div>
+                    <p style={{ color: '#525252', fontSize: '10px', textTransform: 'uppercase', margin: '0', lineHeight: '120%' }}>
+                      CONNECT FOR ALERTS
+                    </p>
                   </div>
                 </div>
               </div>

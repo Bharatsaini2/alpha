@@ -66,7 +66,6 @@ function TopKOLCoinsPage() {
   const [marketCapFilter, setMarketCapFilter] = useState<string>("small")
   const [timeframeFilter, setTimeframeFilter] = useState<string>("24H")
   const [marketCapOpen, setMarketCapOpen] = useState(false)
-  const [marketCapTouched, setMarketCapTouched] = useState(false)
 
   // Sorting State
   const [sortConfig, setSortConfig] = useState<{
@@ -365,17 +364,24 @@ function TopKOLCoinsPage() {
       <section className="">
         <div className="row">
           <div className="col-lg-12 new-mobile-spacing">
-            <div className="last-refreshed-bx mb-2 d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center gap-2">
-                <h6>
-                  Last refreshed: <span className="refresh-title">
-                    {lastUpdatedTime ? <LastUpdatedTicker lastUpdated={lastUpdatedTime} format={formatTimeSinceUpdate} /> : "..."}
-                  </span>
-                </h6>
-              </div>
-              <a href="javascript:void(0)" className="refresh-btn" onClick={() => fetchTopCoinsData(true)}>
-                <TfiReload className={`reload-btn ${isRefreshing ? "spin-animation" : ""}`} /> Refresh
-              </a>
+            <div className="last-refreshed-bx mb-2">
+              <h6>
+                Last refreshed: <span className="refresh-title">
+                  {lastUpdatedTime ? <LastUpdatedTicker lastUpdated={lastUpdatedTime} format={formatTimeSinceUpdate} /> : "..."}
+                </span>
+              </h6>
+              <button
+                onClick={() => {
+                  setFilteringLoading(true);
+                  fetchTopCoinsData(true);
+                  // Keep skeleton for minimum time to show loading state
+                  setTimeout(() => setFilteringLoading(false), 1000);
+                }}
+                className="refresh-btn"
+                disabled={isRefreshing || filteringLoading}
+              >
+                <TfiReload className={`reload-btn ${(isRefreshing || filteringLoading) ? "animate-spin" : ""}`} /> Refresh
+              </button>
             </div>
 
             <div className="d-flex align-items-center justify-content-between gap-2 coin-mb-container">
@@ -395,8 +401,12 @@ function TopKOLCoinsPage() {
                     <a
                       className={`nav-link ${activeView === "chart" ? "active" : ""}`}
                       onClick={() => {
-                        setActiveView("chart")
-                        setActiveChartTab("inflow") // 🔥 auto active
+                        if (activeView !== "chart") {
+                          setFilteringLoading(true);
+                          setActiveView("chart");
+                          setActiveChartTab("inflow");
+                          setTimeout(() => setFilteringLoading(false), 600);
+                        }
                       }}
                       style={{ cursor: "pointer" }}
                     >
@@ -410,7 +420,13 @@ function TopKOLCoinsPage() {
                     <li className="nav-item">
                       <a
                         className={`nav-link ${activeChartTab === "inflow" ? "active" : ""}`}
-                        onClick={() => setActiveChartTab("inflow")}
+                        onClick={() => {
+                          if (activeChartTab !== "inflow") {
+                            setFilteringLoading(true);
+                            setActiveChartTab("inflow");
+                            setTimeout(() => setFilteringLoading(false), 600);
+                          }
+                        }}
                         style={{ cursor: "pointer" }}
                       >
                         Inflow
@@ -420,7 +436,13 @@ function TopKOLCoinsPage() {
                     <li className="nav-item">
                       <a
                         className={`nav-link ${activeChartTab === "outflow" ? "active" : ""}`}
-                        onClick={() => setActiveChartTab("outflow")}
+                        onClick={() => {
+                          if (activeChartTab !== "outflow") {
+                            setFilteringLoading(true);
+                            setActiveChartTab("outflow");
+                            setTimeout(() => setFilteringLoading(false), 600);
+                          }
+                        }}
                         style={{ cursor: "pointer" }}
                       >
                         Outflow
@@ -446,45 +468,45 @@ function TopKOLCoinsPage() {
                   </div>
                 </div>
 
-                <div className="d-flex align-items-center gap-3 market-container mob-market-box position-relative">
-                  <div className="position-relative">
+                <div className="d-flex align-items-center gap-3 market-container mob-market-box">
+                  <div className="relative">
                     <a
                       href="javascript:void(0)"
-                      className="plan-btn"
+                      className={`plan-btn ${marketCapOpen ? 'active' : ''}`}
                       onClick={() => setMarketCapOpen(!marketCapOpen)}
                       style={{ cursor: 'pointer', textDecoration: 'none' }}
                     >
-                      {marketCapTouched
-                        ? (marketCapFilter === "small" ? "Small Cap" : marketCapFilter === "medium" ? "Medium Cap" : "Large Cap")
-                        : "Market Cap"}
-                      <HiChevronDown />
+                      {marketCapFilter === 'small' ? 'Small Cap' : marketCapFilter === 'medium' ? 'Medium Cap' : 'Large Cap'} <HiChevronDown />
                     </a>
                     {marketCapOpen && (
                       <div className="subscription-dropdown-menu show" style={{ position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
                         <div className={`nw-subs-items ${marketCapFilter === "small" ? "active" : ""}`} onClick={() => {
                           setMarketCapOpen(false);
-                          setMarketCapTouched(true);
-                          setFilteringLoading(true);
-                          setMarketCapFilter("small");
-                          setTimeout(() => setFilteringLoading(false), 500);
+                          if (marketCapFilter !== "small") {
+                            setFilteringLoading(true);
+                            setMarketCapFilter("small");
+                            setTimeout(() => setFilteringLoading(false), 1000);
+                          }
                         }}>
                           Small Cap
                         </div>
                         <div className={`nw-subs-items ${marketCapFilter === "medium" ? "active" : ""}`} onClick={() => {
                           setMarketCapOpen(false);
-                          setMarketCapTouched(true);
-                          setFilteringLoading(true);
-                          setMarketCapFilter("medium");
-                          setTimeout(() => setFilteringLoading(false), 500);
+                          if (marketCapFilter !== "medium") {
+                            setFilteringLoading(true);
+                            setMarketCapFilter("medium");
+                            setTimeout(() => setFilteringLoading(false), 1000);
+                          }
                         }}>
                           Medium Cap
                         </div>
                         <div className={`nw-subs-items ${marketCapFilter === "large" ? "active" : ""}`} onClick={() => {
                           setMarketCapOpen(false);
-                          setMarketCapTouched(true);
-                          setFilteringLoading(true);
-                          setMarketCapFilter("large");
-                          setTimeout(() => setFilteringLoading(false), 500);
+                          if (marketCapFilter !== "large") {
+                            setFilteringLoading(true);
+                            setMarketCapFilter("large");
+                            setTimeout(() => setFilteringLoading(false), 1000);
+                          }
                         }}>
                           Large Cap
                         </div>
@@ -494,16 +516,27 @@ function TopKOLCoinsPage() {
 
                   <div className="time-filter">
                     {["4H", "12H", "24H", "1W"].map((time) => (
-                      <a
-                        key={time}
-                        href="#"
-                        className={`time-item ${timeframeFilter === time ? "active" : ""}`}
-                        onClick={(e) => { e.preventDefault(); setTimeframeFilter(time); }}
-                      >
-                        {time}
-                      </a>
+                      <>
+                        <a
+                          key={time}
+                          href="#"
+                          className={`time-item ${timeframeFilter === time ? "active" : ""}`}
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            if (timeframeFilter !== time) {
+                              setFilteringLoading(true);
+                              setTimeframeFilter(time); 
+                              setTimeout(() => setFilteringLoading(false), 1000);
+                            } else {
+                              setTimeframeFilter(time);
+                            }
+                          }}
+                        >
+                          {time}
+                        </a>
+                        {time !== "1W" && <span className="divider">|</span>}
+                      </>
                     ))}
-                    {/* Add dividers if needed like in reference, but CSS might handle it */}
                   </div>
                 </div>
               </div>
@@ -556,7 +589,7 @@ function TopKOLCoinsPage() {
                       </thead>
 
                       <tbody>
-                        {(loading || filteringLoading) && filteredCoins.length === 0 ? (
+                        {(loading || filteringLoading) ? (
                           // Loading Skeleton
                           Array.from({ length: 5 }).map((_, i) => (
                             <tr key={`skeleton-${i}`} className="main-row">
@@ -793,7 +826,7 @@ function TopKOLCoinsPage() {
 
                   {/* Mobile Card View */}
                   <div className="mobile-coin-view">
-                    {(loading || filteringLoading) && filteredCoins.length === 0 ? (
+                    {(loading || filteringLoading) ? (
                       // Mobile Skeleton
                       Array.from({ length: 5 }).map((_, i) => (
                         <div key={`mobile-skeleton-${i}`} className="mobile-coin-card">

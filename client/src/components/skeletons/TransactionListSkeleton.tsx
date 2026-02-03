@@ -11,7 +11,7 @@ const ShimmerDiv = ({ className, style }: { className?: string; style?: React.CS
         style={{
             ...style,
             background: "#1a1a1a",
-            animation: "shimmer 6s infinite linear",
+            animation: "shimmer 1.2s ease-in-out infinite",
             backgroundSize: "200% 100%",
             backgroundImage: "linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)",
         }}
@@ -19,76 +19,74 @@ const ShimmerDiv = ({ className, style }: { className?: string; style?: React.CS
 );
 
 const AlphaSkeletonItem = () => (
-    <div className="bg-[#111113] border border-[#2A2A2D] p-4 mb-3">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
-                <ShimmerDiv className="h-3 w-16" />
-                <ShimmerDiv className="h-3 w-24" />
-            </div>
-            <div className="flex items-center gap-2">
-                <ShimmerDiv className="h-6 w-20" />
-                <ShimmerDiv className="h-6 w-6" />
-                <ShimmerDiv className="h-6 w-6" />
+    <div className="mb-3 nw-custm-trade-bx" style={{ border: '1px solid #141414' }}>
+        {/* Header Section */}
+        <div className="d-flex align-items-center justify-content-between nw-btm-brd" style={{ borderBottom: '1px solid #141414', padding: '8px', backgroundColor: '#0a0a0a', minHeight: '40px' }}>
+            <div style={{ width: '60px', height: '12px', backgroundColor: '#1a1a1a' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '100px', height: '14px', backgroundColor: '#1a1a1a' }}></div>
+                <div style={{ width: '70px', height: '24px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
+                <div style={{ width: '24px', height: '24px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
+                <div style={{ width: '24px', height: '24px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
             </div>
         </div>
 
-        {/* Body */}
-        <div className="flex items-center justify-between">
-            {/* Left Column */}
-            <div className="flex items-center gap-4 flex-1">
-                <ShimmerDiv className="w-14 h-14 flex-shrink-0" />
-                <div className="flex flex-col gap-2">
-                    <ShimmerDiv className="h-4 w-20" />
-                    <div className="flex gap-1">
-                        <ShimmerDiv className="h-3 w-12" />
-                        <ShimmerDiv className="h-3 w-12" />
-                    </div>
-                    <ShimmerDiv className="h-4 w-24" />
-                    <ShimmerDiv className="h-4 w-32" />
-                </div>
+        {/* Main Card Section */}
+        <div className="custom-card" style={{ background: '#0a0a0a', color: '#fff', gap: '10px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', minHeight: '80px' }}>
+            {/* Left: Avatar */}
+            <div className="left-item-bx" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
+                <div style={{ width: '64px', height: '64px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
+                <div style={{ flex: 1 }}></div>
             </div>
 
-            {/* Right Column */}
-            <div className="flex items-center gap-4">
-                <div className="flex flex-col items-end gap-2">
-                    <ShimmerDiv className="h-4 w-16" />
-                    <ShimmerDiv className="h-3 w-24" />
-                    <ShimmerDiv className="h-3 w-32" />
+            {/* Center: BUY/SELL */}
+            <div className="sell-trade-bx" style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, justifyContent: 'center' }}>
+                <div style={{ width: '72px', height: '24px', backgroundColor: '#1a1a1a' }}></div>
+            </div>
+
+            {/* Right: Token Image */}
+            <div className="right-info" style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                <div style={{ flex: 1 }}></div>
+                <div className="right-img" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', flexShrink: 0 }}>
+                    <div style={{ width: '64px', height: '64px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
                 </div>
-                <ShimmerDiv className="w-14 h-14 flex-shrink-0" />
             </div>
         </div>
     </div>
 );
 
 const KOLSkeletonItem = () => (
-    <div className="custom-card relative overflow-hidden flex items-center justify-between p-4 mb-3" style={{ minHeight: '100px', background: '#111113', border: '1px solid #2A2A2D', borderRadius: '0' }}>
-        <div className="left-item-bx" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <ShimmerDiv style={{ width: '60px', height: '60px', borderRadius: '0', flexShrink: 0 }} />
-            <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <ShimmerDiv style={{ height: '16px', width: '120px', borderRadius: '0' }} />
-                <ShimmerDiv style={{ height: '12px', width: '90px', borderRadius: '0' }} />
-                <div style={{ display: 'flex', gap: '5px' }}>
-                    <ShimmerDiv style={{ height: '14px', width: '50px', borderRadius: '0' }} />
-                    <ShimmerDiv style={{ height: '14px', width: '50px', borderRadius: '0' }} />
+    <div className="mb-3 nw-custm-trade-bx" style={{ border: '1px solid #141414' }}>
+        {/* Header Section */}
+        <div className="d-flex align-items-center justify-content-between nw-btm-brd" style={{ borderBottom: '1px solid #141414', padding: '8px', backgroundColor: '#0a0a0a', minHeight: '40px' }}>
+            <div style={{ width: '60px', height: '12px', backgroundColor: '#1a1a1a' }}></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '100px', height: '14px', backgroundColor: '#1a1a1a' }}></div>
+                <div style={{ width: '70px', height: '24px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
+                <div style={{ width: '24px', height: '24px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
+                <div style={{ width: '24px', height: '24px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
+            </div>
+        </div>
+
+        {/* Main Card Section */}
+        <div className="custom-card" style={{ background: '#0a0a0a', color: '#fff', gap: '10px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px', minHeight: '80px' }}>
+            {/* Left: Avatar */}
+            <div className="left-item-bx" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
+                <div style={{ width: '64px', height: '64px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
+                <div style={{ flex: 1 }}></div>
+            </div>
+
+            {/* Center: BUY/SELL */}
+            <div className="sell-trade-bx" style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, justifyContent: 'center' }}>
+                <div style={{ width: '72px', height: '24px', backgroundColor: '#1a1a1a' }}></div>
+            </div>
+
+            {/* Right: Token Image */}
+            <div className="right-info" style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                <div style={{ flex: 1 }}></div>
+                <div className="right-img" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', flexShrink: 0 }}>
+                    <div style={{ width: '64px', height: '64px', backgroundColor: '#1a1a1a', border: '1px solid #3d3d3d' }}></div>
                 </div>
-                <ShimmerDiv style={{ height: '16px', width: '100px', borderRadius: '0' }} />
-            </div>
-        </div>
-
-        <div className="sell-trade-bx hidden md:block" style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
-            <ShimmerDiv style={{ width: '72px', height: '24px', borderRadius: '0' }} />
-        </div>
-
-        <div className="right-info text-end" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <div className="left-crd-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                <ShimmerDiv style={{ height: '16px', width: '60px', borderRadius: '0' }} />
-                <ShimmerDiv style={{ height: '12px', width: '100px', borderRadius: '0' }} />
-                <ShimmerDiv style={{ height: '10px', width: '140px', borderRadius: '0' }} />
-            </div>
-            <div className="right-img">
-                <ShimmerDiv style={{ width: '64px', height: '64px', borderRadius: '0' }} />
             </div>
         </div>
     </div>
@@ -96,11 +94,11 @@ const KOLSkeletonItem = () => (
 
 const TransactionListSkeleton: React.FC<TransactionListSkeletonProps> = ({ variant = 'alpha', count = 5 }) => {
     return (
-        <>
+        <div className="skeleton-container">
             {Array.from({ length: count }).map((_, i) => (
                 variant === 'alpha' ? <AlphaSkeletonItem key={i} /> : <KOLSkeletonItem key={i} />
             ))}
-        </>
+        </div>
     );
 };
 

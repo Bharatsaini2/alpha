@@ -1,0 +1,285 @@
+/* Geist Mono Font - loaded via Google Fonts CDN in index.html */
+
+/* Design System Color Variables */
+:root {
+  --text-primary: #FFFFFF;
+  --text-secondary: #888888;
+  --text-muted: #555555;
+  --text-accent: #00D9AC;
+  --text-positive: #22C55E;
+  --text-negative: #EF4444;
+  --bg-card: #161618;
+  --bg-dark: #111113;
+  --border-color: #2A2A2D;
+}
+
+/* Set Geist Mono as default font */
+* {
+  font-family:
+    "Geist Mono",
+    "Courier New",
+    monospace,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
+    sans-serif;
+}
+
+/* Ensure font-weight classes work with Geist Mono */
+.font-light {
+  font-weight: 300 !important;
+  font-family: "Geist Mono", monospace !important;
+}
+
+.font-normal {
+  font-weight: 400 !important;
+  font-family: "Geist Mono", monospace !important;
+}
+
+.font-medium {
+  font-weight: 500 !important;
+  font-family: "Geist Mono", monospace !important;
+}
+
+.font-semibold {
+  font-weight: 600 !important;
+  font-family: "Geist Mono", monospace !important;
+}
+
+.font-bold {
+  font-weight: 700 !important;
+  font-family: "Geist Mono", monospace !important;
+}
+
+body {
+  font-family:
+    "Geist Mono",
+    "Courier New",
+    monospace,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    "Roboto",
+    "Oxygen",
+    "Ubuntu",
+    "Cantarell",
+    "Fira Sans",
+    "Droid Sans",
+    "Helvetica Neue",
+    sans-serif;
+}
+
+.glass-radio-group {
+  background: rgba(26, 26, 30, 0.8);
+  display: flex;
+  position: relative;
+  height: 48px;
+  border-radius: 1rem;
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0px 4px 12px 0px #00000026,
+    -1px -1px 6px 0px #0000004d inset,
+    1px 1px 4px 0px #ffffff33 inset;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.glass-radio-group input {
+  display: none;
+}
+
+.glass-radio-group label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  font-size: 14px;
+  padding: 0.8rem 1.6rem;
+  cursor: pointer;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: white;
+  position: relative;
+  z-index: 2;
+  transition: color 0.3s ease-in-out;
+}
+
+.glass-radio-group label:hover {
+  color: white;
+}
+
+.glass-radio-group input:checked+label {
+  color: #fff;
+}
+
+.glass-glider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(100% / 3);
+  border-radius: 1rem;
+  z-index: 1;
+  transition:
+    transform 0.5s cubic-bezier(0.37, 1.95, 0.66, 0.56),
+    background 0.4s ease-in-out,
+    box-shadow 0.4s ease-in-out;
+  background: #ffffff;
+  opacity: 0.6;
+}
+
+/* All */
+#glass-all:checked~.glass-glider,
+#glass-desktop-all:checked~.glass-glider {
+  transform: translateX(0%) !important;
+  background: linear-gradient(135deg, #c0c0c055, #ffffff) !important;
+  opacity: 0.6 !important;
+}
+
+/* Ensure All state is properly reset when no radio is checked */
+.glass-radio-group:not(:has(input:checked)) .glass-glider {
+  transform: translateX(0%) !important;
+  background: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+/* Buy */
+#glass-buy:checked~.glass-glider,
+#glass-desktop-buy:checked~.glass-glider {
+  transform: translateX(100%) !important;
+  background: linear-gradient(135deg, #4ade8055, #22c55e) !important;
+  opacity: 0.9 !important;
+}
+
+/* Sell */
+#glass-sell:checked~.glass-glider,
+#glass-desktop-sell:checked~.glass-glider {
+  transform: translateX(200%) !important;
+  background: linear-gradient(135deg, #f8717155, #ef4444) !important;
+  opacity: 0.9 !important;
+}
+
+/* Hide number input spinners (up/down arrows) */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  /* Firefox */
+  appearance: textfield;
+  /* Standard property */
+}
+
+.rel-map.rel-map-ready {
+  background-color: #000000 !important;
+}
+
+.rel-map.rel-map-ready canvas {
+  background-color: #000000 !important;
+}
+
+.create-account-box {
+  position: relative;
+  border-radius: 20px;
+  background: #111113;
+  /* your box background */
+  padding: 2rem;
+  z-index: 1;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.create-account-box::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: 20px;
+  background: linear-gradient(139.37deg,
+      rgba(237, 237, 229, 0.45) 3.33%,
+      rgba(82, 78, 70, 0.66) 99.12%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: -1;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Container that holds the logo */
+.shadow-top-sun {
+  position: relative;
+  /* create stacking context */
+  background: #fff;
+}
+
+/* Top-only radial shadow overlay */
+.shadow-top-sun::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: clamp(160px, 22vw, 360px);
+  /* how far the shadow descends */
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(120% 80% at 50% 0%,
+      /* ellipse width/height at top center */
+      rgba(0, 0, 0, 0.35) 0%,
+      /* darkest at the very top */
+      rgba(0, 0, 0, 0.2) 30%,
+      rgba(0, 0, 0, 0.1) 55%,
+      rgba(0, 0, 0, 0) 70%
+      /* fade to transparent */
+    );
+}
+
+/* Keep actual content above the overlay */
+.shadow-top-sun>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* Snapshot-only hard circle, resilient on Safari foreignObject */
+.snapshot-mode .rf-circle-wrap,
+.snapshot-mode .rf-circle-wrap img {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  clip-path: circle(50% at 50% 50%) !important;
+  -webkit-mask-image: radial-gradient(circle,
+      #000 99.9%,
+      transparent 100%) !important;
+  mask-image: radial-gradient(circle, #000 99.9%, transparent 100%) !important;
+}
+
+.ios-safari .rf-circle-wrap,
+.ios-safari .rf-circle-wrap img {
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  -webkit-clip-path: circle(50% at 50% 50%) !important;
+  clip-path: circle(50% at 50% 50%) !important;
+  -webkit-mask-image: radial-gradient(circle,
+      #000 99.9%,
+      transparent 100%) !important;
+  mask-image: radial-gradient(circle, #000 99.9%, transparent 100%) !important;
+}
+
+/* Snapshot mode: remove transforms/transitions to avoid Safari foreignObject bugs */
+.snapshot-mode .rf-circle-wrap,
+.snapshot-mode .rf-circle-wrap * {
+  transform: none !important;
+  transition: none !important;
+  will-change: auto !important;
+  box-shadow: none !important;
+}

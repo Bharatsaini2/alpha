@@ -13,6 +13,7 @@ import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import { useToast } from "../../contexts/ToastContext"
 import DefaultTokenImage from "../../assets/default_token.svg"
+import TwitterVerified from "../../assets/twitter_verified.svg"
 import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
@@ -1232,12 +1233,13 @@ const KOLFeedPage = () => {
                     <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>
                   </div>
                 ) : (
-                  transactions.map((tx: any, index: number) => (
-                    <div
-                      key={tx._id}
-                      ref={index === transactions.length - 1 ? lastTransactionRef : null}
-                      className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? 'animate-slide-up' : ''}`}
-                      onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
+                  <div className="transaction-container">
+                    {transactions.map((tx: any, index: number) => (
+                      <div
+                        key={tx._id}
+                        ref={index === transactions.length - 1 ? lastTransactionRef : null}
+                        className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? 'animate-slide-up' : ''}`}
+                        onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
                       style={{ cursor: 'pointer' }}
                       onAnimationEnd={() =>
                         setNewTxIds((prev) => {
@@ -1316,49 +1318,35 @@ const KOLFeedPage = () => {
                                 target.src = DefaultTokenImage;
                               }
                             }}
-                            style={{ borderRadius: '0', width: '60px', height: '60px', objectFit: 'cover', cursor: 'pointer' }}
+                            style={{ cursor: 'pointer' }}
                           />
-                          <div className="whale-content flex-grow-1">
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/kol-feed-profile/${tx.influencerUsername?.replace(/^@/, '')}`);
-                              }}
-                              style={{ cursor: 'pointer' }}
-                            >
-                              <h4 className="username mb-0">
-                                {tx.influencerName}
-                              </h4>
+                          <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                              <h4 className="username">{tx.influencerName}</h4>
+                              <img 
+                                src={TwitterVerified} 
+                                alt="verified" 
+                                style={{ width: '14px', height: '14px', flexShrink: 0 }}
+                              />
+                            </div>
+                            {/* Twitter handle in place of tags */}
+                            <div className="tags" style={{ marginBottom: '4px' }}>
                               <a
                                 href={`https://x.com/${tx.influencerUsername?.replace(/^@/, '')}`}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="d-flex align-items-center gap-2 mt-1"
+                                className="tag-title"
                                 style={{
-                                  backgroundColor: '#2A2A2D',
-                                  padding: '4px 8px',
-                                  width: 'fit-content',
                                   textDecoration: 'none',
-                                  borderRadius: '0px'
+                                  color: '#8f8f8f'
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <FaXTwitter style={{ fontSize: '11px', color: '#9CA3AF' }} />
-                                <span style={{ fontSize: '12px', color: '#9CA3AF', textTransform: 'uppercase' }}>
-                                  @{tx.influencerUsername?.replace(/^@/, '')}
-                                </span>
+                                @{tx.influencerUsername?.replace(/^@/, '')}
                               </a>
                             </div>
-                            <div className="tags">
-                              {(tx.whaleLabel || []).slice(0, 2).map((tag: string, i: number) => (
-                                <span key={i} className="tag-title">{tag}</span>
-                              ))}
-                              {(tx.whaleLabel || []).length > 2 && (
-                                <span className="tag-title">+{(tx.whaleLabel || []).length - 2}</span>
-                              )}
-                            </div>
-                            <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`}>
-                              {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ marginTop: 'auto' }}>
+                              {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                           </div>
                         </div>
@@ -1391,7 +1379,8 @@ const KOLFeedPage = () => {
                         </div>
                       </div>
                     </div>
-                  ))
+                  ))}
+                  </div>
                 )}
                 {/* Loading more indicator */}
                 {isLoadingMore && (

@@ -302,10 +302,20 @@ function TopCoinsPage() {
   }
 
   const getCoinTrades = (coin: TopCoin): Trade[] => {
-    if (!coin.chartData) return []
-    return coin.chartData.flatMap(point => point.trades)
+    if (!coin.chartData || coin.chartData.length === 0) {
+      return []
+    }
+    
+    // Get all trades from all chart data points
+    const allTrades = coin.chartData.flatMap(point => point.trades || [])
+    
+    // Filter out invalid trades and sort by timestamp (newest first)
+    const validTrades = allTrades
+      .filter(trade => trade && trade.timestamp && trade.type && trade.amount)
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 10)
+      .slice(0, 10) // Show only the 10 most recent trades
+    
+    return validTrades
   }
 
   return (
@@ -320,11 +330,16 @@ function TopCoinsPage() {
                 </span>
               </h6>
               <button
-                onClick={() => fetchTopCoinsData(true)}
+                onClick={() => {
+                  setFilteringLoading(true);
+                  fetchTopCoinsData(true);
+                  // Keep skeleton for minimum time to show loading state
+                  setTimeout(() => setFilteringLoading(false), 1000);
+                }}
                 className="refresh-btn"
-                disabled={isRefreshing}
+                disabled={isRefreshing || filteringLoading}
               >
-                <TfiReload className={`reload-btn ${isRefreshing ? "animate-spin" : ""}`} /> Refresh
+                <TfiReload className={`reload-btn ${(isRefreshing || filteringLoading) ? "animate-spin" : ""}`} /> Refresh
               </button>
             </div>
 
@@ -345,8 +360,12 @@ function TopCoinsPage() {
                     <a
                       className={`nav-link ${activeView === "chart" ? "active" : ""}`}
                       onClick={() => {
-                        setActiveView("chart")
-                        setActiveChartTab("inflow")
+                        if (activeView !== "chart") {
+                          setFilteringLoading(true);
+                          setActiveView("chart");
+                          setActiveChartTab("inflow");
+                          setTimeout(() => setFilteringLoading(false), 600);
+                        }
                       }}
                       style={{ cursor: "pointer" }}
                     >
@@ -360,7 +379,13 @@ function TopCoinsPage() {
                     <li className="nav-item">
                       <a
                         className={`nav-link ${activeChartTab === "inflow" ? "active" : ""}`}
-                        onClick={() => setActiveChartTab("inflow")}
+                        onClick={() => {
+                          if (activeChartTab !== "inflow") {
+                            setFilteringLoading(true);
+                            setActiveChartTab("inflow");
+                            setTimeout(() => setFilteringLoading(false), 600);
+                          }
+                        }}
                         style={{ cursor: "pointer" }}
                       >
                         Inflow
@@ -370,7 +395,13 @@ function TopCoinsPage() {
                     <li className="nav-item">
                       <a
                         className={`nav-link ${activeChartTab === "outflow" ? "active" : ""}`}
-                        onClick={() => setActiveChartTab("outflow")}
+                        onClick={() => {
+                          if (activeChartTab !== "outflow") {
+                            setFilteringLoading(true);
+                            setActiveChartTab("outflow");
+                            setTimeout(() => setFilteringLoading(false), 600);
+                          }
+                        }}
                         style={{ cursor: "pointer" }}
                       >
                         Outflow
@@ -400,7 +431,7 @@ function TopCoinsPage() {
                   <div className="relative">
                     <a
                       href="javascript:void(0)"
-                      className="plan-btn"
+                      className={`plan-btn ${marketCapOpen ? 'active' : ''}`}
                       onClick={() => setMarketCapOpen(!marketCapOpen)}
                       style={{ cursor: 'pointer', textDecoration: 'none' }}
                     >
@@ -410,25 +441,31 @@ function TopCoinsPage() {
                       <div className="subscription-dropdown-menu show" style={{ position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
                         <div className={`nw-subs-items ${marketCapFilter === 'small' ? 'active' : ''}`} onClick={() => {
                           setMarketCapOpen(false);
-                          setFilteringLoading(true);
-                          setMarketCapFilter('small');
-                          setTimeout(() => setFilteringLoading(false), 500);
+                          if (marketCapFilter !== 'small') {
+                            setFilteringLoading(true);
+                            setMarketCapFilter('small');
+                            setTimeout(() => setFilteringLoading(false), 1000);
+                          }
                         }}>
                           Small Cap
                         </div>
                         <div className={`nw-subs-items ${marketCapFilter === 'medium' ? 'active' : ''}`} onClick={() => {
                           setMarketCapOpen(false);
-                          setFilteringLoading(true);
-                          setMarketCapFilter('medium');
-                          setTimeout(() => setFilteringLoading(false), 500);
+                          if (marketCapFilter !== 'medium') {
+                            setFilteringLoading(true);
+                            setMarketCapFilter('medium');
+                            setTimeout(() => setFilteringLoading(false), 1000);
+                          }
                         }}>
                           Medium Cap
                         </div>
                         <div className={`nw-subs-items ${marketCapFilter === 'large' ? 'active' : ''}`} onClick={() => {
                           setMarketCapOpen(false);
-                          setFilteringLoading(true);
-                          setMarketCapFilter('large');
-                          setTimeout(() => setFilteringLoading(false), 500);
+                          if (marketCapFilter !== 'large') {
+                            setFilteringLoading(true);
+                            setMarketCapFilter('large');
+                            setTimeout(() => setFilteringLoading(false), 1000);
+                          }
                         }}>
                           Large Cap
                         </div>
@@ -442,7 +479,15 @@ function TopCoinsPage() {
                         <a
                           href="#"
                           className={`time-item ${timeframeFilter === time ? 'active' : ''}`}
-                          onClick={(e) => { e.preventDefault(); setTimeframeFilter(time); }}
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            if (timeframeFilter !== time) {
+                              setFilteringLoading(true);
+                              setTimeframeFilter(time);
+                              // Keep skeleton for minimum time to show loading state
+                              setTimeout(() => setFilteringLoading(false), 1000);
+                            }
+                          }}
                         >
                           {time}
                         </a>
@@ -501,7 +546,7 @@ function TopCoinsPage() {
                       </thead>
 
                       <tbody>
-                        {(loading || filteringLoading) && filteredCoins.length === 0 ? (
+                        {(loading || filteringLoading) ? (
                           // Loading Skeleton
                           Array.from({ length: 5 }).map((_, i) => (
                             <tr key={`skeleton-${i}`} className="main-row">
@@ -720,7 +765,7 @@ function TopCoinsPage() {
                                                         ${formatNumber(trade.amount)}
                                                       </span>
                                                     </td>
-                                                    <td>{new Date(trade.timestamp).toLocaleTimeString()}</td>
+                                                    <td>{new Date(trade.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
                                                   </tr>
                                                 ))
                                               )}
@@ -741,7 +786,7 @@ function TopCoinsPage() {
 
                   {/* Mobile Card View */}
                   <div className="mobile-coin-view">
-                    {(loading || filteringLoading) && filteredCoins.length === 0 ? (
+                    {(loading || filteringLoading) ? (
                       // Mobile Skeleton
                       Array.from({ length: 5 }).map((_, i) => (
                         <div key={`mobile-skeleton-${i}`} className="mobile-coin-card">
@@ -770,6 +815,8 @@ function TopCoinsPage() {
                           </div>
                         </div>
                       ))
+                    ) : filteredCoins.length === 0 ? (
+                      <div className="text-center py-4" style={{ color: '#8F8F8F' }}>No coins found</div>
                     ) : (
                       filteredCoins.map((coin) => (
                         <div key={coin.id} className="mobile-coin-card" onClick={() => toggleRow(coin.id)}>
