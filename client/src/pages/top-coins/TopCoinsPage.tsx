@@ -343,6 +343,17 @@ function TopCoinsPage() {
     setMobilePage(1)
   }, [marketCapFilter, timeframeFilter, searchQuery])
 
+  // Set default view based on screen size
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth >= 992) {
+        setMobileViewMode('list'); // Default to Table on Desktop
+      } else {
+        setMobileViewMode('card'); // Default to Card on Mobile
+      }
+    }
+  }, []);
+
   return (
     <>
       <section className="">
