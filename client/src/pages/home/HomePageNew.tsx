@@ -1881,7 +1881,7 @@ const HomePageNew = () => {
                                                             alt="whale"
                                                             onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
                                                         />
-                                                        <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px', justifyContent: 'space-between' }}>
+                                                        <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px', justifyContent: (tx.whaleLabel || []).length > 0 ? 'space-between' : 'flex-start', gap: (tx.whaleLabel || []).length > 0 ? '0' : '2px' }}>
                                                             {/* Top: Name */}
                                                             <h4 className="username" style={{ margin: 0, lineHeight: '1.2' }}>{tx.whaleTokenSymbol} Whale ({tx.whaleAddress?.slice(0, 4)}..) </h4>
 
@@ -1902,12 +1902,10 @@ const HomePageNew = () => {
                                                             )}
 
                                                             {/* Bottom: Amount OR Empty */}
-                                                            {((tx.whaleLabel || []).length > 0) ? (
+                                                            {((tx.whaleLabel || []).length > 0) && (
                                                                 <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ margin: 0, lineHeight: '1.2' }}>
                                                                     {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                 </div>
-                                                            ) : (
-                                                                <div></div>
                                                             )}
                                                         </div>
                                                     </div>

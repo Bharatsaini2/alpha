@@ -4394,12 +4394,5 @@ font-size: 16px;
   border-radius: 4px;
 }
 
-@media (max-width: 991px) {
-  .desktop-coin-table {
-    display: none !important;
-  }
-
-  .mobile-coin-view {
-    display: flex !important;
-  }
-}
+/* REMOVED: Media query that was hiding table and showing accordion on mobile
+   Now controlled by React conditional classes and mobile_cards.css */

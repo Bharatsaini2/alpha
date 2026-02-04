@@ -1,6 +1,7 @@
 "use client"
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { LuCopy } from "react-icons/lu"
 import { HiChevronDown, HiChevronUp, HiChevronUpDown } from "react-icons/hi2"
 import { faSearch } from "@fortawesome/free-solid-svg-icons"
 import { useState, useEffect, useCallback } from "react"
@@ -18,6 +19,7 @@ import { formatNumber } from "../../utils/FormatNumber"
 import DefaultTokenImage from "../../assets/default_token.svg"
 import { LastUpdatedTicker } from "../../components/TicketComponent"
 import { TokenInfo } from "../../components/swap/TokenSelectionModal"
+import "../../css/mobile_cards.css"
 
 const SOL_TOKEN: TokenInfo = {
   address: "So11111111111111111111111111111111111111112",
@@ -318,6 +320,29 @@ function TopCoinsPage() {
     return validTrades
   }
 
+  // Mobile View State
+  const [mobileViewMode, setMobileViewMode] = useState<'card' | 'list'>('card')
+  const [mobilePage, setMobilePage] = useState(1)
+  const ITEMS_PER_PAGE = 10
+
+  // Mobile Pagination Data
+  const mobileStartIndex = (mobilePage - 1) * ITEMS_PER_PAGE
+  const mobileEndIndex = mobileStartIndex + ITEMS_PER_PAGE
+  const mobilePaginatedCoins = filteredCoins.slice(mobileStartIndex, mobileEndIndex)
+  const totalMobilePages = Math.ceil(filteredCoins.length / ITEMS_PER_PAGE)
+
+  const handleMobilePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalMobilePages) {
+      setMobilePage(newPage)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  // Reset page when filters change
+  useEffect(() => {
+    setMobilePage(1)
+  }, [marketCapFilter, timeframeFilter, searchQuery])
+
   return (
     <>
       <section className="">
@@ -343,36 +368,43 @@ function TopCoinsPage() {
               </button>
             </div>
 
+
+            {/* Desktop/Mobile Header - Restyled via CSS for mobile */}
             <div className="d-flex align-items-center justify-content-between gap-2 coin-mb-container">
               <div className="d-flex align-items-center gap-3 new-mobile-tabing-bx">
-                <ul className="nav nav-tabs custom-tabs" role="tablist">
-                  <li className="nav-item">
-                    <a
-                      className={`nav-link ${activeView === "table" ? "active" : ""}`}
-                      onClick={() => setActiveView("table")}
-                      style={{ cursor: "pointer" }}
-                    >
-                      Table View
-                    </a>
-                  </li>
+                {/* Mobile Only: Single 3-option toggle (CARD | TABLE | CHART) */}
+                <div className="mobile-view-toggle">
+                  <button
+                    className={`mobile-toggle-btn ${mobileViewMode === 'card' ? 'active' : ''}`}
+                    onClick={() => {
+                      setMobileViewMode('card');
+                      setActiveView('table');
+                    }}
+                  >
+                    CARD
+                  </button>
+                  <button
+                    className={`mobile-toggle-btn ${mobileViewMode === 'list' && activeView === 'table' ? 'active' : ''}`}
+                    onClick={() => {
+                      setMobileViewMode('list');
+                      setActiveView('table');
+                    }}
+                  >
+                    TABLE
+                  </button>
+                  <button
+                    className={`mobile-toggle-btn ${activeView === 'chart' ? 'active' : ''}`}
+                    onClick={() => {
+                      setMobileViewMode('list');
+                      setActiveView('chart');
+                      setActiveChartTab('inflow');
+                    }}
+                  >
+                    CHART
+                  </button>
+                </div>
 
-                  <li className="nav-item">
-                    <a
-                      className={`nav-link ${activeView === "chart" ? "active" : ""}`}
-                      onClick={() => {
-                        if (activeView !== "chart") {
-                          setFilteringLoading(true);
-                          setActiveView("chart");
-                          setActiveChartTab("inflow");
-                          setTimeout(() => setFilteringLoading(false), 600);
-                        }
-                      }}
-                      style={{ cursor: "pointer" }}
-                    >
-                      Chart View
-                    </a>
-                  </li>
-                </ul>
+                {/* Desktop Toggle REMOVED - Using Unified 3-Way Toggle */}
 
                 {activeView === "chart" && (
                   <ul className="nav nav-tabs custom-tabs chart-sub-tabs">
@@ -502,7 +534,7 @@ function TopCoinsPage() {
             <div className="tab-content custom-tab-content">
               {activeView === "table" ? (
                 <>
-                  <div className="table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-coin-table">
+                  <div className={`table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-coin-table ${mobileViewMode === 'list' ? 'd-block' : 'd-none'}`}>
                     <table className="table crypto-table align-middle mb-0 crypto-sub-table">
                       <thead>
                         <tr>
@@ -784,8 +816,10 @@ function TopCoinsPage() {
                     </table>
                   </div>
 
-                  {/* Mobile Card View */}
-                  <div className="mobile-coin-view">
+                  {/* Mobile Card View - Shows when CARD VIEW is selected - VISIBLE ON DESKTOP TOO */}
+                  {/* Mobile Card View (Unified) - Visible on ALL Screens if mode is CARD */}
+                  <div className={`mobile-coin-view ${mobileViewMode === 'card' ? 'd-flex' : 'd-none'}`}>
+
                     {(loading || filteringLoading) ? (
                       // Mobile Skeleton
                       Array.from({ length: 5 }).map((_, i) => (
@@ -818,81 +852,230 @@ function TopCoinsPage() {
                     ) : filteredCoins.length === 0 ? (
                       <div className="text-center py-4" style={{ color: '#8F8F8F' }}>No coins found</div>
                     ) : (
-                      filteredCoins.map((coin) => (
-                        <div key={coin.id} className="mobile-coin-card" onClick={() => toggleRow(coin.id)}>
-                          <div className="card-row">
-                            <span className="card-label">RANK:</span>
-                            <span className="card-value">#{coin.rank}</span>
-                          </div>
-                          <div className="card-row">
-                            <span className="card-label">COIN:</span>
-                            <span className="card-value">
-                              <span className="coin-icon">
-                                <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '24px', height: '24px', borderRadius: '4px' }} />
-                              </span>
-                              {coin.symbol}
-                              <button
-                                className="tb-cpy-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleCopyTokenAddress(coin.tokenAddress)
-                                }}
-                              >
-                                <FaRegCopy />
-                              </button>
-                            </span>
-                          </div>
-                          <div className="card-row">
-                            <span className="card-label">NET INFLOW:</span>
-                            <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
-                              {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
-                            </span>
-                          </div>
-                          <div className="card-row">
-                            <span className="card-label">WHALE:</span>
-                            <span className="card-value">{coin.whaleCount}</span>
-                          </div>
-                          <div className="card-row">
-                            <span className="card-label">MARKET CAP:</span>
-                            <span className="card-value">${formatNumber(coin.marketCap)}</span>
-                          </div>
-                          {/* Expandable content for mobile can go here if needed, or we keep it simple for now */}
-                          {openRows[coin.id] && (
-                            <div className="mt-3 pt-3 border-top border-secondary">
-                              <div className="expand-tp-title mb-2">
-                                <p>whale ACTIVITY last {timeframeFilter}</p>
+                      <>
+                        {mobilePaginatedCoins.map((coin) => (
+                          mobileViewMode === 'card' ? (
+                            // CARD VIEW
+                            <div key={coin.id} className="mobile-coin-card" onClick={() => toggleRow(coin.id)}>
+                              <div className="card-row">
+                                <span className="card-label">RANK:</span>
+                                <span className="card-value">#{coin.rank}</span>
                               </div>
-                              <div className="whale-quick-buy mb-3" onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }} style={{ cursor: 'pointer' }}>
-                                QUICK BUY
+                              <div className="card-row">
+                                <span className="card-label">COIN:</span>
+                                <span className="card-value">
+                                  <span className="coin-icon">
+                                    <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
+                                  </span>
+                                  {coin.symbol}
+                                  <button
+                                    className="tb-cpy-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleCopyTokenAddress(coin.tokenAddress)
+                                    }}
+                                  >
+                                    <FaRegCopy />
+                                  </button>
+                                </span>
                               </div>
-                              {/* Simplified Stats for Mobile */}
-                              <div className="whale-stats-box">
-                                <div className="whale-stat-row">
-                                  <span className="whale-stat-label">BUYS:</span>
-                                  <p className="whale-stat-value green">+{formatNumber(coin.totalBuys)} ({coin.buyCount})</p>
-                                </div>
-                                <div className="whale-stat-row">
-                                  <span className="whale-stat-label">SELLS:</span>
-                                  <p className="whale-stat-value red">-{formatNumber(coin.totalSells)} ({coin.sellCount})</p>
-                                </div>
-                                <div className="whale-stat-row">
-                                  <span className="whale-stat-net">NET:</span>
-                                  <p className={`whale-stat-value ${coin.netInflow >= 0 ? 'green' : 'red'}`}>
-                                    {coin.netInflow >= 0 ? '+' : ''}{formatNumber(coin.netInflow)}
-                                  </p>
-                                </div>
+                              <div className="card-row">
+                                <span className="card-label">NET INFLOW:</span>
+                                <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
+                                  {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
+                                </span>
                               </div>
+                              <div className="card-row">
+                                <span className="card-label">WHALE:</span>
+                                <span className="card-value">{coin.whaleCount}</span>
+                              </div>
+                              <div className="card-row">
+                                <span className="card-label">MARKET CAP:</span>
+                                <span className="card-value">${formatNumber(coin.marketCap)}</span>
+                              </div>
+
+                              {/* Expandable content for mobile */}
+                              {openRows[coin.id] && (
+                                <div className="mt-3 pt-3 border-top border-secondary">
+                                  <div className="expand-tp-title mb-2">
+                                    <p>whale ACTIVITY last {timeframeFilter}</p>
+                                  </div>
+                                  <div className="whale-quick-buy mb-3" onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }} style={{ cursor: 'pointer' }}>
+                                    QUICK BUY
+                                  </div>
+                                  <div className="whale-stats-box">
+                                    <div className="whale-stat-row">
+                                      <span className="whale-stat-label">BUYS:</span>
+                                      <p className="whale-stat-value green">+{formatNumber(coin.totalBuys)} ({coin.buyCount})</p>
+                                    </div>
+                                    <div className="whale-stat-row">
+                                      <span className="whale-stat-label">SELLS:</span>
+                                      <p className="whale-stat-value red">-{formatNumber(coin.totalSells)} ({coin.sellCount})</p>
+                                    </div>
+                                    <div className="whale-stat-row">
+                                      <span className="whale-stat-label">NET:</span>
+                                      <p className={`whale-stat-value ${coin.netInflow >= 0 ? 'green' : 'red'}`}>
+                                        {formatNumber(coin.netInflow)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ) : (
+                            // TABLE VIEW (Similar to Card but condensed)
+                            <div key={coin.id} className="mobile-coin-card" style={{ gap: '6px', padding: '12px' }} onClick={() => toggleRow(coin.id)}>
+                              <div className="d-flex align-items-center justify-content-between">
+                                <div className="d-flex align-items-center gap-2">
+                                  {openRows[coin.id] ? <HiChevronUp size={14} color="#666" /> : <HiChevronDown size={14} color="#666" />}
+                                  <span className="card-value" style={{ fontSize: '14px' }}>#{coin.rank}</span>
+                                  <span className="card-value">
+                                    <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '18px', height: '18px', borderRadius: '4px' }} />
+                                    {coin.symbol}
+                                  </span>
+                                </div>
+                                <div className="d-flex align-items-center gap-2">
+                                  <button
+                                    className="tb-cpy-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleCopyTokenAddress(coin.tokenAddress)
+                                    }}
+                                  >
+                                    <FaRegCopy size={12} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Expandable content for Table View */}
+                              {openRows[coin.id] && (
+                                <div className="mt-2 pt-2 border-top border-secondary">
+                                  <div className="card-row">
+                                    <span className="card-label">NET INFLOW:</span>
+                                    <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
+                                      {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
+                                    </span>
+                                  </div>
+                                  <div className="card-row">
+                                    <span className="card-label">WHALE:</span>
+                                    <span className="card-value">{coin.whaleCount}</span>
+                                  </div>
+                                  <div className="card-row">
+                                    <span className="card-label">MARKET CAP:</span>
+                                    <span className="card-value">${formatNumber(coin.marketCap)}</span>
+                                  </div>
+                                  <div className="whale-quick-buy mt-2 mb-2" onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }} style={{ cursor: 'pointer', padding: '8px' }}>
+                                    QUICK BUY
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        ))}
+
+                        {/* Pagination Footer */}
+                        <div className="mobile-pagination">
+                          <button
+                            className="pagination-btn"
+                            disabled={mobilePage === 1}
+                            onClick={() => handleMobilePageChange(mobilePage - 1)}
+                          >
+                            &lt; PREVIOUS
+                          </button>
+
+                          <span>SHOWING {mobileStartIndex + 1}-{Math.min(mobileEndIndex, filteredCoins.length)} OUT OF {filteredCoins.length}</span>
+
+                          <button
+                            className="pagination-btn"
+                            disabled={mobilePage === totalMobilePages}
+                            onClick={() => handleMobilePageChange(mobilePage + 1)}
+                          >
+                            NEXT &gt;
+                          </button>
                         </div>
-                      ))
+                      </>
                     )}
                   </div>
                 </>
               ) : (
-                <div className="chart-view-container">
-                  <ReactApexChart options={options} series={series} type="line" height={420} />
-                </div>
+                <>
+                  {/* Desktop Chart - ApexCharts line graph - Show on Desktop if activeView is chart */}
+                  <div className={`chart-view-container d-none d-lg-block`}>
+                    <ReactApexChart options={options} series={series} type="line" height={420} />
+                  </div>
+
+                  {/* Mobile Chart - Horizontal bar chart - Show on Mobile if activeView is chart */}
+                  <div className={`mobile-chart-view d-lg-none`}>
+                    <div className="mobile-chart-header">
+                      <h4>WHALE NET {activeChartTab === 'inflow' ? 'INFLOW' : 'OUTFLOW'} WITH WHALE COUNT</h4>
+                      <div className="mobile-chart-legend">
+                        <span className={`legend-bar ${activeChartTab === 'inflow' ? 'green' : 'red'}`}></span>
+                        <span>NET {activeChartTab === 'inflow' ? 'INFLOW' : 'OUTFLOW'}</span>
+                        <span className="legend-dot"></span>
+                        <span>WHALE COUNT</span>
+                      </div>
+                    </div>
+
+                    <div className="mobile-chart-list">
+                      {filteredCoins.slice(0, 10).map((coin) => {
+                        // Use netInflow directly. If > 0 Green, < 0 Red.
+                        // Width is based on absolute value relative to max absolute value.
+                        const value = coin.netInflow;
+                        const absValue = Math.abs(value);
+
+                        // Calculate max absolute value in the current list for relative sizing
+                        const maxAbsValue = Math.max(...filteredCoins.slice(0, 10).map(c => Math.abs(c.netInflow)));
+
+                        const barWidth = maxAbsValue > 0 ? (absValue / maxAbsValue) * 100 : 0;
+                        const maxWhales = Math.max(...filteredCoins.slice(0, 10).map(c => c.whaleCount));
+                        const dotPosition = maxWhales > 0 ? (coin.whaleCount / maxWhales) * 100 : 0;
+
+                        // Determine color based on value sign
+                        const isPositive = value >= 0;
+
+                        return (
+                          <div key={coin.id} className="mobile-chart-coin">
+                            <div className="chart-coin-name">
+                              <span>{coin.symbol}</span>
+                              <button className="tb-cpy-btn" onClick={() => navigator.clipboard.writeText(coin.tokenAddress)}>
+                                <LuCopy />
+                              </button>
+                            </div>
+                            <div className="chart-bar-container">
+                              {/* Whale Line (Track) */}
+                              <div
+                                className="chart-whale-line"
+                                style={{ width: `${Math.min(dotPosition, 100)}%` }}
+                              ></div>
+                              {/* Colored Bar */}
+                              <div
+                                className={`chart-bar ${isPositive ? 'green' : 'red'}`}
+                                style={{ width: `${Math.min(barWidth, 100)}%` }}
+                              ></div>
+                              {/* Whale Dot */}
+                              <div
+                                className="chart-whale-dot"
+                                style={{ left: `${Math.min(dotPosition, 100)}%` }}
+                              ></div>
+                            </div>
+                            <div className="chart-values">
+                              <div className="chart-value-row">
+                                <span className="chart-label">NET INFLOW</span>
+                                <span className={`chart-amount ${isPositive ? 'green' : 'red'}`}>
+                                  ${value >= 1000 || value <= -1000 ? (value / 1000).toFixed(0) + 'K' : value.toFixed(0)} USD
+                                </span>
+                              </div>
+                              <div className="chart-value-row">
+                                <span className="chart-label">WHALE COUNT</span>
+                                <span className="chart-whale-count">{coin.whaleCount} {coin.whaleCount === 1 ? 'WHALE' : 'WHALES'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>

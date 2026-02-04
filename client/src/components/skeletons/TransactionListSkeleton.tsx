@@ -23,11 +23,8 @@ const AlphaSkeletonItem = () => (
             {/* Left: Avatar */}
             <div className="left-item-bx" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
                 <div style={{ width: '64px', height: '64px', border: '1px solid #3d3d3d' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, justifyContent: 'flex-start', height: '64px' }}>
-                    <div style={{ width: '120px', height: '16px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '100px', height: '14px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '80px', height: '12px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                </div>
+                {/* Skeleton lines removed as per request */}
+
             </div>
 
             {/* Center: BUY/SELL */}
@@ -37,11 +34,8 @@ const AlphaSkeletonItem = () => (
 
             {/* Right: Token Image */}
             <div className="right-info" style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, alignItems: 'flex-end', justifyContent: 'flex-start', height: '64px' }}>
-                    <div style={{ width: '120px', height: '16px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '100px', height: '14px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '80px', height: '12px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                </div>
+                {/* Right side skeleton lines removed */}
+
                 <div className="right-img" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', flexShrink: 0 }}>
                     <div style={{ width: '64px', height: '64px', border: '1px solid #3d3d3d' }} className="bg-[#1a1a1a] animate-pulse"></div>
                 </div>
@@ -68,11 +62,8 @@ const KOLSkeletonItem = () => (
             {/* Left: Avatar */}
             <div className="left-item-bx" style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', flex: 1 }}>
                 <div style={{ width: '64px', height: '64px', border: '1px solid #3d3d3d' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, justifyContent: 'flex-start', height: '64px' }}>
-                    <div style={{ width: '120px', height: '16px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '100px', height: '14px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '80px', height: '12px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                </div>
+                {/* Skeleton lines removed as per request */}
+
             </div>
 
             {/* Center: BUY/SELL */}
@@ -82,11 +73,8 @@ const KOLSkeletonItem = () => (
 
             {/* Right: Token Image */}
             <div className="right-info" style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1, alignItems: 'flex-end', justifyContent: 'flex-start', height: '64px' }}>
-                    <div style={{ width: '120px', height: '16px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '100px', height: '14px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                    <div style={{ width: '80px', height: '12px' }} className="bg-[#1a1a1a] animate-pulse"></div>
-                </div>
+                {/* Right side skeleton lines removed */}
+
                 <div className="right-img" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', flexShrink: 0 }}>
                     <div style={{ width: '64px', height: '64px', border: '1px solid #3d3d3d' }} className="bg-[#1a1a1a] animate-pulse"></div>
                 </div>

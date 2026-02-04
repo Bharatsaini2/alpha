@@ -1,62 +1,592 @@
-/* Mobile Coin Card Styles */
-.mobile-coin-view {
-    display: none;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.mobile-coin-card {
-    background: #0a0a0a;
-    border: 1px solid #292929;
-    border-radius: 4px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.card-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 13px;
-}
-
-.card-label {
-    color: #8f8f8f;
-    text-transform: uppercase;
-    font-weight: 500;
-    font-size: 12px;
-}
-
-.card-value {
-    color: #ebebeb;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.card-value.green-text {
-    color: #14904d;
-}
-
-.card-value.red-text {
-    color: #df2a4e;
-}
-
-.mobile-coin-icon {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-}
-
+/* ========== MOBILE HEADER LAYOUT ========== */
 @media (max-width: 991px) {
-    .desktop-coin-table {
+
+    /* Main header container - stack vertically */
+    .coin-mb-container {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding: 0 !important;
+    }
+
+    /* === ROW 1: SEARCH (Full Width) === */
+    .mob-search-bx {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        width: 100% !important;
+        order: 1 !important;
+    }
+
+    .custom-frm-bx {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .custom-frm-bx .form-control {
+        width: 100% !important;
+        background: #000 !important;
+        border: 1px solid #333 !important;
+        border-radius: 0px !important;
+        color: #fff !important;
+        text-transform: uppercase !important;
+        font-size: 12px !important;
+        padding: 10px 12px !important;
+    }
+
+    .searching-bx {
+        right: 10px !important;
+    }
+
+    /* === ROW 2: FILTERS (Market Cap + Timeframe) === */
+    .mob-market-box {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        width: 100% !important;
+        order: 2 !important;
+        gap: 10px !important;
+    }
+
+    .plan-btn {
+        background: #000 !important;
+        border: 1px solid #333 !important;
+        border-radius: 0px !important;
+        color: #fff !important;
+        padding: 8px 12px !important;
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    .time-filter {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    .time-filter .time-item {
+        color: #666 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+    }
+
+    .time-filter .time-item.active {
+        color: #fff !important;
+    }
+
+    /* === ROW 3: TOGGLES CONTAINER (Stacked vertically) === */
+    .new-mobile-tabing-bx {
+        width: 100% !important;
+        order: 3 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    /* LIST VIEW / CARD VIEW Toggle - Full width */
+    /* MOBILE TOGGLE STYLES REMOVED - NOW GLOBAL */
+
+    /* TABLE VIEW / CHART VIEW Tabs - Full width */
+    .custom-tabs {
+        display: flex !important;
+        width: 100% !important;
+        border: 1px solid #333 !important;
+        border-radius: 0px !important;
+        background: #1a1a1a !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .custom-tabs .nav-item {
+        flex: 1 !important;
+    }
+
+    .custom-tabs .nav-link {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 100% !important;
+        padding: 10px 0 !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        color: #8f8f8f !important;
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0px !important;
+    }
+
+    .custom-tabs .nav-link.active {
+        background: #333 !important;
+        color: #fff !important;
+    }
+
+    /* Style chart sub-tabs (INFLOW/OUTFLOW) for mobile */
+    .chart-sub-tabs {
+        display: flex !important;
+        width: 100% !important;
+        background: #1a1a1a !important;
+        border: 1px solid #333 !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 0 12px 0 !important;
+        height: 36px !important;
+    }
+
+    .chart-sub-tabs .nav-item {
+        flex: 1 !important;
+    }
+
+    .chart-sub-tabs .nav-link {
+        width: 100% !important;
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 8px !important;
+        font-size: 11px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: #666 !important;
+    }
+
+    .chart-sub-tabs .nav-link.active {
+        background: #333 !important;
+        color: #fff !important;
+    }
+
+    /* Hide desktop TABLE VIEW / CHART VIEW toggle on mobile - we use 3-option toggle instead */
+    .custom-tabs.d-none.d-lg-flex {
         display: none !important;
     }
 
+    /* Desktop table on mobile - scroll behavior only, visibility controlled by React */
+    .desktop-coin-table {
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+        width: 100% !important;
+    }
+
+    /* FORCE proper table display - override ALL responsive CSS */
+    .desktop-coin-table .crypto-table,
+    .desktop-coin-table .crypto-sub-table,
+    .desktop-coin-table table.table {
+        display: table !important;
+        width: auto !important;
+        min-width: 800px !important;
+        table-layout: auto !important;
+    }
+
+    .desktop-coin-table .crypto-table thead,
+    .desktop-coin-table .crypto-sub-table thead {
+        display: table-header-group !important;
+        visibility: visible !important;
+    }
+
+    .desktop-coin-table .crypto-table thead tr,
+    .desktop-coin-table .crypto-sub-table thead tr {
+        display: table-row !important;
+    }
+
+    .desktop-coin-table .crypto-table thead th,
+    .desktop-coin-table .crypto-sub-table thead th {
+        display: table-cell !important;
+    }
+
+    .desktop-coin-table .crypto-table tbody,
+    .desktop-coin-table .crypto-sub-table tbody {
+        display: table-row-group !important;
+    }
+
+    .desktop-coin-table .crypto-table tbody tr,
+    .desktop-coin-table .crypto-sub-table tbody tr,
+    .desktop-coin-table .main-row {
+        display: table-row !important;
+        border: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    .desktop-coin-table .crypto-table tbody td,
+    .desktop-coin-table .crypto-sub-table tbody td,
+    .desktop-coin-table .main-row td {
+        display: table-cell !important;
+        border: none !important;
+        border-bottom: 1px solid #292929 !important;
+    }
+
+    /* Mobile card view - HIDDEN by default, React's d-flex class makes it visible when CARD is selected */
     .mobile-coin-view {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .mobile-coin-view.d-flex {
         display: flex !important;
+    }
+}
+
+/* Mobile Footer Toggle REMOVED/Unified */
+
+.mobile-toggle-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #8f8f8f;
+    padding: 0;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-toggle-btn.active {
+    background: #333;
+    color: #fff;
+}
+
+/* Pagination */
+.mobile-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    color: #8f8f8f;
+    font-size: 12px;
+    margin-top: 10px;
+}
+
+.pagination-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.pagination-btn:disabled {
+    color: #333;
+    cursor: not-allowed;
+}
+
+/* ========== MOBILE CHART VIEW ========== */
+.mobile-chart-view {
+    background: transparent;
+    border: none;
+    padding: 16px 0;
+    position: relative;
+    /* Corner Borders Simulation */
+    background-image:
+        linear-gradient(#fff, #fff),
+        linear-gradient(#fff, #fff),
+        linear-gradient(#fff, #fff),
+        linear-gradient(#fff, #fff);
+    background-repeat: no-repeat;
+    background-size: 8px 1px, 1px 8px, 8px 1px, 1px 8px;
+    /* Corner L shapes */
+    background-position: top left, top left, bottom left, bottom left;
+}
+
+/* Add top-right and bottom-right corners via pseudo-element if needed, 
+   but for now just L-brackets on left side as per design hints or full brackets?
+   Design image 2 shows distinct white corners. Let's do full box corners.
+*/
+.mobile-chart-view::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    border-top: 1px solid #fff;
+    border-right: 1px solid #fff;
+}
+
+.mobile-chart-view::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    border-bottom: 1px solid #fff;
+    border-right: 1px solid #fff;
+}
+
+.mobile-chart-header {
+    margin-bottom: 25px;
+    padding: 0 12px;
+}
+
+.mobile-chart-header h4 {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    color: #8f8f8f;
+    margin: 0 0 15px 0;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.mobile-chart-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    font-size: 10px;
+    color: #8f8f8f;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.legend-bar {
+    width: 16px;
+    height: 3px;
+    border-radius: 1px;
+}
+
+.legend-bar.green {
+    background: #14904d;
+}
+
+.legend-bar.red {
+    background: #df2a4e;
+}
+
+.legend-dot {
+    width: 6px;
+    height: 2px;
+    background: #fff;
+    border-radius: 0;
+    border: none;
+}
+
+.mobile-chart-list {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    /* More spacing between items */
+    padding: 0 12px;
+}
+
+.mobile-chart-coin {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.chart-coin-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #ebebeb;
+    margin-bottom: 2px;
+}
+
+.chart-coin-name .tb-cpy-btn {
+    padding: 0;
+    font-size: 12px;
+    color: #666;
+    background: transparent;
+    border: 1px solid #333;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+
+/* CHART BAR CONTAINER - Layered Logic */
+/* CHART BAR CONTAINER - Layered Logic */
+.chart-bar-container {
+    position: relative;
+    height: 30px;
+    /* Tall container for thick bar */
+    background: transparent;
+    border-radius: 0;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+}
+
+/* 1. Whale Line (Track) */
+.chart-whale-line {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    height: 2px;
+    /* Thin white line */
+    background: #e0e0e0;
+    /* Clean white/grey track */
+    z-index: 2;
+    /* VISIBLE ON TOP */
+}
+
+/* 2. Value Bar (Thick) */
+.chart-bar {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    height: 20px;
+    /* THICK Solid Bar - Block style */
+    border-radius: 1px;
+    /* Sharp corners like design */
+    z-index: 1;
+    /* BEHIND LINE */
+    min-width: 4px;
+    /* Ensure visibility */
+}
+
+.chart-bar.green {
+    background: #14904d;
+}
+
+.chart-bar.red {
+    background: #df2a4e;
+}
+
+/* 3. Whale Dot */
+.chart-whale-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    /* Small clean dot */
+    height: 6px;
+    border-radius: 50%;
+    background: #fff;
+    /* Solid white */
+    border: none;
+    z-index: 3;
+    /* Removed shadow */
+}
+
+/* Values Text */
+.chart-values {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.chart-value-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+.chart-label {
+    color: #666;
+    text-transform: uppercase;
+    font-weight: 500;
+}
+
+.chart-amount {
+    font-weight: 600;
+    font-family: 'Roboto Mono', monospace;
+    /* Monospace for numbers if available, or just standard sans */
+}
+
+.chart-amount.green {
+    color: #14904d;
+}
+
+.chart-amount.red {
+    color: #df2a4e;
+}
+
+.chart-whale-count {
+    color: #ebebeb;
+    font-weight: 600;
+}
+
+/* =========================================
+   GLOBAL VIEW TOGGLE (Mobile + Desktop)
+   ========================================= */
+.mobile-view-toggle {
+    display: flex;
+    width: 100%;
+    background: #0d0d0d;
+    /* Darker background for desktop contrast */
+    border: 1px solid #333;
+    border-radius: 0px;
+    /* SHARP BORDERS as requested */
+    height: 36px;
+    overflow: hidden;
+}
+
+@media (min-width: 992px) {
+    .mobile-view-toggle {
+        width: 300px;
+        /* Fixed width on desktop */
+        margin-right: 20px;
+        /* Spacing from search */
+    }
+}
+
+.mobile-toggle-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #8f8f8f;
+    padding: 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #333;
+    cursor: pointer;
+}
+
+.mobile-toggle-btn:last-child {
+    border-right: none;
+}
+
+.mobile-toggle-btn.active {
+    background: #2a2a2a;
+    /* Lighter active state */
+    color: #fff;
+}
+
+/* Redefine for mobile override if needed (specificity match) */
+@media (max-width: 991px) {
+    .mobile-view-toggle {
+        border-radius: 0px;
+        /* Sharp on mobile */
+        background: #1a1a1a;
+    }
+
+    .mobile-toggle-btn {
+        font-size: 11px;
     }
 }
