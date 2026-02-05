@@ -13,7 +13,9 @@ import axios from 'axios'
 import mongoose from 'mongoose'
 import { parseShyftTransactionV2 } from './dist/utils/shyftParserV2'
 import whaleAllTransactionModelV2 from './src/models/whaleAllTransactionsV2.model'
+import WhalesAddress from './src/models/solana-tokens-whales'
 import * as fs from 'fs'
+const WebSocket = require('ws')
 
 dotenv.config()
 
@@ -108,7 +110,7 @@ async function handleTransaction(tx: any) {
 
     if (parseResult.success && parseResult.data) {
       const swapData = parseResult.data
-      let inputAmount: number, outputAmount: number, inputDecimals: number, outputDecimals: number
+      let inputAmount: number, outputAmount: number
       let inputNormalized: string, outputNormalized: string
 
       // Handle both ParsedSwap and SplitSwapPair
@@ -116,9 +118,12 @@ async function handleTransaction(tx: any) {
         // SplitSwapPair - use sellRecord for display
         const sellRecord = swapData.sellRecord
         
-        // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
-        inputAmount = sellRecord.amounts.baseAmount || sellRecord.amounts.swapInputAmount || 0
-        outputAmount = sellRecord.amounts.swapOutputAmount || sellRecord.amounts.netWalletReceived || 0
+        // CRITICAL FIX: For split swaps, use correct amount fields per architecture
+        // SELL record: User sold base to get quote
+        // Input = base_amount (tokens sold)
+        // Output = net_wallet_received (what user got after fees)
+        inputAmount = sellRecord.amounts.baseAmount || 0
+        outputAmount = sellRecord.amounts.netWalletReceived || 0
         
         // These are already normalized amounts from the V2 parser
         inputNormalized = Math.abs(inputAmount).toFixed(6)
@@ -144,15 +149,21 @@ async function handleTransaction(tx: any) {
         v2Detections.push(detection)
       } else {
         // ParsedSwap
-        // CRITICAL FIX: V2 parser already returns normalized amounts, don't normalize again
+        // CRITICAL: Use correct amount fields per architecture
+        // For BUY: Show swap_input_amount (to pool), NOT total_wallet_cost (includes fees)
+        // For SELL: Show net_wallet_received (after fees), NOT swap_output_amount (before fees)
         if (swapData.direction === 'BUY') {
-          // BUY: spending quote asset to get base asset
-          inputAmount = swapData.amounts.swapInputAmount || swapData.amounts.totalWalletCost || 0
+          // BUY: User spent quote to buy base
+          // Input = swap_input_amount (what went to pool)
+          // Output = base_amount (tokens received)
+          inputAmount = swapData.amounts.swapInputAmount || 0
           outputAmount = swapData.amounts.baseAmount || 0
         } else {
-          // SELL: spending base asset to get quote asset
+          // SELL: User sold base to receive quote
+          // Input = base_amount (tokens sold)
+          // Output = net_wallet_received (what user actually got after fees)
           inputAmount = swapData.amounts.baseAmount || 0
-          outputAmount = swapData.amounts.swapOutputAmount || swapData.amounts.netWalletReceived || 0
+          outputAmount = swapData.amounts.netWalletReceived || 0
         }
         
         // These are already normalized amounts from the V2 parser
@@ -187,20 +198,20 @@ async function handleTransaction(tx: any) {
       console.log(colors.gray(`   Output Mint: ${v2Detections[v2Detections.length - 1].outputMint.substring(0, 8)}...`))
       console.log(colors.gray(`   Confidence: ${v2Detections[v2Detections.length - 1].confidence} | Source: ${v2Detections[v2Detections.length - 1].source}`))
     } else {
-      // Track rejected transactions with reasons
+      // Track V2 rejections for analysis
       const rejection = {
         signature: signature,
         timestamp: new Date(),
-        reason: parseResult.data || 'Unknown rejection reason',
-        success: parseResult.success,
-        whaleAddress: shyftResponse.fee_payer || 'UNKNOWN'
+        whaleAddress: shyftResponse.fee_payer || 'UNKNOWN',
+        reason: parseResult.erase?.reason || 'unknown_rejection',
+        success: false
       }
       
       v2Rejections.push(rejection)
       
-      console.log(colors.red(`\n❌ V2 REJECTED: ${signature.substring(0, 20)}...`))
-      console.log(colors.gray(`   Reason: ${rejection.reason}`))
-      console.log(colors.gray(`   Whale: ${rejection.whaleAddress.substring(0, 8)}...`))
+      console.log(colors.red(`\n❌ V2 REJECTED: ${parseResult.erase?.reason || 'unknown'}`))
+      console.log(colors.gray(`   Signature: ${signature}`))
+      console.log(colors.gray(`   Whale: ${(shyftResponse.fee_payer || 'UNKNOWN').substring(0, 8)}...`))
     }
   } catch (error: any) {
     // Silent errors to keep output clean
@@ -208,8 +219,6 @@ async function handleTransaction(tx: any) {
 }
 
 function connectWebSocket(whaleAddresses: string[]) {
-  const WebSocket = require('ws')
-  
   ws = new WebSocket(WSS_URL)
 
   ws.on('open', () => {
@@ -298,7 +307,6 @@ async function compareResults() {
   const v2Signatures = new Set(v2Detections.map(d => d.signature))
 
   // Find matches and differences
-  const v2HasAll = Array.from(v1Signatures).every(sig => v2Signatures.has(sig))
   const v2Extras = Array.from(v2Signatures).filter(sig => !v1Signatures.has(sig))
   const v1Extras = Array.from(v1Signatures).filter(sig => !v2Signatures.has(sig))
   const matches = Array.from(v1Signatures).filter(sig => v2Signatures.has(sig))
@@ -452,6 +460,46 @@ async function compareResults() {
   fs.writeFileSync('v1-v2-comparison-report.json', JSON.stringify(report, null, 2))
   console.log(colors.gray('📄 Detailed report saved to: v1-v2-comparison-report.json\n'))
 
+  // Generate CSV reports
+  const timestamp = Date.now()
+  
+  // 1. Detailed CSV with all detections
+  const detailedCSV = [
+    'Signature,Timestamp,Side,Input_Token,Output_Token,Input_Mint,Output_Mint,Input_Amount,Output_Amount,Whale_Address,Confidence,Source',
+    ...v2Detections.map(d => 
+      `"${d.signature}","${d.timestamp.toISOString()}","${d.side}","${d.inputToken}","${d.outputToken}","${d.inputMint}","${d.outputMint}","${d.inputAmountNormalized}","${d.outputAmountNormalized}","${d.whaleAddress}","${d.confidence}","${d.source}"`
+    )
+  ].join('\n')
+  
+  fs.writeFileSync(`v2-detections-${timestamp}.csv`, detailedCSV)
+  console.log(colors.gray(`📄 V2 detections CSV saved to: v2-detections-${timestamp}.csv\n`))
+  
+  // 2. Rejections CSV
+  const rejectionsCSV = [
+    'Signature,Timestamp,Whale_Address,Rejection_Reason',
+    ...v2Rejections.map(r => 
+      `"${r.signature}","${r.timestamp.toISOString()}","${r.whaleAddress}","${r.reason}"`
+    )
+  ].join('\n')
+  
+  fs.writeFileSync(`v2-rejections-${timestamp}.csv`, rejectionsCSV)
+  console.log(colors.gray(`📄 V2 rejections CSV saved to: v2-rejections-${timestamp}.csv\n`))
+  
+  // 3. Summary CSV
+  const summaryCSV = [
+    'Metric,Value',
+    `Test Duration (minutes),${((endTime.getTime() - startTime.getTime()) / 1000 / 60).toFixed(2)}`,
+    `V1 Total,${v1Transactions.length}`,
+    `V2 Total,${v2Detections.length}`,
+    `V2 Rejections,${v2Rejections.length}`,
+    `Matches,${matches.length}`,
+    `V2 Extras,${v2Extras.length}`,
+    `V1 Extras,${v1Extras.length}`
+  ].join('\n')
+  
+  fs.writeFileSync(`comparison-summary-${timestamp}.csv`, summaryCSV)
+  console.log(colors.gray(`📄 Summary CSV saved to: comparison-summary-${timestamp}.csv\n`))
+
   await mongoose.disconnect()
   console.log(colors.green('✅ Disconnected from MongoDB\n'))
   process.exit(0)
@@ -467,10 +515,11 @@ async function main() {
   await mongoose.connect(MONGO_URI)
   console.log(colors.green('✅ Connected to MongoDB\n'))
 
-  // Fetch whale addresses
-  console.log(colors.cyan('📊 Fetching whale addresses...'))
-  const whaleAddresses = await whaleAllTransactionModelV2.distinct('whale.address')
-  console.log(colors.green(`✅ Found ${whaleAddresses.length} whale addresses\n`))
+  // Fetch whale addresses from dedicated whale collection
+  console.log(colors.cyan('📊 Fetching whale addresses from WhalesAddress collection...'))
+  const whales = await WhalesAddress.find({}).lean()
+  const whaleAddresses = whales.flatMap((doc: any) => doc.whalesAddress)
+  console.log(colors.green(`✅ Found ${whaleAddresses.length} whale addresses from ${whales.length} token records\n`))
 
   // Connect WebSocket and start test
   connectWebSocket(whaleAddresses)

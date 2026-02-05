@@ -1,0 +1,6 @@
+Agreement_Type,Count,Percentage
+MATCH,0,0.00%
+MISMATCH,3,7.50%
+BOTH_REJECT,27,67.50%
+V2_SPLIT,0,0.00%
+DISAGREE,10,25.00%

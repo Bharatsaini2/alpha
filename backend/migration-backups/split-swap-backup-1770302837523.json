@@ -1,0 +1,2402 @@
+[
+  {
+    "_id": "69848a868ebc86b23af5955e",
+    "signature": "2PC47xn4U5f2xc7qUezD5xFdBrJJLMpaNwfgS2ifAex6SnZcP9nrTRdHjtEPqTNm3Y7g9Xzv8fFkbWJjJ1yqkw25",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MF",
+        "address": "moonThZEkkTVoNB7v6YVCQiT56JYDZ1oN185ba3WizL"
+      },
+      "tokenOut": {
+        "symbol": "PANDU",
+        "address": "4NGbC4RRrUjS78ooSN53Up7gSg4dGrj6F6dxpMWHbonk"
+      }
+    },
+    "type": "buy",
+    "timestamp": "2026-02-05T12:18:14.102Z"
+  },
+  {
+    "_id": "698400d18ebc86b23af2a8a5",
+    "signature": "5Ee1Ud85VGa3X2Ygj45pf8qruwJPKNoUcUGEerApaegh8uPLTUTfBn2qsvw3c4gedStivUzc3oiqmcgewHPQQrVC",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "Breviceps",
+        "address": "3KwjbNCEhp2QnqZLXsPuVXy1S1PcpCMrPqQpP3pRTexy"
+      },
+      "tokenOut": {
+        "symbol": "cabbage",
+        "address": "46V2MJCziRMeFD7TAFSu6aN5PubGTk6mmDSkCYgApump"
+      }
+    },
+    "type": "buy",
+    "timestamp": "2026-02-05T02:30:41.828Z"
+  },
+  {
+    "_id": "6983fcba8ebc86b23af2928f",
+    "signature": "2zAf7bvRAu8mJv5QUCPLDwD8HS2zJmjP269DkqHJVUjXbfmQmH7FD2DZuqHuyFET6syj6bDyesj2BfRGvh3aKgJP",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PETAH",
+        "address": "GDmSzyg3F3CqgusT4CcxhjaKKfaucN98L4EUePeqpump"
+      },
+      "tokenOut": {
+        "symbol": "RANSOM",
+        "address": "GqkBi6rQGwD1H9Hs5Fjg4DXf3EyECkaRzWGp78Appump"
+      }
+    },
+    "type": "buy",
+    "timestamp": "2026-02-05T02:13:14.172Z"
+  },
+  {
+    "_id": "6983f5cd8ebc86b23af26b75",
+    "signature": "2tkm3mgMjKbt8hKPK1WYhinpZZTjSh2pFizpEUwGqi79Sq1yw9EvC9MjoPBqSLUNvcaReof2HjLLjjwjUPk5v2GM",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      },
+      "tokenOut": {
+        "symbol": "SAD",
+        "address": "96bxiXCuEqRAT1578pYwRWPYxj1LSR2H9sh6eF8vQPrm"
+      }
+    },
+    "type": "buy",
+    "timestamp": "2026-02-05T01:43:41.355Z"
+  },
+  {
+    "_id": "6983e3e38ebc86b23af1f9ca",
+    "signature": "mFMgLGzgSon484wKrmBAw8bxZFXupPmfijoupHmFSERUs3CXVgd2CNLtQjLR65gW8HTjJQGdPNXSGyyNRsMKi31",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      }
+    },
+    "type": "buy",
+    "timestamp": "2026-02-05T00:27:15.664Z"
+  },
+  {
+    "_id": "6984ad5a8ebc86b23af686bc",
+    "signature": "Ho1ezShCCowU4JPbzf6Awekh2E62WeZy9TdF4MQHxGPPNo2tzCspwerCAoMJmz4Sz4f5wUMcAmn8kRvNxub1z64",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "K2",
+        "address": "8aZEym6Uv5vuy2LQ9BYNSiSiiKS3JKJEhbiUgpQppump"
+      },
+      "tokenOut": {
+        "symbol": "MEMEOTHY",
+        "address": "DLVeaDvdc159gpxrBXkCKXA7LxjP9LLxbhrazBqRpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:46:50.727Z"
+  },
+  {
+    "_id": "6984ad478ebc86b23af6861d",
+    "signature": "4LRsvxCkDYLqCMMeNQ2FxNL2DGn4R3CEmpk83K7A3p55JQz9NJh7ATJ56q7Gvx24LSE2zcgFUWyEaPmaAE5cXLrT",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "K2",
+        "address": "8aZEym6Uv5vuy2LQ9BYNSiSiiKS3JKJEhbiUgpQppump"
+      },
+      "tokenOut": {
+        "symbol": "MAGA",
+        "address": "EECACVyG8A1KMD7WtWYSmq3gtp4sjvrxiJNz8vWYbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:46:31.507Z"
+  },
+  {
+    "_id": "6984ab568ebc86b23af6772f",
+    "signature": "5DPSh4iz7vaBjZEVcnZEaBvdDHtCALJtqdwzRD4rafskZc1Y6PgA8dzZQ7WUaJY6dPDW1envn5tYdP8BtN3UAfad",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "LUNCH",
+        "address": "DfC2mRB5SNF1eCQZPh2cGi5QhNQnm3jRNHwa5Rtkpump"
+      },
+      "tokenOut": {
+        "symbol": "GOLD",
+        "address": "DK9nBUMfdu4XprPRWeh8f6KnQiGWD8Z4xz3yzs9gpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:38:14.128Z"
+  },
+  {
+    "_id": "6984aadf8ebc86b23af67429",
+    "signature": "214wHtHv3dwVgGmghxkLSb5xovfqkTd5fzR2tZYzpfAGgXPzLkbPvnvYozy5Evd92sPZRxrKoYYVXcaYiYX8Kbqf",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "LUNCH",
+        "address": "DfC2mRB5SNF1eCQZPh2cGi5QhNQnm3jRNHwa5Rtkpump"
+      },
+      "tokenOut": {
+        "symbol": "EGG",
+        "address": "29TWWr9Lk9wr4yhzNvJb7qgrmftTzvHgG1C5AKwspump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:36:15.423Z"
+  },
+  {
+    "_id": "6984aa028ebc86b23af66d34",
+    "signature": "3E2kdjLQAzWMTYpzhwE21mFtysAK5byyQ3qLKJw1Sz9a3QeBGTc7Xg381yVMxcvjBKpScGJRkrBLLvLbgLQQp3dn",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "AFK",
+        "address": "kMKX8hBaj3BTRBbeYix9c16EieBP5dih8DTSSwCpump"
+      },
+      "tokenOut": {
+        "symbol": "SS",
+        "address": "9NrkmoqwF1rBjsfKZvn7ngCy6zqvb8A6A5RfTvR2pump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:32:34.007Z"
+  },
+  {
+    "_id": "6984a9eb8ebc86b23af66c5c",
+    "signature": "4HYswxSjbNMpvJqTgKPAA2yBz4n698eGFaTHHjh6qEwF4ARBNJRnQuPcjB6UU6ruNnKhwwMKWgo4KrEVTf3KZkhJ",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "2oR7...Etod",
+        "address": "2oR7GMoqBAHReVoyctfk6X1mh3GshbfQQSYaXfbqEtod"
+      },
+      "tokenOut": {
+        "symbol": "BP",
+        "address": "3B1ijcocM5EDga6XxQ7JLW7weocQPWWjuhBYG8Vepump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:32:11.613Z"
+  },
+  {
+    "_id": "6984a80a8ebc86b23af66031",
+    "signature": "13UiH7FuoHydkQhh7eUJbV3XGzsgU9FWrSBjNPhyraAg9PGgNFSydVfzoxhZbNRCTGLXongAqxoEajSTRj9tgbf",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "ELIZAOK",
+        "address": "CDbW2djfCGibjqbBEkuCZdyEXhQ7EE783b9pVbdJBAGS"
+      },
+      "tokenOut": {
+        "symbol": "DEXTER",
+        "address": "EfPoo4wWgxKVToit7yX5VtXXBrhao4G8L7vrbKy6pump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:24:10.571Z"
+  },
+  {
+    "_id": "6984a4998ebc86b23af64a0e",
+    "signature": "rZE4Gx7hRAA3yDPaWjTLRnTFqBD1qyJwcemzZ7HB1wtJYYdCLw1kfiGJtJYLSZPrnyKc1QXvENioaHYMspCBrJe",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "WAR",
+        "address": "8opvqaWysX1oYbXuTL8PHaoaTiXD69VFYAX4smPebonk"
+      },
+      "tokenOut": {
+        "symbol": "NOBODY",
+        "address": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:09:29.158Z"
+  },
+  {
+    "_id": "6984a29b8ebc86b23af639b6",
+    "signature": "4VRKYVZtZxLTpn6QtDRvQdQuPPPoww9TCHrCT21YVbmqXaFQbC9uKwWURzBwz2oSiuS4Gxk9HgZrqnV5zbb3f3G7",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "WOJAK",
+        "address": "8J69rbLTzWWgUJziFY8jeu5tDwEPBwUz4pKBMr5rpump"
+      },
+      "tokenOut": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T14:00:59.772Z"
+  },
+  {
+    "_id": "6984a0418ebc86b23af62832",
+    "signature": "4LFWTZPPM4ZXxzQuCFjonB4kiwsmtrzxSJNWF4JCW6bUmGcKssY8wW3kbN9MW3ZN4fWTDGwiKbWTVtfCtdv499Hy",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BEAM",
+        "address": "CV38eqqRKfhvqZ5yyuwuNFGTfof1wYvNguJXt2mZDRMj"
+      },
+      "tokenOut": {
+        "symbol": "NOBODY",
+        "address": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:50:57.427Z"
+  },
+  {
+    "_id": "6984a01a8ebc86b23af62709",
+    "signature": "3NCu9FaByxD8HfBgXsWdW5pjLmvJB8AVEoTXGwgEFiX45ZWvjrjnsCgTk5pGwwXb6TC9ppGTaT46rD3UJFcWQBUv",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      },
+      "tokenOut": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:50:18.112Z"
+  },
+  {
+    "_id": "6984a0118ebc86b23af626cd",
+    "signature": "pRwi5HV1sQHDFsf7fbFYGwheKQgXUEBVpRDzEZzas3jNGjf5ZMGLzqo8iQjkbhjw2vyxRttjQZYp5dYCJKt9BKc",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      },
+      "tokenOut": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:50:09.564Z"
+  },
+  {
+    "_id": "69849ff78ebc86b23af62649",
+    "signature": "5fQHbrbigXiPuCRNMESSchpGFEpLifNEKT4MHrYtGetXMEmGqEwyVFSQ5BnhuonPqxr9N8p5gGZnWw7tNuH4WUY1",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      },
+      "tokenOut": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:49:43.577Z"
+  },
+  {
+    "_id": "69849fec8ebc86b23af625f2",
+    "signature": "5yxdBESrXs4MH2Q9y9kXZFq3k3mjB8Loe6BbWuo2PwotjogiMNv6MjkmsnaLWGBn2qqJi9dZgN6tG2KxRctfwGiz",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      },
+      "tokenOut": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:49:32.750Z"
+  },
+  {
+    "_id": "69849fe58ebc86b23af625b2",
+    "signature": "Q7fHnPyFS2wr5jqc4GyD1CUmDuGgKAinnA61WdZNcaNTJUiQmkQVsruJLjXYUCkGSrfhCXNzaoxaq27vK7NZPgC",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      },
+      "tokenOut": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:49:25.037Z"
+  },
+  {
+    "_id": "69849f478ebc86b23af6205a",
+    "signature": "28M1P2fR1GgpybUyv7YavHx5hhpyWusUiezVvMjNUHdWvL2SSnnpeK3hABtGRmhcq7yYGK9DkoWFUkQruSvUgUK3",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "WW3",
+        "address": "7m2TUkpPZCScBhPJnGjWjbh75KkDNnwAdd7i74m8awad"
+      },
+      "tokenOut": {
+        "symbol": "K2",
+        "address": "8aZEym6Uv5vuy2LQ9BYNSiSiiKS3JKJEhbiUgpQppump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:46:47.263Z"
+  },
+  {
+    "_id": "69849a048ebc86b23af5fe84",
+    "signature": "52G2MjpfXGWSbQk1gTwYgcvpY2rCNqvTPUiUE9EG6FNUAkmS7PbPPdwHbn4fVu1XQekY1Px7DyMJHBsBoXr5pMa4",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "UMBRA",
+        "address": "PRVT6TB7uss3FrUd2D9xs2zqDBsa3GbMJMwCQsgmeta"
+      },
+      "tokenOut": {
+        "symbol": "NOBODY",
+        "address": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:24:20.550Z"
+  },
+  {
+    "_id": "698498468ebc86b23af5f052",
+    "signature": "EsdFDdBwWzwaCfKWudTwKGp6vwqBkDeCf936MqhCxhDR6tafbMg2y9tzhU2z3Cgigx18LpX1g9ePVkhy8AFnwKF",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "ORE",
+        "address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:16:54.141Z"
+  },
+  {
+    "_id": "6984983b8ebc86b23af5f00d",
+    "signature": "3rvKvzQrnA6iQfpodiwcP7ajCbDGsuKL233NqvuNpE6U9SDkLFpy89Kj5UM7dzwGR7pHXzjfqhbrLF5RivHNG6No",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "ORE",
+        "address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:16:43.923Z"
+  },
+  {
+    "_id": "698498308ebc86b23af5efb0",
+    "signature": "2Uo3PaoZKBt6fzVhuj2FxGLRrGQyUnYkkrkyLKBYsBkUSkD85MdRuS15Cc9VHYh9VpCy6iLvTKFD16hfLAQnwaP8",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "ORE",
+        "address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:16:32.865Z"
+  },
+  {
+    "_id": "698498248ebc86b23af5ef35",
+    "signature": "54FnoRVv1DkmyAA68fKab7MnyjHJ5HcQ1F2A9tF4hcxv48aWWu572QgMZ9BmT4EExZjHuwCQ6JuSZBf8MbPq8Xwy",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "ORE",
+        "address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:16:20.012Z"
+  },
+  {
+    "_id": "698497b98ebc86b23af5ebb4",
+    "signature": "2K692kYPZQYwuG7UcE2tKyqLUCKTgmti4GbiGhNdRojnPp4iBywTCSg4VM9o6rSUZExVmTKeqq53U9euByL5W9nE",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "ORE",
+        "address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:14:33.607Z"
+  },
+  {
+    "_id": "698497998ebc86b23af5ea71",
+    "signature": "3BwfjheaqNHPyBa5TkqQnTeATDPeCtwRnHMhS3ckmxHxvN6YNdHpCBEQfpnzFYCRCVd1SLnkm7zmEaRaBcXU5kd6",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "ORE",
+        "address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:14:01.092Z"
+  },
+  {
+    "_id": "6984977e8ebc86b23af5e9c3",
+    "signature": "LDt2D5SvYTufhCSHeNeDe7DZWzKsT91jenSmLZwRMm3cs92vMUHHhpq9WBSd2PfFGP3YoTw6Lh2DVuLeM9kyLLa",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "ORE",
+        "address": "oreoU2P8bN6jkk3jbaiVxYnG1dCXcYxwhwyK9jSybcp"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:13:34.254Z"
+  },
+  {
+    "_id": "698495508ebc86b23af5dad4",
+    "signature": "2fF7VMVKMfMSdZgphqJbmjsLRyqgQzZLUSTQvZ65sUMt1evnqAbaxAWXiJWFbE9CSPHXDvoqh8UtSGXQYopWzTQH",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "NOBODY",
+        "address": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon"
+      },
+      "tokenOut": {
+        "symbol": "MOODENG",
+        "address": "ED5nyyWEzpPPiWimP8vYm7sD7TD3LAt3Q3gRTWHzPJBY"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T13:04:16.448Z"
+  },
+  {
+    "_id": "698493d18ebc86b23af5d101",
+    "signature": "5tDQ4CZrFznxe9CJgLNQW4sokbcU453bb4k2HsrqdipXcH3HxSngk6pFQbiuhwHao2ubRgTwkwKZ4FUjKf6V7jpb",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "Monobloc",
+        "address": "BvhHPGE2C684fWpQeBfpSvo5wwrEb3Ej6zXJQMnwpump"
+      },
+      "tokenOut": {
+        "symbol": "NUIT",
+        "address": "2eXamy7t3kvKhfV6aJ6Uwe3eh8cuREFcTKs1mFKZpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:57:53.145Z"
+  },
+  {
+    "_id": "69848fc98ebc86b23af5b98b",
+    "signature": "5JM1hqx97jaYCHu2UFHuYKsnKdVNapqaXC2USd2UjTjGCwuKRnCoEosjVgZdB3SmcmJesjBWgoxmWiJLWpMKm58U",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TROLL",
+        "address": "5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2"
+      },
+      "tokenOut": {
+        "symbol": "pump...9Dfn",
+        "address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:40:41.726Z"
+  },
+  {
+    "_id": "69848c7d8ebc86b23af5a1bb",
+    "signature": "4UNhPfEPbroH1VJnH6FGv18qKwKd6YtjjiotrJCUUhV613q7HHpyXqXaZoeRGjdWYHiVKjFMnnjxJ5ewa3SE6iv7",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:26:37.744Z"
+  },
+  {
+    "_id": "69848b398ebc86b23af59a0f",
+    "signature": "5W3d7J8ZshDTRd32ppwpuDmZqgekyFcVrHuxpi2oguAucqvXnEXhzn8EGCAV2w2m7st8LQa444TuMos7UdA9UDRN",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "TOILET",
+        "address": "8xHAL531iDVW9S2xsrWAFFEr1Yz71rR7RL7qPWGgBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:21:13.338Z"
+  },
+  {
+    "_id": "69848b0b8ebc86b23af598f8",
+    "signature": "4Nm8xbVR7R4k9SMaXohoLng2U8MSP3XrsRTViZCC8QdpmYko3HsYFTvE8i8MGag6nekPavavfN6GLeN3iEtusT8S",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:20:27.772Z"
+  },
+  {
+    "_id": "69848b0a8ebc86b23af598d0",
+    "signature": "59y3eZ2VtRD5LyW4AJ9CnQseaTxCFKL93cv5ZEKZdk5vgFmkt25EMQK6fpMseuhZjQwy4crJYBvQ58cNPtx9RTgp",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:20:26.049Z"
+  },
+  {
+    "_id": "69848ab28ebc86b23af596ab",
+    "signature": "2owzU1zEGSyvDHs2mR6SA7Ee5Ka949CUzmNYNHRp891rQtcpiH4AWJLFTgd63iVTyZcz9FUbLqkfLUKBMwgXecMK",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:18:58.009Z"
+  },
+  {
+    "_id": "69848a508ebc86b23af59404",
+    "signature": "3QHJs9nH3VMuavQF53DexE5Bg3avmkCqRFYZSWDotVC7LqTn1x8j1E2aCqQmBHLWV3Mmub1Kum1rZNNzKGE7jopP",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:17:20.813Z"
+  },
+  {
+    "_id": "698489f48ebc86b23af591d9",
+    "signature": "5Lq89aBUYpqduC36BAg9y3PAoUp7pFYVyrce29r4uYvshWPdHzvPx6rQv4kyBKoj689tVneB72RL1hRgWw9M945s",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:15:48.036Z"
+  },
+  {
+    "_id": "698489f28ebc86b23af591bd",
+    "signature": "oTnLE8AUqcM8jaZgDhr3a88sR2Y8eyCa2AbRtsYWPCX49zt93qyLYbuXNobC3sitwDRPFeDUpTZ95upvkTQUTn4",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:15:46.739Z"
+  },
+  {
+    "_id": "698488e48ebc86b23af58bda",
+    "signature": "5fqqVgvWUitc2EWYjGdC9czro5pwsCmAWXXFpShsPdFMydY5mGDjAMS8aWsDjnyitD9QokaSJEx52jCkmAEwENFd",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HYPE",
+        "address": "98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g"
+      },
+      "tokenOut": {
+        "symbol": "NOBODY",
+        "address": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:11:16.852Z"
+  },
+  {
+    "_id": "698488e38ebc86b23af58bb2",
+    "signature": "4FA2Xe8Pez1wcoS86jF8YnDgQcai9RqpRY6MkvWHtFCC3BYeq8QENAhywTEqBmoBgtzeJWds1mxhghq9eCxQLbvq",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:11:15.189Z"
+  },
+  {
+    "_id": "698488df8ebc86b23af58b85",
+    "signature": "275vFWuTNWF9m7moFW8sf4mc9b5DKZdtaAe7iPARXjkPGxRfuUC7YiQXmQhQKzDkLGokCt6MdRyFKK278Sdz7fJF",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:11:11.777Z"
+  },
+  {
+    "_id": "698488dd8ebc86b23af58b66",
+    "signature": "3zh5RT3hULRmDmkNvWTzM7ETA74Zsq4YkTsbiV9nzHK7A5fGE3qmJXipBFtoXYdgu8BWBiyxp9nbBq5W7JAooLid",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:11:09.947Z"
+  },
+  {
+    "_id": "6984881d8ebc86b23af5872b",
+    "signature": "5Mnp2xghTBnwYEQTxNtGAeyS6MeKsiqes2iJdJYqBcWpR8VxbrvA8gRJnycTkKXY9JJsBDBqEKNfdBBs62Ev3vch",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "COPPERINU",
+        "address": "61Wj56QgGyyB966T7YsMzEAKRLcMvJpDbPzjkrCZc4Bi"
+      },
+      "tokenOut": {
+        "symbol": "WOJAK",
+        "address": "8J69rbLTzWWgUJziFY8jeu5tDwEPBwUz4pKBMr5rpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:07:57.039Z"
+  },
+  {
+    "_id": "698486dc8ebc86b23af581de",
+    "signature": "2qotbXnZEf7fAYi3JKPgzz2tDP4CbY4NPu43Vw649MVVv6XdkpkBcS949tFFpZujgT8eaAJhDk3rWFna4zbvdQDf",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MF",
+        "address": "moonThZEkkTVoNB7v6YVCQiT56JYDZ1oN185ba3WizL"
+      },
+      "tokenOut": {
+        "symbol": "PANDU",
+        "address": "4NGbC4RRrUjS78ooSN53Up7gSg4dGrj6F6dxpMWHbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:02:36.642Z"
+  },
+  {
+    "_id": "698486958ebc86b23af58061",
+    "signature": "5HZ1fH4m9DibRZ8EsikijP8acqH6CtufRprwEH4dM42Pwuy8RwFNXUZq8MbVpGwjrjRLLZm5U8iFY1NwCcynikRE",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T12:01:25.913Z"
+  },
+  {
+    "_id": "698485a08ebc86b23af57bdc",
+    "signature": "2AE5sTHkD5oZjpdoToLHmjtRyacnmjpoFtZd5NupejqQmiEod7dr7ajoMFKR9NrzxUStgdxHF9ZPYrt4H69dGNFC",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:57:20.837Z"
+  },
+  {
+    "_id": "6984859d8ebc86b23af57bb6",
+    "signature": "3NLVhAMqj5GnV18f1pZk8LGXVGi9dcp94MS9us1JzNLuLM6Ub25KUVD1DkThQNiF9fcUXsBYYx5rJsdP8qEFz1Rw",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:57:17.193Z"
+  },
+  {
+    "_id": "6984858f8ebc86b23af57b6a",
+    "signature": "2bw5VERBFV9Tych1YfkwSPLCS8WYJgRzd4LSGvJJTiFmQJ3mVdAJHNgW6z8aQ8aFBYwx696RTpSAaCSivmdmgiLP",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:57:03.895Z"
+  },
+  {
+    "_id": "6984858d8ebc86b23af57b48",
+    "signature": "4JrteWF6zG8KvCT8hxRXPzGr5tcKwZzB7UFbtE99LzeR6WPmAA8Y2CPbn2fzPUacmDoDqUY8r8hkCQEbJZUdqZ7L",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:57:01.391Z"
+  },
+  {
+    "_id": "698485198ebc86b23af57864",
+    "signature": "4WJRCDK28e5VYjJTuVj7rHvAn9rPYThJxWqjFKdUDkT7kMsFkEm5CQs8YVyTwAk6oQtpE3yHiSrmGDXMYgwNpNwp",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:55:05.098Z"
+  },
+  {
+    "_id": "698485138ebc86b23af5783a",
+    "signature": "4BZ9Y8P8tnF6JLjGc4n8gGDCkfwaReTb7yYtmGEE3ALP5VwE2j2k3PrqyPLEmPJE9b1ssaorVTm6pJGvyPXCK1dU",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:54:59.747Z"
+  },
+  {
+    "_id": "698485068ebc86b23af577f4",
+    "signature": "2J2aigTGcb7rvjNzv6tnp2aPXCkXb5n7ZAqajookTqBMSm5BqWSeSzxELiF1bjbEZyAomWpc91tLF99VHamxJTRH",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:54:46.402Z"
+  },
+  {
+    "_id": "698485038ebc86b23af577c8",
+    "signature": "RNNaYmPnTL8LoF8AJZKoTEo5s3ULaryVzTmvTdMr6dpyqmXSoA77MkcYw1oJUqgm2sYVMwonn3DqcuUhKJ7Y7uC",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:54:43.325Z"
+  },
+  {
+    "_id": "698481548ebc86b23af5664f",
+    "signature": "2Rftoy5GSPVPW3LYoNgozMFC3EJ74cucGRs69z2rMfKtjR4GCjpQy25TG6fWQwAsdBZ44JHJcVpEY7FYmNs2GYHk",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:39:00.573Z"
+  },
+  {
+    "_id": "698481398ebc86b23af565b5",
+    "signature": "2R3cwQ7AdHET2eQBBUBf1SM6to5DvaWHFPzfoSmuXyF7kT3xY9svp5VRoc6UaPsgQ3rMHZN1ENacNj8UMhst5VJf",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:38:33.704Z"
+  },
+  {
+    "_id": "698481208ebc86b23af56501",
+    "signature": "3oHDmMc9taYSGSMQxn4KoHmQ2LbiL7T6yTaHzWcG3XbA8iHGNUYmNaaGctHtnqwqAB219cbM8GJ8yR4iGy5DD5Db",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:38:08.227Z"
+  },
+  {
+    "_id": "6984811d8ebc86b23af564e0",
+    "signature": "RW4bdeHwKo6wjdDKvtazkPVc9ZdF5jJDxeu9FEvBpHxVDZyAossdj79roiyXkKNwZNuL8m6yLU96LquapooeQUB",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:38:05.397Z"
+  },
+  {
+    "_id": "6984810e8ebc86b23af56480",
+    "signature": "5J66MdTMvRPbaCm5Vja1Srs8r7pYP74DcoRAjskDqzVB7fdBGue2odaWzCk5K5AkVdfC4AS7Yc2UtTRSfHM1Ge9n",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:37:50.118Z"
+  },
+  {
+    "_id": "698480fa8ebc86b23af563f9",
+    "signature": "2TmgiCNPm98Nsk3KvvSDVo589fYyDNoLk67nRizfNrW4LkJm7T9RAVmAdGxxpKR4Cecokhyu9uxjXLLsFVEuYSBA",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:37:30.536Z"
+  },
+  {
+    "_id": "698480658ebc86b23af560f8",
+    "signature": "59bqTDxoBrhvTarM37Pq9eBCUUffiHwSipEtvrrMazHGccAsxGz2ji3zXbJeM7QDJE19iKxYoPD2oZyo1jRg2pFd",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MF",
+        "address": "moonThZEkkTVoNB7v6YVCQiT56JYDZ1oN185ba3WizL"
+      },
+      "tokenOut": {
+        "symbol": "PANDU",
+        "address": "4NGbC4RRrUjS78ooSN53Up7gSg4dGrj6F6dxpMWHbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:35:01.875Z"
+  },
+  {
+    "_id": "69847f718ebc86b23af55c4e",
+    "signature": "5ma2GumGE68MjddgjKtBuvfTxzeskGCPkS58BZFJzD1jq1J8yLxvysuspV9As3VuC72Jio6bJpfUBSht28Njm9Ti",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MF",
+        "address": "moonThZEkkTVoNB7v6YVCQiT56JYDZ1oN185ba3WizL"
+      },
+      "tokenOut": {
+        "symbol": "PANDU",
+        "address": "4NGbC4RRrUjS78ooSN53Up7gSg4dGrj6F6dxpMWHbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:30:57.856Z"
+  },
+  {
+    "_id": "69847a548ebc86b23af54219",
+    "signature": "G8fzseDaaCeCAjYCLiCt5qZs1rueMo5BqgVFNwH2JL2yVAkp9aLbRDeoUyoLpKVWGhV7PYPFUramd5oNxRzaLLL",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "GMvC...bonk",
+        "address": "GMvCfcZg8YvkkQmwDaAzCtHDrrEtgE74nQpQ7xNabonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:09:08.126Z"
+  },
+  {
+    "_id": "698479c38ebc86b23af53ed9",
+    "signature": "5xDJYD81N23otGh7YT7WYqtcJVspbcepjwUCpBtYKURtd9bBLX4Azwh1LfJEyniHGAjKzTWnVbN1hMe6zFh6pgbx",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MF",
+        "address": "moonThZEkkTVoNB7v6YVCQiT56JYDZ1oN185ba3WizL"
+      },
+      "tokenOut": {
+        "symbol": "PANDU",
+        "address": "4NGbC4RRrUjS78ooSN53Up7gSg4dGrj6F6dxpMWHbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:06:43.800Z"
+  },
+  {
+    "_id": "6984785c8ebc86b23af537f3",
+    "signature": "2BLQG2KtYyVAgqt4pvBYPmdgX1g8Ujym9h96dtW4jgYitQ5PzyvU7AfniKP3EEduqSrMjg3Jmxv8PFKwmV5zSUKi",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "GMvC...bonk",
+        "address": "GMvCfcZg8YvkkQmwDaAzCtHDrrEtgE74nQpQ7xNabonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T11:00:44.238Z"
+  },
+  {
+    "_id": "698478258ebc86b23af536cd",
+    "signature": "4oTRzLCxMUoAZSCHAPJJETfm1VcjAuQgTkv9MVUgGsCmo4jMXW3XQpSuytcqcnjiDA7sq7gTev2dzpjw6wAQUUJU",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MF",
+        "address": "moonThZEkkTVoNB7v6YVCQiT56JYDZ1oN185ba3WizL"
+      },
+      "tokenOut": {
+        "symbol": "PANDU",
+        "address": "4NGbC4RRrUjS78ooSN53Up7gSg4dGrj6F6dxpMWHbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T10:59:49.570Z"
+  },
+  {
+    "_id": "698477b68ebc86b23af5348c",
+    "signature": "43E2v5m322ce7y1isQREcBK2XWW7XWkpQ2uq8RJxN9p7VUGRJUPCPPBUNWeHnDFZdJMNY73g8Eu2TVZynz8gCZdM",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "GMvC...bonk",
+        "address": "GMvCfcZg8YvkkQmwDaAzCtHDrrEtgE74nQpQ7xNabonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T10:57:58.469Z"
+  },
+  {
+    "_id": "698477648ebc86b23af53288",
+    "signature": "neRyaWHdtGZdaRg2g8ne1eE5Lj4TbP6VhjiRhE6MXYaQqV45us1izJF8VdWMbG9V63P4RhyZJYNn2Hy4Kz36G2c",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "hedge",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "GMvC...bonk",
+        "address": "GMvCfcZg8YvkkQmwDaAzCtHDrrEtgE74nQpQ7xNabonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T10:56:36.544Z"
+  },
+  {
+    "_id": "69846bd78ebc86b23af4f967",
+    "signature": "GyBxBZTi9bMgePC35XZPbmaD8T3GZr8yaj4BYGtWury6cDwCKEKZ2wZD6yF6Li5tfgUjVdSwqcj73BVdTtCiGGK",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MINER",
+        "address": "Gka1TQEevBbVw4W9K15ER96ZzKByMTb6TBMQzWFEpump"
+      },
+      "tokenOut": {
+        "symbol": "pump...9Dfn",
+        "address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T10:07:19.292Z"
+  },
+  {
+    "_id": "69846b8b8ebc86b23af4f766",
+    "signature": "56w5CJnpoNtJNqsmwabm4TtmtcQbZuj44xy9UGUXrrdsZsQd2qHvVDbbsCKekYJRVM465V5UCcbZs2oMCf5VkZsu",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MINER",
+        "address": "Gka1TQEevBbVw4W9K15ER96ZzKByMTb6TBMQzWFEpump"
+      },
+      "tokenOut": {
+        "symbol": "pump...9Dfn",
+        "address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T10:06:03.432Z"
+  },
+  {
+    "_id": "69846b288ebc86b23af4f5ed",
+    "signature": "4bRzTfF1MSLNFz5dWr1ri4uCPKJMdcTPjvFyYqSybYcTkWVxLzWuTFREseDrTDkgJXGNAYxD9yX7dT93mY6dwMHG",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "MINER",
+        "address": "Gka1TQEevBbVw4W9K15ER96ZzKByMTb6TBMQzWFEpump"
+      },
+      "tokenOut": {
+        "symbol": "pump...9Dfn",
+        "address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T10:04:24.453Z"
+  },
+  {
+    "_id": "6984696e8ebc86b23af4ee9f",
+    "signature": "2c4F4Xxtk1o5gcJnVmu2QLGEptRkj6QutAXyLELj9PVUyKxWpbGvacVE3nbphW21rs23FMY9e1Ma4bKrQ2jFjk3N",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      },
+      "tokenOut": {
+        "symbol": "TOILET",
+        "address": "8xHAL531iDVW9S2xsrWAFFEr1Yz71rR7RL7qPWGgBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T09:57:02.355Z"
+  },
+  {
+    "_id": "6984604f8ebc86b23af4c2cd",
+    "signature": "4qokcooBS9hPiRCb9sCjsFCqVv4vzKyLAJQEz8dNtybxYz8RRjRzFg6pAxtUK6Z38ggo7sjXWNkNrvedjLihxdLn",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "NOBODY",
+        "address": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon"
+      },
+      "tokenOut": {
+        "symbol": "TROLL",
+        "address": "5UUH9RTDiSpq6HKS6bp4NdU9PNJpXRXuiw6ShBTBhgH2"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T09:18:07.673Z"
+  },
+  {
+    "_id": "698459a38ebc86b23af4a2a1",
+    "signature": "5QGd5BgxDqTCTMcnQ9c71sq5DdeFYfZtDnfCudBTu3DeHDob9SkcT82wSSVDYphs1juDTyz63czPhdtB2zSwoyAu",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "K2",
+        "address": "8aZEym6Uv5vuy2LQ9BYNSiSiiKS3JKJEhbiUgpQppump"
+      },
+      "tokenOut": {
+        "symbol": "GME",
+        "address": "8wXtPeU6557ETkp9WHFY1n1EcU6NxDvbAggHGsMYiHsB"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:49:39.791Z"
+  },
+  {
+    "_id": "698459878ebc86b23af4a1ed",
+    "signature": "4UYW8qJDVLLkupKWiogPsv9rLyUEFuzQL9nS4FgFfbTu3qtfkwsktgADdjRmcVMrBvEcCrB3e9yDLHmyJwHjRHZZ",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "K2",
+        "address": "8aZEym6Uv5vuy2LQ9BYNSiSiiKS3JKJEhbiUgpQppump"
+      },
+      "tokenOut": {
+        "symbol": "SOL",
+        "address": "jk1T35eWK41MBMM8AWoYVaNbjHEEQzMDetTsfnqpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:49:11.847Z"
+  },
+  {
+    "_id": "698458538ebc86b23af49c5a",
+    "signature": "MXHfq3d9By7nRYcQiQzakWAyL8LKotxDjhMsh58AgCzq6PmFj9YoPzr67iu2zkhz8Vyxi82oY9szMUmjgg72Dp5",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BLOWFISH",
+        "address": "CFB4Ff7W87uN9Gf2DSj63L7prZycJvzQeg1MbGxwBcqC"
+      },
+      "tokenOut": {
+        "symbol": "pump...9Dfn",
+        "address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:44:03.615Z"
+  },
+  {
+    "_id": "698458118ebc86b23af49b02",
+    "signature": "44Cmb66J7B4sQUTkMgX19Yzd5NbTTfnkAHtFK7iZZQAxoxTzM9ttBsADitY3PgpTXrJ2RcTQHvoUQ3vXpD1gRQ1a",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "pump...9Dfn",
+        "address": "pumpCmXqMfrsAkQ5r49WcJnRayYRqmXz6ae8H7H9Dfn"
+      },
+      "tokenOut": {
+        "symbol": "GP",
+        "address": "31k88G5Mq7ptbRDf3AM13HAq6wRQHXHikR8hik7wPygk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:42:57.070Z"
+  },
+  {
+    "_id": "6984559a8ebc86b23af48ede",
+    "signature": "z2KhcTDJHr3C49G9imtBnd9dkUZS4sDSbX9GbUz162XL63VAKYhUEXmYutuKGgPNaGePN8hNwcPsShV6MNZpa2t",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:32:26.196Z"
+  },
+  {
+    "_id": "698453b48ebc86b23af48502",
+    "signature": "5JnjczEgcJaMjBR4rWLXRSHTvp1qGzzc6qiFFhg9LEKmH6bHZTpnDESFUemZcLaJTHAtnGTCwAJy5iP4jk7A4V3T",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TOILET",
+        "address": "8xHAL531iDVW9S2xsrWAFFEr1Yz71rR7RL7qPWGgBAGS"
+      },
+      "tokenOut": {
+        "symbol": "SPX",
+        "address": "J3NKxxXZcnNiMjKw9hYb2K4LUxgwB6t1FtPtQVsv3KFr"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:24:20.600Z"
+  },
+  {
+    "_id": "698452d18ebc86b23af47fc4",
+    "signature": "5xcqcBbHa9CCLQcYoz8J2FJNbBRUcameJdLogbQ6wge8gu3QwnVpsPwgfKN13eKCDPHwicvhiiW2RyoLEpQdxXFi",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PETAH",
+        "address": "GDmSzyg3F3CqgusT4CcxhjaKKfaucN98L4EUePeqpump"
+      },
+      "tokenOut": {
+        "symbol": "KABUTO",
+        "address": "A9E2AopuG56LWYiXsvGLLTcLjUjQ539PY6k5Fhfepump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:20:33.771Z"
+  },
+  {
+    "_id": "6984504b8ebc86b23af4724c",
+    "signature": "5wNvGWMMg5HEhFEydjdvhEfpbps49fEfxt4eov5jj9GMskQDP9bYYzptZhCBxRqzH1dqHizqTyzZ3rWd2iidN9TZ",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "X1XHLOL",
+        "address": "DEffWzJyaFRNyA4ogUox631hfHuv3KLeCcpBh2ipBAGS"
+      },
+      "tokenOut": {
+        "symbol": "BLOWFISH",
+        "address": "CFB4Ff7W87uN9Gf2DSj63L7prZycJvzQeg1MbGxwBcqC"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T08:09:47.006Z"
+  },
+  {
+    "_id": "69844d1a8ebc86b23af46256",
+    "signature": "5rgM4r3fGHGDzZyjYr2y8gj8smzkTibzPSnc6XjYHd9GRWVA3VuXd7jcK547mRKahw6PkH44nU4vzsbZT351TjvD",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PURCH",
+        "address": "7EW5dDD6MYJK4PcZ89MGApJQwWeDEeNgH4NCVU4qpump"
+      },
+      "tokenOut": {
+        "symbol": "TOILET",
+        "address": "8xHAL531iDVW9S2xsrWAFFEr1Yz71rR7RL7qPWGgBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T07:56:10.372Z"
+  },
+  {
+    "_id": "6984490b8ebc86b23af45252",
+    "signature": "9WTkCFYLtehftxkgBDQCxgxDLtGjQkzJaGJsxivo2AkJSjmBpULbdk7h7ZuG2vHDMmSAyDngJRzNdsQBj1xLR4N",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SANA",
+        "address": "5dpN5wMH8j8au29Rp91qn4WfNq6t6xJfcjQNcFeDJ8Ct"
+      },
+      "tokenOut": {
+        "symbol": "AVICI",
+        "address": "BANKJmvhT8tiJRsBSS1n2HryMBPvT5Ze4HU95DUAmeta"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T07:38:51.494Z"
+  },
+  {
+    "_id": "698445da8ebc86b23af444a0",
+    "signature": "23tEWX3p6ETfR9CTajwYSGV9cDbZjNcVSDuA81XFCb1LB4YYWbVgZbXaWKWrSNrjNvwEdBz5au35h837u8MbhNwz",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "LMAO!",
+        "address": "H74CYmXgMkYHYuSRsZt6RJb4NYp2u72Vw8BS5huApump"
+      },
+      "tokenOut": {
+        "symbol": "LIMBO",
+        "address": "5UAMZkfNmuVcKzr2wo8Jqw4R1k8vfdAVJNN6h3bVpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T07:25:14.066Z"
+  },
+  {
+    "_id": "698443a68ebc86b23af43a75",
+    "signature": "5ToM75sDiHkTJ5M15RhRepkRDvZC2jNRVPVkzdneaUa9eAv2orGXKS3GMvpUQjQ69xGwTskgnTm6Y8eAsC8ZC3c2",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SOL",
+        "address": "jk1T35eWK41MBMM8AWoYVaNbjHEEQzMDetTsfnqpump"
+      },
+      "tokenOut": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T07:15:50.926Z"
+  },
+  {
+    "_id": "698440ba8ebc86b23af42aee",
+    "signature": "4A2iBi7kwaVfoKRYqkvZnQJWF3wzYGtyoNnc1nPqQi3Tt1pWbCxrGUGXcwg3aRjA4HzQoBfEM8GX29pSoG8Pxfot",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SOL",
+        "address": "jk1T35eWK41MBMM8AWoYVaNbjHEEQzMDetTsfnqpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T07:03:22.373Z"
+  },
+  {
+    "_id": "69843e8d8ebc86b23af41ef7",
+    "signature": "dFumcQ3oLaHCKuW2ibFGbGJd3HS3CBWC1H83ffaBogq8Z9UgrZF6pWCYxeGxxS17nS9g5Sda4hpSWYPD3HNiB7H",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "X1XHLOL",
+        "address": "DEffWzJyaFRNyA4ogUox631hfHuv3KLeCcpBh2ipBAGS"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T06:54:05.689Z"
+  },
+  {
+    "_id": "69843e078ebc86b23af41c3d",
+    "signature": "TY3dQSqg4L7UKbfM87JaWy6trMM8Zf5AgGNfoTheGHfUHyw5VQ2Hf84YXmbf2e7itA68jMy9BrLC6EHU8r3cvAP",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "ZAUTH",
+        "address": "DNhQZ1CE9qZ2FNrVhsCXwQJ2vZG8ufZkcYakTS5Jpump"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T06:51:51.221Z"
+  },
+  {
+    "_id": "69843dec8ebc86b23af41ba9",
+    "signature": "Tgzek7ExhXqu7G8e7L9PEWjfdwoPMiyErX6W5dFSxEWsEESmMZ6ZTvVSG276MG1zjaVdc8v6bGvodWpQY3xaaZL",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      },
+      "tokenOut": {
+        "symbol": "GBOY",
+        "address": "svy5ErijNYy9hEVzxknCdwWdZ3NeXJTdpb9Ndnso17f"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T06:51:24.033Z"
+  },
+  {
+    "_id": "69843a248ebc86b23af405cb",
+    "signature": "5ZpF56PRWvG1U3cGsgd8rg4YWXKcdBeBFmBEBwCBZANaSig8WFVppRMiyHBdCc37msrAxqt8HbQtQzaP9ysfQ1Hs",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "X1XHLOL",
+        "address": "DEffWzJyaFRNyA4ogUox631hfHuv3KLeCcpBh2ipBAGS"
+      },
+      "tokenOut": {
+        "symbol": "LORIA",
+        "address": "Gj4TowizfdkRJNsTgBEkj2WpBZZmGE7o9nN8q6RhBAGS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T06:35:16.904Z"
+  },
+  {
+    "_id": "698434bd8ebc86b23af3e492",
+    "signature": "5wkReiS4yZNBbi2nkHQ5u2yDkBAK3bzgsE5HBWoLHkKehim1BPTKVRVkjY8uhZARBun3Vimv3xGqGvRCjXwyVAjZ",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TOILET",
+        "address": "8xHAL531iDVW9S2xsrWAFFEr1Yz71rR7RL7qPWGgBAGS"
+      },
+      "tokenOut": {
+        "symbol": "SPSC",
+        "address": "4nswj3o1Lo9iWYvvRJxUD8vbCy9ay7QQoXYcncHNbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T06:12:13.640Z"
+  },
+  {
+    "_id": "69842e438ebc86b23af3bb3e",
+    "signature": "3UMy1vip9ZYTq5GD8kZXK3ox5Ggp3mX9yBzp9m7DYKT2nep1w91KJyJBaEj6g4L1akhEX3ducebhKHwELvkc6VoE",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "ARC",
+        "address": "61V8vBaqAGMpgDQi4JcAwo1dmBGHsyhzodcPqnEVpump"
+      },
+      "tokenOut": {
+        "symbol": "FARTCOIN ",
+        "address": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T05:44:35.543Z"
+  },
+  {
+    "_id": "698427238ebc86b23af3881c",
+    "signature": "2gadWyr3NzSa4ty7V74Wxnw6jCi2uWp4r5BKhTaCgfmDgtSipM9eKZ7jsHnDgxAMWap5Y5VvGvh8ivkv7MqUYT4c",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "GOOGLX",
+        "address": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN"
+      },
+      "tokenOut": {
+        "symbol": "$WIF",
+        "address": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T05:14:11.329Z"
+  },
+  {
+    "_id": "698424ea8ebc86b23af37c96",
+    "signature": "3wNh8F3rn55ysymjd41faZSHSFf7zs4YWmr6vdVchKMHBGpuBLkQojG367zTbpF6eMH2aV64gwg73i3ysZnng8cU",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "TOILET",
+        "address": "8xHAL531iDVW9S2xsrWAFFEr1Yz71rR7RL7qPWGgBAGS"
+      },
+      "tokenOut": {
+        "symbol": "SPSC",
+        "address": "4nswj3o1Lo9iWYvvRJxUD8vbCy9ay7QQoXYcncHNbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T05:04:42.682Z"
+  },
+  {
+    "_id": "698420b58ebc86b23af35e9a",
+    "signature": "3HfLjeisCTjzCs6TbNkJm3TdN9xoxDUDgmeZNVFjtsNqBXhf7Hrx5D2Ro7KxaKU5FQPGszB1ExiMTQBQrsYhnM6g",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T04:46:45.005Z"
+  },
+  {
+    "_id": "69841faf8ebc86b23af35843",
+    "signature": "4HHGE15KrCtmt9wqGMBVXLgLiL3dD8JY3XWutbz32eyezup1CqDNZqrxzScJ1pZbgVDFYjcnzZwxhqixfUVXdf5F",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "CHILLHOUSE",
+        "address": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T04:42:23.395Z"
+  },
+  {
+    "_id": "69841fa78ebc86b23af357e0",
+    "signature": "UJ6yaWWwTRFhZx58stZXoxQ5HgFRLNtmcK4AjbenjCdbLdRKwXjRA2vvVqFcoV4BcLhrEC8p9DbeRy2BHbE12bc",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "CHILLHOUSE",
+        "address": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T04:42:15.236Z"
+  },
+  {
+    "_id": "69841f818ebc86b23af3573a",
+    "signature": "3ojrBuHnjNe7LfqRSNvWiEu8cKES9EBNtSc17JGvgTKT1MWkN9u3kF489dFCTbpu4scHyBq4FKdDck167BzsG3F2",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "CHILLHOUSE",
+        "address": "GkyPYa7NnCFbduLknCfBfP7p8564X1VZhwZYJ6CZpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T04:41:37.748Z"
+  },
+  {
+    "_id": "69840b2f8ebc86b23af2e62c",
+    "signature": "3Bq3EborNSqhAwRmyCYpt4pwJnZJ1WsjTKtcnQAX9w1tknbf8mcyWzRgCFDnHURedbah4h2qyN2VS2CLFtfLpxQ9",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      },
+      "tokenOut": {
+        "symbol": "TESTICLE",
+        "address": "4TyZGqRLG3VcHTGMcLBoPUmqYitMVojXinAmkL8xpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:14:55.897Z"
+  },
+  {
+    "_id": "69840b1b8ebc86b23af2e5b8",
+    "signature": "5x7vvtQwf8TS3ARdV2mvLBaZXCrp9SQmjuL5SZyKvCQjYSfAeKLyomCE5n26VqZYoSXBXUzdyVkx8PXYdyLvPwkN",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      },
+      "tokenOut": {
+        "symbol": "CRY",
+        "address": "9CaWKwDJPFTrkJuk5dj1Vyc2TBse9CjQFmomVGkrpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:14:35.407Z"
+  },
+  {
+    "_id": "69840b138ebc86b23af2e4dd",
+    "signature": "5hr3D4h1g7whXkrREKkVnNjP7nARpcQonAp1yitCUcvAxBoXgVEA11e816LYcMoyMVMhcukJfMcKyYy7VC6YTCCT",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      },
+      "tokenOut": {
+        "symbol": "CRY",
+        "address": "9CaWKwDJPFTrkJuk5dj1Vyc2TBse9CjQFmomVGkrpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:14:27.825Z"
+  },
+  {
+    "_id": "69840a2c8ebc86b23af2e00e",
+    "signature": "5Pn4HQwTBe34eUZsf6H5dTj3bxXu8xrWSBotbrWFvfPp2hvbdku8n1NsL9go9vaLfMYGWxZUBS1evzuNcCYDCS2j",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:10:36.494Z"
+  },
+  {
+    "_id": "69840a268ebc86b23af2dfdd",
+    "signature": "56Ui4E3D6UaAdpSLvDCeqzGYymvQ5X2hbvVmw1CPLDUjPg2kGhKtgDqy3eYg7UMKJJaFCgj6f8NMeMNT36JVF8UY",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:10:30.925Z"
+  },
+  {
+    "_id": "69840a158ebc86b23af2df75",
+    "signature": "1Mov7qqtAuuGYr6BTnbMKAQdHRoaF9uS4dXS1j8FASWwWeS7MJ41FxKp7BjabkVKHM41Hqy6iesy92GXpjtzzqG",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:10:13.870Z"
+  },
+  {
+    "_id": "69840a0f8ebc86b23af2df20",
+    "signature": "5HGQoBCYj1qAPskFSikGEgyge6JzttuSawEGvDwFAfX793Dn7rgZq9Q2BLj8RnC1Us9yhjtZbK65NpnDymrzgrkY",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:10:07.245Z"
+  },
+  {
+    "_id": "698409328ebc86b23af2da32",
+    "signature": "c7ECWdPXgwr7sjbtxxNNuUEvygo4f4CCqQVzxsinzDgb8i3K2rVPcn57yxiJLJMhyfNpWHQzrEBr2jn1huhCgkH",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:06:26.823Z"
+  },
+  {
+    "_id": "698408ee8ebc86b23af2d85a",
+    "signature": "297jyteYcgh6D1JkJbnc1FahqoAVFqxuh4LiaRiPyDKE6Nq2un1jjKmW8RFeLydzVbN8Wg6roHETFQdWsFMxD1HP",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:05:18.512Z"
+  },
+  {
+    "_id": "698408d48ebc86b23af2d7c0",
+    "signature": "2Z3WXgEtLSinrugTcryUWfasTCgQAxnbKVfNi3TiBTk9DzWvBaXnq93yZ7QuRJD3HmL2s7efpy2ieePmhMTJYLd7",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:04:52.145Z"
+  },
+  {
+    "_id": "698408d18ebc86b23af2d745",
+    "signature": "5t4Mg3yumHioiBjVJv4jJiQ6p5uChNE3RYPWvVkrCEsePkWEkAnsYf7PDZKaCWdBsqdWRUspLrtndyZKgmb7tfog",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:04:49.976Z"
+  },
+  {
+    "_id": "698408ab8ebc86b23af2d649",
+    "signature": "5fCkFZvDUhtUNHkmnVTBKCqFz4kuFMUqhtEpnFj5cLFWevnT71pmwvFL9ZJVbEEVsAevZ3avK6Z78E4qg2Kwt9R",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      },
+      "tokenOut": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:04:11.005Z"
+  },
+  {
+    "_id": "6984089a8ebc86b23af2d5e0",
+    "signature": "58cRd7f9qFxEHgzkmywkL3dxLr6L5xg4CDcUJbK8Wx4jQsvXj7pYFFRBZu98zkkkzFLzVtMKCiAYzLXBat22FuW3",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:03:54.240Z"
+  },
+  {
+    "_id": "698408668ebc86b23af2d4dd",
+    "signature": "4K5dojNnbWnfMKPY8TUC6sTDCbycVoZesNRqYEr2GKNHVdYm7jTXmmnGHqYTK1afFLfDcMqwi7qtSosCs6fwJ8v5",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:03:02.793Z"
+  },
+  {
+    "_id": "698408378ebc86b23af2d3ef",
+    "signature": "A8cp6vLiMwbbkMtu7DVr6ksmMu9f8SwiEHEiLqZCTsFW5wy4mXUGhRXiEhkk3Xkus9UYwvVP2LtsGS1RAB312i2",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:02:15.746Z"
+  },
+  {
+    "_id": "698408248ebc86b23af2d375",
+    "signature": "4dtJTnzUJYAnpi3iB87BqoctpiwLFBpuBnU1L85LLxXCLATNTN7f7avdVAynxsWHDyDu38K3fBvu2gcyMG3NEru8",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "HEDGE",
+        "address": "FFYLoYzPnD1CAVa8UeP9BeXhPPAykRkYiFLqVpxKbonk"
+      },
+      "tokenOut": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T03:01:56.336Z"
+  },
+  {
+    "_id": "698406c68ebc86b23af2ca8a",
+    "signature": "2R8LJ7w3agRvaKpGYbfTesqSfJKPGk3yB7msGB4XmKy17uKz493brEPWUMMnWcouTFhqqitfjddXEta8o61KQUKt",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SOL",
+        "address": "jk1T35eWK41MBMM8AWoYVaNbjHEEQzMDetTsfnqpump"
+      },
+      "tokenOut": {
+        "symbol": "GME",
+        "address": "8wXtPeU6557ETkp9WHFY1n1EcU6NxDvbAggHGsMYiHsB"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:56:06.174Z"
+  },
+  {
+    "_id": "6984066b8ebc86b23af2c8b4",
+    "signature": "3tqHu8vv5UCUvikM5kX4CjCEzQWZKttQabtyaPJyWqFP3mwxNkvfP6MyToCrNu91WdghDQKaifhKpqa5UwB7m8eh",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SOL",
+        "address": "jk1T35eWK41MBMM8AWoYVaNbjHEEQzMDetTsfnqpump"
+      },
+      "tokenOut": {
+        "symbol": "K2",
+        "address": "8aZEym6Uv5vuy2LQ9BYNSiSiiKS3JKJEhbiUgpQppump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:54:35.521Z"
+  },
+  {
+    "_id": "6984065e8ebc86b23af2c859",
+    "signature": "4dvQYuYp1RvgBE6cBndfCGmqJGy1sjenmBrdmzHFtnjhartVMoKmQV3m7uF7Hexy13NPjSC6aSFYWPPYjymw9Pfm",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SOL",
+        "address": "jk1T35eWK41MBMM8AWoYVaNbjHEEQzMDetTsfnqpump"
+      },
+      "tokenOut": {
+        "symbol": "GME",
+        "address": "8wXtPeU6557ETkp9WHFY1n1EcU6NxDvbAggHGsMYiHsB"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:54:22.836Z"
+  },
+  {
+    "_id": "698404ed8ebc86b23af2c03f",
+    "signature": "3gQdqmFsKsUKHH7jy3BQF8aSY435wSHYCDL6oNRyPPqTdkcu9gM33woUg6JAH3znGh3h33TSMKtKEi58s2yNnerV",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "NOBODY",
+        "address": "C29ebrgYjYoJPMGPnPSGY1q3mMGk4iDSqnQeQQA7moon"
+      },
+      "tokenOut": {
+        "symbol": "HEGE",
+        "address": "ULwSJmmpxmnRfpu6BjnK6rprKXqD5jXUmPpS1FxHXFy"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:48:13.964Z"
+  },
+  {
+    "_id": "698401a88ebc86b23af2ad7e",
+    "signature": "2YMDfzcq4ddatFJ4MobAzgJVY4fh29hEW4weq3iazUAuaDaqFxaAeX9Q8L9ayACKsrwJRbG6QbtAijkNArsMRSeU",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "COPCAT",
+        "address": "jpxfcZEzCX5h1usbaEhwG4vq9A1ZYoceU7wbBDApump"
+      },
+      "tokenOut": {
+        "symbol": "COPPERINU",
+        "address": "61Wj56QgGyyB966T7YsMzEAKRLcMvJpDbPzjkrCZc4Bi"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:34:16.851Z"
+  },
+  {
+    "_id": "698400fe8ebc86b23af2a9da",
+    "signature": "55mZQRqmTncPb9QiBo2LwtNUFTpvQW9LixUrGqZbSy4XFooEwVwhCUhkgkb7Xok7926NDDRijnn3UGtRt3S1Cx9W",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "PETAH",
+        "address": "GDmSzyg3F3CqgusT4CcxhjaKKfaucN98L4EUePeqpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:31:26.637Z"
+  },
+  {
+    "_id": "6983fccb8ebc86b23af2933f",
+    "signature": "5b2Y9YVL1m5oDTjHBKjUFxwWXaaKhN3LgwKM6fN8HWu8Nqyp73VHGeLuf2pJYvpgmRa28G1yJNPtgEgZVC45VQxG",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PETAH",
+        "address": "GDmSzyg3F3CqgusT4CcxhjaKKfaucN98L4EUePeqpump"
+      },
+      "tokenOut": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:13:31.097Z"
+  },
+  {
+    "_id": "6983fc3c8ebc86b23af28f41",
+    "signature": "37xc4q8JACeAxATn1yWXnNCC9VyUe8Su7tzay7JWdy13MYzXK4QnHjobhFZf1ADVfnJyYtkm4LU8ToWGjm1VcT5y",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "RANSOM",
+        "address": "GqkBi6rQGwD1H9Hs5Fjg4DXf3EyECkaRzWGp78Appump"
+      },
+      "tokenOut": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:11:08.704Z"
+  },
+  {
+    "_id": "6983fbbe8ebc86b23af28c44",
+    "signature": "mttz6XfrHKxeWLYMQf3PdacTsQqDAf3KfpPygYwmCg1XGkUK51KoVCvsMG3qA8jqHFM37dyf6J934Z9xwSkcBXK",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SAD",
+        "address": "96bxiXCuEqRAT1578pYwRWPYxj1LSR2H9sh6eF8vQPrm"
+      },
+      "tokenOut": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:09:02.173Z"
+  },
+  {
+    "_id": "6983fba08ebc86b23af28b50",
+    "signature": "5ovR9jgo41RWLNh2iLfDQakCTDNq6opsFNRFkbkiheB8NF2cA3ahwt3Qq27qRFnFApDk1j5sRZBft5SGvz6qWwgw",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SAD",
+        "address": "96bxiXCuEqRAT1578pYwRWPYxj1LSR2H9sh6eF8vQPrm"
+      },
+      "tokenOut": {
+        "symbol": "SATOSHI",
+        "address": "FGxzLF5wuuqBzHsiCCqmEiFRYmGaWSpgCTsdKpxNpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T02:08:32.249Z"
+  },
+  {
+    "_id": "6983f5e28ebc86b23af26bfe",
+    "signature": "5jGjEFXR2pvfTBqyRZn4PXmcHrFGH3LRQQ5j1Q5LAiJ8dE3FSrof2JniyEa64zZfdYX6BQzaSU2Rd9B7VZPiexF1",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "ACCELERANDO",
+        "address": "HiNkp9CdKqTgPtB6WnnrrUAu9YwQqnrvT6Ceuxoypump"
+      },
+      "tokenOut": {
+        "symbol": "POLYFACTS",
+        "address": "FfixAeHevSKBZWoXPTbLk4U4X9piqvzGKvQaFo3cpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:44:02.388Z"
+  },
+  {
+    "_id": "6983f4d18ebc86b23af26648",
+    "signature": "61agicpYBrtoJ7ZeJNRuGeVf29DTuYjDBDSLC5BmzAkQqMem5iPgQz1nUgjURtNxud7rVKfVAhQwmeUToB1WN92H",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "ACCELERANDO",
+        "address": "HiNkp9CdKqTgPtB6WnnrrUAu9YwQqnrvT6Ceuxoypump"
+      },
+      "tokenOut": {
+        "symbol": "DOOD",
+        "address": "DvjbEsdca43oQcw2h3HW1CT7N3x5vRcr3QrvTUHnXvgV"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:39:29.296Z"
+  },
+  {
+    "_id": "6983f38a8ebc86b23af25e77",
+    "signature": "3gZBW5rrqSceVQ6Pa9s3mUs5T2iXmGUFDLarx6a5r2m4EhF7mcVR9EizwZC4LZ3SJm81LTJ43NcJZcWSBKG8z9WV",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SAD",
+        "address": "96bxiXCuEqRAT1578pYwRWPYxj1LSR2H9sh6eF8vQPrm"
+      },
+      "tokenOut": {
+        "symbol": "HAPPINESS",
+        "address": "EUJ6EfKMVQkMopurG5prombN2VbSwUsmNbPGshoiWcWv"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:34:02.108Z"
+  },
+  {
+    "_id": "6983f3678ebc86b23af25dd0",
+    "signature": "5m7Hr43EuzbJytyrw4hfCKKzARBRk5Fbo6Xbk7MZart1me4ti2Cy6bePBZ5tsQ4wB8CQU7quLMc9HqfD4MTuZKC1",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "SAD",
+        "address": "96bxiXCuEqRAT1578pYwRWPYxj1LSR2H9sh6eF8vQPrm"
+      },
+      "tokenOut": {
+        "symbol": "HAPPINESS",
+        "address": "EUJ6EfKMVQkMopurG5prombN2VbSwUsmNbPGshoiWcWv"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:33:27.574Z"
+  },
+  {
+    "_id": "6983ef0f8ebc86b23af2427d",
+    "signature": "5ZV8qzWANVJdjXTQKegq3xZF98CwQTXop7sDcF8YzFVtZdSBYy2QgyrkpdJNieU7q4Q4RS7HtCbVc4QHCEXwCXUY",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "HAPPINESS",
+        "address": "EUJ6EfKMVQkMopurG5prombN2VbSwUsmNbPGshoiWcWv"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:14:55.397Z"
+  },
+  {
+    "_id": "6983ef058ebc86b23af24232",
+    "signature": "2MDZDAe3yDbULeiEMYdgiiTqeMZpVpU1SiBgNQAmEohe8T4zSQnn2m4uTecF1TywYMKtt7RitVDhSpawjKiYukSh",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "HAPPINESS",
+        "address": "EUJ6EfKMVQkMopurG5prombN2VbSwUsmNbPGshoiWcWv"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:14:45.326Z"
+  },
+  {
+    "_id": "6983eedf8ebc86b23af2417b",
+    "signature": "4p7ueCLDKvUu7vh78f8Keqf44kPRY87s1xniKEU78yXZxhQdMtzV1XTPD8s7sXxiyjrUbh2ji5r4c5rurVv1NQqC",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "HAPPINESS",
+        "address": "EUJ6EfKMVQkMopurG5prombN2VbSwUsmNbPGshoiWcWv"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:14:07.717Z"
+  },
+  {
+    "_id": "6983eeda8ebc86b23af2413e",
+    "signature": "4z5nB92WS8SMdHwc9gr3Cr1DESoZg1qeQ6HZUiqSWYctRAXJULRC5qyDgnB1daFqS12JSYwCfMQZmziBJDaK4qGe",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "HAPPINESS",
+        "address": "EUJ6EfKMVQkMopurG5prombN2VbSwUsmNbPGshoiWcWv"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:14:02.394Z"
+  },
+  {
+    "_id": "6983eeca8ebc86b23af2407d",
+    "signature": "5Gdn3EbHkUZe44EdEdYpTo218DtPYTNnmrij21Tdt6GkLqj1Db9UUdPPkq5FZfHCEVf2m4jSiMF1gcVpn3ofZfof",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "HAPPINESS",
+        "address": "EUJ6EfKMVQkMopurG5prombN2VbSwUsmNbPGshoiWcWv"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:13:46.366Z"
+  },
+  {
+    "_id": "6983ee1a8ebc86b23af23c29",
+    "signature": "32xgt6gA3SXNpgJgqwTN1UU945d1vwbq4oqGdws3SMpH5R7UhWtcwbDL4gMLRsmMTQQ5WEGGj7KqWchRSsrmsWDA",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PI",
+        "address": "5gJDMtkx1yaHsM1X4x9RRDL7FeSpooxKozWG7rCPBAGS"
+      },
+      "tokenOut": {
+        "symbol": "EGG",
+        "address": "29TWWr9Lk9wr4yhzNvJb7qgrmftTzvHgG1C5AKwspump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:10:50.784Z"
+  },
+  {
+    "_id": "6983eceb8ebc86b23af235ed",
+    "signature": "5o7d9DBSWRVYv8Wh2kpKTWXTEzyGxjG61KVxFoWtfVj8e7mDJ6jCLUuHMMAjh5b76Fpfyyh9vPBR17zeSfQkZsum",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PI",
+        "address": "7qydzhaVUdW3ji1iAsCtSbqNbCFptAr7CjgejCVfWkt"
+      },
+      "tokenOut": {
+        "symbol": "GOLD",
+        "address": "DK9nBUMfdu4XprPRWeh8f6KnQiGWD8Z4xz3yzs9gpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T01:05:47.925Z"
+  },
+  {
+    "_id": "6983eb208ebc86b23af22c1e",
+    "signature": "2NrsabSLxFGcTKjGnL25yhVxfRdHkoyy6niLkvkRLDWvcwRkLAuqsLpyRzvjNs3q4mTG8c9FYKGkqXcoqb4ha7UG",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "FARTCOIN ",
+        "address": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump"
+      },
+      "tokenOut": {
+        "symbol": "ARC",
+        "address": "61V8vBaqAGMpgDQi4JcAwo1dmBGHsyhzodcPqnEVpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:58:08.838Z"
+  },
+  {
+    "_id": "6983e9188ebc86b23af21d9d",
+    "signature": "aukesGtNFmcKFwwmPzq3dfUdAW7CwkdGNggj57W9psRcC47mSiGg4NYLp9vBrum4YuhpGd6sNeFd7F2KfzCJzGf",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:49:28.145Z"
+  },
+  {
+    "_id": "6983e9168ebc86b23af21d6c",
+    "signature": "3B71CvpcuX61ZQUzMNEAUAZxx2nSvi9rtMB1yAVseJH5vjNHZoSfjMVRQG2EFPvwvvCWECA4dmNspv67SVM2n47c",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BUTTCOIN",
+        "address": "Cm6fNnMk7NfzStP9CZpsQA2v3jjzbcYGAxdJySmHpump"
+      },
+      "tokenOut": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:49:26.239Z"
+  },
+  {
+    "_id": "6983e8188ebc86b23af216d8",
+    "signature": "2mt6yXMAnLY783oMJBuoi6NtstZDo9HUaagzaWAhoXP1GMHRy6i17VqJnziWoGWuro8cQB4cptNcSmRZQYWGNCNY",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      },
+      "tokenOut": {
+        "symbol": "SS",
+        "address": "9NrkmoqwF1rBjsfKZvn7ngCy6zqvb8A6A5RfTvR2pump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:45:12.503Z"
+  },
+  {
+    "_id": "6983e57a8ebc86b23af20657",
+    "signature": "4s7PufPTRZVoEjqfwrr9PBWu6BTEC672NnP3dSGCpwTu4MfsEighQTDdwSWhLzDhsyPQDfp4SdzzotTrijyiUSSC",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "XAUT0",
+        "address": "AymATz4TCL9sWNEEV9Kvyz45CHVhDZ6kUgjTJPzLpU9P"
+      },
+      "tokenOut": {
+        "symbol": "PUMPCADE",
+        "address": "Eg2ymQ2aQqjMcibnmTt8erC6Tvk9PVpJZCxvVPJz2agu"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:34:02.363Z"
+  },
+  {
+    "_id": "6983e55d8ebc86b23af2057a",
+    "signature": "5G6QGoqcpU592ySkPihWGCJoRVzZB3ePUFT1WtUbcChToaarGjX7Lpbx8QLEruPTWnM9XgF9wcF1VWPyQz73EEVp",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "XAUT0",
+        "address": "AymATz4TCL9sWNEEV9Kvyz45CHVhDZ6kUgjTJPzLpU9P"
+      },
+      "tokenOut": {
+        "symbol": "ZEC",
+        "address": "A7bdiYdS5GjqGFtxf17ppRHtDKPkkRqbKtR27dxvQXaS"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:33:33.721Z"
+  },
+  {
+    "_id": "6983e26d8ebc86b23af1f1c7",
+    "signature": "4CNnQSirwyKSMZWZefxSgcwT4fvzTzkcnTWioG9RgDNAQbEeR7br5fhpWG1axXVmbPgvc56v7j36M1uVmHq1TkJM",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "WBTC",
+        "address": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh"
+      },
+      "tokenOut": {
+        "symbol": "USELESS",
+        "address": "Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:21:01.656Z"
+  },
+  {
+    "_id": "6983e04d8ebc86b23af1e377",
+    "signature": "237i8og8FrLd7kESrCR78RW7Wi8ct1AP47gvrcGRHu6HyLnq8sFyN7g4c2sWnhtzH5PdJm49K1CLWQzg26cUjAyx",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "PIGEON ",
+        "address": "GB8KtQfMChhYrCYtd5PoAB42kAdkHnuyAincSSmFpump"
+      },
+      "tokenOut": {
+        "symbol": "ACCELERANDO",
+        "address": "HiNkp9CdKqTgPtB6WnnrrUAu9YwQqnrvT6Ceuxoypump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:11:57.738Z"
+  },
+  {
+    "_id": "6983dff48ebc86b23af1e0a9",
+    "signature": "4w2vLxCiwta5RXogxTKWHaxEv6qk7ov9H6UAiMkN2ffKTN4bsDvK2FW1THFp1MpG4zw1s78kFvfKHb9N4zmyocPi",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "GME",
+        "address": "8wXtPeU6557ETkp9WHFY1n1EcU6NxDvbAggHGsMYiHsB"
+      },
+      "tokenOut": {
+        "symbol": "NYAN",
+        "address": "9BVn3Y8tPghbnGuuuxoj2mGekqgSQV1M7nALF7brpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-05T00:10:28.690Z"
+  },
+  {
+    "_id": "6983db788ebc86b23af0ae77",
+    "signature": "4vJGdMK7ZCvci61m9oumVi3t1W9iu8s4cDqsZDmxd8cPeVrH76BZ4rDX1u2iyBxwV6EBL9TovfSRaR9i8532S9UH",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "9Avy...pump",
+        "address": "9AvytnUKsLxPxFHFqS6VLxaxt5p6BhYNr53SD2Chpump"
+      },
+      "tokenOut": {
+        "symbol": "MOUNTAIN",
+        "address": "GASfLqDbE8c9w8mjKknxaHeDMmdy9usGwM1GwzVJpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-04T23:51:20.605Z"
+  },
+  {
+    "_id": "6983d9398ebc86b23af0a3fa",
+    "signature": "36SYymkwXmb6VX4hYCbt6EVmupUsX9V1Xyi6d1mHCJHwpWk7kZnU9DDwVnuoAS7GeV2aWm7nSXcLfXsjgFxgRayg",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "wif",
+        "address": "CeJEHFKBwFMjCNNKPkDnNxfRakGRVfoRptPe5msu47un"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-04T23:41:45.879Z"
+  },
+  {
+    "_id": "6983d8008ebc86b23af09d98",
+    "signature": "63S2dHrV81R1XXQdKTg5vH94f312eFQfgfVQWy5qyVbnYDyp4bunfUQmcsatNrgWLUeCvjW8GNcPkXS56HtPSHAG",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "9Xei...mM7S",
+        "address": "9XeizW4yMfUqfGmqF3niSL9zkWwGJQ8EY9EQopWQmM7S"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-04T23:36:32.148Z"
+  },
+  {
+    "_id": "6983d7f18ebc86b23af09d3d",
+    "signature": "2Cn493C7ZtseiWp7BMLaV57o8QyFVJ6QZB6FKHYJapo2fHDz4Y5VQykZoSZ89ALvwkVU4Es7LhM3hVGez1fq6hQm",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "BigTrout",
+        "address": "EKwF2HD6X4rHHr4322EJeK9QBGkqhpHZQSanSUmWkecG"
+      },
+      "tokenOut": {
+        "symbol": "9Xei...mM7S",
+        "address": "9XeizW4yMfUqfGmqF3niSL9zkWwGJQ8EY9EQopWQmM7S"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-04T23:36:17.662Z"
+  },
+  {
+    "_id": "6983d4d08ebc86b23af08861",
+    "signature": "2Vg4iEzf2u57Hvm8NNY1DH2jZzgRJksQC49eBbAybZ5hcvkZC6x6MbGLt8MtRz3QUPCFprv3wXqP6mxZa7dEvoXs",
+    "transaction": {
+      "tokenIn": {
+        "symbol": "ARC",
+        "address": "61V8vBaqAGMpgDQi4JcAwo1dmBGHsyhzodcPqnEVpump"
+      },
+      "tokenOut": {
+        "symbol": "FARTCOIN ",
+        "address": "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump"
+      }
+    },
+    "type": "sell",
+    "timestamp": "2026-02-04T23:22:56.692Z"
+  }
+]

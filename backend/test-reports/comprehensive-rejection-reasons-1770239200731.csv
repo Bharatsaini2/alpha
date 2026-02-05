@@ -1,0 +1,10 @@
+Reason,Count,Percentage
+"swapper_identification_failed",212,61.45%
+"single_meaningful_change",39,11.30%
+"only_transfer_actions",33,9.57%
+"transaction_failed",26,7.54%
+"no_opposite_deltas",16,4.64%
+"core_to_core_swap_suppressed",7,2.03%
+"invalid_delta_signs",6,1.74%
+"invalid_asset_count",4,1.16%
+"below_minimum_value_threshold",2,0.58%

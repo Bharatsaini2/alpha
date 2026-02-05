@@ -7,8 +7,8 @@
  * This component implements:
  * - Two-asset gate validation
  * - Opposite delta signs validation
- * - Priority asset check (SOL, WSOL, USDC, USDT)
- * - Token-to-token split protocol
+ * - Core token check (30 core tokens including SOL, stablecoins, LSTs, BTC, ETH)
+ * - Token-to-token split protocol (only when BOTH tokens are non-core)
  */
 
 import logger from './logger'
@@ -19,6 +19,57 @@ import {
   QuoteBaseResult,
   PRIORITY_ASSETS,
 } from './shyftParserV2.types'
+import { getCoreTokenSuppressionService } from '../services/core-token-suppression.service'
+
+// Get core token list (30 tokens)
+const DEFAULT_CORE_TOKENS = [
+  'So11111111111111111111111111111111111111112', // SOL
+  'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v', // jupSOL
+  'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1', // bSOL
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So', // mSOL
+  '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj', // stSOL
+  'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn', // jitoSOL
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v', // USDC
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB', // USDT
+  '2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo', // PYUSD
+  'USDSwr9ApdHk5bvJKMjzff41FfuX8bSxdKcR81vTwcA', // USDS
+  'EjmyN6qEC1Tf1JxiG1ae7UTJhUxSwk1TCWNWqxWV4J6o', // DAI
+  '2u1tszSeqZ3qBWF3uNGPFc8TzMk2tdiwknnRMWGWjGWH', // USDG
+  'JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD', // JupUSD
+  '7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT', // UXD
+  'USD1ttGY1N17NEEHLmELoaybftRBUSErhqYiQzvEmuB', // USD1
+  'HzwqbKZw8HxMN6bF2yFZNrht3c2iXXzpKcFu7uBEDKtr', // EURC
+  'star9agSpjiFe3M49B3RniVU4CMBBEK3Qnaqn3RGiFM', // USD*
+  'USX6FrrzDk5mQARGc1TDYoyVnSyRdds1t4PbtohCD6p3tgG', // USX
+  'CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH', // CASH
+  'hyUSD5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E', // hyUSD
+  'AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUjY', // syrupUSDC
+  'Sj14XLJZSVMcUYpAfajdZRpnfHUpJieZHS4aPektLWvh', // SjlUSD
+  'G9fvHrYNw1A8Evpcj7X2yy4k4fT7nNHcA9L6UsamNHAif', // GjlUSD
+  '9BEcn9aPEmhSPbPQeFGjidRiEKki46fVQDyPpSQXPA2D', // jlUSDC
+  '27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4', // JLP
+  'JUICED7GxATsNMnaC88vdwd2t3mwrFuQwwGvmYPrUQ4D6FotXk', // JUICED
+  'zBTCug3er3tLyffELcvDNrKkCymbPWysGcWihESYfLg', // zBTC
+  'cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij', // cbBTC
+  '9n4nbM75f5Ui33ZbPYXn59EwSgE8CGsHtAeTH5YFeJ9E', // wBTC
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs', // wETH
+]
+
+const coreTokenService = getCoreTokenSuppressionService(DEFAULT_CORE_TOKENS, true)
+
+/**
+ * SOL-equivalent tokens (LSTs and wrapped SOL)
+ * These should all be treated as SOL for asset counting and normalization
+ */
+const SOL_EQUIVALENTS = new Set([
+  PRIORITY_ASSETS.SOL,
+  PRIORITY_ASSETS.WSOL,
+  'jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v', // jupSOL
+  'bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1',  // bSOL
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So',  // mSOL
+  '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj',  // stSOL
+  'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',  // jitoSOL
+])
 
 /**
  * Implementation of QuoteBaseDetector
@@ -31,6 +82,106 @@ import {
  */
 export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
   
+  /**
+   * Normalize all SOL-equivalent tokens (SOL, WSOL, LSTs) into a single SOL value
+   * AND filter out dust amounts
+   * 
+   * CRITICAL FIX: PUMP.fun and Jupiter often route through LSTs (jupSOL, bSOL, mSOL, stSOL)
+   * These create multiple "SOL-like" deltas that should be treated as a single SOL asset.
+   * 
+   * Also filters out:
+   * - Temporary WSOL accounts with near-zero balance
+   * - Fee rebates with dust amounts
+   * - Route tokens with net-zero deltas
+   * 
+   * This method:
+   * 1. Identifies all SOL-equivalent assets (SOL, WSOL, jupSOL, bSOL, mSOL, stSOL, jitoSOL)
+   * 2. Merges their deltas into a single SOL asset
+   * 3. Removes assets with dust amounts (< 0.000001 normalized)
+   * 4. Returns the normalized asset list
+   * 
+   * @param assets - List of active assets
+   * @returns Normalized list with all SOL-equivalents merged and dust filtered
+   */
+  private normalizeCoreSol(assets: AssetDelta[]): AssetDelta[] {
+    const DUST_THRESHOLD = 0.000001 // Dust threshold for normalized amounts
+    
+    // Separate SOL-equivalent assets from others
+    const solLikeAssets = assets.filter(a => SOL_EQUIVALENTS.has(a.mint))
+    const otherAssets = assets.filter(a => !SOL_EQUIVALENTS.has(a.mint))
+
+    // Filter out dust from other assets FIRST
+    const meaningfulOtherAssets = otherAssets.filter(a => {
+      const normalizedDelta = Math.abs(a.netDelta) / Math.pow(10, a.decimals)
+      return normalizedDelta > DUST_THRESHOLD
+    })
+
+    // If no SOL-equivalent assets, return filtered other assets
+    if (solLikeAssets.length === 0) {
+      logger.debug(
+        {
+          beforeCount: otherAssets.length,
+          afterCount: meaningfulOtherAssets.length,
+          filtered: otherAssets.length - meaningfulOtherAssets.length,
+        },
+        'QuoteBaseDetector: Filtered dust amounts (no SOL assets)'
+      )
+      return meaningfulOtherAssets
+    }
+
+    // Merge all SOL-equivalent deltas into a single SOL asset
+    const totalSolDelta = solLikeAssets.reduce((sum, asset) => sum + asset.netDelta, 0)
+
+    logger.debug(
+      {
+        solLikeCount: solLikeAssets.length,
+        individualDeltas: solLikeAssets.map(a => ({ 
+          mint: a.mint.substring(0, 8) + '...', 
+          symbol: a.symbol,
+          delta: a.netDelta 
+        })),
+        totalSolDelta,
+      },
+      'QuoteBaseDetector: Merging SOL-equivalent assets (SOL/WSOL/LSTs)'
+    )
+
+    // Create merged SOL asset
+    const mergedSol: AssetDelta = {
+      mint: PRIORITY_ASSETS.SOL,
+      symbol: 'SOL',
+      netDelta: totalSolDelta,
+      decimals: 9,
+      isIntermediate: false,
+    }
+
+    // Check if merged SOL is meaningful
+    const solNormalizedDelta = Math.abs(totalSolDelta) / Math.pow(10, 9)
+    const solIsMeaningful = solNormalizedDelta > DUST_THRESHOLD
+
+    // Combine meaningful assets
+    const normalized = [
+      ...(solIsMeaningful ? [mergedSol] : []),
+      ...meaningfulOtherAssets
+    ]
+
+    logger.debug(
+      {
+        beforeCount: assets.length,
+        afterCount: normalized.length,
+        dustFiltered: assets.length - normalized.length,
+        normalizedAssets: normalized.map(a => ({ 
+          mint: a.mint.substring(0, 8) + '...', 
+          symbol: a.symbol,
+          delta: a.netDelta,
+          normalizedDelta: Math.abs(a.netDelta) / Math.pow(10, a.decimals)
+        })),
+      },
+      'QuoteBaseDetector: Core SOL normalization and dust filtering complete'
+    )
+
+    return normalized
+  }
+
   /**
    * Detect quote and base assets from asset delta map
    * 
@@ -52,7 +203,7 @@ export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
     )
 
     // Filter out intermediate assets (multi-hop collapse)
-    const activeAssets = Object.values(deltaMap).filter(
+    let activeAssets = Object.values(deltaMap).filter(
       (asset) => !asset.isIntermediate
     )
 
@@ -62,6 +213,19 @@ export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
         assets: activeAssets.map(a => ({ mint: a.mint, delta: a.netDelta }))
       },
       'QuoteBaseDetector: Active assets (non-intermediate)'
+    )
+
+    // CRITICAL FIX: Normalize SOL-equivalents (SOL/WSOL/LSTs) BEFORE asset count check
+    // PUMP.fun and Jupiter often route through LSTs (jupSOL, bSOL, mSOL, stSOL, jitoSOL)
+    // These create multiple "SOL-like" deltas that should be treated as a single SOL asset
+    activeAssets = this.normalizeCoreSol(activeAssets)
+
+    logger.debug(
+      { 
+        normalizedCount: activeAssets.length,
+        assets: activeAssets.map(a => ({ mint: a.mint, delta: a.netDelta }))
+      },
+      'QuoteBaseDetector: After SOL/WSOL normalization'
     )
 
     // Gate 1: Exactly 2 assets required (Requirement 3.1)
@@ -143,56 +307,57 @@ export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
       }
     }
 
-    // Check for priority assets (SOL, WSOL, USDC, USDT)
-    const priorityMints = new Set<string>(Object.values(PRIORITY_ASSETS))
-    const asset1IsPriority = priorityMints.has(asset1.mint)
-    const asset2IsPriority = priorityMints.has(asset2.mint)
-    const hasPriorityAsset = asset1IsPriority || asset2IsPriority
+    // Check for core tokens (30 tokens including SOL, stablecoins, LSTs, BTC, ETH)
+    // If at least one token is core, it's a standard swap (BUY/SELL)
+    // If both are non-core, it's a split swap (token-to-token)
+    const asset1IsCore = coreTokenService.isCoreToken(asset1.mint)
+    const asset2IsCore = coreTokenService.isCoreToken(asset2.mint)
+    const hasCoreToken = asset1IsCore || asset2IsCore
 
     logger.debug(
       {
-        asset1: { mint: asset1.mint, isPriority: asset1IsPriority },
-        asset2: { mint: asset2.mint, isPriority: asset2IsPriority },
-        hasPriorityAsset,
+        asset1: { mint: asset1.mint, isCore: asset1IsCore },
+        asset2: { mint: asset2.mint, isCore: asset2IsCore },
+        hasCoreToken,
       },
-      'QuoteBaseDetector: Priority asset check'
+      'QuoteBaseDetector: Core token check'
     )
 
-    if (hasPriorityAsset) {
-      // Standard Classification (1 Trade) - Requirements 3.3, 3.4
-      return this.detectStandardSwap(asset1, asset2, asset1IsPriority, asset2IsPriority)
+    if (hasCoreToken) {
+      // Standard Classification (1 Trade) - at least one token is core
+      return this.detectStandardSwap(asset1, asset2, asset1IsCore, asset2IsCore)
     } else {
-      // Split Protocol (Token-to-Token Unstable Pair) - Requirements 3.5, 3.6
+      // Split Protocol (Token-to-Token) - both tokens are non-core
       return this.detectSplitSwap(asset1, asset2)
     }
   }
 
   /**
-   * Detect standard swap with priority asset
+   * Detect standard swap with core token
    * 
    * Requirements:
-   * - 3.3: Priority asset is the quote asset
-   * - 3.4: Non-priority asset is the base asset
+   * - 3.3: Core token is the quote asset
+   * - 3.4: Non-core token is the base asset
    * 
    * @param asset1 - First asset
    * @param asset2 - Second asset
-   * @param asset1IsPriority - Whether asset1 is a priority asset
-   * @param asset2IsPriority - Whether asset2 is a priority asset
+   * @param asset1IsCore - Whether asset1 is a core token
+   * @param asset2IsCore - Whether asset2 is a core token
    * @returns QuoteBaseResult with quote, base, and direction
    */
   private detectStandardSwap(
     asset1: AssetDelta,
     asset2: AssetDelta,
-    asset1IsPriority: boolean,
-    asset2IsPriority: boolean
+    asset1IsCore: boolean,
+    asset2IsCore: boolean
   ): QuoteBaseResult {
     let quote: AssetDelta
     let base: AssetDelta
 
-    // Assign quote and base based on priority
-    // If both are priority, prefer SOL/WSOL over stablecoins
-    if (asset1IsPriority && asset2IsPriority) {
-      // Both are priority - prefer SOL/WSOL as quote
+    // Assign quote and base based on core token status
+    // If both are core, prefer SOL/WSOL over stablecoins
+    if (asset1IsCore && asset2IsCore) {
+      // Both are core - prefer SOL/WSOL as quote
       if (asset1.mint === PRIORITY_ASSETS.SOL || asset1.mint === PRIORITY_ASSETS.WSOL) {
         quote = asset1
         base = asset2
@@ -200,11 +365,11 @@ export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
         quote = asset2
         base = asset1
       } else {
-        // Both are stablecoins - use first one as quote
+        // Both are non-SOL core tokens - use first one as quote
         quote = asset1
         base = asset2
       }
-    } else if (asset1IsPriority) {
+    } else if (asset1IsCore) {
       quote = asset1
       base = asset2
     } else {
@@ -217,18 +382,43 @@ export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
         quote: { mint: quote.mint, delta: quote.netDelta },
         base: { mint: base.mint, delta: base.netDelta },
       },
-      'QuoteBaseDetector: Standard swap detected'
+      'QuoteBaseDetector: Initial quote/base assignment'
     )
 
     // Determine direction
+    // Market convention:
+    // - Quote = pricing currency (SOL, USDC) - the priority asset
+    // - Base = asset being traded (the token)
+    // 
+    // For BUY: User spends quote (SOL/USDC) to buy base (token)
+    //   - quote.netDelta < 0 (spending SOL/USDC)
+    //   - base.netDelta > 0 (receiving token)
+    // 
+    // For SELL: User sells base (token) to receive quote (SOL/USDC)
+    //   - quote.netDelta > 0 (receiving SOL/USDC)
+    //   - base.netDelta < 0 (selling token)
     let direction: 'BUY' | 'SELL' | null = null
 
     if (quote.netDelta < 0 && base.netDelta > 0) {
-      // Sold quote to buy base
+      // Spent quote (SOL/USDC) to buy base (token)
       direction = 'BUY'
+      logger.debug(
+        {
+          quote: { mint: quote.mint, delta: quote.netDelta },
+          base: { mint: base.mint, delta: base.netDelta },
+        },
+        'QuoteBaseDetector: BUY detected - user spent quote to buy base'
+      )
     } else if (quote.netDelta > 0 && base.netDelta < 0) {
-      // Sold base to get quote
+      // Sold base (token) to receive quote (SOL/USDC)
       direction = 'SELL'
+      logger.debug(
+        {
+          quote: { mint: quote.mint, delta: quote.netDelta },
+          base: { mint: base.mint, delta: base.netDelta },
+        },
+        'QuoteBaseDetector: SELL detected - user sold base to receive quote'
+      )
     } else {
       logger.debug(
         {
@@ -242,8 +432,12 @@ export class QuoteBaseDetectorImpl implements QuoteBaseDetector {
     }
 
     logger.debug(
-      { direction },
-      'QuoteBaseDetector: Direction determined'
+      { 
+        direction,
+        finalQuote: { mint: quote.mint, delta: quote.netDelta },
+        finalBase: { mint: base.mint, delta: base.netDelta }
+      },
+      'QuoteBaseDetector: Direction determined and quote/base finalized'
     )
 
     return {

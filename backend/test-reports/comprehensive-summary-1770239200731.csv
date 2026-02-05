@@ -1,0 +1,10 @@
+Metric,Value,Percentage
+Test Duration (seconds),42.27,N/A
+Total Transactions,411,100%
+Whale Addresses Tested,100,N/A
+V2 Accepted,40,9.73%
+V2 Split Swaps,26,6.33%
+V2 Rejected,345,83.94%
+V2 Errors,0,N/A
+V1 Accepted,169,41.12%
+V1 Rejected,242,58.88%

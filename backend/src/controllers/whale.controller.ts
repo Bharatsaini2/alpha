@@ -48,6 +48,7 @@ import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { ExpressAdapter } from '@bull-board/express'
 import { parseShyftTransaction, ShyftTransaction } from '../utils/shyftParser'
+import { parseShyftTransactionV2 } from '../utils/shyftParserV2'
 dotenv.config()
 
 function startOfUTCDay(date: Date): Date {
@@ -864,44 +865,139 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       return
     }
 
-    // ✅ Step 2: NEVER filter by type - Log it but don't use it as a filter
-    // Types like CREATE_TOKEN_ACCOUNT, TOKEN_TRANSFER, GETACCOUNTDATASIZE can still be swaps
-    logger.info(`📋 Transaction type: ${txType} (informational only, not used for filtering)`)
-
-    // ✅ Check if we have ANY balance changes - don't require minimum count
-    const tokenBalanceChanges = parsedTx.result?.token_balance_changes || []
-    
-    if (tokenBalanceChanges.length === 0) {
-      logger.info(
-        `Whale [Filter] Skipping ${signature}: No balance changes found`,
-      )
-      return
-    }
-
-    logger.info(
-      `✅ Found ${tokenBalanceChanges.length} balance changes - proceeding to parser`,
-    )
+    // ✅ Step 2: Let V2 parser handle ALL classification logic
+    // DO NOT pre-filter by type, balance changes, or actions
+    // V2 parser has sophisticated logic to handle all cases
+    logger.info(`📋 Transaction type: ${txType} (will be analyzed by V2 parser)`)
 
     const actions = parsedTx?.result?.actions || []
     const protocolName = parsedTx.result.protocol?.name || 'Unknown'
     const gasFee = parsedTx.result.fee
     const swapper = parsedTx.result.signers[0] || whaleAddress
 
-    // ✅ STEP 3: Call SHYFT Parser FIRST (canonical flow)
-    // Parser handles ALL classification logic per SHYFT spec
-    logger.info(pc.cyan('🔍 Calling SHYFT parser for classification...'))
-    const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
+    // ✅ STEP 3: Call V2 Parser with whale-specific context
+    // CRITICAL FIX: Filter token balance changes to only include whale's changes
+    // This ensures the parser sees the transaction from the whale's perspective
+    logger.info(pc.cyan('🔍 Calling V2 parser for classification...'))
     
-    if (!parsedSwap) {
-      logger.info(
-        `Whale [Filter] Skipping ${signature}: Parser could not classify transaction (no swap detected)`,
-      )
-      return
+    // Convert to V2 format with whale-specific filtering
+    const v2Input = {
+      signature: signature,
+      timestamp: parsedTx.result.timestamp ? new Date(parsedTx.result.timestamp).getTime() : Date.now(),
+      status: parsedTx.result.status || 'Success',
+      fee: parsedTx.result.fee || 0,
+      fee_payer: whaleAddress, // ✅ Use whale as fee payer to force correct swapper identification
+      signers: [whaleAddress], // ✅ Use whale as signer
+      protocol: parsedTx.result.protocol,
+      token_balance_changes: parsedTx.result.token_balance_changes.filter(
+        (change: any) => change.owner === whaleAddress
+      ), // ✅ Only include whale's token changes to get correct perspective
+      actions: parsedTx.result.actions || []
     }
 
+    const parseResult = parseShyftTransactionV2(v2Input)
+
+    if (parseResult.success && parseResult.data) {
+      const swapData = parseResult.data
+
+      // ✅ Handle SplitSwapPair by creating TWO separate transactions (SELL + BUY)
+      // This matches V1 behavior where token-to-token swaps create 2 records
+      if ('sellRecord' in swapData) {
+        logger.info(
+          pc.magenta(`🔄 Split Swap Pair detected - creating 2 separate transactions (SELL + BUY)`)
+        )
+        
+        // Create SELL transaction (user sold outgoing token)
+        await processSingleSwapTransaction(
+          swapData.sellRecord,
+          signature,
+          parsedTx,
+          txStatus,
+          whaleAddress,
+          protocolName,
+          gasFee,
+          'v2_parser_split_sell'
+        )
+        
+        // Create BUY transaction (user bought incoming token)
+        await processSingleSwapTransaction(
+          swapData.buyRecord,
+          signature,
+          parsedTx,
+          txStatus,
+          whaleAddress,
+          protocolName,
+          gasFee,
+          'v2_parser_split_buy'
+        )
+        
+        logger.info(
+          pc.green(`✅ Split swap pair processed - created 2 transactions (SELL + BUY) for ${signature}`)
+        )
+        return // Exit early, transactions processed
+      } else {
+        // Handle regular ParsedSwap - single transaction
+        await processSingleSwapTransaction(
+          swapData,
+          signature,
+          parsedTx,
+          txStatus,
+          whaleAddress,
+          protocolName,
+          gasFee,
+          'v2_parser'
+        )
+        return // Exit early, transaction processed
+      }
+    }
+    
+    // V2 parser rejected transaction
+    logger.info(
+      `Whale [Filter] Skipping ${signature}: V2 parser rejected (reason: ${parseResult.erase?.reason || 'unknown'})`,
+    )
+    return
+  } catch (err) {
+    logger.error({ err }, `Error processing signature ${signature}:`)
+  } finally {
+    try {
+      // ✅ Clean up Redis processing key
+      const duplicateKey = `processing_signature:${signature}`
+      await redisClient.del(duplicateKey)
+
+      await redisClient.srem(
+        'whale_signatures',
+        JSON.stringify({ signature, whaleAddress }),
+      )
+      logger.info(`Signature removed from Redis: ${signature}`)
+
+      // Force garbage collection if available
+      if (global.gc) {
+        global.gc()
+      }
+    } catch (cleanupError) {
+      logger.error(
+        { cleanupError },
+        `Error cleaning up signature ${signature}:`,
+      )
+    }
+  }
+}
+
+// ✅ EXTRACTED FUNCTION: Process a single swap transaction
+async function processSingleSwapTransaction(
+  parsedSwap: any,
+  signature: string,
+  parsedTx: any,
+  txStatus: string,
+  whaleAddress: string,
+  protocolName: string,
+  gasFee: number,
+  classificationSource: string
+) {
+  try {
     logger.info(
       pc.green(
-        `✅ Parser classified: ${parsedSwap.side} | confidence: ${parsedSwap.confidence} | source: ${parsedSwap.classification_source}`,
+        `✅ Parser classified: ${parsedSwap.direction} | confidence: ${parsedSwap.confidence} | source: ${classificationSource}`,
       ),
     )
 
@@ -919,22 +1015,25 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       }
     }
 
-    // ✅ Extract token data from parser result
+    // ✅ Extract token data from V2 parser result (using balance-based structure)
     const tokenIn = {
-      token_address: parsedSwap.input.mint,
-      amount: parsedSwap.input.amount,
-      symbol: parsedSwap.input.symbol || 'Unknown',
-      name: parsedSwap.input.symbol || 'Unknown',
+      token_address: parsedSwap.direction === 'BUY' ? parsedSwap.quoteAsset.mint : parsedSwap.baseAsset.mint,
+      amount: parsedSwap.direction === 'BUY' 
+        ? (parsedSwap.amounts.swapInputAmount || parsedSwap.amounts.totalWalletCost || 0)
+        : (parsedSwap.amounts.baseAmount || 0),
+      symbol: parsedSwap.direction === 'BUY' ? (parsedSwap.quoteAsset.symbol || 'Unknown') : (parsedSwap.baseAsset.symbol || 'Unknown'),
+      name: parsedSwap.direction === 'BUY' ? (parsedSwap.quoteAsset.symbol || 'Unknown') : (parsedSwap.baseAsset.symbol || 'Unknown'),
     }
 
     const tokenOut = {
-      token_address: parsedSwap.output.mint,
-      amount: parsedSwap.output.amount,
-      symbol: parsedSwap.output.symbol || 'Unknown',
-      name: parsedSwap.output.symbol || 'Unknown',
+      token_address: parsedSwap.direction === 'BUY' ? parsedSwap.baseAsset.mint : parsedSwap.quoteAsset.mint,
+      amount: parsedSwap.direction === 'BUY' 
+        ? (parsedSwap.amounts.baseAmount || 0)
+        : (parsedSwap.amounts.swapOutputAmount || parsedSwap.amounts.netWalletReceived || 0),
+      symbol: parsedSwap.direction === 'BUY' ? (parsedSwap.baseAsset.symbol || 'Unknown') : (parsedSwap.quoteAsset.symbol || 'Unknown'),
+      name: parsedSwap.direction === 'BUY' ? (parsedSwap.baseAsset.symbol || 'Unknown') : (parsedSwap.quoteAsset.symbol || 'Unknown'),
     }
 
-    const classificationSource = parsedSwap.classification_source
     const confidence = parsedSwap.confidence
 
     logger.info(
@@ -977,7 +1076,9 @@ const processSignature = async (signatureJson: any): Promise<void> => {
     // ✅ FIXED: Cache tokens only if valid (enhanced validation)
     // Cache tokenIn (if valid and not shortened)
     if (inSymbolData.symbol && !inSymbolData._isShortened && isValidMetadata(inSymbolData.symbol)) {
-      const source = (parsedSwap.input.symbol && parsedSwap.input.symbol === inSymbolData.symbol) ? 'shyft' : 'dexscreener'
+      // V2 parser: check quoteAsset or baseAsset based on direction
+      const v2Symbol = parsedSwap.direction === 'BUY' ? parsedSwap.quoteAsset.symbol : parsedSwap.baseAsset.symbol
+      const source = (v2Symbol && v2Symbol === inSymbolData.symbol) ? 'shyft' : 'dexscreener'
       logger.info(`💾 Caching tokenIn: ${inSymbolData.symbol} (${tokenIn.token_address.slice(0, 8)}...) [${source}]`)
       try {
         await saveTokenToCache(tokenIn.token_address, inSymbolData.symbol, inSymbolData.name, source)
@@ -990,7 +1091,9 @@ const processSignature = async (signatureJson: any): Promise<void> => {
     
     // Cache tokenOut (if valid and not shortened)
     if (outSymbolData.symbol && !outSymbolData._isShortened && isValidMetadata(outSymbolData.symbol)) {
-      const source = (parsedSwap.output.symbol && parsedSwap.output.symbol === outSymbolData.symbol) ? 'shyft' : 'dexscreener'
+      // V2 parser: check baseAsset or quoteAsset based on direction
+      const v2Symbol = parsedSwap.direction === 'BUY' ? parsedSwap.baseAsset.symbol : parsedSwap.quoteAsset.symbol
+      const source = (v2Symbol && v2Symbol === outSymbolData.symbol) ? 'shyft' : 'dexscreener'
       logger.info(`💾 Caching tokenOut: ${outSymbolData.symbol} (${tokenOut.token_address.slice(0, 8)}...) [${source}]`)
       try {
         await saveTokenToCache(tokenOut.token_address, outSymbolData.symbol, outSymbolData.name, source)
@@ -1001,9 +1104,9 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       logger.info(`⚠️ Skipping cache for tokenOut: ${outSymbolData.symbol} (invalid or shortened)`)
     }
 
-    // ✅ Use parser's classification for isBuy/isSell
-    const isBuy = parsedSwap.side === 'BUY' || parsedSwap.side === 'SWAP'
-    const isSell = parsedSwap.side === 'SELL' || parsedSwap.side === 'SWAP'
+    // ✅ Use V2 parser's direction for isBuy/isSell classification
+    const isBuy = parsedSwap.direction === 'BUY'
+    const isSell = parsedSwap.direction === 'SELL'
 
     if (!isBuy && !isSell) {
       logger.info(
@@ -1216,7 +1319,7 @@ const processSignature = async (signatureJson: any): Promise<void> => {
           parsedTx,
           txStatus,
           classificationSource,
-          confidence,
+          confidence.toString(), // Convert number to string
         )
       }
 
@@ -1744,11 +1847,17 @@ const storeTransactionInDB = async (
     details.sellMarketCapSol = tokenSolMarketCap / details.tokenOutPrice
   }
 
+  // ✅ CRITICAL FIX: Both buyAmount and sellAmount should show the SAME transaction value
+  // For BUY: User spends SOL/USDC to buy token → show SOL/USDC value
+  // For SELL: User sells token for SOL/USDC → show SOL/USDC value
+  // The transaction value is ALWAYS the priority asset (SOL/USDC/USDT) value
+  const transactionValue = Math.max(details.tokenOutUsdAmount || 0, details.tokenInUsdAmount || 0);
+  
   const transactionData = {
     signature, // ✅ FIX: Add signature to the transaction data
     amount: {
-      buyAmount: details.tokenOutUsdAmount || 0,
-      sellAmount: details.tokenInUsdAmount || 0,
+      buyAmount: transactionValue,
+      sellAmount: transactionValue,
     },
 
     tokenAmount: {

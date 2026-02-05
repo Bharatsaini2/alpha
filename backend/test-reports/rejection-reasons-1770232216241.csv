@@ -1,0 +1,6 @@
+Reason,Count,Percentage
+"transaction_failed",21,52.50%
+"swapper_identification_failed",13,32.50%
+"only_transfer_actions",4,10.00%
+"core_to_core_swap_suppressed",1,2.50%
+"below_minimum_value_threshold",1,2.50%

@@ -1,4 +1,4 @@
-import { PublicKey } from '@solana/web3.js'
+﻿import { PublicKey } from '@solana/web3.js'
 import mongoose from 'mongoose'
 import pc from 'picocolors'
 import { connectDB, getDataBaseInfo } from '../config/connectDb'
@@ -36,6 +36,7 @@ import { ExpressAdapter } from '@bull-board/express'
 import WebSocket from 'ws'
 import { createBullBoard } from '@bull-board/api'
 import { parseShyftTransaction, ShyftTransaction } from '../utils/shyftParser'
+import { parseShyftTransactionV2 } from '../utils/shyftParserV2'
 
 function startOfUTCDay(date: Date): Date {
   return new Date(
@@ -194,7 +195,7 @@ function connectWhaleStream(whaleAddresses: string[]) {
   ws = new WebSocket(HELIUS_WS_URL)
 
   ws.on('open', () => {
-    logger.info(pc.green('✅ Connected to Helius WebSocket'))
+    logger.info(pc.green('âœ… Connected to Helius WebSocket'))
     subscribeKols(whaleAddresses)
     startPing(ws!)
   })
@@ -204,28 +205,28 @@ function connectWhaleStream(whaleAddresses: string[]) {
     try {
       const msg = JSON.parse(msgStr)
       if (msg.result && msg.id) {
-        logger.info(pc.green(`✅ Subscribed successfully: ID ${msg.id}`))
+        logger.info(pc.green(`âœ… Subscribed successfully: ID ${msg.id}`))
       } else if (msg.method === 'transactionNotification') {
         const tx = msg.params.result
 
         logger.info(
-          pc.magenta(`🐋 Tx Notification received for ${tx.signature}`),
+          pc.magenta(`ðŸ‹ Tx Notification received for ${tx.signature}`),
         )
         handleTransactionEvent(tx)
       } else {
         logger.info(pc.gray('Other message:'), msg)
       }
     } catch (err) {
-      logger.error({ err }, pc.red('❌ JSON parse error:'))
+      logger.error({ err }, pc.red('âŒ JSON parse error:'))
     }
   })
 
   ws.on('error', (err) => {
-    logger.error({ err }, pc.red('⚠️ WebSocket error:'))
+    logger.error({ err }, pc.red('âš ï¸ WebSocket error:'))
   })
 
   ws.on('close', () => {
-    logger.info(pc.red('🔌 WebSocket closed — attempting reconnect...'))
+    logger.info(pc.red('ðŸ”Œ WebSocket closed â€” attempting reconnect...'))
     if (reconnectTimeout) clearTimeout(reconnectTimeout)
     reconnectTimeout = setTimeout(
       () => connectWhaleStream(whaleAddresses),
@@ -264,7 +265,7 @@ function subscribeKols(whaleAddresses: string[]) {
 
   ws.send(JSON.stringify(request))
   logger.info(
-    pc.cyan(`📡 Subscribed to all kol addresses in a single request.`),
+    pc.cyan(`ðŸ“¡ Subscribed to all kol addresses in a single request.`),
   )
 }
 
@@ -303,7 +304,7 @@ function subscribeKolsInBatches(whaleAddresses: string[]) {
       ws!.send(JSON.stringify(request))
       console.log(
         pc.cyan(
-          `📡 KOL Subscribed batch ${index + 1}/${batches.length} (${batch.length} addresses)`,
+          `ðŸ“¡ KOL Subscribed batch ${index + 1}/${batches.length} (${batch.length} addresses)`,
         ),
       )
     }, index * 100) // Stagger subscriptions by 100ms
@@ -319,7 +320,7 @@ async function handleTransactionEvent(tx: any) {
 
     if (!transactionData || !signature) {
       console.warn(
-        '⚠️ Malformed transaction notification: missing signature or transaction data',
+        'âš ï¸ Malformed transaction notification: missing signature or transaction data',
       )
       return
     }
@@ -327,7 +328,7 @@ async function handleTransactionEvent(tx: any) {
     const message = transactionData.transaction.message
 
     if (!message || !message.accountKeys) {
-      console.warn('⚠️ No message or accountKeys found in transaction payload')
+      console.warn('âš ï¸ No message or accountKeys found in transaction payload')
       return
     }
 
@@ -389,7 +390,7 @@ async function handleTransactionEvent(tx: any) {
         removeOnFail: false,
       },
     )
-    logger.info(pc.magenta(`👤 New kol Tx Detected: ${signature}`))
+    logger.info(pc.magenta(`ðŸ‘¤ New kol Tx Detected: ${signature}`))
     await setLatestSignature(kolAddress, signature)
   } catch (err) {
     logger.error({ err }, pc.red('Error handling transaction:'))
@@ -401,14 +402,14 @@ function startPing(ws: WebSocket) {
   setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.ping()
-      logger.info(pc.gray('↪️ Ping sent'))
+      logger.info(pc.gray('â†ªï¸ Ping sent'))
     }
   }, 30000)
 }
 
 // ============ WORKER FOR PROCESSING SIGNATURES ============
 
-console.log(pc.cyan(`\n🚀 Initializing ${NUM_WORKERS} workers...`))
+console.log(pc.cyan(`\nðŸš€ Initializing ${NUM_WORKERS} workers...`))
 console.log(`Redis Connection Status Kol: ${redisClient.status}`)
 console.log(`Queue Name: signature-processing-kol`)
 console.log(`Concurrency per worker Kol: ${WORKER_CONCURRENCY}\n`)
@@ -417,7 +418,7 @@ for (let i = 0; i < NUM_WORKERS; i++) {
   try {
     console.log(pc.yellow(`Creating worker Kol ${i}...`))
 
-    // ✅ Duplicate Redis connection for each worker
+    // âœ… Duplicate Redis connection for each worker
     const workerConnection = redisClient.duplicate()
 
     const worker = new Worker(
@@ -425,18 +426,18 @@ for (let i = 0; i < NUM_WORKERS; i++) {
       async (job) => {
         if (!job.data) {
           console.error(
-            pc.red(`[Worker ${i}] ❌ Job data is KOL null/undefined`),
+            pc.red(`[Worker ${i}] âŒ Job data is KOL null/undefined`),
           )
           return
         }
 
         const { signature, kolAddress, transactionData } = job.data
 
-        // ✅ Validate required fields
+        // âœ… Validate required fields
         if (!signature || !kolAddress) {
           console.error(
             pc.red(
-              `[Worker ${i}] ❌ Invalid job data KOL - missing signature or kolAddress:`,
+              `[Worker ${i}] âŒ Invalid job data KOL - missing signature or kolAddress:`,
             ),
             { signature, kolAddress },
           )
@@ -458,12 +459,12 @@ for (let i = 0; i < NUM_WORKERS; i++) {
           await processInfluencerSignature(JSON.stringify(signatureData))
           console.log(
             pc.green(
-              `[Worker Kol ${i}] ✅ Successfully processed KOL: ${signature}`,
+              `[Worker Kol ${i}] âœ… Successfully processed KOL: ${signature}`,
             ),
           )
         } catch (error) {
           console.error(
-            pc.red(`[Worker Kol ${i}] ❌ Error processing KOL: ${signature}:`),
+            pc.red(`[Worker Kol ${i}] âŒ Error processing KOL: ${signature}:`),
             error,
           )
           throw error
@@ -480,9 +481,9 @@ for (let i = 0; i < NUM_WORKERS; i++) {
       },
     )
 
-    // 🔍 Add all event listeners BEFORE pushing to array
+    // ðŸ” Add all event listeners BEFORE pushing to array
     worker.on('ready', () => {
-      console.log(pc.green(`✅ Worker ${i} is KOL READY`))
+      console.log(pc.green(`âœ… Worker ${i} is KOL READY`))
     })
 
     worker.on('active', (job) => {
@@ -490,12 +491,12 @@ for (let i = 0; i < NUM_WORKERS; i++) {
     })
 
     worker.on('completed', (job) => {
-      console.log(pc.green(`✅ [Worker ${i}] Job ${job.id} Kol completed`))
+      console.log(pc.green(`âœ… [Worker ${i}] Job ${job.id} Kol completed`))
     })
 
     worker.on('failed', (job, err) => {
       console.log(
-        pc.red(`❌ [Worker ${i}] Kol Job ${job?.id} failed: ${err.message}`),
+        pc.red(`âŒ [Worker ${i}] Kol Job ${job?.id} failed: ${err.message}`),
       )
     })
 
@@ -508,14 +509,14 @@ for (let i = 0; i < NUM_WORKERS; i++) {
     })
 
     workers.push(worker)
-    console.log(pc.green(`✅ Worker ${i} Kol created and ready\n`))
+    console.log(pc.green(`âœ… Worker ${i} Kol created and ready\n`))
   } catch (error) {
-    console.error(pc.red(`❌ Failed to create Kol worker ${i}:`), error)
+    console.error(pc.red(`âŒ Failed to create Kol worker ${i}:`), error)
     throw error
   }
 }
 
-console.log(pc.green(`🎉 All ${NUM_WORKERS} Kol workers started successfully`))
+console.log(pc.green(`ðŸŽ‰ All ${NUM_WORKERS} Kol workers started successfully`))
 console.log(
   `Total capacity: ${NUM_WORKERS * WORKER_CONCURRENCY} Kol concurrent jobs\n`,
 )
@@ -550,18 +551,18 @@ setInterval(async () => {
     const stats = await getQueueStats()
     logger.info(
       {
-        '⏳ Waiting': stats.waiting,
-        '⚡ Active': stats.active,
-        '✅ Completed': stats.completed,
-        '❌ Failed': stats.failed,
-        '🕒 Delayed': stats.delayed,
+        'â³ Waiting': stats.waiting,
+        'âš¡ Active': stats.active,
+        'âœ… Completed': stats.completed,
+        'âŒ Failed': stats.failed,
+        'ðŸ•’ Delayed': stats.delayed,
       },
-      '📊 Queue Stats:',
+      'ðŸ“Š Queue Stats:',
     )
 
     // Alert if backlog is growing
     if (stats.waiting > 1000) {
-      logger.warn(pc.yellow(`⚠️ Large backlog: ${stats.waiting} jobs waiting!`))
+      logger.warn(pc.yellow(`âš ï¸ Large backlog: ${stats.waiting} jobs waiting!`))
     }
   } catch (error) {
     logger.error({ error }, 'Error getting queue stats:')
@@ -585,13 +586,13 @@ setInterval(async () => {
             active: stats.active,
             oldestJobAge: `${Math.round(age / 1000)}s`,
           },
-          '📊 Queue Stats KOL',
+          'ðŸ“Š Queue Stats KOL',
         )
 
         if (age > 30000) {
           // Over 30 seconds old
           logger.warn(
-            `⚠️  Queue KOL lag detected! Oldest job is ${Math.round(age / 1000)}s old`,
+            `âš ï¸  Queue KOL lag detected! Oldest job is ${Math.round(age / 1000)}s old`,
           )
         }
       }
@@ -606,7 +607,7 @@ export const monitorInfluencerWhales = async (whaleAddresses: string[]) => {
   try {
     monitoredKols = whaleAddresses
     logger.info(
-      pc.green('🚀 Starting Enhanced Kol Monitor (WebSocket mode)...'),
+      pc.green('ðŸš€ Starting Enhanced Kol Monitor (WebSocket mode)...'),
     )
     connectWhaleStream(whaleAddresses)
   } catch (error) {
@@ -618,7 +619,7 @@ export const getInfluencerWhaleLatestTransactions = catchAsyncErrors(
   async (req: any, res: any) => {
     // Check if the monitoring service is already active
     if (isMonitoringStarted) {
-      logger.info('✅ Kol monitoring is already active. No action needed.')
+      logger.info('âœ… Kol monitoring is already active. No action needed.')
       // Immediately tell the client that the service is running
       return res.status(200).json({
         status: 'active',
@@ -629,7 +630,7 @@ export const getInfluencerWhaleLatestTransactions = catchAsyncErrors(
     // If we reach here, monitoring has NOT started yet.
     // Set the flag to true IMMEDIATELY to prevent race conditions
     isMonitoringStarted = true
-    logger.info('🚀 Starting Kol monitoring for the first time...')
+    logger.info('ðŸš€ Starting Kol monitoring for the first time...')
 
     // --- Respond to the User Immediately ---
     // Tell the client that the monitoring service is now starting.
@@ -670,52 +671,52 @@ export const getInfluencerWhaleLatestTransactions = catchAsyncErrors(
 
 // ****************   2. Parse signatures for influencer *********************
 
-// 🛠️ Helper: Get symbol safely
+// ðŸ› ï¸ Helper: Get symbol safely
 const resolveSymbol = async (token: any) => {
   try {
-    // ✅ STEP 1: Check if SHYFT already provided valid symbol (FASTEST - no API call!)
+    // âœ… STEP 1: Check if SHYFT already provided valid symbol (FASTEST - no API call!)
     if (isValidMetadata(token.symbol)) {
-      logger.info(`✅ Using SHYFT symbol: ${token.symbol} (no API call needed)`)
+      logger.info(`âœ… Using SHYFT symbol: ${token.symbol} (no API call needed)`)
       
-      // ✅ FIXED: Cache SHYFT symbols too!
+      // âœ… FIXED: Cache SHYFT symbols too!
       try {
         await saveTokenToCache(token.token_address, token.symbol, token.name || token.symbol, 'shyft')
-        logger.info(`💾 Cached SHYFT symbol: ${token.symbol} for ${token.token_address.slice(0, 8)}...`)
+        logger.info(`ðŸ’¾ Cached SHYFT symbol: ${token.symbol} for ${token.token_address.slice(0, 8)}...`)
       } catch (err) {
-        logger.error({ err }, `❌ Failed to cache SHYFT symbol: ${token.token_address}`)
+        logger.error({ err }, `âŒ Failed to cache SHYFT symbol: ${token.token_address}`)
       }
       
       return { symbol: token.symbol, name: token.name || token.symbol }
     }
     
-    logger.info(`⚠️ SHYFT symbol missing or invalid (${token.symbol}), checking cache/API for ${token.token_address}...`)
+    logger.info(`âš ï¸ SHYFT symbol missing or invalid (${token.symbol}), checking cache/API for ${token.token_address}...`)
     
-    // ✅ STEP 1.5: Check if resolution previously failed
+    // âœ… STEP 1.5: Check if resolution previously failed
     if (await isTokenResolutionFailed(token.token_address)) {
-      logger.info(`⚠️ Token resolution previously failed, using shortened address`)
+      logger.info(`âš ï¸ Token resolution previously failed, using shortened address`)
       const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
       return { symbol: shortAddress, name: token.token_address, _isShortened: true }
     }
     
-    // ✅ STEP 2: SHYFT doesn't have it - check cache/API (fallback)
+    // âœ… STEP 2: SHYFT doesn't have it - check cache/API (fallback)
     const metadata = await getTokenMetaDataUsingRPC(token.token_address)
     
-    // ✅ FIXED: Better validation for resolved metadata
+    // âœ… FIXED: Better validation for resolved metadata
     if (metadata && !metadata._isShortened && isValidMetadata(metadata.symbol)) {
-      logger.info(`✅ Resolved symbol: ${metadata.symbol} for ${token.token_address}`)
+      logger.info(`âœ… Resolved symbol: ${metadata.symbol} for ${token.token_address}`)
       return metadata
     }
     
-    // ✅ STEP 3: Last resort - shortened contract address
+    // âœ… STEP 3: Last resort - shortened contract address
     const shortAddress = `${token.token_address.slice(0, 4)}...${token.token_address.slice(-4)}`
-    logger.info(`⚠️ All sources failed, using fallback: ${shortAddress} for ${token.token_address}`)
+    logger.info(`âš ï¸ All sources failed, using fallback: ${shortAddress} for ${token.token_address}`)
     return { 
       symbol: shortAddress,
       name: token.token_address,
       _isShortened: true
     }
   } catch (error) {
-    logger.error({ error }, `❌ Error in resolveSymbol for ${token.token_address}`)
+    logger.error({ error }, `âŒ Error in resolveSymbol for ${token.token_address}`)
     // On error, try SHYFT symbol first
     if (isValidMetadata(token.symbol)) {
       return { symbol: token.symbol, name: token.name || token.symbol }
@@ -751,7 +752,7 @@ const storeInfluencerTransactionInDB = async (
   if (classificationSource || confidence) {
     logger.info(
       pc.cyan(
-        `📊 Classification: source=${classificationSource || 'unknown'}, confidence=${confidence || 'unknown'}`,
+        `ðŸ“Š Classification: source=${classificationSource || 'unknown'}, confidence=${confidence || 'unknown'}`,
       ),
     )
   }
@@ -843,11 +844,17 @@ const storeInfluencerTransactionInDB = async (
     details.sellMarketCapSol = tokenSolMarketCap / details.tokenOutPrice
   }
 
+  // ✅ CRITICAL FIX: Both buyAmount and sellAmount should show the SAME transaction value
+  // For BUY: User spends SOL/USDC to buy token → show SOL/USDC value
+  // For SELL: User sells token for SOL/USDC → show SOL/USDC value
+  // The transaction value is ALWAYS the priority asset (SOL/USDC/USDT) value
+  const transactionValue = Math.max(details.tokenOutUsdAmount || 0, details.tokenInUsdAmount || 0);
+
   const transactionData = {
     signature,
     amount: {
-      buyAmount: details.tokenOutUsdAmount || 0,
-      sellAmount: details.tokenInUsdAmount || 0,
+      buyAmount: transactionValue,
+      sellAmount: transactionValue,
     },
 
     tokenAmount: {
@@ -936,7 +943,7 @@ const storeInfluencerTransactionInDB = async (
   const savedTransaction =
     await influencerWhaleTransactionsModelV2.create(transactionData)
   logger.info(
-    pc.green('✅ Stored whale transaction in MongoDB with enhanced V2 fields'),
+    pc.green('âœ… Stored whale transaction in MongoDB with enhanced V2 fields'),
   )
 
   // Trigger alert matching asynchronously (non-blocking)
@@ -1002,7 +1009,7 @@ const checkAndPostKOLAlert = async (
     const clampedHotnessScore = Math.max(0, Math.min(hotnessScoreWithBonus, 10))
 
     if (details.tokenOutUsdAmount > 3000) {
-      alertMessage = `🚨 KOL Move Alert 👀\n\n🔥 Hotness Score: ${clampedHotnessScore.toFixed(1)}/10\n\nWallet tied to ${details.influencerUsername} just bought $${formattedValue} of $${details.tokenOutSymbol} at $${formattedMarketCap} MC 🐋\n\n`
+      alertMessage = `ðŸš¨ KOL Move Alert ðŸ‘€\n\nðŸ”¥ Hotness Score: ${clampedHotnessScore.toFixed(1)}/10\n\nWallet tied to ${details.influencerUsername} just bought $${formattedValue} of $${details.tokenOutSymbol} at $${formattedMarketCap} MC ðŸ‹\n\n`
     }
 
     logger.info(`alertMessage==============', ${alertMessage}`)
@@ -1015,7 +1022,7 @@ const checkAndPostKOLAlert = async (
           { $set: { hotnessScore: clampedHotnessScore } },
         )
         logger.info(
-          `✅ Updated hotness score for ALPHA token: ${clampedHotnessScore}`,
+          `âœ… Updated hotness score for ALPHA token: ${clampedHotnessScore}`,
         )
       } catch (error) {
         logger.error({ error }, 'Error updating hotness score for ALPHA token')
@@ -1035,7 +1042,7 @@ const processInfluencerSignature = async (
   // ) => {
   if (!signatureJson) {
     logger.error(
-      '❌ processSignature called KOL with null/undefined signatureJson',
+      'âŒ processSignature called KOL with null/undefined signatureJson',
     )
     return
   }
@@ -1046,18 +1053,18 @@ const processInfluencerSignature = async (
   } catch (error) {
     logger.error(
       { error, signatureJson },
-      '❌ Failed to parse signatureJson KOL',
+      'âŒ Failed to parse signatureJson KOL',
     )
     return
   }
 
   const { signature, kolAddress, transactionData } = parsedData
 
-  // ✅ Validate parsed data
+  // âœ… Validate parsed data
   if (!signature || !kolAddress) {
     logger.error(
       { parsedData },
-      '❌ Missing required fields in parsed data KOL',
+      'âŒ Missing required fields in parsed data KOL',
     )
     return
   }
@@ -1065,7 +1072,7 @@ const processInfluencerSignature = async (
   logger.info(`kolAddress KOL : ${kolAddress}`)
 
   try {
-    // ✅ Add Redis-based duplicate check for race condition prevention
+    // âœ… Add Redis-based duplicate check for race condition prevention
     const duplicateKey = `processing_signature_kol:${signature}`
     const isProcessing = await redisClient.set(
       duplicateKey,
@@ -1100,7 +1107,7 @@ const processInfluencerSignature = async (
       // Use transaction data from WebSocket notification
       logger.info('Using cached transaction data from WebSocket KOL')
 
-      // ✅ Enhanced validation for transactionData
+      // âœ… Enhanced validation for transactionData
       if (
         !transactionData ||
         typeof transactionData !== 'object' ||
@@ -1115,7 +1122,7 @@ const processInfluencerSignature = async (
 
       txStatus = transactionData // Use cached data
     } else {
-      // ✅ Add timeout and retry logic for RPC calls
+      // âœ… Add timeout and retry logic for RPC calls
       const maxRetries = 3
       let retryCount = 0
 
@@ -1169,7 +1176,7 @@ const processInfluencerSignature = async (
       }
     }
 
-    logger.info(pc.cyan(`\n⚡ Processing signature: ${signature}`))
+    logger.info(pc.cyan(`\nâš¡ Processing signature: ${signature}`))
 
     const parsedData = await Promise.race([
       getParsedTransactions(signature),
@@ -1182,7 +1189,7 @@ const processInfluencerSignature = async (
     ]).catch(async (e) => {
       logger.error({ e }, 'RPCError:')
 
-      // ✅ Retry logic for getParsedTransactions
+      // âœ… Retry logic for getParsedTransactions
       const maxRetries = 2
       for (let i = 1; i <= maxRetries; i++) {
         try {
@@ -1201,7 +1208,7 @@ const processInfluencerSignature = async (
             ),
           ])
 
-          logger.info(`✅ getParsedTransactions succeeded on retry ${i} KOL`)
+          logger.info(`âœ… getParsedTransactions succeeded on retry ${i} KOL`)
           return retryData
         } catch (retryError) {
           logger.warn(`Retry ${i} failed: ${String(retryError)}`)
@@ -1238,7 +1245,7 @@ const processInfluencerSignature = async (
     }
 
     logger.info(
-      `✅ Swap detected via token balance changes (${tokenBalanceChanges.length} changes)`,
+      `âœ… Swap detected via token balance changes (${tokenBalanceChanges.length} changes)`,
     )
 
     const actions = parsedTx?.result?.actions
@@ -1263,13 +1270,13 @@ const processInfluencerSignature = async (
       tokenIn = actionInfo.tokens_swapped.in
       tokenOut = actionInfo.tokens_swapped.out
       swapSource = 'tokens_swapped'
-      logger.info(`✅ Swap data extracted from: tokens_swapped`)
+      logger.info(`âœ… Swap data extracted from: tokens_swapped`)
     } else if (
       parsedTx.result?.token_balance_changes &&
       parsedTx.result.token_balance_changes.length > 0
     ) {
       logger.info(
-        `⚠️ tokens_swapped not found. Checking token_balance_changes...`,
+        `âš ï¸ tokens_swapped not found. Checking token_balance_changes...`,
       )
 
       const balanceChanges = parsedTx.result.token_balance_changes.filter(
@@ -1303,11 +1310,11 @@ const processInfluencerSignature = async (
           name: tokenReceivedChange.name || 'Unknown',
         }
         swapSource = 'token_balance'
-        logger.info(`✅ Swap data extracted from: token_balance_changes`)
+        logger.info(`âœ… Swap data extracted from: token_balance_changes`)
       }
     } else {
       logger.info(
-        `⚠️ tokens_swapped and token_balance_changes not found. Using TOKEN_TRANSFER fallback...`,
+        `âš ï¸ tokens_swapped and token_balance_changes not found. Using TOKEN_TRANSFER fallback...`,
       )
 
       const transfers = actions.filter((a: any) => a.type === 'TOKEN_TRANSFER')
@@ -1332,7 +1339,7 @@ const processInfluencerSignature = async (
           name: 'Unknown',
         }
         swapSource = 'token_transfer'
-        logger.info(`✅ Swap data extracted from: TOKEN_TRANSFER`)
+        logger.info(`âœ… Swap data extracted from: TOKEN_TRANSFER`)
       }
     }
 
@@ -1377,43 +1384,131 @@ const processInfluencerSignature = async (
       tokenOut.name = outSymbolData.name
     }
 
-    // ✅ NEW: Use canonical SHYFT parser for classification (Task 3.2)
-    // Parse the transaction using the new parser to get accurate BUY/SELL classification
-    const parsedSwap = parseShyftTransaction(parsedTx.result as ShyftTransaction)
+    // ✅ Use V2 parser directly with KOL-specific context
+    // CRITICAL FIX: Filter token balance changes to only include KOL's changes
+    // This ensures the parser sees the transaction from the KOL's perspective
+    // Convert to V2 format
+    const v2Input = {
+      signature: signature,
+      timestamp: parsedTx.result.timestamp ? new Date(parsedTx.result.timestamp).getTime() : Date.now(),
+      status: parsedTx.result.status || 'Success',
+      fee: parsedTx.result.fee || 0,
+      fee_payer: kolAddress, // ✅ Use KOL as fee payer to force correct swapper identification
+      signers: [kolAddress], // ✅ Use KOL as signer
+      protocol: parsedTx.result.protocol,
+      token_balance_changes: parsedTx.result.token_balance_changes.filter(
+        (change: any) => change.owner === kolAddress
+      ), // ✅ Only include KOL's token changes to get correct perspective
+      actions: parsedTx.result.actions || []
+    }
+
+    const parseResult = parseShyftTransactionV2(v2Input)
+
+    if (parseResult.success && parseResult.data) {
+      const swapData = parseResult.data
+
+      // âœ… CRITICAL FIX: Handle SplitSwapPair by creating TWO separate transactions
+      if ('sellRecord' in swapData) {
+        logger.info(
+          pc.magenta(`ðŸ”„ Split Swap Pair detected - creating SELL and BUY transactions`)
+        )
+        
+        // Process SELL transaction
+        await processSingleInfluencerSwap(
+          swapData.sellRecord,
+          signature,
+          parsedTx,
+          txStatus,
+          kolAddress,
+          protocolName,
+          gasFee,
+          'v2_parser_split_sell'
+        )
+        
+        // Process BUY transaction
+        await processSingleInfluencerSwap(
+          swapData.buyRecord,
+          signature,
+          parsedTx,
+          txStatus,
+          kolAddress,
+          protocolName,
+          gasFee,
+          'v2_parser_split_buy'
+        )
+        
+        logger.info(
+          pc.green(`âœ… Split swap pair processed - created 2 transactions for ${signature}`)
+        )
+        return // Exit early, both transactions processed
+      } else {
+        // Handle regular ParsedSwap - single transaction
+        await processSingleInfluencerSwap(
+          swapData,
+          signature,
+          parsedTx,
+          txStatus,
+          kolAddress,
+          protocolName,
+          gasFee,
+          'v2_parser'
+        )
+        return // Exit early, transaction processed
+      }
+    }
     
-    if (!parsedSwap) {
-      logger.info(
-        pc.yellow(
-          `KOL [Filter] Skipping ${signature}: Parser could not classify transaction`,
-        ),
+    logger.info(
+      pc.yellow(
+        `KOL [Filter] Skipping ${signature}: Parser could not classify transaction (no swap detected)`,
+      ),
+    )
+    return
+  } catch (err) {
+    logger.error({ err }, `Error processing signature ${signature}:`)
+  } finally {
+    try {
+      // âœ… Clean up Redis processing key
+      const duplicateKey = `processing_signature:${signature}`
+      await redisClient.del(duplicateKey)
+
+      await redisClient.srem(
+        'kol_signatures',
+        JSON.stringify({ signature, kolAddress }),
       )
-      return
-    }
+      logger.info(`Signature removed from Redis: ${signature}`)
 
-    // ✅ FIXED: Cache tokens only if valid (enhanced validation)
-    // Cache tokenIn (if valid and not shortened)
-    if (inSymbolData.symbol && !inSymbolData._isShortened && isValidMetadata(inSymbolData.symbol)) {
-      const source = (parsedSwap.input.symbol && parsedSwap.input.symbol === inSymbolData.symbol) ? 'shyft' : 'dexscreener'
-      logger.info(`💾 Caching tokenIn: ${inSymbolData.symbol} (${tokenIn.token_address.slice(0, 8)}...) [${source}]`)
-      await saveTokenToCache(tokenIn.token_address, inSymbolData.symbol, inSymbolData.name, source).catch((err) => {
-        logger.error({ err }, `❌ Failed to cache tokenIn: ${tokenIn.token_address}`)
-      })
-    } else {
-      logger.info(`⚠️ Skipping cache for tokenIn: ${inSymbolData.symbol} (invalid or shortened)`)
+      // Force garbage collection if available
+      if (global.gc) {
+        global.gc()
+      }
+    } catch (cleanupError) {
+      logger.error(
+        { cleanupError },
+        `Error cleaning up signature ${signature}: KOL`,
+      )
     }
-    
-    // Cache tokenOut (if valid and not shortened)
-    if (outSymbolData.symbol && !outSymbolData._isShortened && isValidMetadata(outSymbolData.symbol)) {
-      const source = (parsedSwap.output.symbol && parsedSwap.output.symbol === outSymbolData.symbol) ? 'shyft' : 'dexscreener'
-      logger.info(`💾 Caching tokenOut: ${outSymbolData.symbol} (${tokenOut.token_address.slice(0, 8)}...) [${source}]`)
-      await saveTokenToCache(tokenOut.token_address, outSymbolData.symbol, outSymbolData.name, source).catch((err) => {
-        logger.error({ err }, `❌ Failed to cache tokenOut: ${tokenOut.token_address}`)
-      })
-    } else {
-      logger.info(`⚠️ Skipping cache for tokenOut: ${outSymbolData.symbol} (invalid or shortened)`)
-    }
+  }
+}
 
-    // ✅ Task 3.3: Apply confidence-based filtering
+// âœ… EXTRACTED FUNCTION: Process a single swap transaction (for both split and regular swaps)
+async function processSingleInfluencerSwap(
+  parsedSwap: any,
+  signature: string,
+  parsedTx: any,
+  txStatus: string,
+  kolAddress: string,
+  protocolName: string,
+  gasFee: number,
+  classificationSource: string
+) {
+  try {
+    logger.info(
+      pc.green(
+        `âœ… Parser classified: ${parsedSwap.direction} | confidence: ${parsedSwap.confidence} | source: ${classificationSource}`,
+      ),
+    )
+
+    // âœ… Apply confidence filtering if configured (Task 3.3)
     const minConfidence = process.env.MIN_ALERT_CONFIDENCE
     if (minConfidence) {
       const { meetsMinimumConfidence } = require('../utils/shyftParser')
@@ -1423,40 +1518,68 @@ const processInfluencerSignature = async (
             `KOL [Filter] Skipping ${signature}: Confidence ${parsedSwap.confidence} below minimum ${minConfidence}`,
           ),
         )
-        logger.debug(
-          {
-            signature,
-            confidence: parsedSwap.confidence,
-            minConfidence,
-            classification_source: parsedSwap.classification_source,
-            side: parsedSwap.side,
-          },
-          'Transaction filtered by confidence threshold'
-        )
         return
       }
     }
 
+    // Extract token information from parsed swap
+    const tokenIn = {
+      token_address: parsedSwap.direction === 'BUY' ? parsedSwap.quoteAsset.mint : parsedSwap.baseAsset.mint,
+      amount: parsedSwap.direction === 'BUY' 
+        ? (parsedSwap.amounts.swapInputAmount || parsedSwap.amounts.totalWalletCost || 0)
+        : (parsedSwap.amounts.baseAmount || 0),
+      symbol: parsedSwap.direction === 'BUY' ? (parsedSwap.quoteAsset.symbol || 'UNKNOWN') : (parsedSwap.baseAsset.symbol || 'UNKNOWN')
+    }
+
+    const tokenOut = {
+      token_address: parsedSwap.direction === 'BUY' ? parsedSwap.baseAsset.mint : parsedSwap.quoteAsset.mint,
+      amount: parsedSwap.direction === 'BUY' 
+        ? (parsedSwap.amounts.baseAmount || 0)
+        : (parsedSwap.amounts.swapOutputAmount || parsedSwap.amounts.netWalletReceived || 0),
+      symbol: parsedSwap.direction === 'BUY' ? (parsedSwap.baseAsset.symbol || 'UNKNOWN') : (parsedSwap.quoteAsset.symbol || 'UNKNOWN')
+    }
+
+    // Get token metadata
+    const [inSymbol, outSymbol] = await Promise.all([
+      resolveSymbol(tokenIn),
+      resolveSymbol(tokenOut),
+    ])
+
+    const inSymbolData =
+      typeof inSymbol === 'string'
+        ? { symbol: inSymbol, name: inSymbol }
+        : inSymbol
+    const outSymbolData =
+      typeof outSymbol === 'string'
+        ? { symbol: outSymbol, name: outSymbol }
+        : outSymbol
+
+    // âœ… FIXED: Cache tokens only if valid (enhanced validation)
+    // Cache tokenIn (if valid and not shortened)
+    if (inSymbolData.symbol && !inSymbolData._isShortened && isValidMetadata(inSymbolData.symbol)) {
+      const source = (tokenIn.symbol && tokenIn.symbol === inSymbolData.symbol) ? 'shyft' : 'dexscreener'
+      logger.info(`ðŸ’¾ Caching tokenIn: ${inSymbolData.symbol} (${tokenIn.token_address.slice(0, 8)}...) [${source}]`)
+      await saveTokenToCache(tokenIn.token_address, inSymbolData.symbol, inSymbolData.name, source).catch((err) => {
+        logger.error({ err }, `âŒ Failed to cache tokenIn: ${tokenIn.token_address}`)
+      })
+    } else {
+      logger.info(`âš ï¸ Skipping cache for tokenIn: ${inSymbolData.symbol} (invalid or shortened)`)
+    }
+    
+    // Cache tokenOut (if valid and not shortened)
+    if (outSymbolData.symbol && !outSymbolData._isShortened && isValidMetadata(outSymbolData.symbol)) {
+      const source = (tokenOut.symbol && tokenOut.symbol === outSymbolData.symbol) ? 'shyft' : 'dexscreener'
+      logger.info(`ðŸ’¾ Caching tokenOut: ${outSymbolData.symbol} (${tokenOut.token_address.slice(0, 8)}...) [${source}]`)
+      await saveTokenToCache(tokenOut.token_address, outSymbolData.symbol, outSymbolData.name, source).catch((err) => {
+        logger.error({ err }, `âŒ Failed to cache tokenOut: ${tokenOut.token_address}`)
+      })
+    } else {
+      logger.info(`âš ï¸ Skipping cache for tokenOut: ${outSymbolData.symbol} (invalid or shortened)`)
+    }
+
     // Map parser output to isBuy/isSell flags
-    // Parser provides: 'BUY', 'SELL', or 'SWAP'
-    // For 'SWAP', we treat it as both buy and sell (SPL to SPL swap)
-    const isBuy = parsedSwap.side === 'BUY' || parsedSwap.side === 'SWAP'
-    const isSell = parsedSwap.side === 'SELL' || parsedSwap.side === 'SWAP'
-
-    // Update classification source and confidence from parser
-    classificationSource = parsedSwap.classification_source === 'token_balance_changes' 
-      ? 'token_balance' 
-      : parsedSwap.classification_source === 'tokens_swapped'
-      ? 'tokens_swapped'
-      : 'event_override'
-    confidence = parsedSwap.confidence
-
-    // Log classification details
-    logger.info(
-      pc.cyan(
-        `📊 Parser Classification: side=${parsedSwap.side}, source=${classificationSource}, confidence=${confidence}, ata_created=${parsedSwap.ata_created}`,
-      ),
-    )
+    const isBuy = parsedSwap.direction === 'BUY'
+    const isSell = parsedSwap.direction === 'SELL'
 
     if (!isBuy && !isSell) {
       logger.info(
@@ -1488,13 +1611,12 @@ const processInfluencerSignature = async (
       inTokenData = inT
       influencerData = influencerDataResult
       influencerHandle = influencerData?.influencerUsername || null
-      // }
     } catch (error) {
       logger.error({ error }, `Error fetching token data for ${signature}:`)
       return
     }
 
-    // ✅ Fallback: If output token price is 0 but we have input token price,
+    // âœ… Fallback: If output token price is 0 but we have input token price,
     // estimate output price from swap ratio (for buy transactions)
     if (
       (outTokenData?.price === 0 || !outTokenData?.price) &&
@@ -1506,12 +1628,12 @@ const processInfluencerSignature = async (
       if (estimatedOutPrice > 0) {
         outTokenData.price = estimatedOutPrice
         logger.info(
-          `⚠️ Output token price not found for ${tokenOut.token_address}, estimated from swap ratio: $${estimatedOutPrice.toFixed(8)}`,
+          `âš ï¸ Output token price not found for ${tokenOut.token_address}, estimated from swap ratio: ${estimatedOutPrice.toFixed(8)}`,
         )
       }
     }
 
-    // ✅ Fallback: If input token price is 0 but we have output token price,
+    // âœ… Fallback: If input token price is 0 but we have output token price,
     // estimate input price from swap ratio (for sell transactions)
     if (
       (inTokenData?.price === 0 || !inTokenData?.price) &&
@@ -1523,7 +1645,7 @@ const processInfluencerSignature = async (
       if (estimatedInPrice > 0) {
         inTokenData.price = estimatedInPrice
         logger.info(
-          `⚠️ Input token price not found for ${tokenIn.token_address}, estimated from swap ratio: $${estimatedInPrice.toFixed(8)}`,
+          `âš ï¸ Input token price not found for ${tokenIn.token_address}, estimated from swap ratio: ${estimatedInPrice.toFixed(8)}`,
         )
       }
     }
@@ -1544,14 +1666,16 @@ const processInfluencerSignature = async (
     // Debug logging for price issues
     if (tokenOutUsdAmount === 0 && isBuy && tokenInUsdAmount > 0) {
       logger.warn(
-        `⚠️ Buy transaction ${signature}: Output token USD amount is 0 despite input value of $${tokenInUsdAmount.toFixed(2)}. Token: ${tokenOut.token_address}, Price: $${outTokenData?.price || 0}`,
+        `âš ï¸ Buy transaction ${signature}: Output token USD amount is 0 despite input value of ${tokenInUsdAmount.toFixed(2)}. Token: ${tokenOut.token_address}, Price: ${outTokenData?.price || 0}`,
       )
     }
+
     // Use influencer data from the model (updated by weekly cron job)
     let influencerName = influencerData?.influencerName || null
     let influencerFollowerCount = influencerData?.influencerFollowerCount || 0
     let influencerProfileImageUrl =
       influencerData?.influencerProfileImageUrl || null
+
     // Extract Values
     const tokenDetails = {
       signature,
@@ -1581,7 +1705,6 @@ const processInfluencerSignature = async (
       sellMarketCapSol: sellMarketCapSol,
       inMarketCap: inTokenData?.marketCap,
       outMarketCap: outTokenData?.marketCap,
-
       outTokenURL: outTokenData?.imageUrl || null,
       inTokenURL: inTokenData?.imageUrl || null,
       hotnessScore: 0,
@@ -1590,97 +1713,53 @@ const processInfluencerSignature = async (
     }
 
     // Calculate Transaction Value
-    // const txValue = isSell
-    //   ? tokenDetails.tokenInAmount * (inTokenData?.price || 0)
-    //   : tokenDetails.tokenOutAmount * (outTokenData?.price || 0)
-    // const tokenPrice = isSell ? inTokenData?.price : outTokenData?.price
-    // const tokenAmount = isSell
-    //   ? tokenDetails.tokenInAmount
-    //   : tokenDetails.tokenOutAmount
-
     let txValue: number = 0
-    let tokenPrice: number = 0
-    let tokenAmount: number = 0
 
-    let sellTxValue: number = 0
-    let sellTokenPrice: number = 0
-    let sellTokenAmt: number = 0
-
-    let buyTxValue: number = 0
-    let buyTokenPrice: number = 0
-    let buyTokenAmt: number = 0
-
-    if (isSell && !isBuy) {
+    if (isSell) {
       // Pure sell
       txValue = tokenDetails?.tokenInUsdAmount
-      tokenPrice = tokenDetails?.tokenInPrice
-      tokenAmount = tokenDetails?.tokenInAmount
     }
-    if (isBuy && !isSell) {
+    if (isBuy) {
       // Pure buy
       txValue = tokenDetails?.tokenOutUsdAmount
-      tokenPrice = tokenDetails?.tokenOutPrice
-      tokenAmount = tokenDetails?.tokenOutAmount
-    }
-    if (isSell && isBuy) {
-      sellTxValue = tokenDetails?.tokenInUsdAmount
-      sellTokenPrice = tokenDetails?.tokenInPrice
-      sellTokenAmt = tokenDetails?.tokenInAmount
-
-      buyTxValue = tokenDetails?.tokenOutUsdAmount
-      buyTokenPrice = tokenDetails?.tokenOutPrice
-      buyTokenAmt = tokenDetails?.tokenOutAmount
     }
 
-    // Log only relevant transaction details based on buy/sell
+    // Log transaction details
     if (isSell) {
       logger.info(
         pc.yellow(
-          `Sell Transaction: In Token ${tokenDetails.tokenInSymbol}: ${tokenDetails.tokenInAmount} at $${tokenDetails.tokenInPrice || 0} => Value: $${tokenDetails.tokenInUsdAmount.toFixed(2)}`,
+          `Sell Transaction: In Token ${tokenDetails.tokenInSymbol}: ${tokenDetails.tokenInAmount} at ${tokenDetails.tokenInPrice || 0} => Value: ${tokenDetails.tokenInUsdAmount.toFixed(2)}`,
         ),
       )
     }
     if (isBuy) {
-      const buyValue = isSell ? buyTxValue : txValue
-      const buyPrice = isSell ? buyTokenPrice : tokenPrice
       logger.info(
         pc.green(
-          `Buy Transaction: Out Token ${tokenDetails.tokenOutSymbol}: ${tokenDetails.tokenOutAmount} at $${buyPrice || tokenDetails.tokenOutPrice || 0} => Value: $${(buyValue || tokenDetails.tokenOutUsdAmount || 0).toFixed(2)}`,
+          `Buy Transaction: Out Token ${tokenDetails.tokenOutSymbol}: ${tokenDetails.tokenOutAmount} at ${tokenDetails.tokenOutPrice || 0} => Value: ${tokenDetails.tokenOutUsdAmount.toFixed(2)}`,
         ),
       )
     }
 
-    // if (txValue < 10) return
-    if (
-      txValue != null &&
-      txValue < 10 &&
-      sellTxValue != null &&
-      sellTxValue < 10 &&
-      buyTxValue != null &&
-      buyTxValue < 10
-    ) {
+    // Check minimum transaction value
+    if (txValue < 10) {
+      logger.info(pc.yellow(`KOL [Filter] Skipping ${signature}: Transaction value ${txValue.toFixed(2)} below $10 minimum`))
       return
     }
 
-    // logger.info(pc.cyan(`Transaction Value: $${txValue.toFixed(2)}`))
-
-    // Store buy/sell transaction grater then $10 in MongoDB (If it doesn't exist)
+    // Store buy/sell transaction greater than $10 in MongoDB
     try {
       if (isBuy) {
-        if (
-          (txValue > 10 || buyTxValue > 10) &&
-          (txValue < 140 || buyTxValue < 140)
-        ) {
+        if (txValue > 10 && txValue < 140) {
           await storeRepeatedTransactions(
             tokenDetails.tokenOutAddress,
             tokenDetails.kolAddress,
             signature,
-            txValue > 0 ? txValue : buyTxValue,
+            txValue,
           )
         }
       }
 
-      if (txValue > 10 || sellTxValue > 10 || buyTxValue > 10) {
+      if (txValue > 10) {
         if (isBuy) {
           const hotnessScore = await getKolHotnessScore(
             signature,
@@ -1700,11 +1779,11 @@ const processInfluencerSignature = async (
           parsedTx,
           txStatus,
           classificationSource,
-          confidence,
+          parsedSwap.confidence,
         )
       }
 
-      // // Check & Post Alerts to alpha whale
+      // Check & Post Alerts to alpha whale
       if (isBuy) {
         await checkAndPostKOLAlert(tokenDetails, isBuy, signature)
       }
@@ -1712,29 +1791,7 @@ const processInfluencerSignature = async (
       logger.error({ error }, `Error processing transaction ${signature}:`)
     }
   } catch (err) {
-    logger.error({ err }, `Error processing signature ${signature}: KOL`)
-  } finally {
-    try {
-      // ✅ Clean up Redis processing key
-      const duplicateKey = `processing_signature_kol:${signature}`
-      await redisClient.del(duplicateKey)
-
-      await redisClient.srem(
-        'influencer_whale_signatures',
-        JSON.stringify({ signature, kolAddress }),
-      )
-      logger.info(`Signature removed from Redis: ${signature} KOL`)
-
-      // Force garbage collection if available
-      if (global.gc) {
-        global.gc()
-      }
-    } catch (cleanupError) {
-      logger.error(
-        { cleanupError },
-        `Error cleaning up signature ${signature}: KOL`,
-      )
-    }
+    logger.error({ err }, `Error in processSingleInfluencerSwap for ${signature}:`)
   }
 }
 
@@ -1792,10 +1849,10 @@ export const getInfluencerSignatureDetails = async (): Promise<void> => {
     const signatureCount = await redisClient.scard(
       'influencer_whale_signatures',
     )
-    logger.info(`📊 Found ${signatureCount} signatures in Redis`)
+    logger.info(`ðŸ“Š Found ${signatureCount} signatures in Redis`)
 
     if (signatureCount === 0) {
-      logger.info('✅ No signatures to process')
+      logger.info('âœ… No signatures to process')
       return
     }
 
@@ -1804,7 +1861,7 @@ export const getInfluencerSignatureDetails = async (): Promise<void> => {
     // If too many signatures, process in smaller chunks
     // if (signatureCount > 500) {
     //   logger.info(
-    //     `⚠️ Large dataset detected (${signatureCount} signatures). Processing in chunks...`,
+    //     `âš ï¸ Large dataset detected (${signatureCount} signatures). Processing in chunks...`,
     //   )
     //   await processSignaturesKolInChunks(pLimit(CHUNK_CONCURRENCY))
     // } else {
@@ -1820,7 +1877,7 @@ const processSignaturesKolNormally = async (limit: any) => {
   const signatures: string[] = await redisClient.smembers(
     'influencer_whale_signatures',
   )
-  logger.info(`📦 Processing ${signatures.length} signatures normally`)
+  logger.info(`ðŸ“¦ Processing ${signatures.length} signatures normally`)
 
   if (signatures.length === 0) return
 
@@ -1831,7 +1888,7 @@ const processSignaturesKolNormally = async (limit: any) => {
   )
 
   await Promise.all(tasks)
-  logger.info(`✅ Processed ${signatures.length} signatures normally`)
+  logger.info(`âœ… Processed ${signatures.length} signatures normally`)
 }
 
 // Process signatures in chunks (for large datasets)
@@ -1854,7 +1911,7 @@ const processSignaturesKolInChunks = async (limit: any) => {
       break
     }
 
-    logger.info(`📦 Processing chunk: ${signatures.length} signatures`)
+    logger.info(`ðŸ“¦ Processing chunk: ${signatures.length} signatures`)
 
     // Process this chunk
     await connectDB()
@@ -1866,7 +1923,7 @@ const processSignaturesKolInChunks = async (limit: any) => {
     await Promise.all(tasks)
     processedCount += signatures.length
 
-    logger.info(`✅ Chunk completed. Total processed: ${processedCount}`)
+    logger.info(`âœ… Chunk completed. Total processed: ${processedCount}`)
     cursor = nextCursor
     if (cursor === '0') {
       hasMore = false
@@ -1875,7 +1932,7 @@ const processSignaturesKolInChunks = async (limit: any) => {
     await new Promise((resolve) => setTimeout(resolve, 100))
   }
 
-  logger.info(`🎉 All chunks completed. Total processed: ${processedCount}`)
+  logger.info(`ðŸŽ‰ All chunks completed. Total processed: ${processedCount}`)
 }
 
 export const getAllInfluencerWhaleTransactions = async (
@@ -1908,7 +1965,7 @@ export const getAllInfluencerWhaleTransactions = async (
         .map((term) => term.trim())
         .filter((term) => term.length > 0)
 
-      logger.info(`🔍 Parsed search terms:', ${searchTerms}`)
+      logger.info(`ðŸ” Parsed search terms:', ${searchTerms}`)
 
       // Enhanced search type detection for multiple terms
       let searchType = filters.searchType || 'all'
@@ -2026,7 +2083,7 @@ export const getAllInfluencerWhaleTransactions = async (
       }
 
       logger.info(
-        `🔍 Total OR conditions: ${orConditions.length} for ${searchTerms.length} terms`,
+        `ðŸ” Total OR conditions: ${orConditions.length} for ${searchTerms.length} terms`,
       )
     }
     // Combine $or conditions if we have multiple
@@ -2113,7 +2170,7 @@ export const getAllInfluencerWhaleTransactions = async (
         const minAgeMs = parseInt(filters.ageMin) * 60 * 1000 // Convert minutes to milliseconds
         ageQuery.$lte = new Date(now.getTime() - minAgeMs)
         logger.info(
-          `🕐 Age Min: ${filters.ageMin}m = ${minAgeMs}ms = ${new Date(now.getTime() - minAgeMs)}`,
+          `ðŸ• Age Min: ${filters.ageMin}m = ${minAgeMs}ms = ${new Date(now.getTime() - minAgeMs)}`,
         )
       }
 
@@ -2121,12 +2178,12 @@ export const getAllInfluencerWhaleTransactions = async (
         const maxAgeMs = parseInt(filters.ageMax) * 60 * 1000 // Convert minutes to milliseconds
         ageQuery.$gte = new Date(now.getTime() - maxAgeMs)
         logger.info(
-          `🕐 Age Max: ${filters.ageMax}m = ${maxAgeMs}ms = ${new Date(now.getTime() - maxAgeMs)}`,
+          `ðŸ• Age Max: ${filters.ageMax}m = ${maxAgeMs}ms = ${new Date(now.getTime() - maxAgeMs)}`,
         )
       }
 
       filterQuery.age = ageQuery
-      logger.info(`🕐 Age Filter Query:`, ageQuery)
+      logger.info(`ðŸ• Age Filter Query:`, ageQuery)
     }
 
     // Market Cap filter (in K - thousands)
@@ -2140,13 +2197,13 @@ export const getAllInfluencerWhaleTransactions = async (
         : null
 
       logger.info(
-        `💰 Market Cap Filter: User input Min: ${filters.marketCapMin}k, Max: ${filters.marketCapMax}k`,
+        `ðŸ’° Market Cap Filter: User input Min: ${filters.marketCapMin}k, Max: ${filters.marketCapMax}k`,
       )
       logger.info(
-        `💰 Market Cap Filter: Converted Min: ${minMarketCap}, Max: ${maxMarketCap}`,
+        `ðŸ’° Market Cap Filter: Converted Min: ${minMarketCap}, Max: ${maxMarketCap}`,
       )
       logger.info(
-        `💰 Transaction Type Filter: ${filters.transactionType || 'all'}`,
+        `ðŸ’° Transaction Type Filter: ${filters.transactionType || 'all'}`,
       )
 
       // Create market cap conditions based on transaction type
@@ -2154,7 +2211,7 @@ export const getAllInfluencerWhaleTransactions = async (
 
       if (filters.transactionType === 'buy') {
         logger.info(
-          `💰 Applying BUY market cap filter: Only checking buyMarketCap`,
+          `ðŸ’° Applying BUY market cap filter: Only checking buyMarketCap`,
         )
         // For buy transactions, only check buyMarketCap
         marketCapConditions = {
@@ -2188,7 +2245,7 @@ export const getAllInfluencerWhaleTransactions = async (
         }
       } else if (filters.transactionType === 'sell') {
         logger.info(
-          `💰 Applying SELL market cap filter: Only checking sellMarketCap`,
+          `ðŸ’° Applying SELL market cap filter: Only checking sellMarketCap`,
         )
         // For sell transactions, only check sellMarketCap
         marketCapConditions = {
@@ -2222,7 +2279,7 @@ export const getAllInfluencerWhaleTransactions = async (
         }
       } else {
         logger.info(
-          `💰 Applying ALL market cap filter: Checking both buyMarketCap AND sellMarketCap`,
+          `ðŸ’° Applying ALL market cap filter: Checking both buyMarketCap AND sellMarketCap`,
         )
         // For all transactions (no type filter), check both buy and sell market caps
         marketCapConditions = {
@@ -2290,7 +2347,7 @@ export const getAllInfluencerWhaleTransactions = async (
       }
 
       logger.info(
-        `💰 Market Cap Filter Query:,
+        `ðŸ’° Market Cap Filter Query:,
        ${JSON.stringify(marketCapConditions, null, 2)}`,
       )
 
@@ -2307,15 +2364,15 @@ export const getAllInfluencerWhaleTransactions = async (
 
       // Add debug logging for the final filter query
       logger.info(
-        `🔍 Final Filter Query:,
+        `ðŸ” Final Filter Query:,
         ${JSON.stringify(filterQuery, null, 2)}`,
       )
     }
 
-    // logger.info('🔍 Filter query:', JSON.stringify(filterQuery, null, 2))
-    logger.info(`📊 Query params:', ${{ page, limit, skip, filters }}`)
+    // logger.info('ðŸ” Filter query:', JSON.stringify(filterQuery, null, 2))
+    logger.info(`ðŸ“Š Query params:', ${{ page, limit, skip, filters }}`)
     logger.info(
-      `🔍 Final Filter Query:', ${JSON.stringify(filterQuery, null, 2)}`,
+      `ðŸ” Final Filter Query:', ${JSON.stringify(filterQuery, null, 2)}`,
     )
 
     const [transactions, total] = await Promise.all([
@@ -2333,7 +2390,7 @@ export const getAllInfluencerWhaleTransactions = async (
     const queryTime = endTime - startTime
 
     logger.info(
-      `📦 Page ${page} | Found: ${transactions.length} / ${total} with filters | Query time: ${queryTime}ms`,
+      `ðŸ“¦ Page ${page} | Found: ${transactions.length} / ${total} with filters | Query time: ${queryTime}ms`,
     )
 
     return {
@@ -2344,7 +2401,7 @@ export const getAllInfluencerWhaleTransactions = async (
       queryTime,
     }
   } catch (err) {
-    logger.error({ err }, '❌ Error in getAllWhaleTransactions:')
+    logger.error({ err }, 'âŒ Error in getAllWhaleTransactions:')
     throw err
   }
 }
@@ -2436,7 +2493,7 @@ export const visualizeKols = async (req: any, res: any) => {
           lastAction: tx.timestamp,
         }
       }
-      logger.info('🐳 Token data before pushing transaction:', tokenData)
+      logger.info('ðŸ³ Token data before pushing transaction:', tokenData)
 
       // aggregate buy/sell
       const usdAmount =
@@ -2444,7 +2501,7 @@ export const visualizeKols = async (req: any, res: any) => {
           ? Number(tx.transaction.tokenOut?.usdAmount || 0)
           : Number(tx.transaction.tokenIn?.usdAmount || 0)
 
-      logger.info(`🐳 Usd amount:', ${usdAmount}`)
+      logger.info(`ðŸ³ Usd amount:', ${usdAmount}`)
 
       if (tx.type === 'buy') {
         tokenData.coin.totalBuyInflow += usdAmount
@@ -2452,7 +2509,7 @@ export const visualizeKols = async (req: any, res: any) => {
       } else {
         tokenData.whales[whaleId].sellVolume += usdAmount
       }
-      logger.info('🐳 Token data after aggregation:', tokenData)
+      logger.info('ðŸ³ Token data after aggregation:', tokenData)
       // update last action
       tokenData.whales[whaleId].lastAction = tx.timestamp
 
@@ -2462,7 +2519,7 @@ export const visualizeKols = async (req: any, res: any) => {
         type: tx.type,
         amount: usdAmount,
       })
-      logger.info('🐳 Token data after pushing transaction:', tokenData)
+      logger.info('ðŸ³ Token data after pushing transaction:', tokenData)
     })
 
     // filter by whales + inflow
@@ -2474,7 +2531,7 @@ export const visualizeKols = async (req: any, res: any) => {
 
     return res.status(200).json({ success: true, data: result })
   } catch (error) {
-    logger.error({ error }, '❌ Error in visualizeWhales:')
+    logger.error({ error }, 'âŒ Error in visualizeWhales:')
     return res
       .status(500)
       .json({ success: false, message: 'Internal server error' })
@@ -2490,7 +2547,7 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
     const result = await influencerWhaleTransactionsModelV2.aggregate([
       { $match: { timestamp: { $gte: cutoff } } },
 
-      // 🔄 Expand "both" into two transactions (buy + sell)
+      // ðŸ”„ Expand "both" into two transactions (buy + sell)
       {
         $facet: {
           trades: [
@@ -2618,7 +2675,7 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
         },
       },
 
-      // 🔗 Merge back trades + bothTrades
+      // ðŸ”— Merge back trades + bothTrades
       {
         $project: {
           allTrades: { $concatArrays: ['$trades', '$bothTrades'] },
@@ -2627,7 +2684,7 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
       { $unwind: '$allTrades' },
       { $replaceRoot: { newRoot: '$allTrades' } },
 
-      // 🐳 Group by whale per token
+      // ðŸ³ Group by whale per token
       {
         $group: {
           _id: { tokenId: '$tokenId', whaleId: '$whaleId' },
@@ -2668,7 +2725,7 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
         },
       },
 
-      // 📊 Group by token
+      // ðŸ“Š Group by token
       {
         $group: {
           _id: '$_id.tokenId',
@@ -2693,7 +2750,7 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
         },
       },
 
-      // 🎯 Filter by conditions (only check buy volume, not sell volume)
+      // ðŸŽ¯ Filter by conditions (only check buy volume, not sell volume)
       {
         $match: {
           $expr: {
@@ -2705,7 +2762,7 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
         },
       },
 
-      // 🎨 Final shape
+      // ðŸŽ¨ Final shape
       {
         $project: {
           _id: 0,
@@ -2724,7 +2781,7 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
 
     return res.status(200).json({ success: true, data: result })
   } catch (error) {
-    logger.error({ error }, '❌ Error in visualizeKolsV2:')
+    logger.error({ error }, 'âŒ Error in visualizeKolsV2:')
     return res
       .status(500)
       .json({ success: false, message: 'Internal Server Error' })
@@ -2733,12 +2790,12 @@ export const visualizeKolsV2 = async (req: any, res: any) => {
 
 const gracefulShutdown = async (signal: string = 'SIGTERM') => {
   console.log(
-    pc.yellow(`\n🛑 Received ${signal} - Starting graceful shutdown...`),
+    pc.yellow(`\nðŸ›‘ Received ${signal} - Starting graceful shutdown...`),
   )
 
   // Create a timeout to force exit if shutdown takes too long
   const forceExitTimeout = setTimeout(() => {
-    console.error(pc.red('❌ Shutdown timeout exceeded - forcing exit'))
+    console.error(pc.red('âŒ Shutdown timeout exceeded - forcing exit'))
     process.exit(1)
   }, 25000) // 25 seconds (less than PM2's 30s timeout)
 
@@ -2747,16 +2804,16 @@ const gracefulShutdown = async (signal: string = 'SIGTERM') => {
 
     // 1. Stop accepting new WebSocket messages
     if (ws) {
-      console.log('📡 Closing WebSocket connection...')
+      console.log('ðŸ“¡ Closing WebSocket connection...')
       ws.removeAllListeners('message') // Stop processing new messages
       ws.close()
-      console.log('✅ WebSocket closed')
+      console.log('âœ… WebSocket closed')
     }
 
     // 2. Get queue stats before shutdown
     try {
       const statsBefore = await getQueueStats()
-      console.log('📊 Queue stats before shutdown:', {
+      console.log('ðŸ“Š Queue stats before shutdown:', {
         waiting: statsBefore.waiting,
         active: statsBefore.active,
         completed: statsBefore.completed,
@@ -2768,7 +2825,7 @@ const gracefulShutdown = async (signal: string = 'SIGTERM') => {
 
     // 3. Close all workers (wait for active jobs to complete)
     console.log(
-      '👷 Closing workers (waiting max 10 seconds for active jobs)...',
+      'ðŸ‘· Closing workers (waiting max 10 seconds for active jobs)...',
     )
     const workerClosePromises = workers.map(
       async (worker: any, index: number) => {
@@ -2783,19 +2840,19 @@ const gracefulShutdown = async (signal: string = 'SIGTERM') => {
               ),
             ),
           ])
-          console.log(`✅ Worker ${index} closed`)
+          console.log(`âœ… Worker ${index} closed`)
         } catch (error) {
-          console.warn(`⚠️  Worker ${index} close timeout - forcing`)
+          console.warn(`âš ï¸  Worker ${index} close timeout - forcing`)
           await worker.close({ force: true }) // Force close if timeout
         }
       },
     )
 
     await Promise.all(workerClosePromises)
-    console.log('✅ All workers closed')
+    console.log('âœ… All workers closed')
 
     // 4. Obliterate queue (remove all jobs)
-    console.log('🗑️  Obliterating queue (removing all jobs)...')
+    console.log('ðŸ—‘ï¸  Obliterating queue (removing all jobs)...')
     try {
       await Promise.race([
         signatureKolQueue.obliterate({ force: true }),
@@ -2803,20 +2860,20 @@ const gracefulShutdown = async (signal: string = 'SIGTERM') => {
           setTimeout(() => reject(new Error('Obliterate timeout')), 5000),
         ),
       ])
-      console.log('✅ Queue obliterated - all jobs removed')
+      console.log('âœ… Queue obliterated - all jobs removed')
     } catch (error) {
-      console.warn('⚠️  Queue obliterate timeout - continuing shutdown')
+      console.warn('âš ï¸  Queue obliterate timeout - continuing shutdown')
     }
 
     // 5. Close queue connection
-    console.log('🔌 Closing queue connection...')
+    console.log('ðŸ”Œ Closing queue connection...')
     await signatureKolQueue.close()
-    console.log('✅ Queue connection closed')
+    console.log('âœ… Queue connection closed')
 
     // 6. Close Redis connections
-    console.log('💾 Closing Redis connections...')
+    console.log('ðŸ’¾ Closing Redis connections...')
 
-    console.log('✅ Redis connections closed')
+    console.log('âœ… Redis connections closed')
 
     // 7. Clear the force exit timeout
     clearTimeout(forceExitTimeout)
@@ -2824,14 +2881,14 @@ const gracefulShutdown = async (signal: string = 'SIGTERM') => {
     const shutdownTime = Date.now() - startTime
     console.log(
       pc.green(
-        `🎉 Graceful shutdown completed successfully in ${shutdownTime}ms`,
+        `ðŸŽ‰ Graceful shutdown completed successfully in ${shutdownTime}ms`,
       ),
     )
 
     process.exit(0)
   } catch (error) {
     clearTimeout(forceExitTimeout)
-    console.error(pc.red('❌ Error during shutdown:'), error)
+    console.error(pc.red('âŒ Error during shutdown:'), error)
     process.exit(1)
   }
 }
@@ -2849,11 +2906,11 @@ process.on('message', (msg) => {
 
 // Handle uncaught exceptions
 process.on('uncaughtException', async (error) => {
-  console.error('❌ Uncaught Exception:', error)
+  console.error('âŒ Uncaught Exception:', error)
   await gracefulShutdown('UNCAUGHT_EXCEPTION')
 })
 
 process.on('unhandledRejection', async (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason)
+  console.error('âŒ Unhandled Rejection at:', promise, 'reason:', reason)
   await gracefulShutdown('UNHANDLED_REJECTION')
 })

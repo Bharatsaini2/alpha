@@ -1,0 +1,9 @@
+Metric,Value,Percentage
+Test Duration (seconds),12.60,N/A
+Total Transactions,40,100%
+V2 Accepted,3,7.50%
+V2 Split Swaps,0,0.00%
+V2 Rejected,37,92.50%
+V2 Errors,0,N/A
+V1 Accepted,13,32.50%
+V1 Rejected,27,67.50%

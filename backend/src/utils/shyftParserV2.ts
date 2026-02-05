@@ -27,6 +27,7 @@ import { createQuoteBaseDetector } from './shyftParserV2.quoteBaseDetector'
 import { createEraseValidator } from './shyftParserV2.eraseValidator'
 import { createAmountNormalizer } from './shyftParserV2.amountNormalizer'
 import { PerformanceTracker } from './shyftParserV2.performance'
+import { getCoreTokenSuppressionService } from '../services/core-token-suppression.service'
 import {
   TokenBalanceChange,
   ParsedSwap,
@@ -38,6 +39,8 @@ import {
   AssetDelta,
   PRIORITY_ASSETS,
 } from './shyftParserV2.types'
+import { DEFAULT_CORE_TOKENS } from '../types/shyft-parser-v2.types'
+import axios from 'axios'
 
 /**
  * Input transaction structure from SHYFT API
@@ -84,6 +87,80 @@ export class ShyftParserV2 {
   private quoteBaseDetector = createQuoteBaseDetector()
   private eraseValidator = createEraseValidator()
   private amountNormalizer = createAmountNormalizer()
+  private coreTokenSuppression = getCoreTokenSuppressionService(DEFAULT_CORE_TOKENS, true) // ✅ Enable suppression
+
+  // ✅ SOL price cache (refreshed every 5 minutes)
+  private static solPriceCache: { price: number; timestamp: number } | null = null
+  private static readonly SOL_PRICE_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+  private cachedSolPrice: number = 94 // Default SOL price ($94)
+
+  /**
+   * Update SOL price cache if needed (non-blocking)
+   * Triggers async price fetch but doesn't wait for it
+   */
+  private updateSolPriceCache(): void {
+    const now = Date.now()
+    
+    // Check if cache needs refresh
+    if (
+      !ShyftParserV2.solPriceCache ||
+      now - ShyftParserV2.solPriceCache.timestamp > ShyftParserV2.SOL_PRICE_CACHE_TTL
+    ) {
+      // Trigger async update (don't wait for it)
+      this.getSolPrice().then(price => {
+        this.cachedSolPrice = price
+      }).catch(error => {
+        logger.warn(
+          { error: error instanceof Error ? error.message : String(error) },
+          'ShyftParserV2: Failed to update SOL price cache'
+        )
+      })
+    } else {
+      // Use cached price
+      this.cachedSolPrice = ShyftParserV2.solPriceCache.price
+    }
+  }
+
+  /**
+   * Fetch current SOL price with caching
+   * 
+   * @returns Current SOL price in USD
+   */
+  private async getSolPrice(): Promise<number> {
+    const now = Date.now()
+    
+    // Return cached price if still valid
+    if (
+      ShyftParserV2.solPriceCache &&
+      now - ShyftParserV2.solPriceCache.timestamp < ShyftParserV2.SOL_PRICE_CACHE_TTL
+    ) {
+      return ShyftParserV2.solPriceCache.price
+    }
+
+    // Fetch fresh price from Jupiter API
+    try {
+      const response = await axios.get(
+        `https://lite-api.jup.ag/price/v3?ids=So11111111111111111111111111111111111111112`,
+        { timeout: 5000 }
+      )
+
+      const price = response.data?.['So11111111111111111111111111111111111111112']?.usdPrice || 94
+
+      // Update cache
+      ShyftParserV2.solPriceCache = { price, timestamp: now }
+
+      logger.debug({ price }, 'ShyftParserV2: Fetched fresh SOL price')
+      return price
+    } catch (error) {
+      logger.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        'ShyftParserV2: Failed to fetch SOL price, using fallback'
+      )
+      
+      // Use cached price if available, otherwise fallback to $94
+      return ShyftParserV2.solPriceCache?.price || 94
+    }
+  }
 
   /**
    * Parse a SHYFT transaction into a swap record or ERASE result
@@ -97,6 +174,8 @@ export class ShyftParserV2 {
     const perfTracker = enablePerformanceTracking ? new PerformanceTracker(tx.signature) : null
 
     try {
+      // Update cached SOL price if needed (non-blocking)
+      this.updateSolPriceCache()
       // Validate required input fields
       perfTracker?.startComponent('input_validation')
       const validationError = this.validateInput(tx)
@@ -211,7 +290,8 @@ export class ShyftParserV2 {
       perfTracker?.startComponent('asset_delta_collection')
       const assetDeltas = this.assetDeltaCollector.collectDeltas(
         filteredChanges.economicChanges,
-        swapper
+        swapper,
+        tx.actions // Pass actions for fallback when balance changes are missing
       )
       perfTracker?.endComponent('asset_delta_collection')
 
@@ -319,6 +399,31 @@ export class ShyftParserV2 {
 
       // Stage 6: Handle Split Protocol or Standard Swap
       if (quoteBaseResult.splitRequired) {
+        // ✅ CRITICAL: Check for core-to-core swap suppression BEFORE creating split
+        const shouldSuppress = this.coreTokenSuppression.shouldSuppressSwap(
+          { mint: quote.mint, symbol: quote.symbol, amount: Math.abs(quote.netDelta), decimals: quote.decimals },
+          { mint: base.mint, symbol: base.symbol, amount: Math.abs(base.netDelta), decimals: base.decimals }
+        )
+
+        if (shouldSuppress) {
+          logger.info(
+            {
+              signature: tx.signature,
+              quoteMint: quote.mint,
+              baseMint: base.mint,
+              reason: 'core_to_core_swap_suppressed',
+            },
+            'ShyftParserV2: Core-to-core swap suppressed - returning ERASE'
+          )
+          return this.createEraseResult(
+            tx,
+            'core_to_core_swap_suppressed',
+            { assetDeltas, quote, base },
+            Date.now() - startTime,
+            perfTracker
+          )
+        }
+
         // Token-to-token split protocol (no minimum value filter for swaps)
         perfTracker?.startComponent('split_swap_creation')
         const splitResult = this.createSplitSwapPair(
@@ -365,6 +470,33 @@ export class ShyftParserV2 {
           performanceMetrics: perfTracker?.getMetrics(),
         }
       } else {
+        // Standard swap (BUY/SELL) - check for core-to-core suppression first
+        perfTracker?.startComponent('core_token_suppression_check')
+        const shouldSuppress = this.coreTokenSuppression.shouldSuppressSwap(
+          { mint: quote.mint, symbol: quote.symbol, amount: Math.abs(quote.netDelta), decimals: quote.decimals },
+          { mint: base.mint, symbol: base.symbol, amount: Math.abs(base.netDelta), decimals: base.decimals }
+        )
+        perfTracker?.endComponent('core_token_suppression_check')
+
+        if (shouldSuppress) {
+          logger.info(
+            {
+              signature: tx.signature,
+              quoteMint: quote.mint,
+              baseMint: base.mint,
+              reason: 'core_to_core_swap_suppressed',
+            },
+            'ShyftParserV2: Core-to-core swap suppressed - returning ERASE'
+          )
+          return this.createEraseResult(
+            tx,
+            'core_to_core_swap_suppressed',
+            { assetDeltas, quote, base },
+            Date.now() - startTime,
+            perfTracker
+          )
+        }
+
         // Standard swap (BUY/SELL) - apply minimum value filter
         perfTracker?.startComponent('swap_creation')
         const direction = quoteBaseResult.direction!
@@ -401,7 +533,7 @@ export class ShyftParserV2 {
             { 
               direction,
               usdValue: minimumValueCheck.usdValue,
-              minimumRequired: 2.0
+              minimumRequired: 5.0
             },
             Date.now() - startTime,
             perfTracker
@@ -765,17 +897,21 @@ export class ShyftParserV2 {
   }
 
   /**
-   * Augment balance changes with SOL transfers from actions
+   * Augment balance changes with data from actions
    * 
-   * This fixes the AMM swap detection bug where SOL goes to pool/AMM address
-   * instead of being recorded as a balance change for the swapper.
+   * Per Core Parsing Logic Step 4.2:
+   * "Compute: native SOL inflow and outflow"
    * 
-   * Pattern: Fee payer sends SOL to pool (in actions) + receives tokens (in balance changes)
+   * Strategy (following Core Logic exactly):
+   * 1. Start with token_balance_changes for all tokens (USDC, USDT, etc.)
+   * 2. Compute SOL deltas from SOL_TRANSFER actions (Step 4.2)
+   * 3. Add missing tokens from SWAP action if not in balance changes
+   * 4. Build complete "balance truth layer"
    * 
    * @param balanceChanges - Original token balance changes
-   * @param actions - Transaction actions containing transfers
+   * @param actions - Transaction actions
    * @param swapper - Identified swapper address
-   * @returns Augmented balance changes including SOL transfers from actions
+   * @returns Augmented balance changes with computed SOL deltas
    */
   private augmentBalanceChangesWithActions(
     balanceChanges: TokenBalanceChange[],
@@ -803,163 +939,197 @@ export class ShyftParserV2 {
     swapper: string
   ): TokenBalanceChange[] {
     const augmented = [...balanceChanges]
+    const SOL_MINT = 'So11111111111111111111111111111111111111112'
 
-    // Process each action
+    // ============================================================================
+    // STEP 1: Compute SOL deltas from SOL_TRANSFER actions (Core Logic Step 4.2)
+    // ============================================================================
+    // This is CRITICAL for PUMP.fun and other protocols where SOL doesn't appear
+    // in token_balance_changes but appears in SOL_TRANSFER actions.
+    // 
+    // Per Core Logic: "Compute: native SOL inflow and outflow"
+    // Per Core Logic Step 13: "total_wallet_cost = swap_input + all fees"
+    // 
+    // We sum ALL SOL_TRANSFER actions to get the true wallet cost.
+    //
+    // IMPORTANT: SOL_TRANSFER actions provide amounts in SOL (normalized),
+    // but token_balance_changes expects amounts in lamports (raw).
+    // We must convert: SOL * 1e9 = lamports
+    
+    let solSent = 0
+    let solReceived = 0
+    
+    for (const action of actions) {
+      if (action.type === 'SOL_TRANSFER' && action.info) {
+        const { sender, receiver, amount } = action.info
+        
+        // Skip if amount is missing
+        if (amount === undefined || amount === null) continue
+        
+        if (sender === swapper) {
+          solSent += amount
+        }
+        if (receiver === swapper) {
+          solReceived += amount
+        }
+      }
+    }
+    
+    const netSolChange = solReceived - solSent
+    
+    // Convert SOL to lamports for consistency with token_balance_changes
+    // token_balance_changes stores raw amounts (lamports for SOL)
+    const netSolChangeLamports = netSolChange * 1e9
+    
+    // Add computed SOL delta to balance changes if meaningful
+    if (Math.abs(netSolChangeLamports) > 1000) { // > 0.000001 SOL in lamports
+      const existingSol = augmented.find(
+        (bc) => bc.owner === swapper && bc.mint === SOL_MINT
+      )
+      
+      if (!existingSol) {
+        augmented.push({
+          address: swapper,
+          decimals: 9,
+          change_amount: netSolChangeLamports,
+          post_balance: Math.max(0, netSolChangeLamports),
+          pre_balance: Math.max(0, -netSolChangeLamports),
+          mint: SOL_MINT,
+          owner: swapper,
+        })
+        
+        logger.debug(
+          { 
+            swapper, 
+            netSolChange, // SOL (normalized)
+            netSolChangeLamports, // lamports (raw)
+            solSent, 
+            solReceived,
+            source: 'SOL_TRANSFER_actions'
+          },
+          'ShyftParserV2: Computed SOL delta from SOL_TRANSFER actions (Core Logic Step 4.2)'
+        )
+      } else {
+        // SOL exists in balance changes - log for debugging
+        logger.debug(
+          {
+            swapper,
+            existingChange: existingSol.change_amount,
+            computedChange: netSolChangeLamports,
+            source: 'both_balance_changes_and_actions'
+          },
+          'ShyftParserV2: SOL exists in both balance changes and SOL_TRANSFER actions'
+        )
+      }
+    }
+
+    // ============================================================================
+    // STEP 2: Add missing tokens from SWAP action (optional accelerator)
+    // ============================================================================
+    // Per Core Logic Step 10: "tokens_swapped is an accelerator, not an authority"
+    // 
+    // We use SWAP action ONLY to add missing tokens that don't appear in
+    // token_balance_changes. This handles cases where SHYFT omits tokens.
+    
     for (const action of actions) {
       if (!action.info) continue
 
-      // PRIORITY 1: Extract from SWAP actions (fixes false negative edge case)
-      // Some swaps only have amounts in the SWAP action's tokens_swapped field
       if (action.type === 'SWAP' && action.info.tokens_swapped) {
         const swapInfo = action.info.tokens_swapped
         const swapperFromAction = action.info.swapper
         
         // Only process if this is the swapper's swap
-        if (swapperFromAction === swapper) {
-          // Handle IN token (what user sent)
-          if (swapInfo.in && swapInfo.in.token_address && swapInfo.in.amount_raw) {
-            const inToken = swapInfo.in.token_address
-            const inAmount = typeof swapInfo.in.amount_raw === 'string' 
-              ? parseFloat(swapInfo.in.amount_raw) 
-              : swapInfo.in.amount_raw
-            
-            // Check if we already have this token in balance changes
-            const existingIn = augmented.find(
-              (bc) => bc.owner === swapper && bc.mint === inToken
+        if (swapperFromAction !== swapper) continue
+        
+        // Handle OUT token (what user received) - most commonly missing
+        if (swapInfo.out && swapInfo.out.token_address && swapInfo.out.amount_raw) {
+          const outToken = swapInfo.out.token_address
+          
+          // ✅ CRITICAL FIX: Skip SOL if it already exists in balance changes
+          // This prevents double-counting when SHYFT provides SOL in both places
+          if (outToken === SOL_MINT) {
+            const existingSol = augmented.find(
+              (bc) => bc.owner === swapper && bc.mint === SOL_MINT
             )
-            
-            if (!existingIn) {
-              // Create synthetic balance change for IN token
-              augmented.push({
-                address: swapper,
-                decimals: 9, // Default, will be corrected by AssetDeltaCollector
-                change_amount: -inAmount, // Negative because user sent it
-                post_balance: 0,
-                pre_balance: inAmount,
-                mint: inToken,
-                owner: swapper,
-              })
-              
+            if (existingSol) {
               logger.debug(
-                { 
-                  swapper, 
-                  token: inToken.substring(0, 8) + '...',
-                  amount: -inAmount
-                },
-                'ShyftParserV2: Added synthetic balance change from SWAP action (IN token)'
+                { swapper, existingChange: existingSol.change_amount },
+                'ShyftParserV2: SOL already in balance changes, skipping SWAP action augmentation'
               )
+              continue
             }
           }
           
-          // Handle OUT token (what user received)
-          if (swapInfo.out && swapInfo.out.token_address && swapInfo.out.amount_raw) {
-            const outToken = swapInfo.out.token_address
-            const outAmount = typeof swapInfo.out.amount_raw === 'string'
-              ? parseFloat(swapInfo.out.amount_raw)
-              : swapInfo.out.amount_raw
+          const outAmount = typeof swapInfo.out.amount_raw === 'string'
+            ? parseFloat(swapInfo.out.amount_raw)
+            : swapInfo.out.amount_raw
+          
+          const existingOut = augmented.find(
+            (bc) => bc.owner === swapper && bc.mint === outToken
+          )
+          
+          if (!existingOut) {
+            augmented.push({
+              address: swapper,
+              decimals: 9, // Default, will be corrected by AssetDeltaCollector
+              change_amount: outAmount,
+              post_balance: outAmount,
+              pre_balance: 0,
+              mint: outToken,
+              owner: swapper,
+            })
             
-            // Check if we already have this token in balance changes
-            const existingOut = augmented.find(
-              (bc) => bc.owner === swapper && bc.mint === outToken
+            logger.debug(
+              { swapper, token: outToken.substring(0, 8) + '...', amount: outAmount },
+              'ShyftParserV2: Added missing OUT token from SWAP action'
             )
-            
-            if (!existingOut) {
-              // Create synthetic balance change for OUT token
-              augmented.push({
-                address: swapper,
-                decimals: 9, // Default
-                change_amount: outAmount, // Positive because user received it
-                post_balance: outAmount,
-                pre_balance: 0,
-                mint: outToken,
-                owner: swapper,
-              })
-              
-              logger.debug(
-                { 
-                  swapper, 
-                  token: outToken.substring(0, 8) + '...',
-                  amount: outAmount
-                },
-                'ShyftParserV2: Added synthetic balance change from SWAP action (OUT token)'
-              )
-            }
           }
         }
         
-        // Continue to next action after processing SWAP
-        continue
-      }
-
-      // PRIORITY 2: Extract from SOL_TRANSFER and TOKEN_TRANSFER actions
-      const { sender, receiver, amount_raw, token_address } = action.info
-
-      // Check if this is a SOL transfer (TOKEN_TRANSFER or SOL_TRANSFER)
-      const isSOLTransfer = 
-        token_address === PRIORITY_ASSETS.SOL ||
-        token_address === PRIORITY_ASSETS.WSOL ||
-        action.type === 'SOL_TRANSFER'
-
-      if (!isSOLTransfer || !amount_raw) continue
-
-      // Convert amount_raw to number
-      const amountRaw = typeof amount_raw === 'string' ? parseFloat(amount_raw) : amount_raw
-
-      // Check if swapper is involved in this transfer
-      let changeAmount = 0
-      if (sender === swapper) {
-        // Swapper sent SOL (negative change)
-        changeAmount = -amountRaw
-      } else if (receiver === swapper) {
-        // Swapper received SOL (positive change)
-        changeAmount = amountRaw
-      } else {
-        // Swapper not involved, skip
-        continue
-      }
-
-      // Check if we already have a SOL balance change for this swapper
-      const existingSOLChange = augmented.find(
-        (bc) => 
-          bc.owner === swapper && 
-          (bc.mint === PRIORITY_ASSETS.SOL || bc.mint === PRIORITY_ASSETS.WSOL)
-      )
-
-      if (existingSOLChange) {
-        // Merge with existing SOL change
-        existingSOLChange.change_amount += changeAmount
-        logger.debug(
-          { 
-            swapper, 
-            existingChange: existingSOLChange.change_amount - changeAmount,
-            actionChange: changeAmount,
-            mergedChange: existingSOLChange.change_amount
-          },
-          'ShyftParserV2: Merged SOL transfer from action with existing balance change'
-        )
-      } else {
-        // Create new balance change entry for SOL transfer from action
-        const syntheticBalanceChange: TokenBalanceChange = {
-          address: swapper, // Use swapper address as account address
-          decimals: 9, // SOL has 9 decimals
-          change_amount: changeAmount,
-          post_balance: 0, // We don't know the actual balance
-          pre_balance: 0,
-          mint: PRIORITY_ASSETS.SOL,
-          owner: swapper,
+        // Handle IN token (what user sent) - rarely missing, but check anyway
+        if (swapInfo.in && swapInfo.in.token_address && swapInfo.in.amount_raw) {
+          const inToken = swapInfo.in.token_address
+          
+          // ✅ CRITICAL FIX: Skip SOL if it already exists in balance changes
+          // This prevents double-counting when SHYFT provides SOL in both places
+          if (inToken === SOL_MINT) {
+            const existingSol = augmented.find(
+              (bc) => bc.owner === swapper && bc.mint === SOL_MINT
+            )
+            if (existingSol) {
+              logger.debug(
+                { swapper, existingChange: existingSol.change_amount },
+                'ShyftParserV2: SOL already in balance changes, skipping SWAP action augmentation'
+              )
+              continue
+            }
+          }
+          
+          const inAmount = typeof swapInfo.in.amount_raw === 'string' 
+            ? parseFloat(swapInfo.in.amount_raw) 
+            : swapInfo.in.amount_raw
+          
+          const existingIn = augmented.find(
+            (bc) => bc.owner === swapper && bc.mint === inToken
+          )
+          
+          if (!existingIn) {
+            augmented.push({
+              address: swapper,
+              decimals: 9, // Default, will be corrected by AssetDeltaCollector
+              change_amount: -inAmount,
+              post_balance: 0,
+              pre_balance: inAmount,
+              mint: inToken,
+              owner: swapper,
+            })
+            
+            logger.debug(
+              { swapper, token: inToken.substring(0, 8) + '...', amount: -inAmount },
+              'ShyftParserV2: Added missing IN token from SWAP action'
+            )
+          }
         }
-
-        augmented.push(syntheticBalanceChange)
-
-        logger.debug(
-          { 
-            swapper, 
-            changeAmount,
-            sender,
-            receiver
-          },
-          'ShyftParserV2: Added synthetic SOL balance change from action'
-        )
       }
     }
 
@@ -1021,9 +1191,10 @@ export class ShyftParserV2 {
       // For BUY: use the input amount (what user spent)
       const inputAmount = swapResult.amounts.swapInputAmount || swapResult.amounts.totalWalletCost || 0
       
-      // If quote asset is SOL, estimate USD value (assume ~$240 SOL for rough estimate)
+      // If quote asset is SOL, estimate USD value using cached price
       if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.SOL) {
-        estimatedUsdValue = inputAmount * 240 // Rough SOL price estimate
+        const solPrice = this.cachedSolPrice || 94 // Use cached price or fallback to $94
+        estimatedUsdValue = inputAmount * solPrice
       }
       // If quote asset is USDC/USDT, use direct value
       else if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.USDC || 
@@ -1038,9 +1209,10 @@ export class ShyftParserV2 {
       // For SELL: use the output amount (what user received)
       const outputAmount = swapResult.amounts.swapOutputAmount || swapResult.amounts.netWalletReceived || 0
       
-      // If quote asset is SOL, estimate USD value
+      // If quote asset is SOL, estimate USD value using cached price
       if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.SOL) {
-        estimatedUsdValue = outputAmount * 240 // Rough SOL price estimate
+        const solPrice = this.cachedSolPrice || 94 // Use cached price or fallback to $94
+        estimatedUsdValue = outputAmount * solPrice
       }
       // If quote asset is USDC/USDT, use direct value
       else if (swapResult.quoteAsset.mint === PRIORITY_ASSETS.USDC || 

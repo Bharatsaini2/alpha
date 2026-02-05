@@ -118,7 +118,11 @@ export interface SwapperResult {
 export interface AssetDeltaCollector {
   collectDeltas(
     economicChanges: TokenBalanceChange[],
-    swapper: string
+    swapper: string,
+    swapActions?: Array<{
+      type: string
+      info?: any
+    }>
   ): AssetDeltaMap
 }
 

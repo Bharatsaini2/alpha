@@ -1,0 +1,2 @@
+Signature,Whale,Protocol,Timestamp,V2_Status,V2_Direction,V2_Quote,V2_Base,V2_Swap_Input,V2_Total_Cost,V2_Swap_Output,V2_Net_Received,V2_Base_Amount,V2_Rejection_Reason,V2_Processing_Ms,V2_Is_Split,V2_Split_Sell,V2_Split_Buy,V1_Status,V1_Direction,Agreement
+"2N1jCUhUFRgg19XwFiQiTW42VRwuBCnYmbj52DCQcaXDvSXsoUFvhuH7RpFMxv8WswUUhKJSowRZ2KwU8sLo22Xv","unknown","WebSocket","2026-02-04T21:24:05.346Z","REJECTED","","","","","","","","","invalid_input","15","false","","","REJECTED","","BOTH_REJECT"

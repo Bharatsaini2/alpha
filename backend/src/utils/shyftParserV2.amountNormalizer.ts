@@ -1,9 +1,14 @@
 /**
  * SHYFT Parser V2 - AmountNormalizer Component
  * 
- * Purpose: Calculate both swap amounts and total wallet costs
+ * Purpose: Normalize raw balance changes to human-readable amounts
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.8
  * Task 10: Implement AmountNormalizer component
+ * 
+ * ✅ BALANCE-TRUTH MODEL:
+ * - quote.netDelta already includes ALL fees (network, priority, platform)
+ * - We NEVER add or subtract fees - that would be double accounting
+ * - Fees are INFORMATIONAL ONLY - never used for amount calculations
  */
 
 import logger from './logger'
@@ -65,11 +70,21 @@ export class AmountNormalizerImpl implements AmountNormalizer {
     base: AssetDelta,
     fees: FeeData
   ): NormalizedAmounts {
-    // CRITICAL FIX: Normalize raw amounts using decimals
-    const swapInputAmount = Math.abs(quote.netDelta) / Math.pow(10, quote.decimals)
-    const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
-    const totalWalletCost = swapInputAmount + feeBreakdown.totalFeeQuote
+    // ✅ BALANCE-TRUTH MODEL: Use raw balance changes ONLY
+    // quote.netDelta already includes ALL fees - it's the final wallet truth
+    // 
+    // 🔒 INVARIANT: swapInputAmount can ONLY come from pool transfers
+    // Balance deltas may NEVER populate pool fields
+    const totalWalletCost = Math.abs(quote.netDelta) / Math.pow(10, quote.decimals)
     const baseAmount = Math.abs(base.netDelta) / Math.pow(10, base.decimals)
+    
+    // Fee breakdown is INFORMATIONAL ONLY - never used for math
+    const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
+    
+    // swapInputAmount = what went to pool (ONLY from pool data)
+    // We don't have pool transfer data, so we use undefined
+    // Consumers can decide to display totalWalletCost if needed
+    const swapInputAmount = undefined
 
     return {
       swapInputAmount,
@@ -84,11 +99,21 @@ export class AmountNormalizerImpl implements AmountNormalizer {
     base: AssetDelta,
     fees: FeeData
   ): NormalizedAmounts {
-    // CRITICAL FIX: Normalize raw amounts using decimals
-    const swapOutputAmount = Math.abs(quote.netDelta) / Math.pow(10, quote.decimals)
-    const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
-    const netWalletReceived = swapOutputAmount - feeBreakdown.totalFeeQuote
+    // ✅ BALANCE-TRUTH MODEL: Use raw balance changes ONLY
+    // quote.netDelta already has fees deducted - it's the final wallet truth
+    // 
+    // 🔒 INVARIANT: swapOutputAmount can ONLY come from pool transfers
+    // Balance deltas may NEVER populate pool fields
+    const netWalletReceived = Math.abs(quote.netDelta) / Math.pow(10, quote.decimals)
     const baseAmount = Math.abs(base.netDelta) / Math.pow(10, base.decimals)
+    
+    // Fee breakdown is INFORMATIONAL ONLY - never used for math
+    const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
+    
+    // swapOutputAmount = what came from pool (ONLY from pool data)
+    // We don't have pool transfer data, so we use undefined
+    // Consumers can decide to display netWalletReceived if needed
+    const swapOutputAmount = undefined
 
     return {
       swapOutputAmount,
@@ -143,6 +168,10 @@ export class AmountNormalizerImpl implements AmountNormalizer {
 
   /**
    * Create fallback amounts when calculation fails
+   * 
+   * ✅ BALANCE-TRUTH MODEL: Even in fallback, we follow the same rules
+   * - Pool amounts (swapInputAmount/swapOutputAmount) can ONLY come from pool data
+   * - We use undefined for pool amounts, let consumers decide what to display
    */
   private createFallbackAmounts(
     quote: AssetDelta,
@@ -150,7 +179,10 @@ export class AmountNormalizerImpl implements AmountNormalizer {
     direction: 'BUY' | 'SELL',
     fees: FeeData
   ): NormalizedAmounts {
-    const baseAmount = Math.abs(base.netDelta)
+    // ✅ FIX: Properly normalize decimals in fallback
+    const baseAmount = Math.abs(base.netDelta) / Math.pow(10, base.decimals)
+    const quoteAmount = Math.abs(quote.netDelta) / Math.pow(10, quote.decimals)
+    
     const feeBreakdown: FeeBreakdown = {
       transactionFeeSOL: fees.transactionFee,
       transactionFeeQuote: 0,
@@ -161,15 +193,15 @@ export class AmountNormalizerImpl implements AmountNormalizer {
 
     if (direction === 'BUY') {
       return {
-        swapInputAmount: Math.abs(quote.netDelta),
-        totalWalletCost: Math.abs(quote.netDelta),
+        swapInputAmount: undefined, // Pool data not available
+        totalWalletCost: quoteAmount,
         baseAmount,
         feeBreakdown,
       }
     } else {
       return {
-        swapOutputAmount: Math.abs(quote.netDelta),
-        netWalletReceived: Math.abs(quote.netDelta),
+        swapOutputAmount: undefined, // Pool data not available
+        netWalletReceived: quoteAmount,
         baseAmount,
         feeBreakdown,
       }

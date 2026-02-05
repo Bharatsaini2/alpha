@@ -1,38 +1,41 @@
 /**
- * List all MongoDB collections
+ * List all collections in the database
  */
 
-require('dotenv').config();
 const mongoose = require('mongoose');
-
-const MONGODB_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/test';
+require('dotenv').config();
 
 async function listCollections() {
   try {
-    console.log('🔌 Connecting to MongoDB...');
-    await mongoose.connect(MONGODB_URI);
-    console.log('✅ Connected!\n');
+    console.log('🔍 Connecting to MongoDB...');
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('✅ Connected to MongoDB\n');
 
     const db = mongoose.connection.db;
     const collections = await db.listCollections().toArray();
+
+    console.log('📊 Collections in database:');
+    console.log('='.repeat(80));
     
-    console.log(`📊 Total collections: ${collections.length}\n`);
-    console.log('Collections containing "whale" or "transaction":');
-    
-    for (const col of collections) {
-      const name = col.name;
-      if (name.toLowerCase().includes('whale') || name.toLowerCase().includes('transaction')) {
-        const collection = db.collection(name);
-        const count = await collection.countDocuments();
-        console.log(`  ${name.padEnd(40)} | ${count.toLocaleString().padStart(10)} docs`);
+    for (const collection of collections) {
+      const count = await db.collection(collection.name).countDocuments();
+      console.log(`\n📁 ${collection.name}`);
+      console.log(`   Documents: ${count}`);
+      
+      if (count > 0) {
+        // Get a sample document
+        const sample = await db.collection(collection.name).findOne();
+        console.log(`   Sample keys: ${Object.keys(sample).slice(0, 10).join(', ')}`);
       }
     }
 
-    await mongoose.connection.close();
-    console.log('\n✅ Done!');
+    console.log('\n' + '='.repeat(80));
+
   } catch (error) {
-    console.error('❌ Error:', error.message);
-    process.exit(1);
+    console.error('❌ Error:', error);
+  } finally {
+    await mongoose.disconnect();
+    console.log('\n✅ Disconnected from MongoDB');
   }
 }
 

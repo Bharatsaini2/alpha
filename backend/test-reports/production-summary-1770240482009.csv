@@ -1,0 +1,14 @@
+Metric,Value,Percentage
+Test Duration (seconds),49.61,N/A
+Total Transactions,0,100%
+SHYFT API Calls,0,N/A
+SHYFT API Errors,0,N/A
+V2 Accepted,0,0%
+V2 Split Swaps,0,0%
+V2 Rejected,0,0%
+V2 Errors,0,N/A
+V2 BUY,0,N/A
+V2 SELL,0,N/A
+V2 SPLIT,0,N/A
+V1 Accepted,0,0%
+V1 Rejected,0,0%
