@@ -900,41 +900,49 @@ const processSignature = async (signatureJson: any): Promise<void> => {
     if (parseResult.success && parseResult.data) {
       const swapData = parseResult.data
 
-      // ✅ Handle SplitSwapPair by creating TWO separate transactions (SELL + BUY)
-      // This matches V1 behavior where token-to-token swaps create 2 records
+      // ✅ Handle SplitSwapPair by creating SINGLE "both" type transaction
+      // Frontend expects ONE record with type="both" that it expands into 2 display items
       if ('sellRecord' in swapData) {
         logger.info(
-          pc.magenta(`🔄 Split Swap Pair detected - creating 2 separate transactions (SELL + BUY)`)
+          pc.magenta(`🔄 Split Swap Pair detected - creating single "both" type transaction`)
         )
         
-        // Create SELL transaction (user sold outgoing token)
+        // Merge sell and buy records into a single "both" type transaction
+        const mergedSwapData = {
+          ...swapData.sellRecord,
+          // Override with buy-specific data where needed
+          tokenOut: swapData.buyRecord.tokenOut,
+          tokenOutAmount: swapData.buyRecord.tokenOutAmount,
+          tokenOutPrice: swapData.buyRecord.tokenOutPrice,
+          tokenOutSolAmount: swapData.buyRecord.tokenOutSolAmount,
+          tokenOutUsdAmount: swapData.buyRecord.tokenOutUsdAmount,
+          tokenOutSymbol: swapData.buyRecord.tokenOutSymbol,
+          tokenOutName: swapData.buyRecord.tokenOutName,
+          tokenOutAddress: swapData.buyRecord.tokenOutAddress,
+          outTokenURL: swapData.buyRecord.outTokenURL,
+          outMarketCap: swapData.buyRecord.outMarketCap,
+          sellTokenPriceSol: swapData.buyRecord.sellTokenPriceSol,
+          // Mark as both buy and sell
+          isBuy: true,
+          isSell: true,
+        }
+        
+        // Create single "both" type transaction
         await processSingleSwapTransaction(
-          swapData.sellRecord,
+          mergedSwapData,
           signature,
           parsedTx,
           txStatus,
           whaleAddress,
           protocolName,
           gasFee,
-          'v2_parser_split_sell'
-        )
-        
-        // Create BUY transaction (user bought incoming token)
-        await processSingleSwapTransaction(
-          swapData.buyRecord,
-          signature,
-          parsedTx,
-          txStatus,
-          whaleAddress,
-          protocolName,
-          gasFee,
-          'v2_parser_split_buy'
+          'v2_parser_split_both'
         )
         
         logger.info(
-          pc.green(`✅ Split swap pair processed - created 2 transactions (SELL + BUY) for ${signature}`)
+          pc.green(`✅ Split swap pair processed - created single "both" type transaction for ${signature}`)
         )
-        return // Exit early, transactions processed
+        return // Exit early, transaction processed
       } else {
         // Handle regular ParsedSwap - single transaction
         await processSingleSwapTransaction(
@@ -1176,15 +1184,27 @@ async function processSingleSwapTransaction(
       }
     }
 
-    const tokenInSolAmount =
-      (tokenIn.amount * (inTokenData?.price || 0)) / solPrice
-    const tokenOutSolAmount =
-      (tokenOut.amount * (outTokenData?.price || 0)) / solPrice
+    // ✅ Safety check: Prevent division by zero (Infinity bug fix)
+    const safeSolPrice = solPrice && solPrice > 0 ? solPrice : 94 // Default to $94 if invalid
+    
+    // ✅ Log warning if solPrice was invalid
+    if (!solPrice || solPrice <= 0) {
+      logger.warn({
+        signature,
+        solPrice,
+        fallbackUsed: 94
+      }, 'Invalid SOL price detected, using fallback value')
+    }
 
-    const buyTokenPriceSol = inTokenData?.price / solPrice || 0
-    const sellTokenPriceSol = outTokenData?.price / solPrice || 0
-    const buyMarketCapSol = inTokenData?.marketCap / solPrice || 0
-    const sellMarketCapSol = outTokenData?.marketCap / solPrice || 0
+    const tokenInSolAmount =
+      (tokenIn.amount * (inTokenData?.price || 0)) / safeSolPrice
+    const tokenOutSolAmount =
+      (tokenOut.amount * (outTokenData?.price || 0)) / safeSolPrice
+
+    const buyTokenPriceSol = inTokenData?.price / safeSolPrice || 0
+    const sellTokenPriceSol = outTokenData?.price / safeSolPrice || 0
+    const buyMarketCapSol = inTokenData?.marketCap / safeSolPrice || 0
+    const sellMarketCapSol = outTokenData?.marketCap / safeSolPrice || 0
     const gasFeeUSD = gasFee * solPrice || 0
 
     // Extract Values
@@ -1273,22 +1293,29 @@ async function processSingleSwapTransaction(
       )
     }
 
-    if (
-      txValue != null &&
-      txValue < 200 &&
-      sellTxValue != null &&
-      sellTxValue < 200 &&
-      buyTxValue != null &&
-      buyTxValue < 200
-    ) {
-      return
+    // ✅ FIXED: Don't filter out split transactions with undefined values
+    // For split transactions, values might be undefined initially
+    // Only skip if ALL values are defined AND all are below $2
+    const hasDefinedValue = txValue != null || sellTxValue != null || buyTxValue != null
+    const allValuesBelowThreshold = 
+      (txValue == null || txValue < 2) &&
+      (sellTxValue == null || sellTxValue < 2) &&
+      (buyTxValue == null || buyTxValue < 2)
+    
+    // Only return if we have at least one defined value AND all defined values are below $2
+    if (hasDefinedValue && allValuesBelowThreshold) {
+      const maxValue = Math.max(txValue || 0, sellTxValue || 0, buyTxValue || 0)
+      if (maxValue < 2 && maxValue > 0) {
+        logger.info(`Skipping transaction ${signature}: Max value $${maxValue.toFixed(2)} below $2 threshold`)
+        return
+      }
     }
 
     // Store buy/sell transaction grater then $200 in MongoDB (If it doesn't exist)
     try {
       if (isBuy) {
         if (
-          (txValue > 200 || buyTxValue > 200) &&
+          (txValue > 2 || buyTxValue > 2) &&
           (txValue < 400 || buyTxValue < 400)
         ) {
           await storeRepeatedTransactions(
@@ -1300,7 +1327,7 @@ async function processSingleSwapTransaction(
         }
       }
 
-      if (txValue > 200 || sellTxValue > 200 || buyTxValue > 200) {
+      if (txValue > 2 || sellTxValue > 2 || buyTxValue > 2) {
         if (isBuy) {
           const hotnessScore = await getHotnessScore(
             signature,
