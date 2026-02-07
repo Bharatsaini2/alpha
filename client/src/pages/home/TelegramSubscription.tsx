@@ -410,7 +410,11 @@ function TelegramSubscription() {
                                     <div className="share-profile">
                                         <img src={getUserAvatarUrl(user?.avatar)} alt="User Avatar" />
                                         <div>
-                                            <h4>@{user.telegramUsername || 'User'}</h4>
+                                            <h4>
+                                                {user.telegramUsername 
+                                                    ? `@${user.telegramUsername}` 
+                                                    : user.telegramFirstName || 'User'}
+                                            </h4>
                                             <button className="telegram-share-btn mt-2">
                                                 <PiTelegramLogoDuotone />
                                                 Connected

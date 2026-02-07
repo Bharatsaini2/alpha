@@ -408,7 +408,7 @@ export class TelegramService {
     }
 
     // Handle /start command with token parameter
-    this.bot.onText(/\/start (.+)/, async (msg, match) => {
+    this.bot.onText(/\/start\s*(.+)/, async (msg, match) => {
       const chatId = msg.chat.id.toString()
       const token = match?.[1]
       const username = msg.from?.username

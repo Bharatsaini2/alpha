@@ -908,23 +908,19 @@ const processSignature = async (signatureJson: any): Promise<void> => {
         )
         
         // Merge sell and buy records into a single "both" type transaction
+        // Note: ParsedSwap now has nested structure with quoteAsset, baseAsset, amounts
         const mergedSwapData = {
           ...swapData.sellRecord,
-          // Override with buy-specific data where needed
-          tokenOut: swapData.buyRecord.tokenOut,
-          tokenOutAmount: swapData.buyRecord.tokenOutAmount,
-          tokenOutPrice: swapData.buyRecord.tokenOutPrice,
-          tokenOutSolAmount: swapData.buyRecord.tokenOutSolAmount,
-          tokenOutUsdAmount: swapData.buyRecord.tokenOutUsdAmount,
-          tokenOutSymbol: swapData.buyRecord.tokenOutSymbol,
-          tokenOutName: swapData.buyRecord.tokenOutName,
-          tokenOutAddress: swapData.buyRecord.tokenOutAddress,
-          outTokenURL: swapData.buyRecord.outTokenURL,
-          outMarketCap: swapData.buyRecord.outMarketCap,
-          sellTokenPriceSol: swapData.buyRecord.sellTokenPriceSol,
+          // Override with buy-specific data from the buyRecord
+          // The buyRecord contains the token being purchased
+          baseAsset: swapData.buyRecord.baseAsset,
+          quoteAsset: swapData.buyRecord.quoteAsset,
+          amounts: {
+            ...swapData.sellRecord.amounts,
+            ...swapData.buyRecord.amounts,
+          },
           // Mark as both buy and sell
-          isBuy: true,
-          isSell: true,
+          direction: 'BUY' as const, // Primary direction is BUY
         }
         
         // Create single "both" type transaction
@@ -1782,7 +1778,12 @@ const storeTransactionInDB = async (
   }
 
   let typeValue: 'buy' | 'sell' | 'both'
-  if (isBuy && isSell) {
+  
+  // ✅ FIX: Check if this is a merged split swap (non-core to non-core)
+  // Split swaps should always be 'both' type so frontend can expand them
+  if (classificationSource === 'v2_parser_split_both') {
+    typeValue = 'both'
+  } else if (isBuy && isSell) {
     typeValue = 'both'
   } else if (isBuy) {
     typeValue = 'buy'

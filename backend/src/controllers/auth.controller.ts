@@ -422,6 +422,8 @@ export const getCurrentUser = catchAsyncErrors(
           createdAt: user.createdAt,
           lastLogin: user.lastLogin,
           telegramChatId: user.telegramChatId,
+          telegramUsername: user.telegramUsername,
+          telegramFirstName: user.telegramFirstName,
         },
         authMethods: authMethods.map((method) => ({
           type: method.authType,
