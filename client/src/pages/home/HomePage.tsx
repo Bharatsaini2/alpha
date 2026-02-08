@@ -1168,7 +1168,7 @@ const HomePage = () => {
             )}
 
             {/* Row 3: Filters - Unified Single Row Layout */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mobile-filters-row">
               {/* Transaction Type Filters (ALL, BUY, SELL) */}
               <div className="glass-radio-group">
                 {filters.map((filter) => (

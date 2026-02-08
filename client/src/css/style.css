@@ -2172,11 +2172,120 @@ font-size: 16px;
 }
 
 /* Mobile scrolling fix for alpha stream page */
-@media (max-width: 991px) {}
+@media (max-width: 991px) {
+  /* KOL Feed Page - Mobile Layout */
+
+  /* Hide desktop quick buy on mobile */
+  .mobile-quick-buy-desktop {
+    display: none !important;
+  }
+
+  /* Show mobile quick buy */
+  .mobile-quick-buy-mobile {
+    display: block !important;
+  }
+
+  /* Row 2 & 3: Quick Buy and Filters - stacked vertically */
+  .mobile-filters-quick-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    margin-top: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Quick Buy - full width, comes FIRST */
+  .mobile-filters-quick-row .mobile-quick-buy-mobile {
+    width: 100% !important;
+    margin-bottom: 0 !important;
+    order: 1 !important;
+  }
+
+  .mobile-filters-quick-row .mobile-quick-buy-mobile .quick-btn {
+    font-size: 9px !important;
+    padding: 6px 8px !important;
+    height: 32px !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-filters-quick-row .mobile-quick-buy-mobile img {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  .mobile-filters-quick-row .mobile-quick-buy-mobile input {
+    width: 45px !important;
+    font-size: 11px !important;
+  }
+
+  /* Filters container - comes AFTER quick buy */
+  .mobile-filters-quick-row>div:last-child {
+    width: 100% !important;
+    order: 2 !important;
+  }
+
+  /* ALL/BUY/SELL tabs row */
+  .mobile-tabling-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  /* Row 2a: ALL/BUY/SELL tabs */
+  .mobile-tabling-list>div:first-child {
+    width: 100% !important;
+  }
+
+  .mobile-tabling-list .custom-tabs {
+    width: 100% !important;
+    display: flex !important;
+  }
+
+  .custom-tabs .nav-link {
+    flex: 1 !important;
+    text-align: center !important;
+    padding: 6px 8px !important;
+    font-size: 10px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Row 3: Other filters (HOTNESS, AMOUNT, TAGS, SUBSCRIPTION) */
+  .mobile-tabling-list>div:last-child {
+    width: 100% !important;
+  }
+
+  .mobile-tabling-list .plan-btn-list {
+    display: flex !important;
+    gap: 5px !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  .mobile-tabling-list .plan-btn-list li {
+    flex: 1 1 auto !important;
+  }
+
+  .mobile-tabling-list .plan-btn-list .plan-btn {
+    width: 100% !important;
+    font-size: 10px !important;
+    padding: 6px 8px !important;
+  }
+}
+
+/* Desktop - hide mobile quick buy */
+@media (min-width: 992px) {
+  .mobile-quick-buy-mobile {
+    display: none !important;
+  }
+
+  .mobile-filters-quick-row {
+    display: block !important;
+  }
+}
+
 
 /* Coppied Addres */
 .coppied-address {
-  background-color: #141414;
   border: 1px solid #525252;
   padding: 8px 16px;
 }
@@ -3199,7 +3308,7 @@ font-size: 16px;
 
 .whale-stat-value.red {
   text-transform: uppercase;
-  color: #ff4d4d;
+  color: #FF0000;
   font-size: 12px;
   font-weight: 500;
   line-height: 140%;

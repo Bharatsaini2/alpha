@@ -1197,7 +1197,7 @@ const HomePageNew = () => {
 
                         {/* Filters */}
                         <div>
-                            <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
+                            <div className="d-flex align-items-center justify-content-between mobile-tabling-list mobile-filters-row">
                                 <div>
                                     <ul className="nav nav-tabs custom-tabs" role="tablist">
                                         <li className="nav-item" role="presentation">

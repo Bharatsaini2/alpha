@@ -916,7 +916,7 @@ const KOLFeedPage = () => {
                 )}
               </div>
 
-              <div className="custom-frm-bx nw-quick-bx mb-3">
+              <div className="custom-frm-bx nw-quick-bx mb-3 mobile-quick-buy-desktop">
                 <button
                   className="quick-btn"
                   style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
@@ -960,443 +960,490 @@ const KOLFeedPage = () => {
               </div>
             </div>
 
-            {/* Filters */}
-            <div>
-              <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
-                <div>
-                  <ul className="nav nav-tabs custom-tabs" role="tablist">
-                    <li className="nav-item" role="presentation">
-                      <a
-                        className={`nav-link ${activeFilter === 'all' ? 'active' : ''}`}
-                        onClick={() => handleFilterTabChange('all')}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        ALL
-                      </a>
-                    </li>
-                    <li className="nav-item" role="presentation">
-                      <a
-                        className={`nav-link ${activeFilter === 'buy' ? 'active' : ''}`}
-                        onClick={() => handleFilterTabChange('buy')}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        BUY
-                      </a>
-                    </li>
-                    <li className="nav-item" role="presentation">
-                      <a
-                        className={`nav-link ${activeFilter === 'sell' ? 'active' : ''}`}
-                        onClick={() => handleFilterTabChange('sell')}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        SELL
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-                <div>
-                  <ul className="plan-btn-list">
-                    <li onClick={(e) => e.stopPropagation()}>
-                      <a href="javascript:void(0)"
-                        className={`plan-btn ${activeFilters.hotness ? 'active' : ''}`}
-                        onClick={() => setOpenDropdown(openDropdown === 'hotness' ? null : 'hotness')}>
-                        {activeFilters.hotness
-                          ? `HOTNESS: ${hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}`
-                          : 'hotness'} <HiChevronUpDown />
-                      </a>
-                      {openDropdown === 'hotness' && (
-                        <div className="filter-dropdown-menu">
-                          <div className="filter-dropdown-header">Hotness Score</div>
-                          {hotnessOptions.map(opt => (
-                            <button
-                              key={opt.label}
-                              className={`filter-dropdown-item ${activeFilters.hotness === opt.value ? 'active' : ''}`}
-                              onClick={() => handleFilterUpdate('hotness', opt.value)}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </li>
-                    <li onClick={(e) => e.stopPropagation()}>
-                      <a href="javascript:void(0)"
-                        className={`plan-btn ${activeFilters.amount ? 'active' : ''}`}
-                        onClick={() => setOpenDropdown(openDropdown === 'amount' ? null : 'amount')}>
-                        {activeFilters.amount
-                          ? `AMOUNT: ${amountOptions.find(o => o.value === activeFilters.amount)?.label}`
-                          : 'amount'} <HiChevronUpDown />
-                      </a>
-                      {openDropdown === 'amount' && (
-                        <div className="filter-dropdown-menu">
-                          <div className="filter-dropdown-header">Min Amount</div>
-                          {amountOptions.map(opt => (
-                            <button
-                              key={opt.label}
-                              className={`filter-dropdown-item ${activeFilters.amount === opt.value ? 'active' : ''}`}
-                              onClick={() => handleFilterUpdate('amount', opt.value)}
-                            >
-                              {opt.label}
-
-                            </button>
-
-
-                          ))}
-                          <div className="custm-input-filed">
-                            <input type="text" className="custom-amount-frm" placeholder="Custom..." />
-                          </div>
-
-                          <div className="quick-nw-btn">
-                            <button>Submit</button>
-                          </div>
-                        </div>
-                      )}
-                    </li>
-
-
-                    <li onClick={(e) => e.stopPropagation()}>
-                      <a href="javascript:void(0)"
-                        className={`plan-btn ${openDropdown === 'subs' ? 'active' : ''}`}
-                        onClick={() => setOpenDropdown(openDropdown === 'subs' ? null : 'subs')}>
-                        Subscription <HiChevronUpDown />
-                      </a>
-                      {openDropdown === 'subs' && (
-                        <KOLAlertPopup
-                          hotness={hotness}
-                          setHotness={setHotness}
-                          amount={amount}
-                          setAmount={setAmount}
-                          onActivate={handleKOLAlertConnect}
-                          isSaved={isSaved}
-                          setIsSaved={setIsSaved}
-                          user={user}
-                          onClose={() => setOpenDropdown(null)}
-                        />
-                      )}
-                    </li>
-
-                    <li onClick={(e) => e.stopPropagation()}>
-                      <a href="javascript:void(0)"
-                        className={`plan-btn d-block ${(activeFilters.ageMin || activeFilters.ageMax || activeFilters.marketCapMin || activeFilters.marketCapMax) ? 'active' : ''}`}
-                        onClick={() => setOpenDropdown(openDropdown === 'newFilter' ? null : 'newFilter')}>
-                        {[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length > 0
-                          ? `: ${[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length}`
-                          : ''} <FontAwesomeIcon icon={faFilter} />
-                      </a>
-                      {openDropdown === 'newFilter' && (
-                        <div className="filter-dropdown-menu w-xs p-2">
-                          <div className="row">
-
-                            <div className="col-lg-6">
-                              <div className="custom-frm-bx ">
-                                <label htmlFor="">Age (minutes)</label>
-                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
-                              </div>
-                            </div>
-
-                            <div className="col-lg-6">
-
-                              <div className="custom-frm-bx">
-                                <label htmlFor=""></label>
-                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
-                              </div>
-                            </div>
-
-                            <div className="col-lg-6">
-                              <div className="custom-frm-bx mb-0">
-                                <label htmlFor="">Market Cap (K)</label>
-                                <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
-                              </div>
-                            </div>
-
-                            <div className="col-lg-6">
-
-                              <div className="custom-frm-bx mb-0">
-                                <label htmlFor=""></label>
-                                <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
-                              </div>
-                            </div>
-
-                          </div>
-
-
-
-                        </div>
-                      )}
-                    </li>
-
-                  </ul>
-                </div>
-              </div>
-
-              {/* Active Filter Indicators - Only show when filters are active */}
-              {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery) && (
-                <div className="category-remove-filting">
-                  <ul>
-                    {/* Search Filter Indicator */}
-                    {activeFilters.searchQuery && (
-                      <li>
-                        <div className="category-filtering-add">
-                          <div className="category-filter-items">
-                            <h6>
-                              Search: <span>{activeFilters.searchQuery}</span>
-                            </h6>
-                            <span>
-                              <a
-                                href="javascript:void(0)"
-                                className="filter-remv-btn"
-                                onClick={() => handleFilterUpdate('searchQuery', "")}
-                              >
-                                <FontAwesomeIcon icon={faClose} />
-                              </a>
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                    )}
-
-                    {/* Hotness Filter Indicator */}
-                    {activeFilters.hotness && (
-                      <li>
-                        <div className="category-filtering-add">
-                          <div className="category-filter-items">
-                            <h6>
-                              Hotness Score: <span>{hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}</span>
-                            </h6>
-                            <span>
-                              <a
-                                href="javascript:void(0)"
-                                className="filter-remv-btn"
-                                onClick={() => handleFilterUpdate('hotness', null)}
-                              >
-                                <FontAwesomeIcon icon={faClose} />
-                              </a>
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                    )}
-
-                    {/* Amount Filter Indicator */}
-                    {activeFilters.amount && (
-                      <li>
-                        <div className="category-filtering-add">
-                          <div className="category-filter-items">
-                            <h6>
-                              Amount: <span>{amountOptions.find(o => o.value === activeFilters.amount)?.label}</span>
-                            </h6>
-                            <span>
-                              <a
-                                href="javascript:void(0)"
-                                className="filter-remv-btn"
-                                onClick={() => handleFilterUpdate('amount', null)}
-                              >
-                                <FontAwesomeIcon icon={faClose} />
-                              </a>
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                    )}
-
-                    {/* Tags Filter Indicators - One for each active tag */}
-                    {activeFilters.tags.map((tag: string, index: number) => (
-                      <li key={`tag-${index}`}>
-                        <div className="category-filtering-add">
-                          <div className="category-filter-items">
-                            <h6>
-                              Tags: <span>{tag}</span>
-                            </h6>
-                            <span>
-                              <a
-                                href="javascript:void(0)"
-                                className="filter-remv-btn"
-                                onClick={() => toggleTag(tag)}
-                              >
-                                <FontAwesomeIcon icon={faClose} />
-                              </a>
-                            </span>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Transactions List */}
-              <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
-                {isAllTxLoading ? (
-                  <TransactionListSkeleton variant="kol" count={12} />
-                ) : transactions.length === 0 ? (
-                  <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
-                    <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>
-                  </div>
-                ) : (
-                  <div className="transaction-container">
-                    {transactions.map((tx: any, index: number) => (
-                      <div
-                        key={tx._id}
-                        ref={index === transactions.length - 1 ? lastTransactionRef : null}
-                        className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? 'animate-slide-up' : ''}`}
-                        onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
-                        style={{ cursor: 'pointer' }}
-                        onAnimationEnd={() =>
-                          setNewTxIds((prev) => {
-                            const updated = new Set(prev)
-                            updated.delete(tx._id)
-                            return updated
-                          })
-                        }
-                      >
-                        <div className="d-flex align-items-center justify-content-between nw-btm-brd">
-                          <div>
-                            <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
-                          </div>
-                          <div>
-                            <ul className="quick-list">
-                              {tx.hotnessScore > 0 && (
-                                <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
-                              )}
-                              <li className="quick-item">
-                                <a
-                                  href="javascript:void(0)"
-                                  className="quick-nw-btn"
-                                  onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
-                                  role="button"
-                                  tabIndex={0}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
-                                      e.preventDefault()
-                                      e.stopPropagation()
-                                      handleQuickBuy(tx)
-                                    }
-                                  }}
-                                  aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
-                                  title="Quick buy this token"
-                                >
-                                  quick buy
-                                </a>
-                              </li>
-                              <li className="quick-item">
-                                <a
-                                  href="javascript:void(0)"
-                                  className="quick-nw-btn quick-copy-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
-                                  }}
-                                >
-                                  <RiFileCopyLine />
-                                </a>
-                              </li>
-                              <li className="quick-item">
-                                <a
-                                  href="javascript:void(0)"
-                                  className="quick-nw-btn quick-arrow-btn"
-                                  onClick={(e) => { e.stopPropagation(); handleTransactionInfoNewTab(tx.signature, tx.type) }}
-                                >
-                                  <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
-                                </a>
-                              </li>
-                            </ul>
-                          </div>
-                        </div>
-
-                        <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
-                          <div className="left-item-bx">
-                            <img
-                              src={tx.influencerProfileImageUrl || DefaultTokenImage}
-                              alt="influencer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/kol-feed-profile/${tx.influencerUsername?.replace(/^@/, '')}`);
-                              }}
-                              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                                const target = e.currentTarget;
-                                if (target.src.indexOf(DefaultTokenImage) === -1) {
-                                  target.src = DefaultTokenImage;
-                                }
-                              }}
-                              style={{ cursor: 'pointer' }}
-                            />
-                            <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
-                                <h4 className="username">{tx.influencerName}</h4>
-                                <img
-                                  src={TwitterVerified}
-                                  alt="verified"
-                                  style={{ width: '14px', height: '14px', flexShrink: 0 }}
-                                />
-                              </div>
-                              {/* Twitter handle in place of tags */}
-                              <div className="tags" style={{ marginBottom: '4px' }}>
-                                <a
-                                  href={`https://x.com/${tx.influencerUsername?.replace(/^@/, '')}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="tag-title"
-                                  style={{
-                                    textDecoration: 'none',
-                                    color: '#8f8f8f'
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  @{tx.influencerUsername?.replace(/^@/, '')}
-                                </a>
-                              </div>
-                              <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ marginTop: 'auto' }}>
-                                {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="sell-trade-bx">
-                            {tx.type === 'sell' ? (
-                              <span className="sell-title">
-                                <FontAwesomeIcon icon={faArrowTrendDown} /> SELL
-                              </span>
-                            ) : (
-                              <span className="buy-trade-title">
-                                <IoMdTrendingUp /> BUY
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="right-info text-end">
-                            <div className="left-crd-content">
-                              <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
-                              <p>{tx.type === 'sell' ? tx.transaction?.tokenIn?.name?.substring(0, 20) : tx.transaction?.tokenOut?.name?.substring(0, 20)}</p>
-                              <small className="mc-title">MC: ${formatNumber(getMarketCap(tx))} / AGE: {tx.age}</small>
-                            </div>
-                            <div className="right-img">
-                              <img
-                                src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
-                                alt="token"
-                                onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+            {/* Filters and Quick Buy Row (Mobile) */}
+            <div className="mobile-filters-quick-row">
+              {/* Quick Buy - Mobile Only */}
+              <div className="custom-frm-bx nw-quick-bx mb-3 mobile-quick-buy-mobile">
+                <button
+                  className="quick-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
+                  onClick={() => quickBuyInputRef.current?.focus()}
+                >
+                  <img src="/quick-btn.png" alt="" /> quick buy amount
+                  <input
+                    ref={quickBuyInputRef}
+                    type="number"
+                    value={quickBuyAmount}
+                    onChange={handleQuickBuyAmountChange}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="0.5"
+                    min="0"
+                    step="0.1"
+                    style={{
+                      background: 'transparent',
+                      border: quickBuyAmountError ? '1px solid #ef4444' : 'none',
+                      color: '#fff',
+                      width: '60px',
+                      textAlign: 'right',
+                      outline: 'none',
+                      fontSize: '14px',
+                      borderRadius: '4px',
+                      padding: '2px 4px'
+                    }}
+                    title={quickBuyAmountError || ''}
+                  />
+                  <span style={{ color: '#fff', fontSize: '14px' }}>SOL</span>
+                </button>
+                {quickBuyAmountError && (
+                  <div style={{
+                    color: '#ef4444',
+                    fontSize: '11px',
+                    marginTop: '4px',
+                    paddingLeft: '8px'
+                  }}>
+                    {quickBuyAmountError}
                   </div>
                 )}
-                {/* Loading more indicator */}
-                {isLoadingMore && (
-                  <div className="d-flex align-items-center justify-content-center py-4">
-                    <div className="lds-spinner text-white">
-                      {Array.from({ length: 12 }).map((_, i) => (
-                        <div key={i}></div>
+              </div>
+
+              {/* Filters */}
+              <div>
+                <div className="d-flex align-items-center justify-content-between mobile-tabling-list">
+                  <div>
+                    <ul className="nav nav-tabs custom-tabs" role="tablist">
+                      <li className="nav-item" role="presentation">
+                        <a
+                          className={`nav-link ${activeFilter === 'all' ? 'active' : ''}`}
+                          onClick={() => handleFilterTabChange('all')}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          ALL
+                        </a>
+                      </li>
+                      <li className="nav-item" role="presentation">
+                        <a
+                          className={`nav-link ${activeFilter === 'buy' ? 'active' : ''}`}
+                          onClick={() => handleFilterTabChange('buy')}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          BUY
+                        </a>
+                      </li>
+                      <li className="nav-item" role="presentation">
+                        <a
+                          className={`nav-link ${activeFilter === 'sell' ? 'active' : ''}`}
+                          onClick={() => handleFilterTabChange('sell')}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          SELL
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div>
+                    <ul className="plan-btn-list">
+                      <li onClick={(e) => e.stopPropagation()}>
+                        <a href="javascript:void(0)"
+                          className={`plan-btn ${activeFilters.hotness ? 'active' : ''}`}
+                          onClick={() => setOpenDropdown(openDropdown === 'hotness' ? null : 'hotness')}>
+                          {activeFilters.hotness
+                            ? `HOTNESS: ${hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}`
+                            : 'hotness'} <HiChevronUpDown />
+                        </a>
+                        {openDropdown === 'hotness' && (
+                          <div className="filter-dropdown-menu">
+                            <div className="filter-dropdown-header">Hotness Score</div>
+                            {hotnessOptions.map(opt => (
+                              <button
+                                key={opt.label}
+                                className={`filter-dropdown-item ${activeFilters.hotness === opt.value ? 'active' : ''}`}
+                                onClick={() => handleFilterUpdate('hotness', opt.value)}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </li>
+                      <li onClick={(e) => e.stopPropagation()}>
+                        <a href="javascript:void(0)"
+                          className={`plan-btn ${activeFilters.amount ? 'active' : ''}`}
+                          onClick={() => setOpenDropdown(openDropdown === 'amount' ? null : 'amount')}>
+                          {activeFilters.amount
+                            ? `AMOUNT: ${amountOptions.find(o => o.value === activeFilters.amount)?.label}`
+                            : 'amount'} <HiChevronUpDown />
+                        </a>
+                        {openDropdown === 'amount' && (
+                          <div className="filter-dropdown-menu">
+                            <div className="filter-dropdown-header">Min Amount</div>
+                            {amountOptions.map(opt => (
+                              <button
+                                key={opt.label}
+                                className={`filter-dropdown-item ${activeFilters.amount === opt.value ? 'active' : ''}`}
+                                onClick={() => handleFilterUpdate('amount', opt.value)}
+                              >
+                                {opt.label}
+
+                              </button>
+
+
+                            ))}
+                            <div className="custm-input-filed">
+                              <input type="text" className="custom-amount-frm" placeholder="Custom..." />
+                            </div>
+
+                            <div className="quick-nw-btn">
+                              <button>Submit</button>
+                            </div>
+                          </div>
+                        )}
+                      </li>
+
+
+                      <li onClick={(e) => e.stopPropagation()}>
+                        <a href="javascript:void(0)"
+                          className={`plan-btn ${openDropdown === 'subs' ? 'active' : ''}`}
+                          onClick={() => setOpenDropdown(openDropdown === 'subs' ? null : 'subs')}>
+                          Subscription <HiChevronUpDown />
+                        </a>
+                        {openDropdown === 'subs' && (
+                          <KOLAlertPopup
+                            hotness={hotness}
+                            setHotness={setHotness}
+                            amount={amount}
+                            setAmount={setAmount}
+                            onActivate={handleKOLAlertConnect}
+                            isSaved={isSaved}
+                            setIsSaved={setIsSaved}
+                            user={user}
+                            onClose={() => setOpenDropdown(null)}
+                          />
+                        )}
+                      </li>
+
+                      <li onClick={(e) => e.stopPropagation()}>
+                        <a href="javascript:void(0)"
+                          className={`plan-btn d-block ${(activeFilters.ageMin || activeFilters.ageMax || activeFilters.marketCapMin || activeFilters.marketCapMax) ? 'active' : ''}`}
+                          onClick={() => setOpenDropdown(openDropdown === 'newFilter' ? null : 'newFilter')}>
+                          {[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length > 0
+                            ? `: ${[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length}`
+                            : ''} <FontAwesomeIcon icon={faFilter} />
+                        </a>
+                        {openDropdown === 'newFilter' && (
+                          <div className="filter-dropdown-menu w-xs p-2">
+                            <div className="row">
+
+                              <div className="col-lg-6">
+                                <div className="custom-frm-bx ">
+                                  <label htmlFor="">Age (minutes)</label>
+                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                </div>
+                              </div>
+
+                              <div className="col-lg-6">
+
+                                <div className="custom-frm-bx">
+                                  <label htmlFor=""></label>
+                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                </div>
+                              </div>
+
+                              <div className="col-lg-6">
+                                <div className="custom-frm-bx mb-0">
+                                  <label htmlFor="">Market Cap (K)</label>
+                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                </div>
+                              </div>
+
+                              <div className="col-lg-6">
+
+                                <div className="custom-frm-bx mb-0">
+                                  <label htmlFor=""></label>
+                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
+                                </div>
+                              </div>
+
+                            </div>
+
+
+
+                          </div>
+                        )}
+                      </li>
+
+                    </ul>
+                  </div>
+                </div>
+
+                {/* Active Filter Indicators - Only show when filters are active */}
+                {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery) && (
+                  <div className="category-remove-filting">
+                    <ul>
+                      {/* Search Filter Indicator */}
+                      {activeFilters.searchQuery && (
+                        <li>
+                          <div className="category-filtering-add">
+                            <div className="category-filter-items">
+                              <h6>
+                                Search: <span>{activeFilters.searchQuery}</span>
+                              </h6>
+                              <span>
+                                <a
+                                  href="javascript:void(0)"
+                                  className="filter-remv-btn"
+                                  onClick={() => handleFilterUpdate('searchQuery', "")}
+                                >
+                                  <FontAwesomeIcon icon={faClose} />
+                                </a>
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      )}
+
+                      {/* Hotness Filter Indicator */}
+                      {activeFilters.hotness && (
+                        <li>
+                          <div className="category-filtering-add">
+                            <div className="category-filter-items">
+                              <h6>
+                                Hotness Score: <span>{hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}</span>
+                              </h6>
+                              <span>
+                                <a
+                                  href="javascript:void(0)"
+                                  className="filter-remv-btn"
+                                  onClick={() => handleFilterUpdate('hotness', null)}
+                                >
+                                  <FontAwesomeIcon icon={faClose} />
+                                </a>
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      )}
+
+                      {/* Amount Filter Indicator */}
+                      {activeFilters.amount && (
+                        <li>
+                          <div className="category-filtering-add">
+                            <div className="category-filter-items">
+                              <h6>
+                                Amount: <span>{amountOptions.find(o => o.value === activeFilters.amount)?.label}</span>
+                              </h6>
+                              <span>
+                                <a
+                                  href="javascript:void(0)"
+                                  className="filter-remv-btn"
+                                  onClick={() => handleFilterUpdate('amount', null)}
+                                >
+                                  <FontAwesomeIcon icon={faClose} />
+                                </a>
+                              </span>
+                            </div>
+                          </div>
+                        </li>
+                      )}
+
+                      {/* Tags Filter Indicators - One for each active tag */}
+                      {activeFilters.tags.map((tag: string, index: number) => (
+                        <li key={`tag-${index}`}>
+                          <div className="category-filtering-add">
+                            <div className="category-filter-items">
+                              <h6>
+                                Tags: <span>{tag}</span>
+                              </h6>
+                              <span>
+                                <a
+                                  href="javascript:void(0)"
+                                  className="filter-remv-btn"
+                                  onClick={() => toggleTag(tag)}
+                                >
+                                  <FontAwesomeIcon icon={faClose} />
+                                </a>
+                              </span>
+                            </div>
+                          </div>
+                        </li>
                       ))}
-                    </div>
+                    </ul>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Transactions List */}
+            <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
+              {isAllTxLoading ? (
+                <TransactionListSkeleton variant="kol" count={12} />
+              ) : transactions.length === 0 ? (
+                <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
+                  <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>
+                </div>
+              ) : (
+                <div className="transaction-container">
+                  {transactions.map((tx: any, index: number) => (
+                    <div
+                      key={tx._id}
+                      ref={index === transactions.length - 1 ? lastTransactionRef : null}
+                      className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? 'animate-slide-up' : ''}`}
+                      onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
+                      style={{ cursor: 'pointer' }}
+                      onAnimationEnd={() =>
+                        setNewTxIds((prev) => {
+                          const updated = new Set(prev)
+                          updated.delete(tx._id)
+                          return updated
+                        })
+                      }
+                    >
+                      <div className="d-flex align-items-center justify-content-between nw-btm-brd">
+                        <div>
+                          <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
+                        </div>
+                        <div>
+                          <ul className="quick-list">
+                            {tx.hotnessScore > 0 && (
+                              <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
+                            )}
+                            <li className="quick-item">
+                              <a
+                                href="javascript:void(0)"
+                                className="quick-nw-btn"
+                                onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleQuickBuy(tx)
+                                  }
+                                }}
+                                aria-label={`Quick buy ${tx.type === "sell" ? tx.tokenInSymbol : tx.tokenOutSymbol} token`}
+                                title="Quick buy this token"
+                              >
+                                quick buy
+                              </a>
+                            </li>
+                            <li className="quick-item">
+                              <a
+                                href="javascript:void(0)"
+                                className="quick-nw-btn quick-copy-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
+                                }}
+                              >
+                                <RiFileCopyLine />
+                              </a>
+                            </li>
+                            <li className="quick-item">
+                              <a
+                                href="javascript:void(0)"
+                                className="quick-nw-btn quick-arrow-btn"
+                                onClick={(e) => { e.stopPropagation(); handleTransactionInfoNewTab(tx.signature, tx.type) }}
+                              >
+                                <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+
+                      <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
+                        <div className="left-item-bx">
+                          <img
+                            src={tx.influencerProfileImageUrl || DefaultTokenImage}
+                            alt="influencer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/kol-feed-profile/${tx.influencerUsername?.replace(/^@/, '')}`);
+                            }}
+                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                              const target = e.currentTarget;
+                              if (target.src.indexOf(DefaultTokenImage) === -1) {
+                                target.src = DefaultTokenImage;
+                              }
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          />
+                          <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                              <h4 className="username">{tx.influencerName}</h4>
+                              <img
+                                src={TwitterVerified}
+                                alt="verified"
+                                style={{ width: '14px', height: '14px', flexShrink: 0 }}
+                              />
+                            </div>
+                            {/* Twitter handle in place of tags */}
+                            <div className="tags" style={{ marginBottom: '4px' }}>
+                              <a
+                                href={`https://x.com/${tx.influencerUsername?.replace(/^@/, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="tag-title"
+                                style={{
+                                  textDecoration: 'none',
+                                  color: '#8f8f8f'
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                @{tx.influencerUsername?.replace(/^@/, '')}
+                              </a>
+                            </div>
+                            <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ marginTop: 'auto' }}>
+                              {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="sell-trade-bx">
+                          {tx.type === 'sell' ? (
+                            <span className="sell-title">
+                              <FontAwesomeIcon icon={faArrowTrendDown} /> SELL
+                            </span>
+                          ) : (
+                            <span className="buy-trade-title">
+                              <IoMdTrendingUp /> BUY
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="right-info text-end">
+                          <div className="left-crd-content">
+                            <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
+                            <p>{tx.type === 'sell' ? tx.transaction?.tokenIn?.name?.substring(0, 20) : tx.transaction?.tokenOut?.name?.substring(0, 20)}</p>
+                            <small className="mc-title">MC: ${formatNumber(getMarketCap(tx))} / AGE: {tx.age}</small>
+                          </div>
+                          <div className="right-img">
+                            <img
+                              src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
+                              alt="token"
+                              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {/* Loading more indicator */}
+              {isLoadingMore && (
+                <div className="d-flex align-items-center justify-content-center py-4">
+                  <div className="lds-spinner text-white">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                      <div key={i}></div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </section>
+      </section >
 
       <ReactFlowProvider>
         <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} type="kol" />

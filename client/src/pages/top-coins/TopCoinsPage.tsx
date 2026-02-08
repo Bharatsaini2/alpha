@@ -209,11 +209,11 @@ function TopCoinsPage() {
     },
     markers: {
       size: 6,
-      colors: activeChartTab === "inflow" ? ["#00fa9a"] : ["#ff4500"],
+      colors: activeChartTab === "inflow" ? ["#00fa9a"] : ["#FF0000"],
       strokeColors: "#ffffff",
       hover: { size: 7 },
     },
-    colors: activeChartTab === "inflow" ? ["#00fa9a", "#ffffff"] : ["#ff4500", "#ffffff"],
+    colors: activeChartTab === "inflow" ? ["#00fa9a", "#ffffff"] : ["#FF0000", "#ffffff"],
     dataLabels: { enabled: false },
     xaxis: {
       categories: chartCategories,
@@ -228,7 +228,7 @@ function TopCoinsPage() {
         title: {
           text: `NET ${activeChartTab.toUpperCase()} (THOUSANDS USD)`,
           style: {
-            color: activeChartTab === "inflow" ? "#00fa9a" : "#ff4500",
+            color: activeChartTab === "inflow" ? "#00fa9a" : "#FF0000",
             fontWeight: 500,
             fontSize: "12px",
             fontFamily: "Geist Mono, monospace",
@@ -950,7 +950,7 @@ function TopCoinsPage() {
                                   <div className="d-flex justify-content-between align-items-center">
                                     <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL SELLS:</span>
                                     <div className="text-end">
-                                      <span className="fw-medium font-monospace" style={{ color: '#ff4500', fontSize: '12px' }}>
+                                      <span className="fw-medium font-monospace" style={{ color: '#FF0000', fontSize: '12px' }}>
                                         -{formatNumber(coin.totalSells)}
                                       </span>
                                       <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.sellCount})</span>
@@ -959,7 +959,7 @@ function TopCoinsPage() {
                                   <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
                                     <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>NET INFLOW:</span>
                                     <div className="text-end">
-                                      <span className="fw-medium font-monospace" style={{ color: coin.netInflow >= 0 ? '#00fa9a' : '#ff4500', fontSize: '12px' }}>
+                                      <span className="fw-medium font-monospace" style={{ color: coin.netInflow >= 0 ? '#00fa9a' : '#FF0000', fontSize: '12px' }}>
                                         {formatNumber(coin.netInflow)}
                                       </span>
                                       <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount + coin.sellCount})</span>
@@ -989,7 +989,7 @@ function TopCoinsPage() {
                                               minWidth: '20px',
                                               width: '20px',
                                               height: '20px',
-                                              backgroundColor: trade.type === 'buy' ? '#00fa9a' : '#ff4500',
+                                              backgroundColor: trade.type === 'buy' ? '#00fa9a' : '#FF0000',
                                               borderRadius: '0px',
                                               fontSize: '11px',
                                               lineHeight: 1
@@ -997,7 +997,7 @@ function TopCoinsPage() {
                                           >
                                             {trade.type === 'buy' ? 'B' : 'S'}
                                           </div>
-                                          <div style={{ color: trade.type === 'buy' ? '#00fa9a' : '#ff4500', fontSize: '11px', fontWeight: 'bold' }}>
+                                          <div style={{ color: trade.type === 'buy' ? '#00fa9a' : '#FF0000', fontSize: '11px', fontWeight: 'bold' }}>
                                             {(() => {
                                               const diff = new Date().getTime() - new Date(trade.timestamp).getTime();
                                               const seconds = Math.floor(diff / 1000);
@@ -1019,7 +1019,7 @@ function TopCoinsPage() {
 
                                         {/* USD Column: Green/Red */}
                                         <div style={{ width: '25%', textAlign: 'right' }}>
-                                          <div className="fw-bold" style={{ color: trade.type === 'buy' ? '#00fa9a' : '#ff4500', fontSize: '11px' }}>
+                                          <div className="fw-bold" style={{ color: trade.type === 'buy' ? '#00fa9a' : '#FF0000', fontSize: '11px' }}>
                                             ${formatNumber(trade.amount)}
                                           </div>
                                         </div>

@@ -305,3 +305,44 @@ input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* Mobile-specific styles for HomePage filters and quick buy */
+@media (max-width: 768px) {
+
+  /* Add spacing between quick buy and filters row */
+  .mobile-filters-row {
+    margin-top: 12px !important;
+  }
+
+  /* Make glass-radio-group more compact on mobile and take flexible space */
+  .glass-radio-group {
+    height: 40px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .glass-radio-group label {
+    padding: 0.5rem 0.6rem;
+    font-size: 10px;
+    min-width: 40px;
+  }
+
+  /* Make quick buy amount input compact and fixed width */
+  .flex.items-center.gap-2.bg-\[#161618\] {
+    padding: 0.5rem 0.75rem !important;
+    min-width: 150px;
+    max-width: 150px;
+    flex-shrink: 0;
+    height: 40px;
+    margin-bottom: 0;
+  }
+
+  .flex.items-center.gap-2.bg-\[#161618\] span {
+    font-size: 9px !important;
+  }
+
+  .flex.items-center.gap-2.bg-\[#161618\] input {
+    font-size: 11px !important;
+    width: 45px !important;
+  }
+}
