@@ -4351,7 +4351,7 @@ font-size: 16px;
 .mobile-coin-card {
   background: #0a0a0a;
   border: 1px solid #292929;
-  border-radius: 4px;
+  border-radius: 0px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -4391,7 +4391,7 @@ font-size: 16px;
 .mobile-coin-icon {
   width: 20px;
   height: 20px;
-  border-radius: 4px;
+  border-radius: 0px;
 }
 
 /* REMOVED: Media query that was hiding table and showing accordion on mobile

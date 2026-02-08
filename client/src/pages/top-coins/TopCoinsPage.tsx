@@ -35,7 +35,6 @@ function TopCoinsPage() {
   const toggleRow = (rowId: string | number) => {
     const key = String(rowId)
     setOpenRows((prev) => ({
-      ...prev,
       [key]: !prev[key],
     }))
   }
@@ -321,7 +320,7 @@ function TopCoinsPage() {
   }
 
   // Mobile View State
-  const [mobileViewMode, setMobileViewMode] = useState<'card' | 'list'>('card')
+
   const [mobilePage, setMobilePage] = useState(1)
   const ITEMS_PER_PAGE = 10
 
@@ -343,16 +342,7 @@ function TopCoinsPage() {
     setMobilePage(1)
   }, [marketCapFilter, timeframeFilter, searchQuery])
 
-  // Set default view based on screen size
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      if (window.innerWidth >= 992) {
-        setMobileViewMode('list'); // Default to Table on Desktop
-      } else {
-        setMobileViewMode('card'); // Default to Card on Mobile
-      }
-    }
-  }, []);
+
 
   return (
     <>
@@ -383,30 +373,18 @@ function TopCoinsPage() {
             {/* Desktop/Mobile Header - Restyled via CSS for mobile */}
             <div className="d-flex align-items-center justify-content-between gap-2 coin-mb-container">
               <div className="d-flex align-items-center gap-3 new-mobile-tabing-bx">
-                {/* Mobile Only: Single 3-option toggle (CARD | TABLE | CHART) */}
+                {/* Mobile & Desktop: Unified 2-Way Toggle (Card/Table vs Chart) */}
                 <div className="mobile-view-toggle">
                   <button
-                    className={`mobile-toggle-btn ${mobileViewMode === 'card' ? 'active' : ''}`}
-                    onClick={() => {
-                      setMobileViewMode('card');
-                      setActiveView('table');
-                    }}
+                    className={`mobile-toggle-btn ${activeView === 'table' ? 'active' : ''}`}
+                    onClick={() => setActiveView('table')}
                   >
-                    CARD
-                  </button>
-                  <button
-                    className={`mobile-toggle-btn ${mobileViewMode === 'list' && activeView === 'table' ? 'active' : ''}`}
-                    onClick={() => {
-                      setMobileViewMode('list');
-                      setActiveView('table');
-                    }}
-                  >
-                    TABLE
+                    <span className="d-none d-lg-block">TABLE</span>
+                    <span className="d-lg-none">CARD</span>
                   </button>
                   <button
                     className={`mobile-toggle-btn ${activeView === 'chart' ? 'active' : ''}`}
                     onClick={() => {
-                      setMobileViewMode('list');
                       setActiveView('chart');
                       setActiveChartTab('inflow');
                     }}
@@ -545,7 +523,7 @@ function TopCoinsPage() {
             <div className="tab-content custom-tab-content">
               {activeView === "table" ? (
                 <>
-                  <div className={`table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-coin-table ${mobileViewMode === 'list' ? 'd-block' : 'd-none'}`}>
+                  <div className={`table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-coin-table d-none d-lg-block`}>
                     <table className="table crypto-table align-middle mb-0 crypto-sub-table">
                       <thead>
                         <tr>
@@ -828,8 +806,8 @@ function TopCoinsPage() {
                   </div>
 
                   {/* Mobile Card View - Shows when CARD VIEW is selected - VISIBLE ON DESKTOP TOO */}
-                  {/* Mobile Card View (Unified) - Visible on ALL Screens if mode is CARD */}
-                  <div className={`mobile-coin-view ${mobileViewMode === 'card' ? 'd-flex' : 'd-none'}`}>
+                  {/* Mobile Card View (Unified) - Visible on MOBILE Screens if mode is TABLE (which maps to CARD on mobile) */}
+                  <div className={`mobile-coin-view d-lg-none ${activeView === 'table' ? 'd-flex' : 'd-none'}`}>
 
                     {(loading || filteringLoading) ? (
                       // Mobile Skeleton
@@ -865,123 +843,202 @@ function TopCoinsPage() {
                     ) : (
                       <>
                         {mobilePaginatedCoins.map((coin) => (
-                          mobileViewMode === 'card' ? (
-                            // CARD VIEW
-                            <div key={coin.id} className="mobile-coin-card" onClick={() => toggleRow(coin.id)}>
-                              <div className="card-row">
-                                <span className="card-label">RANK:</span>
-                                <span className="card-value">#{coin.rank}</span>
-                              </div>
-                              <div className="card-row">
-                                <span className="card-label">COIN:</span>
-                                <span className="card-value">
-                                  <span className="coin-icon">
-                                    <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '20px', height: '20px', borderRadius: '4px' }} />
-                                  </span>
-                                  {coin.symbol}
+                          // CARD VIEW
+                          <div key={coin.id} className="mobile-coin-card" onClick={() => toggleRow(coin.id)}>
+                            <div className="card-row">
+                              <span className="card-label">RANK:</span>
+                              <span className="card-value">#{coin.rank}</span>
+                            </div>
+                            <div className="card-row">
+                              <span className="card-label">COIN:</span>
+                              <span className="card-value">
+                                <span className="coin-icon">
+                                  <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '20px', height: '20px', borderRadius: '0px' }} />
+                                </span>
+                                {coin.symbol}
+                                <button
+                                  className="tb-cpy-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleCopyTokenAddress(coin.tokenAddress)
+                                  }}
+                                >
+                                  <FaRegCopy />
+                                </button>
+                              </span>
+                            </div>
+                            <div className="card-row">
+                              <span className="card-label">NET INFLOW:</span>
+                              <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
+                                {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
+                              </span>
+                            </div>
+                            <div className="card-row">
+                              <span className="card-label">WHALE:</span>
+                              <span className="card-value">{coin.whaleCount}</span>
+                            </div>
+                            <div className="card-row">
+                              <span className="card-label">MARKET CAP:</span>
+                              <span className="card-value">${formatNumber(coin.marketCap)}</span>
+                            </div>
+
+                            {/* Expandable content for mobile */}
+                            {openRows[coin.id] && (
+                              <div className="mt-3 pt-3 border-top border-secondary">
+                                <div className="text-center mb-3">
+                                  <p className="text-uppercase mb-0" style={{ color: '#8F8F8F', fontSize: '11px', letterSpacing: '1px' }}>
+                                    WHALE ACTIVITY LAST {timeframeFilter}
+                                  </p>
+                                </div>
+
+                                {/* Coin Info Box - NO BORDER RADIUS */}
+                                <div className="p-3 mb-3" style={{ backgroundColor: '#111', borderRadius: '0px', border: '1px solid #222' }}>
+                                  <div className="d-flex align-items-center gap-3 mb-3">
+                                    <img
+                                      src={coin.imageUrl || DefaultTokenImage}
+                                      alt={coin.symbol}
+                                      style={{ width: '48px', height: '48px', borderRadius: '0px' }}
+                                    />
+                                    <div>
+                                      <h5 className="mb-0 fw-bold text-white" style={{ fontSize: '16px' }}>{coin.name}</h5>
+                                      <div className="d-flex align-items-center gap-2 mt-1">
+                                        <span style={{ color: '#8F8F8F', fontSize: '12px' }}>${coin.symbol}</span>
+                                      </div>
+                                      <div className="d-flex align-items-center gap-1 mt-1">
+                                        <span style={{ color: '#8F8F8F', fontSize: '12px', fontFamily: 'monospace' }}>
+                                          {coin.tokenAddress.slice(0, 4)}...{coin.tokenAddress.slice(-4)}
+                                        </span>
+                                        <button
+                                          className="p-0 border-0 bg-transparent"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCopyTokenAddress(coin.tokenAddress);
+                                          }}
+                                          style={{ color: '#8F8F8F' }}
+                                        >
+                                          <LuCopy size={12} />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+
                                   <button
-                                    className="tb-cpy-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleCopyTokenAddress(coin.tokenAddress)
+                                    className="w-100 py-2 fw-bold text-white text-uppercase"
+                                    onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }}
+                                    style={{
+                                      backgroundColor: 'transparent',
+                                      border: '1px solid #333',
+                                      borderRadius: '0px',
+                                      fontSize: '13px',
+                                      letterSpacing: '0.5px'
                                     }}
                                   >
-                                    <FaRegCopy />
+                                    Quick Buy
                                   </button>
-                                </span>
-                              </div>
-                              <div className="card-row">
-                                <span className="card-label">NET INFLOW:</span>
-                                <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
-                                  {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
-                                </span>
-                              </div>
-                              <div className="card-row">
-                                <span className="card-label">WHALE:</span>
-                                <span className="card-value">{coin.whaleCount}</span>
-                              </div>
-                              <div className="card-row">
-                                <span className="card-label">MARKET CAP:</span>
-                                <span className="card-value">${formatNumber(coin.marketCap)}</span>
-                              </div>
+                                </div>
 
-                              {/* Expandable content for mobile */}
-                              {openRows[coin.id] && (
-                                <div className="mt-3 pt-3 border-top border-secondary">
-                                  <div className="expand-tp-title mb-2">
-                                    <p>whale ACTIVITY last {timeframeFilter}</p>
-                                  </div>
-                                  <div className="whale-quick-buy mb-3" onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }} style={{ cursor: 'pointer' }}>
-                                    QUICK BUY
-                                  </div>
-                                  <div className="whale-stats-box">
-                                    <div className="whale-stat-row">
-                                      <span className="whale-stat-label">BUYS:</span>
-                                      <p className="whale-stat-value green">+{formatNumber(coin.totalBuys)} ({coin.buyCount})</p>
+                                {/* Stats Section */}
+                                <div className="mb-4 d-flex flex-column gap-2">
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL BUYS:</span>
+                                    <div className="text-end">
+                                      <span className="green-text fw-medium font-monospace" style={{ fontSize: '12px' }}>
+                                        +{formatNumber(coin.totalBuys)}
+                                      </span>
+                                      <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount})</span>
                                     </div>
-                                    <div className="whale-stat-row">
-                                      <span className="whale-stat-label">SELLS:</span>
-                                      <p className="whale-stat-value red">-{formatNumber(coin.totalSells)} ({coin.sellCount})</p>
+                                  </div>
+                                  <div className="d-flex justify-content-between align-items-center">
+                                    <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL SELLS:</span>
+                                    <div className="text-end">
+                                      <span className="red-text fw-medium font-monospace" style={{ fontSize: '12px' }}>
+                                        -{formatNumber(coin.totalSells)}
+                                      </span>
+                                      <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.sellCount})</span>
                                     </div>
-                                    <div className="whale-stat-row">
-                                      <span className="whale-stat-label">NET:</span>
-                                      <p className={`whale-stat-value ${coin.netInflow >= 0 ? 'green' : 'red'}`}>
+                                  </div>
+                                  <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
+                                    <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>NET INFLOW:</span>
+                                    <div className="text-end">
+                                      <span className={`${coin.netInflow >= 0 ? 'green-text' : 'red-text'} fw-medium font-monospace`} style={{ fontSize: '12px' }}>
                                         {formatNumber(coin.netInflow)}
-                                      </p>
+                                      </span>
+                                      <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount + coin.sellCount})</span>
                                     </div>
                                   </div>
                                 </div>
-                              )}
-                            </div>
-                          ) : (
-                            // TABLE VIEW (Similar to Card but condensed)
-                            <div key={coin.id} className="mobile-coin-card" style={{ gap: '6px', padding: '12px' }} onClick={() => toggleRow(coin.id)}>
-                              <div className="d-flex align-items-center justify-content-between">
-                                <div className="d-flex align-items-center gap-2">
-                                  {openRows[coin.id] ? <HiChevronUp size={14} color="#666" /> : <HiChevronDown size={14} color="#666" />}
-                                  <span className="card-value" style={{ fontSize: '14px' }}>#{coin.rank}</span>
-                                  <span className="card-value">
-                                    <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '18px', height: '18px', borderRadius: '4px' }} />
-                                    {coin.symbol}
-                                  </span>
+
+                                {/* Transaction List Header */}
+                                <div className="d-flex text-uppercase mb-2 px-2 py-1" style={{ color: '#8F8F8F', fontSize: '10px', fontWeight: 600 }}>
+                                  <div style={{ width: '15%' }}>TYPE</div>
+                                  <div style={{ width: '35%' }}>MAKER</div>
+                                  <div style={{ width: '25%', textAlign: 'right' }}>USD</div>
+                                  <div style={{ width: '25%', textAlign: 'right' }}>MC</div>
                                 </div>
-                                <div className="d-flex align-items-center gap-2">
-                                  <button
-                                    className="tb-cpy-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleCopyTokenAddress(coin.tokenAddress)
-                                    }}
-                                  >
-                                    <FaRegCopy size={12} />
-                                  </button>
+
+                                <div className="d-flex flex-column gap-1">
+                                  {getCoinTrades(coin).length === 0 ? (
+                                    <div className="text-center py-3" style={{ color: '#8F8F8F', fontSize: '12px' }}>No recent transactions</div>
+                                  ) : (
+                                    getCoinTrades(coin).map((trade, idx) => (
+                                      <div key={idx} className="d-flex align-items-center px-2 py-2" style={{ backgroundColor: '#0A0A0A', borderRadius: '0px' }}>
+                                        {/* Type Column: Badge Left, Time Right */}
+                                        <div style={{ width: '15%' }} className="d-flex align-items-center gap-2">
+                                          <div
+                                            className="d-flex align-items-center justify-content-center fw-bold text-white"
+                                            style={{
+                                              minWidth: '20px',
+                                              width: '20px',
+                                              height: '20px',
+                                              backgroundColor: trade.type === 'buy' ? '#14904D' : '#DF2A4E',
+                                              borderRadius: '0px',
+                                              fontSize: '11px',
+                                              lineHeight: 1
+                                            }}
+                                          >
+                                            {trade.type === 'buy' ? 'B' : 'S'}
+                                          </div>
+                                          <div style={{ color: trade.type === 'buy' ? '#14904D' : '#DF2A4E', fontSize: '11px', fontWeight: 'bold' }}>
+                                            {(() => {
+                                              const diff = new Date().getTime() - new Date(trade.timestamp).getTime();
+                                              const seconds = Math.floor(diff / 1000);
+                                              if (seconds < 60) return `${seconds}S`;
+                                              return `${Math.floor(seconds / 60)}M`;
+                                            })()}
+                                          </div>
+                                        </div>
+
+                                        {/* Maker Column */}
+                                        <div style={{ width: '35%', paddingLeft: '4px' }} className="d-flex flex-column">
+                                          <div className="text-white text-truncate fw-bold" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>
+                                            {trade.whaleAddress.slice(0, 8)}...
+                                          </div>
+                                          <div style={{ color: '#666', fontSize: '10px' }}>
+                                            ({trade.whaleAddress.slice(-4)})
+                                          </div>
+                                        </div>
+
+                                        {/* USD Column: Green/Red */}
+                                        <div style={{ width: '25%', textAlign: 'right' }}>
+                                          <div className="fw-bold" style={{ color: trade.type === 'buy' ? '#14904D' : '#DF2A4E', fontSize: '11px' }}>
+                                            ${formatNumber(trade.amount)}
+                                          </div>
+                                        </div>
+
+                                        {/* MC Column */}
+                                        <div style={{ width: '25%', textAlign: 'right' }}>
+                                          <div className="text-white fw-bold" style={{ fontSize: '11px' }}>
+                                            {formatNumber(coin.marketCap)}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
                                 </div>
                               </div>
+                            )}
+                          </div>
 
-                              {/* Expandable content for Table View */}
-                              {openRows[coin.id] && (
-                                <div className="mt-2 pt-2 border-top border-secondary">
-                                  <div className="card-row">
-                                    <span className="card-label">NET INFLOW:</span>
-                                    <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
-                                      {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
-                                    </span>
-                                  </div>
-                                  <div className="card-row">
-                                    <span className="card-label">WHALE:</span>
-                                    <span className="card-value">{coin.whaleCount}</span>
-                                  </div>
-                                  <div className="card-row">
-                                    <span className="card-label">MARKET CAP:</span>
-                                    <span className="card-value">${formatNumber(coin.marketCap)}</span>
-                                  </div>
-                                  <div className="whale-quick-buy mt-2 mb-2" onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }} style={{ cursor: 'pointer', padding: '8px' }}>
-                                    QUICK BUY
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )
                         ))}
 
                         {/* Pagination Footer */}
