@@ -209,11 +209,11 @@ function TopCoinsPage() {
     },
     markers: {
       size: 6,
-      colors: activeChartTab === "inflow" ? ["#14904D"] : ["#DF2A4E"],
+      colors: activeChartTab === "inflow" ? ["#00fa9a"] : ["#ff4500"],
       strokeColors: "#ffffff",
       hover: { size: 7 },
     },
-    colors: activeChartTab === "inflow" ? ["#14904D", "#ffffff"] : ["#DF2A4E", "#ffffff"],
+    colors: activeChartTab === "inflow" ? ["#00fa9a", "#ffffff"] : ["#ff4500", "#ffffff"],
     dataLabels: { enabled: false },
     xaxis: {
       categories: chartCategories,
@@ -228,7 +228,7 @@ function TopCoinsPage() {
         title: {
           text: `NET ${activeChartTab.toUpperCase()} (THOUSANDS USD)`,
           style: {
-            color: activeChartTab === "inflow" ? "#14904D" : "#DF2A4E",
+            color: activeChartTab === "inflow" ? "#00fa9a" : "#ff4500",
             fontWeight: 500,
             fontSize: "12px",
             fontFamily: "Geist Mono, monospace",
@@ -379,8 +379,7 @@ function TopCoinsPage() {
                     className={`mobile-toggle-btn ${activeView === 'table' ? 'active' : ''}`}
                     onClick={() => setActiveView('table')}
                   >
-                    <span className="d-none d-lg-block">TABLE</span>
-                    <span className="d-lg-none">CARD</span>
+                    TABLE VIEW
                   </button>
                   <button
                     className={`mobile-toggle-btn ${activeView === 'chart' ? 'active' : ''}`}
@@ -389,7 +388,7 @@ function TopCoinsPage() {
                       setActiveChartTab('inflow');
                     }}
                   >
-                    CHART
+                    CHART VIEW
                   </button>
                 </div>
 
@@ -456,7 +455,7 @@ function TopCoinsPage() {
                       onClick={() => setMarketCapOpen(!marketCapOpen)}
                       style={{ cursor: 'pointer', textDecoration: 'none' }}
                     >
-                      {marketCapFilter === 'small' ? 'Small Cap' : marketCapFilter === 'medium' ? 'Medium Cap' : 'Large Cap'} <HiChevronDown />
+                      MARKET CAP <HiChevronDown />
                     </a>
                     {marketCapOpen && (
                       <div className="subscription-dropdown-menu show" style={{ position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
@@ -884,7 +883,7 @@ function TopCoinsPage() {
 
                             {/* Expandable content for mobile */}
                             {openRows[coin.id] && (
-                              <div className="mt-3 pt-3 border-top border-secondary">
+                              <div className="mt-3 pt-3 border-top border-secondary" style={{ margin: '0 -16px', padding: '0 16px' }}>
                                 <div className="text-center mb-3">
                                   <p className="text-uppercase mb-0" style={{ color: '#8F8F8F', fontSize: '11px', letterSpacing: '1px' }}>
                                     WHALE ACTIVITY LAST {timeframeFilter}
@@ -942,7 +941,7 @@ function TopCoinsPage() {
                                   <div className="d-flex justify-content-between align-items-center">
                                     <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL BUYS:</span>
                                     <div className="text-end">
-                                      <span className="green-text fw-medium font-monospace" style={{ fontSize: '12px' }}>
+                                      <span className="fw-medium font-monospace" style={{ color: '#00fa9a', fontSize: '12px' }}>
                                         +{formatNumber(coin.totalBuys)}
                                       </span>
                                       <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount})</span>
@@ -951,7 +950,7 @@ function TopCoinsPage() {
                                   <div className="d-flex justify-content-between align-items-center">
                                     <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL SELLS:</span>
                                     <div className="text-end">
-                                      <span className="red-text fw-medium font-monospace" style={{ fontSize: '12px' }}>
+                                      <span className="fw-medium font-monospace" style={{ color: '#ff4500', fontSize: '12px' }}>
                                         -{formatNumber(coin.totalSells)}
                                       </span>
                                       <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.sellCount})</span>
@@ -960,7 +959,7 @@ function TopCoinsPage() {
                                   <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
                                     <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>NET INFLOW:</span>
                                     <div className="text-end">
-                                      <span className={`${coin.netInflow >= 0 ? 'green-text' : 'red-text'} fw-medium font-monospace`} style={{ fontSize: '12px' }}>
+                                      <span className="fw-medium font-monospace" style={{ color: coin.netInflow >= 0 ? '#00fa9a' : '#ff4500', fontSize: '12px' }}>
                                         {formatNumber(coin.netInflow)}
                                       </span>
                                       <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount + coin.sellCount})</span>
@@ -990,7 +989,7 @@ function TopCoinsPage() {
                                               minWidth: '20px',
                                               width: '20px',
                                               height: '20px',
-                                              backgroundColor: trade.type === 'buy' ? '#14904D' : '#DF2A4E',
+                                              backgroundColor: trade.type === 'buy' ? '#00fa9a' : '#ff4500',
                                               borderRadius: '0px',
                                               fontSize: '11px',
                                               lineHeight: 1
@@ -998,7 +997,7 @@ function TopCoinsPage() {
                                           >
                                             {trade.type === 'buy' ? 'B' : 'S'}
                                           </div>
-                                          <div style={{ color: trade.type === 'buy' ? '#14904D' : '#DF2A4E', fontSize: '11px', fontWeight: 'bold' }}>
+                                          <div style={{ color: trade.type === 'buy' ? '#00fa9a' : '#ff4500', fontSize: '11px', fontWeight: 'bold' }}>
                                             {(() => {
                                               const diff = new Date().getTime() - new Date(trade.timestamp).getTime();
                                               const seconds = Math.floor(diff / 1000);
@@ -1020,7 +1019,7 @@ function TopCoinsPage() {
 
                                         {/* USD Column: Green/Red */}
                                         <div style={{ width: '25%', textAlign: 'right' }}>
-                                          <div className="fw-bold" style={{ color: trade.type === 'buy' ? '#14904D' : '#DF2A4E', fontSize: '11px' }}>
+                                          <div className="fw-bold" style={{ color: trade.type === 'buy' ? '#00fa9a' : '#ff4500', fontSize: '11px' }}>
                                             ${formatNumber(trade.amount)}
                                           </div>
                                         </div>
