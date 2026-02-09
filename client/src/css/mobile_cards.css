@@ -593,3 +593,41 @@
         font-size: 11px;
     }
 }
+
+/* Desktop chart container */
+.desktop-chart-view {
+    background: transparent;
+    border: none;
+    padding: 16px 0;
+    position: relative;
+    background-image:
+        linear-gradient(#fff, #fff),
+        linear-gradient(#fff, #fff),
+        linear-gradient(#fff, #fff),
+        linear-gradient(#fff, #fff);
+    background-repeat: no-repeat;
+    background-size: 10px 1px, 1px 10px, 10px 1px, 1px 10px;
+    background-position: top left, top left, bottom left, bottom left;
+}
+
+.desktop-chart-view::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-top: 1px solid #fff;
+    border-right: 1px solid #fff;
+}
+
+.desktop-chart-view::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 10px;
+    height: 10px;
+    border-bottom: 1px solid #fff;
+    border-right: 1px solid #fff;
+}

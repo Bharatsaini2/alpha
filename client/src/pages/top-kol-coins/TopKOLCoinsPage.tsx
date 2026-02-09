@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useMemo } from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { LuCopy } from "react-icons/lu"
 import { HiChevronDown, HiChevronUp, HiChevronUpDown } from "react-icons/hi2"
@@ -13,19 +13,25 @@ import { topCoinsAPI } from "../../lib/api"
 import { TopKolCoin, TopKolCoinsParams, Trade } from "../../lib/types"
 import SwapModal from "../../components/swap/SwapModal"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { validateQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
+import {
+  validateQuickBuyAmount,
+  loadQuickBuyAmount,
+} from "../../utils/quickBuyValidation"
 import { formatNumber } from "../../utils/FormatNumber"
 import DefaultTokenImage from "../../assets/default_token.svg"
 import { LastUpdatedTicker } from "../../components/TicketComponent"
 import { TokenInfo } from "../../components/swap/TokenSelectionModal"
 import "../../css/mobile_cards.css"
+import ReactApexChart from "react-apexcharts"
+import type { ApexOptions } from "apexcharts"
 
 const SOL_TOKEN: TokenInfo = {
   address: "So11111111111111111111111111111111111111112",
   symbol: "SOL",
   name: "Solana",
   decimals: 9,
-  image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
+  image:
+    "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
 }
 
 function TopKOLCoinsPage() {
@@ -145,10 +151,17 @@ function TopKOLCoinsPage() {
   const getFilteredData = useCallback(() => {
     let data: TopKolCoin[] = []
     switch (marketCapFilter) {
-      case "small": data = allMarketCapData.smallCaps || []; break
-      case "medium": data = allMarketCapData.midCaps || []; break
-      case "large": data = allMarketCapData.largeCaps || []; break
-      default: data = allMarketCapData.smallCaps || []
+      case "small":
+        data = allMarketCapData.smallCaps || []
+        break
+      case "medium":
+        data = allMarketCapData.midCaps || []
+        break
+      case "large":
+        data = allMarketCapData.largeCaps || []
+        break
+      default:
+        data = allMarketCapData.smallCaps || []
     }
 
     if (searchQuery) {
@@ -173,12 +186,14 @@ function TopKOLCoinsPage() {
 
   const filteredCoins = getFilteredData()
 
-
   const handleQuickBuy = (coin: TopKolCoin) => {
     const quickBuyAmount = loadQuickBuyAmount() || "100"
     const validation = validateQuickBuyAmount(quickBuyAmount)
     if (!validation.isValid) {
-      showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
+      showToast(
+        validation.error || "Please enter a valid SOL amount for quick buy",
+        "error"
+      )
       return
     }
 
@@ -201,7 +216,11 @@ function TopKOLCoinsPage() {
 
   const handleSort = (key: any) => {
     let direction: "asc" | "desc" = "asc"
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === "asc") {
+    if (
+      sortConfig &&
+      sortConfig.key === key &&
+      sortConfig.direction === "asc"
+    ) {
       direction = "desc"
     }
     setSortConfig({ key, direction })
@@ -220,12 +239,15 @@ function TopKOLCoinsPage() {
     }
 
     // Get all trades from all chart data points
-    const allTrades = coin.chartData.flatMap(point => point.trades || [])
+    const allTrades = coin.chartData.flatMap((point) => point.trades || [])
 
     // Filter out invalid trades and sort by timestamp (newest first)
     const validTrades = allTrades
-      .filter(trade => trade && trade.timestamp && trade.type && trade.amount)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .filter((trade) => trade && trade.timestamp && trade.type && trade.amount)
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
       .slice(0, 10) // Show only the 10 most recent trades
 
     return validTrades
@@ -239,13 +261,16 @@ function TopKOLCoinsPage() {
   // Mobile Pagination Data
   const mobileStartIndex = (mobilePage - 1) * ITEMS_PER_PAGE
   const mobileEndIndex = mobileStartIndex + ITEMS_PER_PAGE
-  const mobilePaginatedCoins = filteredCoins.slice(mobileStartIndex, mobileEndIndex)
+  const mobilePaginatedCoins = filteredCoins.slice(
+    mobileStartIndex,
+    mobileEndIndex
+  )
   const totalMobilePages = Math.ceil(filteredCoins.length / ITEMS_PER_PAGE)
 
   const handleMobilePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalMobilePages) {
       setMobilePage(newPage)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      window.scrollTo({ top: 0, behavior: "smooth" })
     }
   }
 
@@ -254,7 +279,115 @@ function TopKOLCoinsPage() {
     setMobilePage(1)
   }, [marketCapFilter, timeframeFilter, searchQuery])
 
-
+  const desktopChartData = useMemo(() => {
+    const top = filteredCoins.slice(0, 10)
+    const categories = top.map((c) => c.symbol)
+    const values = top.map((c) => {
+      const v = activeChartTab === "inflow" ? c.netInflow : c.netOutflow
+      return Math.abs(Number(v || 0))
+    })
+    const whales = top.map((c) => Number(c.whaleCount || 0))
+    const barColor = activeChartTab === "inflow" ? "#14904d" : "#df2a4e"
+    const options: ApexOptions = {
+      chart: {
+        type: "line",
+        background: "#0A0A0A",
+        foreColor: "#ebebeb",
+        toolbar: { show: false },
+        animations: { enabled: false },
+      },
+      grid: { strokeDashArray: 3, borderColor: "#2a2a2a" },
+      xaxis: {
+        categories,
+        axisBorder: { color: "#2a2a2a" },
+        axisTicks: { color: "#2a2a2a" },
+        labels: { style: { colors: "#8f8f8f", fontSize: "11px" } },
+      },
+      yaxis: [
+        {
+          seriesName:
+            activeChartTab === "inflow" ? "NET INFLOW" : "NET OUTFLOW",
+          labels: {
+            formatter: (val: number) => {
+              if (val % 100000 === 0) return `${val / 1000}K($)`
+              return ""
+            },
+            style: { colors: "#8f8f8f", fontSize: "11px" },
+          },
+          title: {
+            text: activeChartTab === "inflow"
+              ? "NET INFLOW (THOUSANDS USD)"
+              : "NET OUTFLOW (THOUSANDS USD)",
+            style: { color: "#8f8f8f", fontSize: "11px" },
+          },
+          min: 0,
+          max: 400000,
+          tickAmount: 8,
+        },
+        {
+          opposite: true,
+          seriesName: "WHALE COUNT",
+          labels: {
+            formatter: (val: number) => {
+              if (val % 1 === 0) return val.toFixed(0)
+              return ""
+            },
+            style: { colors: "#8f8f8f", fontSize: "11px" },
+          },
+          title: {
+            text: "WHALES",
+            style: { color: "#8f8f8f", fontSize: "11px" },
+          },
+          min: 0,
+          max: 4,
+          tickAmount: 8,
+        },
+      ],
+      annotations: { yaxis: [] },
+      legend: { show: false },
+      stroke: { width: [0, 2], curve: "straight", colors: ["#ffffff"] },
+      markers: {
+        size: 4,
+        strokeWidth: 2,
+        colors: ["#ffffff"],
+        strokeColors: "#000000",
+      },
+      plotOptions: {
+        bar: { columnWidth: "45%", borderRadius: 0, distributed: false },
+      },
+      tooltip: {
+        theme: "dark",
+        shared: true,
+        x: { show: false },
+        y: {
+          formatter: (val: number, opts) => {
+            const name = opts.seriesIndex === 0 ? "USD" : "WHALES"
+            if (opts.seriesIndex === 0) {
+              const v = Math.abs(val)
+              if (v >= 1_000_000) return `${Math.round(v / 1_000_000)}M ${name}`
+              if (v >= 1_000) return `${Math.round(v / 1_000)}K ${name}`
+              return `${Math.round(v)} ${name}`
+            }
+            return `${Math.round(val)} ${name}`
+          },
+        },
+      },
+      colors: [barColor, "#ffffff"],
+    }
+    const series = [
+      {
+        name: activeChartTab === "inflow" ? "NET INFLOW" : "NET OUTFLOW",
+        type: "column",
+        data: values,
+      },
+      {
+        name: "WHALE COUNT",
+        type: "line",
+        data: whales,
+      },
+    ]
+    return { options, series }
+  }, [filteredCoins, activeChartTab])
 
   return (
     <>
@@ -263,24 +396,34 @@ function TopKOLCoinsPage() {
           <div className="col-lg-12 new-mobile-spacing">
             <div className="last-refreshed-bx mb-2">
               <h6>
-                Last refreshed: <span className="refresh-title">
-                  {lastUpdatedTime ? <LastUpdatedTicker lastUpdated={lastUpdatedTime} format={formatTimeSinceUpdate} /> : "..."}
+                Last refreshed:{" "}
+                <span className="refresh-title">
+                  {lastUpdatedTime ? (
+                    <LastUpdatedTicker
+                      lastUpdated={lastUpdatedTime}
+                      format={formatTimeSinceUpdate}
+                    />
+                  ) : (
+                    "..."
+                  )}
                 </span>
               </h6>
               <button
                 onClick={() => {
-                  setFilteringLoading(true);
-                  fetchTopCoinsData(true);
+                  setFilteringLoading(true)
+                  fetchTopCoinsData(true)
                   // Keep skeleton for minimum time to show loading state
-                  setTimeout(() => setFilteringLoading(false), 1000);
+                  setTimeout(() => setFilteringLoading(false), 1000)
                 }}
                 className="refresh-btn"
                 disabled={isRefreshing || filteringLoading}
               >
-                <TfiReload className={`reload-btn ${(isRefreshing || filteringLoading) ? "animate-spin" : ""}`} /> Refresh
+                <TfiReload
+                  className={`reload-btn ${isRefreshing || filteringLoading ? "animate-spin" : ""}`}
+                />{" "}
+                Refresh
               </button>
             </div>
-
 
             {/* Desktop/Mobile Header - Unified View */}
             <div className="d-flex align-items-center justify-content-between gap-2 coin-mb-container">
@@ -288,16 +431,16 @@ function TopKOLCoinsPage() {
                 {/* Mobile & Desktop: Unified 2-Way Toggle (Card/Table vs Chart) */}
                 <div className="mobile-view-toggle">
                   <button
-                    className={`mobile-toggle-btn ${activeView === 'table' ? 'active' : ''}`}
-                    onClick={() => setActiveView('table')}
+                    className={`mobile-toggle-btn ${activeView === "table" ? "active" : ""}`}
+                    onClick={() => setActiveView("table")}
                   >
                     TABLE VIEW
                   </button>
                   <button
-                    className={`mobile-toggle-btn ${activeView === 'chart' ? 'active' : ''}`}
+                    className={`mobile-toggle-btn ${activeView === "chart" ? "active" : ""}`}
                     onClick={() => {
-                      setActiveView('chart');
-                      setActiveChartTab('inflow');
+                      setActiveView("chart")
+                      setActiveChartTab("inflow")
                     }}
                   >
                     CHART VIEW
@@ -312,9 +455,9 @@ function TopKOLCoinsPage() {
                         className={`nav-link ${activeChartTab === "inflow" ? "active" : ""}`}
                         onClick={() => {
                           if (activeChartTab !== "inflow") {
-                            setFilteringLoading(true);
-                            setActiveChartTab("inflow");
-                            setTimeout(() => setFilteringLoading(false), 600);
+                            setFilteringLoading(true)
+                            setActiveChartTab("inflow")
+                            setTimeout(() => setFilteringLoading(false), 600)
                           }
                         }}
                         style={{ cursor: "pointer" }}
@@ -328,9 +471,9 @@ function TopKOLCoinsPage() {
                         className={`nav-link ${activeChartTab === "outflow" ? "active" : ""}`}
                         onClick={() => {
                           if (activeChartTab !== "outflow") {
-                            setFilteringLoading(true);
-                            setActiveChartTab("outflow");
-                            setTimeout(() => setFilteringLoading(false), 600);
+                            setFilteringLoading(true)
+                            setActiveChartTab("outflow")
+                            setTimeout(() => setFilteringLoading(false), 600)
                           }
                         }}
                         style={{ cursor: "pointer" }}
@@ -362,42 +505,66 @@ function TopKOLCoinsPage() {
                   <div className="relative">
                     <a
                       href="javascript:void(0)"
-                      className={`plan-btn ${marketCapOpen ? 'active' : ''}`}
+                      className={`plan-btn ${marketCapOpen ? "active" : ""}`}
                       onClick={() => setMarketCapOpen(!marketCapOpen)}
-                      style={{ cursor: 'pointer', textDecoration: 'none' }}
+                      style={{ cursor: "pointer", textDecoration: "none" }}
                     >
-                      {marketCapFilter === 'small' ? 'Small Cap' : marketCapFilter === 'medium' ? 'Medium Cap' : 'Large Cap'} <HiChevronDown />
+                      {marketCapFilter === "small"
+                        ? "Small Cap"
+                        : marketCapFilter === "medium"
+                          ? "Medium Cap"
+                          : "Large Cap"}{" "}
+                      <HiChevronDown />
                     </a>
                     {marketCapOpen && (
-                      <div className="subscription-dropdown-menu show" style={{ position: 'absolute', top: '100%', left: 0, width: '100%', zIndex: 100 }} onClick={(e) => e.stopPropagation()}>
-                        <div className={`nw-subs-items ${marketCapFilter === 'small' ? 'active' : ''}`} onClick={() => {
-                          setMarketCapOpen(false);
-                          if (marketCapFilter !== 'small') {
-                            setFilteringLoading(true);
-                            setMarketCapFilter('small');
-                            setTimeout(() => setFilteringLoading(false), 1000);
-                          }
-                        }}>
+                      <div
+                        className="subscription-dropdown-menu show"
+                        style={{
+                          position: "absolute",
+                          top: "100%",
+                          left: 0,
+                          width: "100%",
+                          zIndex: 100,
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div
+                          className={`nw-subs-items ${marketCapFilter === "small" ? "active" : ""}`}
+                          onClick={() => {
+                            setMarketCapOpen(false)
+                            if (marketCapFilter !== "small") {
+                              setFilteringLoading(true)
+                              setMarketCapFilter("small")
+                              setTimeout(() => setFilteringLoading(false), 1000)
+                            }
+                          }}
+                        >
                           Small Cap
                         </div>
-                        <div className={`nw-subs-items ${marketCapFilter === 'medium' ? 'active' : ''}`} onClick={() => {
-                          setMarketCapOpen(false);
-                          if (marketCapFilter !== 'medium') {
-                            setFilteringLoading(true);
-                            setMarketCapFilter('medium');
-                            setTimeout(() => setFilteringLoading(false), 1000);
-                          }
-                        }}>
+                        <div
+                          className={`nw-subs-items ${marketCapFilter === "medium" ? "active" : ""}`}
+                          onClick={() => {
+                            setMarketCapOpen(false)
+                            if (marketCapFilter !== "medium") {
+                              setFilteringLoading(true)
+                              setMarketCapFilter("medium")
+                              setTimeout(() => setFilteringLoading(false), 1000)
+                            }
+                          }}
+                        >
                           Medium Cap
                         </div>
-                        <div className={`nw-subs-items ${marketCapFilter === 'large' ? 'active' : ''}`} onClick={() => {
-                          setMarketCapOpen(false);
-                          if (marketCapFilter !== 'large') {
-                            setFilteringLoading(true);
-                            setMarketCapFilter('large');
-                            setTimeout(() => setFilteringLoading(false), 1000);
-                          }
-                        }}>
+                        <div
+                          className={`nw-subs-items ${marketCapFilter === "large" ? "active" : ""}`}
+                          onClick={() => {
+                            setMarketCapOpen(false)
+                            if (marketCapFilter !== "large") {
+                              setFilteringLoading(true)
+                              setMarketCapFilter("large")
+                              setTimeout(() => setFilteringLoading(false), 1000)
+                            }
+                          }}
+                        >
                           Large Cap
                         </div>
                       </div>
@@ -405,24 +572,24 @@ function TopKOLCoinsPage() {
                   </div>
 
                   <div className="time-filter">
-                    {['4H', '12H', '24H', '1W'].map((time) => (
+                    {["4H", "12H", "24H", "1W"].map((time) => (
                       <React.Fragment key={time}>
                         <a
                           href="#"
-                          className={`time-item ${timeframeFilter === time ? 'active' : ''}`}
+                          className={`time-item ${timeframeFilter === time ? "active" : ""}`}
                           onClick={(e) => {
-                            e.preventDefault();
+                            e.preventDefault()
                             if (timeframeFilter !== time) {
-                              setFilteringLoading(true);
-                              setTimeframeFilter(time);
+                              setFilteringLoading(true)
+                              setTimeframeFilter(time)
                               // Keep skeleton for minimum time to show loading state
-                              setTimeout(() => setFilteringLoading(false), 1000);
+                              setTimeout(() => setFilteringLoading(false), 1000)
                             }
                           }}
                         >
                           {time}
                         </a>
-                        {time !== '1W' && <span className="divider">|</span>}
+                        {time !== "1W" && <span className="divider">|</span>}
                       </React.Fragment>
                     ))}
                   </div>
@@ -433,62 +600,89 @@ function TopKOLCoinsPage() {
             <div className="tab-content custom-tab-content">
               {activeView === "table" ? (
                 <>
-                  <div className={`table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-coin-table d-none d-lg-block`}>
+                  <div
+                    className={`table-responsive crypto-table-responsive crypto-sub-table-responsive desktop-coin-table d-none d-lg-block`}
+                  >
                     <table className="table crypto-table align-middle mb-0 crypto-sub-table">
                       <thead>
                         <tr>
-                          <th className="expand-col" style={{ width: '4%' }}></th>
-                          <th style={{ width: '8%' }}>
-                            <div className="coin-th-title cursor-pointer" onClick={() => handleSort('rank')}>
+                          <th
+                            className="expand-col"
+                            style={{ width: "4%" }}
+                          ></th>
+                          <th style={{ width: "8%" }}>
+                            <div
+                              className="coin-th-title cursor-pointer"
+                              onClick={() => handleSort("rank")}
+                            >
                               RANK
                               <span>
                                 <HiChevronUpDown />
                               </span>
                             </div>
                           </th>
-                          <th style={{ width: '38%' }}>
-                            <div className="coin-th-title cursor-pointer" onClick={() => handleSort('symbol')}>
+                          <th style={{ width: "38%" }}>
+                            <div
+                              className="coin-th-title cursor-pointer"
+                              onClick={() => handleSort("symbol")}
+                            >
                               COIN
                               <span>
                                 <HiChevronUpDown />
                               </span>
                             </div>
                           </th>
-                          <th style={{ width: '15%' }}>
-                            <div className="coin-th-title cursor-pointer" onClick={() => handleSort('netInflow')}>
+                          <th style={{ width: "15%" }}>
+                            <div
+                              className="coin-th-title cursor-pointer"
+                              onClick={() => handleSort("netInflow")}
+                            >
                               NET INFLOW
                               <span>
                                 <HiChevronUpDown />
                               </span>
                             </div>
                           </th>
-                          <th style={{ width: '15%' }}>
-                            <div className="coin-th-title cursor-pointer" onClick={() => handleSort('whaleCount')}>
+                          <th style={{ width: "15%" }}>
+                            <div
+                              className="coin-th-title cursor-pointer"
+                              onClick={() => handleSort("whaleCount")}
+                            >
                               WHALE
                               <span>
                                 <HiChevronUpDown />
                               </span>
                             </div>
                           </th>
-                          <th style={{ width: '20%' }}>
-                            <div className="coin-th-title cursor-pointer" onClick={() => handleSort('marketCap')}>MARKET CAP </div>
+                          <th style={{ width: "20%" }}>
+                            <div
+                              className="coin-th-title cursor-pointer"
+                              onClick={() => handleSort("marketCap")}
+                            >
+                              MARKET CAP{" "}
+                            </div>
                           </th>
                         </tr>
                       </thead>
 
                       <tbody>
-                        {(loading || filteringLoading) ? (
+                        {loading || filteringLoading ? (
                           // Loading Skeleton
                           Array.from({ length: 5 }).map((_, i) => (
                             <tr key={`skeleton-${i}`} className="main-row">
                               <td className="expand-col">
                                 <div className="w-4 h-4 bg-[#1a1a1a] animate-pulse"></div>
                               </td>
-                              <td><div className="w-5 h-4 bg-[#1a1a1a] animate-pulse"></div></td>
+                              <td>
+                                <div className="w-5 h-4 bg-[#1a1a1a] animate-pulse"></div>
+                              </td>
                               <td>
                                 <div className="coin-cell">
                                   <span className="coin-icon">
-                                    <div className="w-6 h-6 bg-[#1a1a1a] animate-pulse" style={{ flexShrink: 0 }}></div>
+                                    <div
+                                      className="w-6 h-6 bg-[#1a1a1a] animate-pulse"
+                                      style={{ flexShrink: 0 }}
+                                    ></div>
                                   </span>
                                   <div className="w-20 h-4 bg-[#1a1a1a] animate-pulse"></div>
                                 </div>
@@ -505,12 +699,16 @@ function TopKOLCoinsPage() {
                             </tr>
                           ))
                         ) : filteredCoins.length === 0 ? (
-                          <tr><td colSpan={6} className="text-center py-4">No coins found</td></tr>
+                          <tr>
+                            <td colSpan={6} className="text-center py-4">
+                              No coins found
+                            </td>
+                          </tr>
                         ) : (
                           filteredCoins.map((coin) => (
                             <React.Fragment key={coin.id}>
                               <tr
-                                className={`main-row ${openRows[coin.id] ? 'active' : ''}`}
+                                className={`main-row ${openRows[coin.id] ? "active" : ""}`}
                                 onClick={() => toggleRow(coin.id)}
                               >
                                 <td className="expand-col">
@@ -524,7 +722,10 @@ function TopKOLCoinsPage() {
                                 <td>
                                   <div className="coin-cell">
                                     <span className="coin-icon">
-                                      <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} />
+                                      <img
+                                        src={coin.imageUrl || DefaultTokenImage}
+                                        alt={coin.symbol}
+                                      />
                                     </span>
                                     {coin.name}
                                     <span className="">
@@ -532,7 +733,9 @@ function TopKOLCoinsPage() {
                                         className="tb-cpy-btn"
                                         onClick={(e) => {
                                           e.stopPropagation()
-                                          handleCopyTokenAddress(coin.tokenAddress)
+                                          handleCopyTokenAddress(
+                                            coin.tokenAddress
+                                          )
                                         }}
                                       >
                                         <FaRegCopy />
@@ -541,8 +744,11 @@ function TopKOLCoinsPage() {
                                   </div>
                                 </td>
                                 <td>
-                                  <span className={`sold-title ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
-                                    {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
+                                  <span
+                                    className={`sold-title ${coin.netInflow >= 0 ? "green-text" : "red-text"}`}
+                                  >
+                                    {coin.netInflow >= 0 ? "+" : ""} $
+                                    {formatNumber(coin.netInflow)}
                                   </span>
                                 </td>
                                 <td>{coin.whaleCount}</td>
@@ -556,7 +762,10 @@ function TopKOLCoinsPage() {
                                       <div className="expand-empty-box"></div>
                                       <div className="flex-grow-1">
                                         <div className="expand-tp-title">
-                                          <p>whale ACTIVITY last {timeframeFilter}</p>
+                                          <p>
+                                            whale ACTIVITY last{" "}
+                                            {timeframeFilter}
+                                          </p>
                                         </div>
 
                                         <div className="nw-whale-parent-bx">
@@ -564,7 +773,10 @@ function TopKOLCoinsPage() {
                                             <div className="whale-card-header">
                                               <div className="whale-card-icon">
                                                 <img
-                                                  src={coin.imageUrl || DefaultTokenImage}
+                                                  src={
+                                                    coin.imageUrl ||
+                                                    DefaultTokenImage
+                                                  }
                                                   alt={coin.symbol}
                                                 />
                                               </div>
@@ -579,16 +791,36 @@ function TopKOLCoinsPage() {
 
                                                 <div className="whale-card-address">
                                                   <span className="whale-crd-title">
-                                                    {coin.tokenAddress.slice(0, 8)}...{coin.tokenAddress.slice(-4)}
+                                                    {coin.tokenAddress.slice(
+                                                      0,
+                                                      8
+                                                    )}
+                                                    ...
+                                                    {coin.tokenAddress.slice(
+                                                      -4
+                                                    )}
                                                   </span>
-                                                  <button className="whale-copy-btn" onClick={() => handleCopyTokenAddress(coin.tokenAddress)}>
+                                                  <button
+                                                    className="whale-copy-btn"
+                                                    onClick={() =>
+                                                      handleCopyTokenAddress(
+                                                        coin.tokenAddress
+                                                      )
+                                                    }
+                                                  >
                                                     <FaRegCopy />
                                                   </button>
                                                 </div>
                                               </div>
                                             </div>
 
-                                            <div className="whale-quick-buy" onClick={() => handleQuickBuy(coin)} style={{ cursor: 'pointer' }}>
+                                            <div
+                                              className="whale-quick-buy"
+                                              onClick={() =>
+                                                handleQuickBuy(coin)
+                                              }
+                                              style={{ cursor: "pointer" }}
+                                            >
                                               QUICK BUY
                                             </div>
 
@@ -598,7 +830,8 @@ function TopKOLCoinsPage() {
                                                   TOTAL BUYS:
                                                 </span>
                                                 <p className="whale-stat-value green">
-                                                  +{formatNumber(coin.totalBuys)}
+                                                  +
+                                                  {formatNumber(coin.totalBuys)}
                                                   <span className="whale-stat-title">
                                                     ({coin.buyCount})
                                                   </span>
@@ -610,7 +843,10 @@ function TopKOLCoinsPage() {
                                                   TOTAL SELLS:
                                                 </span>
                                                 <p className="whale-stat-value red">
-                                                  -{formatNumber(coin.totalSells)}
+                                                  -
+                                                  {formatNumber(
+                                                    coin.totalSells
+                                                  )}
                                                   <span className="whale-stat-title">
                                                     ({coin.sellCount})
                                                   </span>
@@ -623,10 +859,18 @@ function TopKOLCoinsPage() {
                                                 <span className="whale-stat-net">
                                                   NET INFLOW:
                                                 </span>
-                                                <p className={`whale-stat-value ${coin.netInflow >= 0 ? 'green' : 'red'}`}>
-                                                  {coin.netInflow >= 0 ? '+' : ''}{formatNumber(coin.netInflow)}
+                                                <p
+                                                  className={`whale-stat-value ${coin.netInflow >= 0 ? "green" : "red"}`}
+                                                >
+                                                  {coin.netInflow >= 0
+                                                    ? "+"
+                                                    : ""}
+                                                  {formatNumber(coin.netInflow)}
                                                   <span className="whale-stat-title">
-                                                    ({coin.buyCount - coin.sellCount})
+                                                    (
+                                                    {coin.buyCount -
+                                                      coin.sellCount}
+                                                    )
                                                   </span>
                                                 </p>
                                               </div>
@@ -672,32 +916,78 @@ function TopKOLCoinsPage() {
                                             </thead>
 
                                             <tbody>
-                                              {getCoinTrades(coin).length === 0 ? (
-                                                <tr><td colSpan={4} className="text-center">No recent transactions</td></tr>
+                                              {getCoinTrades(coin).length ===
+                                              0 ? (
+                                                <tr>
+                                                  <td
+                                                    colSpan={4}
+                                                    className="text-center"
+                                                  >
+                                                    No recent transactions
+                                                  </td>
+                                                </tr>
                                               ) : (
-                                                getCoinTrades(coin).map((trade, idx) => (
-                                                  <tr key={idx}>
-                                                    <td>
-                                                      <div className="d-flex align-items-center gap-1">
-                                                        <span className={trade.type === 'buy' ? "buy-bazar" : "sell-bazar"}>
-                                                          {trade.type.toUpperCase()}
+                                                getCoinTrades(coin).map(
+                                                  (trade, idx) => (
+                                                    <tr key={idx}>
+                                                      <td>
+                                                        <div className="d-flex align-items-center gap-1">
+                                                          <span
+                                                            className={
+                                                              trade.type ===
+                                                              "buy"
+                                                                ? "buy-bazar"
+                                                                : "sell-bazar"
+                                                            }
+                                                          >
+                                                            {trade.type.toUpperCase()}
+                                                          </span>
+                                                        </div>
+                                                      </td>
+                                                      <td>
+                                                        Whale
+                                                        <span className="whale-marker-title">
+                                                          (
+                                                          {trade.whaleAddress.slice(
+                                                            0,
+                                                            4
+                                                          )}
+                                                          ...
+                                                          {trade.whaleAddress.slice(
+                                                            -4
+                                                          )}
+                                                          )
                                                         </span>
-                                                      </div>
-                                                    </td>
-                                                    <td>
-                                                      Whale
-                                                      <span className="whale-marker-title">
-                                                        ({trade.whaleAddress.slice(0, 4)}...{trade.whaleAddress.slice(-4)})
-                                                      </span>
-                                                    </td>
-                                                    <td>
-                                                      <span className={trade.type === 'buy' ? "sold-title" : "sold-out-title"}>
-                                                        ${formatNumber(trade.amount)}
-                                                      </span>
-                                                    </td>
-                                                    <td>{new Date(trade.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td>
-                                                  </tr>
-                                                ))
+                                                      </td>
+                                                      <td>
+                                                        <span
+                                                          className={
+                                                            trade.type === "buy"
+                                                              ? "sold-title"
+                                                              : "sold-out-title"
+                                                          }
+                                                        >
+                                                          $
+                                                          {formatNumber(
+                                                            trade.amount
+                                                          )}
+                                                        </span>
+                                                      </td>
+                                                      <td>
+                                                        {new Date(
+                                                          trade.timestamp
+                                                        ).toLocaleTimeString(
+                                                          [],
+                                                          {
+                                                            hour: "2-digit",
+                                                            minute: "2-digit",
+                                                            second: "2-digit",
+                                                          }
+                                                        )}
+                                                      </td>
+                                                    </tr>
+                                                  )
+                                                )
                                               )}
                                             </tbody>
                                           </table>
@@ -715,12 +1005,16 @@ function TopKOLCoinsPage() {
                   </div>
 
                   {/* Mobile Card View (Unified) - Visible on MOBILE Screens if mode is TABLE (which maps to CARD on mobile) */}
-                  <div className={`mobile-coin-view d-lg-none ${activeView === 'table' ? 'd-flex' : 'd-none'}`}>
-
-                    {(loading || filteringLoading) ? (
+                  <div
+                    className={`mobile-coin-view d-lg-none ${activeView === "table" ? "d-flex" : "d-none"}`}
+                  >
+                    {loading || filteringLoading ? (
                       // Mobile Skeleton
                       Array.from({ length: 5 }).map((_, i) => (
-                        <div key={`mobile-skeleton-${i}`} className="mobile-coin-card">
+                        <div
+                          key={`mobile-skeleton-${i}`}
+                          className="mobile-coin-card"
+                        >
                           <div className="card-row">
                             <span className="card-label">RANK:</span>
                             <div className="w-8 h-4 bg-[#1a1a1a] animate-pulse"></div>
@@ -747,21 +1041,54 @@ function TopKOLCoinsPage() {
                         </div>
                       ))
                     ) : filteredCoins.length === 0 ? (
-                      <div className="text-center py-4" style={{ color: '#8F8F8F' }}>No coins found</div>
+                      <div
+                        className="text-center py-4"
+                        style={{ color: "#8F8F8F" }}
+                      >
+                        No coins found
+                      </div>
                     ) : (
                       <>
                         {mobilePaginatedCoins.map((coin) => (
                           // CARD VIEW
-                          <div key={coin.id} className="mobile-coin-card" onClick={() => toggleRow(coin.id)}>
+                          <div
+                            key={coin.id}
+                            className="mobile-coin-card"
+                            onClick={() => toggleRow(coin.id)}
+                          >
                             <div className="card-row">
                               <span className="card-label">RANK:</span>
                               <span className="card-value">#{coin.rank}</span>
                             </div>
                             <div className="card-row">
                               <span className="card-label">COIN:</span>
-                              <span className="card-value" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>
-                                <span className="coin-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', marginRight: '6px' }}>
-                                  <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '20px', height: '20px', borderRadius: '0px', objectFit: 'cover' }} />
+                              <span
+                                className="card-value"
+                                style={{
+                                  fontFamily: "IBM Plex Mono, monospace",
+                                }}
+                              >
+                                <span
+                                  className="coin-icon"
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    width: "20px",
+                                    height: "20px",
+                                    marginRight: "6px",
+                                  }}
+                                >
+                                  <img
+                                    src={coin.imageUrl || DefaultTokenImage}
+                                    alt={coin.symbol}
+                                    style={{
+                                      width: "20px",
+                                      height: "20px",
+                                      borderRadius: "0px",
+                                      objectFit: "cover",
+                                    }}
+                                  />
                                 </span>
                                 {coin.symbol}
                                 <button
@@ -777,55 +1104,109 @@ function TopKOLCoinsPage() {
                             </div>
                             <div className="card-row">
                               <span className="card-label">NET INFLOW:</span>
-                              <span className={`card-value ${coin.netInflow >= 0 ? 'green-text' : 'red-text'}`}>
-                                {coin.netInflow >= 0 ? '+' : ''} ${formatNumber(coin.netInflow)}
+                              <span
+                                className={`card-value ${coin.netInflow >= 0 ? "green-text" : "red-text"}`}
+                              >
+                                {coin.netInflow >= 0 ? "+" : ""} $
+                                {formatNumber(coin.netInflow)}
                               </span>
                             </div>
                             <div className="card-row">
                               <span className="card-label">WHALE:</span>
-                              <span className="card-value">{coin.whaleCount}</span>
+                              <span className="card-value">
+                                {coin.whaleCount}
+                              </span>
                             </div>
                             <div className="card-row">
                               <span className="card-label">MARKET CAP:</span>
-                              <span className="card-value">${formatNumber(coin.marketCap)}</span>
+                              <span className="card-value">
+                                ${formatNumber(coin.marketCap)}
+                              </span>
                             </div>
 
                             {/* Expandable content for mobile */}
                             {openRows[coin.id] && (
                               <>
-                                <div className="mt-3 pt-3 border-top border-secondary" style={{ margin: '0 -16px', padding: '0 16px' }}>
+                                <div
+                                  className="mt-3 pt-3 border-top border-secondary"
+                                  style={{
+                                    margin: "0 -16px",
+                                    padding: "0 16px",
+                                  }}
+                                >
                                   <div className="expand-tp-title mb-2">
                                     <div className="">
                                       <div className="text-center mb-3">
-                                        <p className="text-uppercase mb-0" style={{ color: '#8F8F8F', fontSize: '11px', letterSpacing: '1px' }}>
+                                        <p
+                                          className="text-uppercase mb-0"
+                                          style={{
+                                            color: "#8F8F8F",
+                                            fontSize: "11px",
+                                            letterSpacing: "1px",
+                                          }}
+                                        >
                                           KOL ACTIVITY LAST {timeframeFilter}
                                         </p>
                                       </div>
 
                                       {/* Coin Info Box - NO BORDER RADIUS */}
-                                      <div className="p-3 mb-3" style={{ backgroundColor: '#111', borderRadius: '0px', border: '1px solid #222' }}>
+                                      <div
+                                        className="p-3 mb-3"
+                                        style={{
+                                          backgroundColor: "#111",
+                                          borderRadius: "0px",
+                                          border: "1px solid #222",
+                                        }}
+                                      >
                                         <div className="d-flex align-items-center gap-3 mb-3">
                                           <img
-                                            src={coin.imageUrl || DefaultTokenImage}
+                                            src={
+                                              coin.imageUrl || DefaultTokenImage
+                                            }
                                             alt={coin.symbol}
-                                            style={{ width: '48px', height: '48px', borderRadius: '0px' }}
+                                            style={{
+                                              width: "48px",
+                                              height: "48px",
+                                              borderRadius: "0px",
+                                            }}
                                           />
                                           <div>
-                                            <h5 className="mb-0 fw-bold text-white" style={{ fontSize: '16px' }}>{coin.name}</h5>
+                                            <h5
+                                              className="mb-0 fw-bold text-white"
+                                              style={{ fontSize: "16px" }}
+                                            >
+                                              {coin.name}
+                                            </h5>
                                             <div className="d-flex align-items-center gap-2 mt-1">
-                                              <span style={{ color: '#8F8F8F', fontSize: '12px' }}>${coin.symbol}</span>
+                                              <span
+                                                style={{
+                                                  color: "#8F8F8F",
+                                                  fontSize: "12px",
+                                                }}
+                                              >
+                                                ${coin.symbol}
+                                              </span>
                                             </div>
                                             <div className="d-flex align-items-center gap-1 mt-1">
-                                              <span style={{ color: '#8F8F8F', fontSize: '12px', fontFamily: 'monospace' }}>
-                                                {coin.tokenAddress.slice(0, 4)}...{coin.tokenAddress.slice(-4)}
+                                              <span
+                                                style={{
+                                                  color: "#8F8F8F",
+                                                  fontSize: "12px",
+                                                  fontFamily: "monospace",
+                                                }}
+                                              >
+                                                {coin.tokenAddress.slice(0, 4)}
+                                                ...{coin.tokenAddress.slice(-4)}
                                               </span>
                                               <button
                                                 className="p-0 border-0 bg-transparent"
                                                 onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleCopyTokenAddress(coin.tokenAddress);
+                                                  e.stopPropagation()
+                                                  handleCopyTokenAddress(
+                                                    coin.tokenAddress
+                                                  )
                                                 }}
-                                                style={{ color: '#8F8F8F' }}
+                                                style={{ color: "#8F8F8F" }}
                                               >
                                                 <LuCopy size={12} />
                                               </button>
@@ -835,13 +1216,16 @@ function TopKOLCoinsPage() {
 
                                         <button
                                           className="w-100 py-2 fw-bold text-white text-uppercase"
-                                          onClick={(e) => { e.stopPropagation(); handleQuickBuy(coin); }}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleQuickBuy(coin)
+                                          }}
                                           style={{
-                                            backgroundColor: 'transparent',
-                                            border: '1px solid #333',
-                                            borderRadius: '0px',
-                                            fontSize: '13px',
-                                            letterSpacing: '0.5px'
+                                            backgroundColor: "transparent",
+                                            border: "1px solid #333",
+                                            borderRadius: "0px",
+                                            fontSize: "13px",
+                                            letterSpacing: "0.5px",
                                           }}
                                         >
                                           Quick Buy
@@ -849,101 +1233,264 @@ function TopKOLCoinsPage() {
                                       </div>
                                     </div>
                                   </div>
-
-
                                 </div>
 
                                 {/* Stats Section */}
                                 <div className="mb-4 d-flex flex-column gap-2">
                                   <div className="d-flex justify-content-between align-items-center">
-                                    <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL BUYS:</span>
+                                    <span
+                                      style={{
+                                        color: "#8F8F8F",
+                                        fontSize: "11px",
+                                        textTransform: "uppercase",
+                                      }}
+                                    >
+                                      TOTAL BUYS:
+                                    </span>
                                     <div className="text-end">
-                                      <span className="fw-medium font-monospace" style={{ color: '#00fa9a', fontSize: '12px' }}>
+                                      <span
+                                        className="fw-medium font-monospace"
+                                        style={{
+                                          color: "#00fa9a",
+                                          fontSize: "12px",
+                                        }}
+                                      >
                                         +{formatNumber(coin.totalBuys)}
                                       </span>
-                                      <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount})</span>
+                                      <span
+                                        style={{
+                                          color: "#8F8F8F",
+                                          fontSize: "12px",
+                                          marginLeft: "6px",
+                                        }}
+                                      >
+                                        ({coin.buyCount})
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="d-flex justify-content-between align-items-center">
-                                    <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL SELLS:</span>
+                                    <span
+                                      style={{
+                                        color: "#8F8F8F",
+                                        fontSize: "11px",
+                                        textTransform: "uppercase",
+                                      }}
+                                    >
+                                      TOTAL SELLS:
+                                    </span>
                                     <div className="text-end">
-                                      <span className="fw-medium font-monospace" style={{ color: '#df2a4e', fontSize: '12px' }}>
+                                      <span
+                                        className="fw-medium font-monospace"
+                                        style={{
+                                          color: "#df2a4e",
+                                          fontSize: "12px",
+                                        }}
+                                      >
                                         -{formatNumber(coin.totalSells)}
                                       </span>
-                                      <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.sellCount})</span>
+                                      <span
+                                        style={{
+                                          color: "#8F8F8F",
+                                          fontSize: "12px",
+                                          marginLeft: "6px",
+                                        }}
+                                      >
+                                        ({coin.sellCount})
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
-                                    <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>NET INFLOW:</span>
+                                    <span
+                                      style={{
+                                        color: "#8F8F8F",
+                                        fontSize: "11px",
+                                        textTransform: "uppercase",
+                                      }}
+                                    >
+                                      NET INFLOW:
+                                    </span>
                                     <div className="text-end">
-                                      <span className="fw-medium font-monospace" style={{ color: coin.netInflow >= 0 ? '#00fa9a' : '#df2a4e', fontSize: '12px' }}>
+                                      <span
+                                        className="fw-medium font-monospace"
+                                        style={{
+                                          color:
+                                            coin.netInflow >= 0
+                                              ? "#00fa9a"
+                                              : "#df2a4e",
+                                          fontSize: "12px",
+                                        }}
+                                      >
                                         {formatNumber(coin.netInflow)}
                                       </span>
-                                      <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount + coin.sellCount})</span>
+                                      <span
+                                        style={{
+                                          color: "#8F8F8F",
+                                          fontSize: "12px",
+                                          marginLeft: "6px",
+                                        }}
+                                      >
+                                        ({coin.buyCount + coin.sellCount})
+                                      </span>
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Transaction List Header */}
-                                <div className="d-flex text-uppercase mb-2 px-2 py-1" style={{ color: '#8F8F8F', fontSize: '10px', fontWeight: 600 }}>
-                                  <div style={{ width: '15%' }}>TYPE</div>
-                                  <div style={{ width: '35%' }}>MAKER</div>
-                                  <div style={{ width: '25%', textAlign: 'right' }}>USD</div>
-                                  <div style={{ width: '25%', textAlign: 'right' }}>MC</div>
+                                <div
+                                  className="d-flex text-uppercase mb-2 px-2 py-1"
+                                  style={{
+                                    color: "#8F8F8F",
+                                    fontSize: "10px",
+                                    fontWeight: 600,
+                                  }}
+                                >
+                                  <div style={{ width: "15%" }}>TYPE</div>
+                                  <div style={{ width: "35%" }}>MAKER</div>
+                                  <div
+                                    style={{ width: "25%", textAlign: "right" }}
+                                  >
+                                    USD
+                                  </div>
+                                  <div
+                                    style={{ width: "25%", textAlign: "right" }}
+                                  >
+                                    MC
+                                  </div>
                                 </div>
 
                                 <div className="d-flex flex-column gap-1">
                                   {getCoinTrades(coin).length === 0 ? (
-                                    <div className="text-center py-3" style={{ color: '#8F8F8F', fontSize: '12px' }}>No recent transactions</div>
+                                    <div
+                                      className="text-center py-3"
+                                      style={{
+                                        color: "#8F8F8F",
+                                        fontSize: "12px",
+                                      }}
+                                    >
+                                      No recent transactions
+                                    </div>
                                   ) : (
                                     getCoinTrades(coin).map((trade, idx) => (
-                                      <div key={idx} className="d-flex align-items-center px-2 py-2 gap-2" style={{ backgroundColor: '#0A0A0A', borderRadius: '0px' }}>
+                                      <div
+                                        key={idx}
+                                        className="d-flex align-items-center px-2 py-2 gap-2"
+                                        style={{
+                                          backgroundColor: "#0A0A0A",
+                                          borderRadius: "0px",
+                                        }}
+                                      >
                                         {/* Type Column: B/S Badge + Time */}
-                                        <div style={{ width: '18%' }} className="d-flex align-items-center gap-1">
+                                        <div
+                                          style={{ width: "18%" }}
+                                          className="d-flex align-items-center gap-1"
+                                        >
                                           <div
                                             className="d-flex align-items-center justify-content-center fw-bold text-white"
                                             style={{
-                                              minWidth: '18px',
-                                              width: '18px',
-                                              height: '18px',
-                                              backgroundColor: trade.type === 'buy' ? '#00fa9a' : '#df2a4e',
-                                              borderRadius: '0px',
-                                              fontSize: '10px',
-                                              lineHeight: 1
+                                              minWidth: "18px",
+                                              width: "18px",
+                                              height: "18px",
+                                              backgroundColor:
+                                                trade.type === "buy"
+                                                  ? "#00fa9a"
+                                                  : "#df2a4e",
+                                              borderRadius: "0px",
+                                              fontSize: "10px",
+                                              lineHeight: 1,
                                             }}
                                           >
-                                            {trade.type === 'buy' ? 'B' : 'S'}
+                                            {trade.type === "buy" ? "B" : "S"}
                                           </div>
-                                          <div style={{ color: trade.type === 'buy' ? '#00fa9a' : '#df2a4e', fontSize: '10px', fontWeight: '500' }}>
+                                          <div
+                                            style={{
+                                              color:
+                                                trade.type === "buy"
+                                                  ? "#00fa9a"
+                                                  : "#df2a4e",
+                                              fontSize: "10px",
+                                              fontWeight: "500",
+                                            }}
+                                          >
                                             {(() => {
-                                              const diff = new Date().getTime() - new Date(trade.timestamp).getTime();
-                                              const seconds = Math.floor(diff / 1000);
-                                              if (seconds < 60) return `${seconds}S`;
-                                              return `${Math.floor(seconds / 60)}M`;
+                                              const diff =
+                                                new Date().getTime() -
+                                                new Date(
+                                                  trade.timestamp
+                                                ).getTime()
+                                              const seconds = Math.floor(
+                                                diff / 1000
+                                              )
+                                              if (seconds < 60)
+                                                return `${seconds}S`
+                                              return `${Math.floor(seconds / 60)}M`
                                             })()}
                                           </div>
                                         </div>
 
                                         {/* Maker Column: Name on top, Address below in grey */}
-                                        <div style={{ width: '32%' }} className="d-flex flex-column">
-                                          <div className="text-white text-truncate" style={{ fontSize: '11px', fontWeight: '400', fontFamily: 'IBM Plex Mono, monospace' }}>
-                                            {trade.whaleLabel?.[0] || 'Whale'}
+                                        <div
+                                          style={{ width: "32%" }}
+                                          className="d-flex flex-column"
+                                        >
+                                          <div
+                                            className="text-white text-truncate"
+                                            style={{
+                                              fontSize: "11px",
+                                              fontWeight: "400",
+                                              fontFamily:
+                                                "IBM Plex Mono, monospace",
+                                            }}
+                                          >
+                                            Whale
                                           </div>
-                                          <div style={{ color: '#666', fontSize: '9px', fontFamily: 'IBM Plex Mono, monospace' }}>
-                                            {trade.whaleAddress.slice(0, 4)}...{trade.whaleAddress.slice(-4)}
+                                          <div
+                                            style={{
+                                              color: "#666",
+                                              fontSize: "9px",
+                                              fontFamily:
+                                                "IBM Plex Mono, monospace",
+                                            }}
+                                          >
+                                            {trade.whaleAddress.slice(0, 4)}...
+                                            {trade.whaleAddress.slice(-4)}
                                           </div>
                                         </div>
 
                                         {/* USD Column */}
-                                        <div style={{ width: '25%', textAlign: 'right' }}>
-                                          <span className={trade.type === 'buy' ? 'sold-title' : 'sold-out-title'} style={{ fontSize: '11px' }}>
+                                        <div
+                                          style={{
+                                            width: "25%",
+                                            textAlign: "right",
+                                          }}
+                                        >
+                                          <span
+                                            className={
+                                              trade.type === "buy"
+                                                ? "sold-title"
+                                                : "sold-out-title"
+                                            }
+                                            style={{ fontSize: "11px" }}
+                                          >
                                             ${formatNumber(trade.amount)}
                                           </span>
                                         </div>
 
                                         {/* MC Column */}
-                                        <div style={{ width: '25%', textAlign: 'right' }}>
-                                          <div className="text-white" style={{ fontSize: '11px', fontWeight: '400', fontFamily: 'IBM Plex Mono, monospace' }}>
+                                        <div
+                                          style={{
+                                            width: "25%",
+                                            textAlign: "right",
+                                          }}
+                                        >
+                                          <div
+                                            className="text-white"
+                                            style={{
+                                              fontSize: "11px",
+                                              fontWeight: "400",
+                                              fontFamily:
+                                                "IBM Plex Mono, monospace",
+                                            }}
+                                          >
                                             ${formatNumber(coin.marketCap)}
                                           </div>
                                         </div>
@@ -956,23 +1503,30 @@ function TopKOLCoinsPage() {
                           </div>
                         ))}
 
-
                         {/* Pagination Footer */}
                         <div className="mobile-pagination">
                           <button
                             className="pagination-btn"
                             disabled={mobilePage === 1}
-                            onClick={() => handleMobilePageChange(mobilePage - 1)}
+                            onClick={() =>
+                              handleMobilePageChange(mobilePage - 1)
+                            }
                           >
                             &lt; PREVIOUS
                           </button>
 
-                          <span>SHOWING {mobileStartIndex + 1}-{Math.min(mobileEndIndex, filteredCoins.length)} OUT OF {filteredCoins.length}</span>
+                          <span>
+                            SHOWING {mobileStartIndex + 1}-
+                            {Math.min(mobileEndIndex, filteredCoins.length)} OUT
+                            OF {filteredCoins.length}
+                          </span>
 
                           <button
                             className="pagination-btn"
                             disabled={mobilePage === totalMobilePages}
-                            onClick={() => handleMobilePageChange(mobilePage + 1)}
+                            onClick={() =>
+                              handleMobilePageChange(mobilePage + 1)
+                            }
                           >
                             NEXT &gt;
                           </button>
@@ -983,13 +1537,48 @@ function TopKOLCoinsPage() {
                 </>
               ) : (
                 <>
-                  {/* Mobile Chart - Horizontal bar chart - Now shown on ALL screen sizes */}
-                  <div className={`mobile-chart-view`}>
+                  <div className="desktop-chart-view d-none d-lg-block">
                     <div className="mobile-chart-header">
-                      <h4>WHALE NET {activeChartTab === 'inflow' ? 'INFLOW' : 'OUTFLOW'} WITH WHALE COUNT</h4>
+                      <h4>
+                        WHALE NET{" "}
+                        {activeChartTab === "inflow" ? "INFLOW" : "OUTFLOW"}{" "}
+                        WITH WHALE COUNT
+                      </h4>
                       <div className="mobile-chart-legend">
-                        <span className={`legend-bar ${activeChartTab === 'inflow' ? 'green' : 'red'}`}></span>
-                        <span>NET {activeChartTab === 'inflow' ? 'INFLOW' : 'OUTFLOW'}</span>
+                        <span
+                          className={`legend-bar ${activeChartTab === "inflow" ? "green" : "red"}`}
+                        ></span>
+                        <span>
+                          NET{" "}
+                          {activeChartTab === "inflow" ? "INFLOW" : "OUTFLOW"}
+                        </span>
+                        <span className="legend-dot"></span>
+                        <span>WHALE COUNT</span>
+                      </div>
+                    </div>
+                    <div style={{ padding: "0 12px" }}>
+                      <ReactApexChart
+                        options={desktopChartData.options}
+                        series={desktopChartData.series}
+                        height={380}
+                      />
+                    </div>
+                  </div>
+                  <div className={`mobile-chart-view d-lg-none ${activeView === "chart" ? "" : "d-none"}`}>
+                    <div className="mobile-chart-header">
+                      <h4>
+                        WHALE NET{" "}
+                        {activeChartTab === "inflow" ? "INFLOW" : "OUTFLOW"}{" "}
+                        WITH WHALE COUNT
+                      </h4>
+                      <div className="mobile-chart-legend">
+                        <span
+                          className={`legend-bar ${activeChartTab === "inflow" ? "green" : "red"}`}
+                        ></span>
+                        <span>
+                          NET{" "}
+                          {activeChartTab === "inflow" ? "INFLOW" : "OUTFLOW"}
+                        </span>
                         <span className="legend-dot"></span>
                         <span>WHALE COUNT</span>
                       </div>
@@ -999,74 +1588,108 @@ function TopKOLCoinsPage() {
                       {filteredCoins.slice(0, 10).map((coin) => {
                         // Use netInflow directly. If > 0 Green, < 0 Red.
                         // Width is based on absolute value relative to max absolute value.
-                        const value = coin.netInflow;
-                        const absValue = Math.abs(value);
+                        const value = coin.netInflow
+                        const absValue = Math.abs(value)
 
                         // Calculate max absolute value in the current list for relative sizing
-                        const maxAbsValue = Math.max(...filteredCoins.slice(0, 10).map(c => Math.abs(c.netInflow)));
+                        const maxAbsValue = Math.max(
+                          ...filteredCoins
+                            .slice(0, 10)
+                            .map((c) => Math.abs(c.netInflow))
+                        )
 
-                        const barWidth = maxAbsValue > 0 ? (absValue / maxAbsValue) * 100 : 0;
-                        const maxWhales = Math.max(...filteredCoins.slice(0, 10).map(c => c.whaleCount));
-                        const dotPosition = maxWhales > 0 ? (coin.whaleCount / maxWhales) * 100 : 0;
+                        const barWidth =
+                          maxAbsValue > 0 ? (absValue / maxAbsValue) * 100 : 0
+                        const maxWhales = Math.max(
+                          ...filteredCoins.slice(0, 10).map((c) => c.whaleCount)
+                        )
+                        const dotPosition =
+                          maxWhales > 0
+                            ? (coin.whaleCount / maxWhales) * 100
+                            : 0
 
                         // Determine color based on value sign
-                        const isPositive = value >= 0;
+                        const isPositive = value >= 0
 
                         return (
                           <div key={coin.id} className="mobile-chart-coin">
                             <div className="chart-coin-name">
                               <span>{coin.symbol}</span>
-                              <button className="tb-cpy-btn" onClick={() => navigator.clipboard.writeText(coin.tokenAddress)}>
+                              <button
+                                className="tb-cpy-btn"
+                                onClick={() =>
+                                  navigator.clipboard.writeText(
+                                    coin.tokenAddress
+                                  )
+                                }
+                              >
                                 <LuCopy />
                               </button>
                             </div>
                             <div className="chart-bar-container">
                               {/* Track Line - spans from 0 to whale dot */}
-                              <div className="chart-whale-line" style={{ width: `${dotPosition}%` }}></div>
+                              <div
+                                className="chart-whale-line"
+                                style={{ width: `${dotPosition}%` }}
+                              ></div>
 
                               {/* Colored Bar - Net Inflow/Outflow */}
                               {/* Use min-width: 4px to ensure even tiny/0/negative values are visible */}
                               <div
-                                className={`chart-bar ${isPositive ? 'green' : 'red'}`}
-                                style={{ width: `${Math.min(barWidth, 100)}%`, minWidth: '4px' }}
+                                className={`chart-bar ${isPositive ? "green" : "red"}`}
+                                style={{
+                                  width: `${Math.min(barWidth, 100)}%`,
+                                  minWidth: "4px",
+                                }}
                               ></div>
 
                               {/* Whale Dot */}
-                              <div className="chart-whale-dot" style={{ left: `${dotPosition}%` }}></div>
+                              <div
+                                className="chart-whale-dot"
+                                style={{ left: `${dotPosition}%` }}
+                              ></div>
                             </div>
                             <div className="chart-values">
                               <div className="chart-value-row">
-                                <span className="chart-label">NET {activeChartTab === 'inflow' ? 'INFLOW' : 'OUTFLOW'}</span>
-                                <span className={`chart-amount ${isPositive ? 'green' : 'red'}`}>
-                                  {isPositive ? '+' : ''}${formatNumber(value)}
+                                <span className="chart-label">
+                                  NET{" "}
+                                  {activeChartTab === "inflow"
+                                    ? "INFLOW"
+                                    : "OUTFLOW"}
+                                </span>
+                                <span
+                                  className={`chart-amount ${isPositive ? "green" : "red"}`}
+                                >
+                                  {isPositive ? "+" : ""}${formatNumber(value)}
                                 </span>
                               </div>
                               <div className="chart-value-row">
                                 <span className="chart-label">WHALE COUNT</span>
-                                <span className="chart-whale-count">{coin.whaleCount}</span>
+                                <span className="chart-whale-count">
+                                  {coin.whaleCount}
+                                </span>
                               </div>
                             </div>
                           </div>
-                        );
+                        )
                       })}
                     </div>
                   </div>
                 </>
               )}
             </div>
-          </div >
-        </div >
-      </section >
+          </div>
+        </div>
+      </section>
 
       {isSwapModalOpen && swapTokenInfo && (
         <SwapModal
           isOpen={isSwapModalOpen}
           onClose={() => setIsSwapModalOpen(false)}
           initialInputToken={SOL_TOKEN}
-          initialOutputToken={swapTokenInfo}
+          initialOutputToken={swapTokenInfo || undefined}
         />
-      )
-      }
+      )}
     </>
   )
 }

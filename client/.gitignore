@@ -27,3 +27,4 @@ dist-ssr
 *.pdf
 *.docx
 *.doc
+.env.local
