@@ -845,9 +845,9 @@ const KOLFeedPage = () => {
             </div>
 
             {/* Search and Quick Buy */}
-            <div className="d-flex align-items-center gap-1 mobile-searching-bx">
+            <div className="d-flex align-items-center mobile-searching-bx" style={{ gap: '12px', marginBottom: '12px' }}>
               <div className="search-container flex-grow-1" ref={searchRef}>
-                <form className="custom-frm-bx mb-3" onSubmit={handleSearch}>
+                <form className="custom-frm-bx" onSubmit={handleSearch}>
                   <input
                     type="text"
                     className="form-control pe-5"
@@ -916,13 +916,14 @@ const KOLFeedPage = () => {
                 )}
               </div>
 
-              <div className="custom-frm-bx nw-quick-bx mb-3 mobile-quick-buy-desktop">
+              <div className="custom-frm-bx nw-quick-bx mobile-quick-buy-desktop">
                 <button
                   className="quick-btn"
                   style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
                   onClick={() => quickBuyInputRef.current?.focus()}
                 >
                   <img src="/quick-btn.png" alt="" /> quick buy amount
+                  <div style={{ flexGrow: 1 }} />
                   <input
                     ref={quickBuyInputRef}
                     type="number"
@@ -963,13 +964,14 @@ const KOLFeedPage = () => {
             {/* Filters and Quick Buy Row (Mobile) */}
             <div className="mobile-filters-quick-row">
               {/* Quick Buy - Mobile Only */}
-              <div className="custom-frm-bx nw-quick-bx mb-3 mobile-quick-buy-mobile">
+              <div className="custom-frm-bx nw-quick-bx mobile-quick-buy-mobile">
                 <button
                   className="quick-btn"
                   style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
                   onClick={() => quickBuyInputRef.current?.focus()}
                 >
                   <img src="/quick-btn.png" alt="" /> quick buy amount
+                  <div style={{ flexGrow: 1 }} />
                   <input
                     ref={quickBuyInputRef}
                     type="number"

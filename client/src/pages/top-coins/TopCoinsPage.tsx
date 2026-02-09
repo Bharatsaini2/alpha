@@ -8,8 +8,6 @@ import { faSearch } from "@fortawesome/free-solid-svg-icons"
 import { useState, useEffect, useCallback } from "react"
 import { FaRegCopy } from "react-icons/fa6"
 import { TfiReload } from "react-icons/tfi"
-import ReactApexChart from "react-apexcharts"
-import { ApexOptions } from "apexcharts"
 import { useToast } from "../../contexts/ToastContext"
 import { topCoinsAPI } from "../../lib/api"
 import { TopCoin, TopCoinsParams, Trade } from "../../lib/types"
@@ -174,94 +172,6 @@ function TopCoinsPage() {
 
   const filteredCoins = getFilteredData()
 
-  // Prepare Chart Data
-  const chartCategories = filteredCoins.slice(0, 10).map(c => c.symbol)
-  const chartValues = filteredCoins.slice(0, 10).map(c =>
-    activeChartTab === "inflow"
-      ? (c.netInflow >= 1000 ? c.netInflow / 1000 : c.netInflow)
-      : (c.netOutflow >= 1000 ? c.netOutflow / 1000 : c.netOutflow)
-  )
-  const chartWhaleData = filteredCoins.slice(0, 10).map(c => c.whaleCount)
-
-  const series: ApexOptions["series"] = [
-    {
-      name: activeChartTab === "inflow" ? "Net Inflow" : "Net Outflow",
-      type: "column",
-      data: chartValues,
-    },
-    {
-      name: "Whale Count",
-      type: "line",
-      data: chartWhaleData,
-    },
-  ]
-
-  const options: ApexOptions = {
-    chart: {
-      height: 420,
-      type: "line",
-      background: "transparent",
-      toolbar: { show: false },
-    },
-    theme: { mode: "dark" },
-    stroke: { width: [0, 2], curve: "straight" },
-    plotOptions: {
-      bar: { columnWidth: "40%", borderRadius: 0 },
-    },
-    markers: {
-      size: 6,
-      colors: activeChartTab === "inflow" ? ["#00fa9a"] : ["#df2a4e"],
-      strokeColors: "#ffffff",
-      hover: { size: 7 },
-    },
-    colors: activeChartTab === "inflow" ? ["#00fa9a", "#ffffff"] : ["#df2a4e", "#ffffff"],
-    dataLabels: { enabled: false },
-    xaxis: {
-      categories: chartCategories,
-      labels: {
-        style: { colors: "#FBFAF9", fontSize: "14px", fontWeight: 300 },
-      },
-      axisBorder: { color: "#333" },
-      axisTicks: { color: "#333" },
-    },
-    yaxis: [
-      {
-        title: {
-          text: `NET ${activeChartTab.toUpperCase()} (THOUSANDS USD)`,
-          style: {
-            color: activeChartTab === "inflow" ? "#00fa9a" : "#df2a4e",
-            fontWeight: 500,
-            fontSize: "12px",
-            fontFamily: "Geist Mono, monospace",
-          },
-        },
-        labels: {
-          formatter: (val: number) => `${val.toFixed(1)}K ($)`,
-          style: { colors: "#cbd5e1" },
-        },
-      },
-      {
-        opposite: true,
-        title: {
-          text: "WHALE COUNT",
-          style: {
-            color: "#ffffff",
-            fontWeight: 500,
-            fontSize: "12px",
-            fontFamily: "Geist Mono, monospace",
-          },
-        },
-        labels: { style: { colors: "#cbd5e1" } },
-      },
-    ],
-    grid: { borderColor: "#333", strokeDashArray: 4 },
-    legend: {
-      position: "top",
-      horizontalAlign: "center",
-      labels: { colors: "#e5e7eb" },
-    },
-    tooltip: { theme: "dark" },
-  }
 
   const handleQuickBuy = (coin: TopCoin) => {
     const quickBuyAmount = loadQuickBuyAmount() || "100"
@@ -1066,13 +976,8 @@ function TopCoinsPage() {
                 </>
               ) : (
                 <>
-                  {/* Desktop Chart - ApexCharts line graph - Show on Desktop if activeView is chart */}
-                  <div className={`chart-view-container d-none d-lg-block`}>
-                    <ReactApexChart options={options} series={series} type="line" height={420} />
-                  </div>
-
-                  {/* Mobile Chart - Horizontal bar chart - Show on Mobile if activeView is chart */}
-                  <div className={`mobile-chart-view d-lg-none`}>
+                  {/* Mobile Chart - Horizontal bar chart - Now shown on ALL screen sizes */}
+                  <div className={`mobile-chart-view`}>
                     <div className="mobile-chart-header">
                       <h4>WHALE NET {activeChartTab === 'inflow' ? 'INFLOW' : 'OUTFLOW'} WITH WHALE COUNT</h4>
                       <div className="mobile-chart-legend">

@@ -1016,7 +1016,7 @@ const HomePageNew = () => {
                         </div>
 
                         {/* Search and Quick Buy */}
-                        <div className="d-flex align-items-center gap-1 mobile-searching-bx">
+                        <div className="d-flex align-items-center mobile-searching-bx" style={{ gap: '12px', marginBottom: '12px' }}>
                             {/* <form className="custom-frm-bx flex-grow-1" onSubmit={handleSearch}>
                                 <input
                                     type="text"
@@ -1033,7 +1033,7 @@ const HomePageNew = () => {
                             </form> */}
 
                             <div className="search-container flex-grow-1" ref={searchRef}>
-                                <form className="custom-frm-bx mb-3" onSubmit={handleSearch}>
+                                <form className="custom-frm-bx" onSubmit={handleSearch}>
                                     <input
                                         type="text"
                                         className="form-control pe-5"
@@ -1151,13 +1151,14 @@ const HomePageNew = () => {
                                 )}
                             </div>
 
-                            <div className="custom-frm-bx nw-quick-bx mb-3">
+                            <div className="custom-frm-bx nw-quick-bx">
                                 <button
                                     className="quick-btn"
                                     style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
                                     onClick={() => quickBuyInputRef.current?.focus()}
                                 >
                                     <img src="/quick-btn.png" alt="" /> quick buy amount
+                                    <div style={{ flexGrow: 1 }} />
                                     <input
                                         ref={quickBuyInputRef}
                                         type="number"
@@ -1546,6 +1547,7 @@ const HomePageNew = () => {
                                                                 e.stopPropagation();
                                                                 handleWhaleAlertConnect();
                                                             }}
+                                                            style={{ marginTop: '16px' }}
                                                         >
                                                             {user?.telegramChatId ? 'Create' : 'Connect'}
                                                         </button>

@@ -914,7 +914,10 @@ input[type="number"] {
 .custom-tabs {
   border-bottom: none;
   background-color: #0a0a0a;
-  border: 1px solid #141414;
+  border-left: 1px solid #141414;
+  border-top: 1px solid #141414;
+  border-bottom: 1px solid #141414;
+  border-right: none;
   padding: 2px;
 }
 
@@ -2191,6 +2194,41 @@ font-size: 16px;
 @media (max-width: 991px) {
   /* KOL Feed Page - Mobile Layout */
 
+  /* Prevent horizontal overflow that causes gray line */
+  body,
+  html {
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+  }
+
+  /* Fix Bootstrap row negative margins that cause overflow */
+  .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Fix Bootstrap column padding */
+  [class*="col-"] {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Remove section padding */
+  section {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Remove ALL right borders on mobile to eliminate gray line */
+  .content,
+  .sidebar,
+  .main,
+  body,
+  html,
+  * {
+    border-right: none !important;
+  }
+
   /* Hide desktop quick buy on mobile */
   .mobile-quick-buy-desktop {
     display: none !important;
@@ -2250,11 +2288,14 @@ font-size: 16px;
   /* Row 2a: ALL/BUY/SELL tabs */
   .mobile-tabling-list>div:first-child {
     width: 100% !important;
+    overflow: hidden !important;
   }
 
   .mobile-tabling-list .custom-tabs {
     width: 100% !important;
     display: flex !important;
+    border-right: none !important;
+    overflow: hidden !important;
   }
 
   .custom-tabs .nav-link {

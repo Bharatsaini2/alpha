@@ -155,6 +155,7 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
                             e.stopPropagation();
                             onActivate();
                         }}
+                        style={{ marginTop: '16px' }}
                     >
                         {user?.telegramChatId ? 'Active' : 'Connect'}
                     </button>

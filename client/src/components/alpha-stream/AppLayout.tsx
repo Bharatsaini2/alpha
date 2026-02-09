@@ -14,7 +14,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <Sidebar isOpen={isSidebarOpen} onToggle={() => setIsSidebarOpen(false)} />
             <div className="main">
                 <Header onOpenSidebar={() => setIsSidebarOpen(true)} />
-                <section className="content">
+                <section className="content" style={{ borderRight: 'none' }}>
                     {children}
                 </section>
             </div>
