@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { LuCopy } from "react-icons/lu"
 import { HiChevronDown, HiChevronUp, HiChevronUpDown } from "react-icons/hi2"
@@ -209,11 +210,11 @@ function TopCoinsPage() {
     },
     markers: {
       size: 6,
-      colors: activeChartTab === "inflow" ? ["#00fa9a"] : ["#FF0000"],
+      colors: activeChartTab === "inflow" ? ["#00fa9a"] : ["#df2a4e"],
       strokeColors: "#ffffff",
       hover: { size: 7 },
     },
-    colors: activeChartTab === "inflow" ? ["#00fa9a", "#ffffff"] : ["#FF0000", "#ffffff"],
+    colors: activeChartTab === "inflow" ? ["#00fa9a", "#ffffff"] : ["#df2a4e", "#ffffff"],
     dataLabels: { enabled: false },
     xaxis: {
       categories: chartCategories,
@@ -228,7 +229,7 @@ function TopCoinsPage() {
         title: {
           text: `NET ${activeChartTab.toUpperCase()} (THOUSANDS USD)`,
           style: {
-            color: activeChartTab === "inflow" ? "#00fa9a" : "#FF0000",
+            color: activeChartTab === "inflow" ? "#00fa9a" : "#df2a4e",
             fontWeight: 500,
             fontSize: "12px",
             fontFamily: "Geist Mono, monospace",
@@ -495,7 +496,7 @@ function TopCoinsPage() {
 
                   <div className="time-filter">
                     {['4H', '12H', '24H', '1W'].map((time) => (
-                      <>
+                      <React.Fragment key={time}>
                         <a
                           href="#"
                           className={`time-item ${timeframeFilter === time ? 'active' : ''}`}
@@ -512,7 +513,7 @@ function TopCoinsPage() {
                           {time}
                         </a>
                         {time !== '1W' && <span className="divider">|</span>}
-                      </>
+                      </React.Fragment>
                     ))}
                   </div>
                 </div>
@@ -597,11 +598,10 @@ function TopCoinsPage() {
                           <tr><td colSpan={6} className="text-center py-4">No coins found</td></tr>
                         ) : (
                           filteredCoins.map((coin) => (
-                            <>
+                            <React.Fragment key={coin.id}>
                               <tr
                                 className={`main-row ${openRows[coin.id] ? 'active' : ''}`}
                                 onClick={() => toggleRow(coin.id)}
-                                key={coin.id}
                               >
                                 <td className="expand-col">
                                   {openRows[coin.id] ? (
@@ -797,7 +797,7 @@ function TopCoinsPage() {
                                   </td>
                                 </tr>
                               )}
-                            </>
+                            </React.Fragment>
                           ))
                         )}
                       </tbody>
@@ -850,9 +850,9 @@ function TopCoinsPage() {
                             </div>
                             <div className="card-row">
                               <span className="card-label">COIN:</span>
-                              <span className="card-value">
-                                <span className="coin-icon">
-                                  <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '20px', height: '20px', borderRadius: '0px' }} />
+                              <span className="card-value" style={{ fontFamily: 'IBM Plex Mono, monospace' }}>
+                                <span className="coin-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', marginRight: '6px' }}>
+                                  <img src={coin.imageUrl || DefaultTokenImage} alt={coin.symbol} style={{ width: '20px', height: '20px', borderRadius: '0px', objectFit: 'cover' }} />
                                 </span>
                                 {coin.symbol}
                                 <button
@@ -950,7 +950,7 @@ function TopCoinsPage() {
                                   <div className="d-flex justify-content-between align-items-center">
                                     <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>TOTAL SELLS:</span>
                                     <div className="text-end">
-                                      <span className="fw-medium font-monospace" style={{ color: '#FF0000', fontSize: '12px' }}>
+                                      <span className="fw-medium font-monospace" style={{ color: '#df2a4e', fontSize: '12px' }}>
                                         -{formatNumber(coin.totalSells)}
                                       </span>
                                       <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.sellCount})</span>
@@ -959,7 +959,7 @@ function TopCoinsPage() {
                                   <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
                                     <span style={{ color: '#8F8F8F', fontSize: '11px', textTransform: 'uppercase' }}>NET INFLOW:</span>
                                     <div className="text-end">
-                                      <span className="fw-medium font-monospace" style={{ color: coin.netInflow >= 0 ? '#00fa9a' : '#FF0000', fontSize: '12px' }}>
+                                      <span className="fw-medium font-monospace" style={{ color: coin.netInflow >= 0 ? '#00fa9a' : '#df2a4e', fontSize: '12px' }}>
                                         {formatNumber(coin.netInflow)}
                                       </span>
                                       <span style={{ color: '#8F8F8F', fontSize: '12px', marginLeft: '6px' }}>({coin.buyCount + coin.sellCount})</span>
@@ -980,24 +980,24 @@ function TopCoinsPage() {
                                     <div className="text-center py-3" style={{ color: '#8F8F8F', fontSize: '12px' }}>No recent transactions</div>
                                   ) : (
                                     getCoinTrades(coin).map((trade, idx) => (
-                                      <div key={idx} className="d-flex align-items-center px-2 py-2" style={{ backgroundColor: '#0A0A0A', borderRadius: '0px' }}>
-                                        {/* Type Column: Badge Left, Time Right */}
-                                        <div style={{ width: '15%' }} className="d-flex align-items-center gap-2">
+                                      <div key={idx} className="d-flex align-items-center px-2 py-2 gap-2" style={{ backgroundColor: '#0A0A0A', borderRadius: '0px' }}>
+                                        {/* Type Column: B/S Badge + Time */}
+                                        <div style={{ width: '18%' }} className="d-flex align-items-center gap-1">
                                           <div
                                             className="d-flex align-items-center justify-content-center fw-bold text-white"
                                             style={{
-                                              minWidth: '20px',
-                                              width: '20px',
-                                              height: '20px',
-                                              backgroundColor: trade.type === 'buy' ? '#00fa9a' : '#FF0000',
+                                              minWidth: '18px',
+                                              width: '18px',
+                                              height: '18px',
+                                              backgroundColor: trade.type === 'buy' ? '#00fa9a' : '#df2a4e',
                                               borderRadius: '0px',
-                                              fontSize: '11px',
+                                              fontSize: '10px',
                                               lineHeight: 1
                                             }}
                                           >
                                             {trade.type === 'buy' ? 'B' : 'S'}
                                           </div>
-                                          <div style={{ color: trade.type === 'buy' ? '#00fa9a' : '#FF0000', fontSize: '11px', fontWeight: 'bold' }}>
+                                          <div style={{ color: trade.type === 'buy' ? '#00fa9a' : '#df2a4e', fontSize: '10px', fontWeight: '500' }}>
                                             {(() => {
                                               const diff = new Date().getTime() - new Date(trade.timestamp).getTime();
                                               const seconds = Math.floor(diff / 1000);
@@ -1007,27 +1007,27 @@ function TopCoinsPage() {
                                           </div>
                                         </div>
 
-                                        {/* Maker Column */}
-                                        <div style={{ width: '35%', paddingLeft: '4px' }} className="d-flex flex-column">
-                                          <div className="text-white text-truncate fw-bold" style={{ fontSize: '11px', letterSpacing: '0.5px' }}>
-                                            {trade.whaleAddress.slice(0, 8)}...
+                                        {/* Maker Column: Name on top, Address below in grey */}
+                                        <div style={{ width: '32%' }} className="d-flex flex-column">
+                                          <div className="text-white text-truncate" style={{ fontSize: '11px', fontWeight: '400', fontFamily: 'IBM Plex Mono, monospace' }}>
+                                            {trade.whaleLabel?.[0] || 'Whale'}
                                           </div>
-                                          <div style={{ color: '#666', fontSize: '10px' }}>
-                                            ({trade.whaleAddress.slice(-4)})
+                                          <div style={{ color: '#666', fontSize: '9px', fontFamily: 'IBM Plex Mono, monospace' }}>
+                                            {trade.whaleAddress.slice(0, 4)}...{trade.whaleAddress.slice(-4)}
                                           </div>
                                         </div>
 
-                                        {/* USD Column: Green/Red */}
+                                        {/* USD Column */}
                                         <div style={{ width: '25%', textAlign: 'right' }}>
-                                          <div className="fw-bold" style={{ color: trade.type === 'buy' ? '#00fa9a' : '#FF0000', fontSize: '11px' }}>
+                                          <span className={trade.type === 'buy' ? 'sold-title' : 'sold-out-title'} style={{ fontSize: '11px' }}>
                                             ${formatNumber(trade.amount)}
-                                          </div>
+                                          </span>
                                         </div>
 
                                         {/* MC Column */}
                                         <div style={{ width: '25%', textAlign: 'right' }}>
-                                          <div className="text-white fw-bold" style={{ fontSize: '11px' }}>
-                                            {formatNumber(coin.marketCap)}
+                                          <div className="text-white" style={{ fontSize: '11px', fontWeight: '400', fontFamily: 'IBM Plex Mono, monospace' }}>
+                                            ${formatNumber(coin.marketCap)}
                                           </div>
                                         </div>
                                       </div>

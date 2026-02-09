@@ -1022,6 +1022,14 @@ input[type="number"] {
   color: #14904d;
 }
 
+.sold-title.green-text {
+  color: #14904d;
+}
+
+.sold-title.red-text {
+  color: #df2a4e;
+}
+
 .left-item-bx {
   display: flex;
   align-items: flex-start;

@@ -1,0 +1,9 @@
+Metric,Count
+Total Users,1517
+Users with Wallet (Current Method),504
+Users with Email,815
+Users with Google Login,0
+Users with Twitter Login,0
+Users with Legacy Auth (Email/Google/Twitter),815
+Users with Telegram Connected,34
+Users with Alert Subscriptions,0

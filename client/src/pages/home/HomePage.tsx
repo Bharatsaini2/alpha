@@ -1131,7 +1131,7 @@ const HomePage = () => {
               </div>
 
               {/* Quick Buy Amount */}
-              <div className="flex items-center gap-2 bg-[#161618] border border-[#2A2A2D] rounded-lg px-3 py-2.5">
+              <div className="flex items-center gap-2 bg-dark-bg border border-[#2A2A2D] rounded-lg px-3 py-2.5">
                 <span className="text-gray-400 text-xs font-medium tracking-wider uppercase whitespace-nowrap">Quick Buy Amount</span>
                 <input
                   type="number"

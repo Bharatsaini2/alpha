@@ -1,0 +1,7 @@
+Metric,Count
+Total Users,1517
+Users with walletAddress (Legacy Lowercase),504
+Users with walletAddressOriginal (Proper Case),227
+Users with Email (Legacy Auth),815
+Users with Telegram Connected,34
+Users with Alert Subscriptions,0

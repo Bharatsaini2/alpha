@@ -73,6 +73,7 @@ const config = {
           300: "#0f3460",
           400: "#0a2342",
           500: "#061b33",
+          bg: "#161618", // Custom dark background
         },
         neon: {
           blue: "#00f2ff",

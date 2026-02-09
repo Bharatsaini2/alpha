@@ -718,6 +718,14 @@ input[type="number"] {
   color: #14904d !important;
 }
 
+.sold-title.green-text {
+  color: #14904d !important;
+}
+
+.sold-title.red-text {
+  color: #df2a4e !important;
+}
+
 .sold-out-title {
   color: #df2a4e !important;
 }
@@ -1055,6 +1063,14 @@ input[type="number"] {
 
 .sold-title {
   color: #14904d;
+}
+
+.sold-title.green-text {
+  color: #14904d;
+}
+
+.sold-title.red-text {
+  color: #df2a4e;
 }
 
 .left-item-bx {
@@ -3308,7 +3324,7 @@ font-size: 16px;
 
 .whale-stat-value.red {
   text-transform: uppercase;
-  color: #FF0000;
+  color: #df2a4e;
   font-size: 12px;
   font-weight: 500;
   line-height: 140%;
@@ -4494,7 +4510,7 @@ font-size: 16px;
 }
 
 .card-value.red-text {
-  color: #ff4500;
+  color: #df2a4e;
 }
 
 .mobile-coin-icon {

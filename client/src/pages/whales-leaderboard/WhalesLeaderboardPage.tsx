@@ -13,7 +13,7 @@ const WhalesLeaderboardPage = () => {
           weight={true}
           italic={true}
           textColor="#ffffff"
-          strokeColor="#ff0000"
+          strokeColor="#df2a4e"
           minFontSize={24}
         />
       </div>
