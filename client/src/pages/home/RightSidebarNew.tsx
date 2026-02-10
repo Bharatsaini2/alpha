@@ -2,10 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react"
 import { IoSparklesOutline } from "react-icons/io5"
 import { RiLoader2Fill } from "react-icons/ri"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
-import {
-  faChevronDown,
-  faChevronUp,
-} from "@fortawesome/free-solid-svg-icons"
+import { faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons"
 import { Transaction, VersionedTransaction } from "@solana/web3.js"
 import DefaultTokenImage from "../../assets/default_token.svg"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
@@ -23,12 +20,11 @@ import { IoMdTrendingUp } from "react-icons/io"
 import { IoWalletOutline } from "react-icons/io5"
 import { SwapModal } from "../../components/swap/SwapModal"
 
-
 // import { MdOutlineCheckBox } from "react-icons/md";
 
 interface RightSidebarNewProps {
   selectedToken?: any
-  pageType?: 'alpha' | 'kol' // Determine which page we're on (alpha streams or kol feed)
+  pageType?: "alpha" | "kol" // Determine which page we're on (alpha streams or kol feed)
 }
 
 // Default tokens for swap
@@ -53,7 +49,7 @@ const DEFAULT_OUTPUT_TOKEN: TokenInfo = {
 
 const RightSidebarNew = ({
   selectedToken,
-  pageType = 'alpha', // Default to 'alpha' for Alpha Streams page
+  pageType = "alpha", // Default to 'alpha' for Alpha Streams page
 }: RightSidebarNewProps) => {
   // Auth hook for login modal
   const { openLoginModal } = useAuth()
@@ -94,7 +90,9 @@ const RightSidebarNew = ({
   const [outputBalance, setOutputBalance] = useState<number>(0)
   const [isSwapping, setIsSwapping] = useState(false)
   const [swapProgress, setSwapProgress] = useState<number>(0) // Progress bar percentage (0-100)
-  const [swapButtonStatus, setSwapButtonStatus] = useState<'idle' | 'executing' | 'success'>('idle') // Button animation status
+  const [swapButtonStatus, setSwapButtonStatus] = useState<
+    "idle" | "executing" | "success"
+  >("idle") // Button animation status
   const [isLoadingHotCoins, setIsLoadingHotCoins] = useState(true) // Local loading state for hot coins
   const [hotCoins, setHotCoins] = useState<any[]>([]) // Sidebar hot coins list
 
@@ -102,16 +100,15 @@ const RightSidebarNew = ({
   useEffect(() => {
     let timeoutId: NodeJS.Timeout
 
-    if (swapButtonStatus === 'success') {
+    if (swapButtonStatus === "success") {
       timeoutId = setTimeout(() => {
         // Reset ALL states as requested by user
         setInputAmount("")
         setOutputAmount("")
         setQuote(null)
 
-
         // Reset UI states
-        setSwapButtonStatus('idle')
+        setSwapButtonStatus("idle")
         setSwapProgress(0)
         setIsSwapping(false)
         clearErrors()
@@ -129,15 +126,17 @@ const RightSidebarNew = ({
       setIsLoadingHotCoins(true)
       try {
         let coins: any[] = []
-        if (pageType === 'kol') {
-          const response = await topCoinsAPI.getTopKolCoins({ timeframe: '24H' }) // Default to 24H
+        if (pageType === "kol") {
+          const response = await topCoinsAPI.getTopKolCoins({
+            timeframe: "24H",
+          }) // Default to 24H
           if (response.data.success) {
             // Default to small caps (matches Top KOL Page default)
             coins = response.data.data.coins.smallCaps || []
           }
         } else {
           // Default to Alpha Streams logic (Top Coins)
-          const response = await topCoinsAPI.getTopCoins({ timeframe: '24H' })
+          const response = await topCoinsAPI.getTopCoins({ timeframe: "24H" })
           if (response.data.success) {
             // Default to small caps
             coins = response.data.data.coins.smallCaps || []
@@ -180,8 +179,6 @@ const RightSidebarNew = ({
     }
   }, [selectedToken])
 
-
-
   // Fetch input token balance when wallet connects or token changes
   useEffect(() => {
     if (wallet.connected && wallet.publicKey) {
@@ -207,7 +204,13 @@ const RightSidebarNew = ({
       setInputBalance(0)
       setOutputBalance(0)
     }
-  }, [wallet.connected, wallet.publicKey, inputToken.address, outputToken.address, getBalance])
+  }, [
+    wallet.connected,
+    wallet.publicKey,
+    inputToken.address,
+    outputToken.address,
+    getBalance,
+  ])
 
   // Fetch quote when input amount or tokens change
   useEffect(() => {
@@ -262,31 +265,32 @@ const RightSidebarNew = ({
       fetchOutputBalance()
     }
 
-    window.addEventListener('wallet-balance-changed', handleBalanceChange)
+    window.addEventListener("wallet-balance-changed", handleBalanceChange)
 
     return () => {
-      window.removeEventListener('wallet-balance-changed', handleBalanceChange)
+      window.removeEventListener("wallet-balance-changed", handleBalanceChange)
     }
   }, [fetchInputBalance, fetchOutputBalance])
 
   // Listen for 'open-quick-buy' event
   useEffect(() => {
-    const handleOpenQuickBuy = (event: any) => { // Type as any to avoid CustomEvent compilation issues if strict
-      console.log('Received open-quick-buy event', event.detail);
-      const token = event.detail;
+    const handleOpenQuickBuy = (event: any) => {
+      // Type as any to avoid CustomEvent compilation issues if strict
+      console.log("Received open-quick-buy event", event.detail)
+      const token = event.detail
 
       if (token) {
-        console.log('Setting swap token info:', token);
-        setSwapTokenInfo(token);
-        setIsSwapModalOpen(true);
+        console.log("Setting swap token info:", token)
+        setSwapTokenInfo(token)
+        setIsSwapModalOpen(true)
       }
-    };
+    }
 
-    window.addEventListener('open-quick-buy', handleOpenQuickBuy);
+    window.addEventListener("open-quick-buy", handleOpenQuickBuy)
     return () => {
-      window.removeEventListener('open-quick-buy', handleOpenQuickBuy);
-    };
-  }, []); // Empty dependency array to ensure listener is always active and not re-bound unnecessarily
+      window.removeEventListener("open-quick-buy", handleOpenQuickBuy)
+    }
+  }, []) // Empty dependency array to ensure listener is always active and not re-bound unnecessarily
 
   // Fetch swap quote with debouncing (handled by useSwapApi)
   const fetchQuote = useCallback(async () => {
@@ -357,10 +361,16 @@ const RightSidebarNew = ({
       const mintsToFetch = new Set<string>()
 
       // Always fetch if price is missing OR zero
-      if ((!inputToken.usdPrice || inputToken.usdPrice === 0) && inputToken.address) {
+      if (
+        (!inputToken.usdPrice || inputToken.usdPrice === 0) &&
+        inputToken.address
+      ) {
         mintsToFetch.add(inputToken.address)
       }
-      if ((!outputToken.usdPrice || outputToken.usdPrice === 0) && outputToken.address) {
+      if (
+        (!outputToken.usdPrice || outputToken.usdPrice === 0) &&
+        outputToken.address
+      ) {
         mintsToFetch.add(outputToken.address)
       }
 
@@ -372,13 +382,13 @@ const RightSidebarNew = ({
 
         // 1. Try Jupiter Price API v2
         try {
-          const ids = addresses.join(',')
+          const ids = addresses.join(",")
           const response = await fetch(`https://api.jup.ag/price/v2?ids=${ids}`)
 
           if (response.ok) {
             const data = await response.json()
             if (data.data) {
-              Object.keys(data.data).forEach(mint => {
+              Object.keys(data.data).forEach((mint) => {
                 if (data.data[mint]?.price) {
                   prices[mint] = parseFloat(data.data[mint].price)
                 }
@@ -390,14 +400,16 @@ const RightSidebarNew = ({
         }
 
         // 2. Fallback to CoinGecko if missing prices
-        const missingMints = addresses.filter(addr => !prices[addr])
+        const missingMints = addresses.filter((addr) => !prices[addr])
         if (missingMints.length > 0) {
           try {
-            const ids = missingMints.join(',')
-            const cgResponse = await fetch(`https://api.coingecko.com/api/v3/simple/token_price/solana?contract_addresses=${ids}&vs_currencies=usd`)
+            const ids = missingMints.join(",")
+            const cgResponse = await fetch(
+              `https://api.coingecko.com/api/v3/simple/token_price/solana?contract_addresses=${ids}&vs_currencies=usd`
+            )
             if (cgResponse.ok) {
               const cgData = await cgResponse.json()
-              Object.keys(cgData).forEach(mint => {
+              Object.keys(cgData).forEach((mint) => {
                 if (cgData[mint]?.usd) {
                   prices[mint] = cgData[mint].usd
                 }
@@ -412,7 +424,7 @@ const RightSidebarNew = ({
 
         // Update state safely
         if (prices[inputToken.address]) {
-          setInputToken(prev => {
+          setInputToken((prev) => {
             // Only update if address matches (prevent race condition)
             if (prev.address === inputToken.address) {
               return { ...prev, usdPrice: prices[inputToken.address] }
@@ -421,14 +433,13 @@ const RightSidebarNew = ({
           })
         }
         if (prices[outputToken.address]) {
-          setOutputToken(prev => {
+          setOutputToken((prev) => {
             if (prev.address === outputToken.address) {
               return { ...prev, usdPrice: prices[outputToken.address] }
             }
             return prev
           })
         }
-
       } catch (e) {
         console.error("Failed to fetch prices", e)
       }
@@ -436,7 +447,9 @@ const RightSidebarNew = ({
 
     fetchLivePrices()
 
-    return () => { isMounted = false }
+    return () => {
+      isMounted = false
+    }
   }, [inputToken.address, outputToken.address])
 
   // Handle wallet connection - opens login modal which handles wallet connection
@@ -538,7 +551,9 @@ const RightSidebarNew = ({
       let halfAmount = inputBalance / 2
 
       // Reserve some SOL for transaction fees if input is SOL
-      if (inputToken.address === "So11111111111111111111111111111111111111112") {
+      if (
+        inputToken.address === "So11111111111111111111111111111111111111112"
+      ) {
         const maxAmount = Math.max(0, inputBalance - 0.01) // Reserve 0.01 SOL for fees
         halfAmount = maxAmount / 2
       }
@@ -572,7 +587,6 @@ const RightSidebarNew = ({
     }
   }, [inputBalance, inputToken.address, inputToken.decimals, showToast])
 
-
   // Handle swap execution
   const handleSwap = useCallback(async () => {
     if (!wallet.connected || !wallet.publicKey || !quote) {
@@ -600,13 +614,13 @@ const RightSidebarNew = ({
 
     try {
       setIsSwapping(true)
-      setSwapButtonStatus('executing') // Start animation
+      setSwapButtonStatus("executing") // Start animation
       setSwapProgress(0) // Reset progress
       clearErrors()
 
       // Simulate smooth progress animation
       const progressInterval = setInterval(() => {
-        setSwapProgress(prev => {
+        setSwapProgress((prev) => {
           if (prev >= 90) return prev // Cap at 90% until transaction completes
           return prev + Math.random() * 15 // Random increments for smooth animation
         })
@@ -655,7 +669,7 @@ const RightSidebarNew = ({
       showToast("Please sign the transaction in your wallet", "info")
 
       // Small delay to ensure toast renders before wallet popup
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
 
       // Send transaction (this will block until user signs or cancels)
       let signature: string
@@ -670,18 +684,19 @@ const RightSidebarNew = ({
       // Transaction successful - complete progress and show success
       clearInterval(progressInterval)
       setSwapProgress(100)
-      setSwapButtonStatus('success')
+      setSwapButtonStatus("success")
 
       // Only show success and copy if we get here (user signed)
-
 
       // Copy transaction signature to clipboard
       await navigator.clipboard.writeText(signature)
       // Show transaction success toast with "View Tx" button
-      showToast("Transaction successful!", "success", "transaction", { txSignature: signature })
+      showToast("Transaction successful!", "success", "transaction", {
+        txSignature: signature,
+      })
 
       // Dispatch global event to update balances everywhere
-      window.dispatchEvent(new CustomEvent('wallet-balance-changed'))
+      window.dispatchEvent(new CustomEvent("wallet-balance-changed"))
 
       // Calculate amounts for tracking
       const inputAmountNum =
@@ -719,8 +734,6 @@ const RightSidebarNew = ({
       // Refresh balances after successful transaction
       await fetchInputBalance()
       await fetchOutputBalance()
-
-
     } catch (error: any) {
       // Show user-friendly error messages
       let errorMessage = "Swap failed. Please try again."
@@ -749,13 +762,25 @@ const RightSidebarNew = ({
       ) {
         errorMessage = "Transaction cancelled"
         toastType = "info"
-      } else if (errorCode === "INSUFFICIENT_FUNDS" || errorMsg.toLowerCase().includes("insufficient")) {
+      } else if (
+        errorCode === "INSUFFICIENT_FUNDS" ||
+        errorMsg.toLowerCase().includes("insufficient")
+      ) {
         errorMessage = `Insufficient ${inputToken.symbol} balance`
-      } else if (errorCode === "TRANSACTION_EXPIRED" || errorMsg.toLowerCase().includes("expired")) {
+      } else if (
+        errorCode === "TRANSACTION_EXPIRED" ||
+        errorMsg.toLowerCase().includes("expired")
+      ) {
         errorMessage = "Transaction expired. Please try again."
-      } else if (errorCode === "NETWORK_ERROR" || errorMsg.toLowerCase().includes("network")) {
+      } else if (
+        errorCode === "NETWORK_ERROR" ||
+        errorMsg.toLowerCase().includes("network")
+      ) {
         errorMessage = "Network error. Please check your connection."
-      } else if (errorCode === "RATE_LIMIT_EXCEEDED" || errorMsg.toLowerCase().includes("rate limit")) {
+      } else if (
+        errorCode === "RATE_LIMIT_EXCEEDED" ||
+        errorMsg.toLowerCase().includes("rate limit")
+      ) {
         errorMessage = "Too many requests. Please wait a moment."
       } else if (
         errorMsg &&
@@ -764,7 +789,8 @@ const RightSidebarNew = ({
           errorMsg.toLowerCase().includes("custom program error") ||
           errorMsg.toLowerCase().includes("0x1"))
       ) {
-        errorMessage = "Transaction simulation failed. Try increasing slippage or reducing amount."
+        errorMessage =
+          "Transaction simulation failed. Try increasing slippage or reducing amount."
       } else if (
         errorMsg &&
         typeof errorMsg === "string" &&
@@ -779,7 +805,7 @@ const RightSidebarNew = ({
       showToast(errorMessage, toastType)
 
       // Reset button animation states on error
-      setSwapButtonStatus('idle')
+      setSwapButtonStatus("idle")
       setSwapProgress(0)
     } finally {
       setIsSwapping(false)
@@ -804,7 +830,7 @@ const RightSidebarNew = ({
   // Handle Quick Buy - opens SwapModal popup like HomePageNew
   const handleQuickBuy = useCallback(
     async (token: any) => {
-      console.log('Quick Buy clicked:', token)
+      console.log("Quick Buy clicked:", token)
 
       if (!wallet.connected) {
         showToast("Please connect your wallet first", "error")
@@ -820,7 +846,7 @@ const RightSidebarNew = ({
         decimals: token.decimals || 9,
       }
 
-      console.log('Opening SwapModal with token:', tokenInfo)
+      console.log("Opening SwapModal with token:", tokenInfo)
 
       // Open SwapModal in 'quickBuy' mode with SOL as input token
       const savedAmount = loadQuickBuyAmount()
@@ -904,10 +930,6 @@ const RightSidebarNew = ({
     outputToken.address,
   ])
 
-
-
-
-
   const [showRateDetails, setShowRateDetails] = useState(false)
 
   const handleToggleSwap = () => {
@@ -928,11 +950,18 @@ const RightSidebarNew = ({
 
       // Log suspicious prices for debugging
       if (token.usdPrice && token.usdPrice >= 100000) {
-        console.warn(`⚠️ Suspicious price for ${token.symbol}: $${token.usdPrice.toLocaleString()} - ignoring`)
+        console.warn(
+          `⚠️ Suspicious price for ${token.symbol}: $${token.usdPrice.toLocaleString()} - ignoring`
+        )
       }
 
       // Fallback for stablecoins
-      if (['USDC', 'USDT', 'USDH', 'USDS', 'DAI'].includes(token.symbol.toUpperCase())) return 1
+      if (
+        ["USDC", "USDT", "USDH", "USDS", "DAI"].includes(
+          token.symbol.toUpperCase()
+        )
+      )
+        return 1
       return 0
     }
 
@@ -960,14 +989,19 @@ const RightSidebarNew = ({
       // If both have prices but values are way off (>10% difference), something is wrong
       else if (inVal > 0 && outVal > 0) {
         const ratio = Math.abs(inVal - outVal) / Math.max(inVal, outVal)
-        if (ratio > 0.10) {
-          console.warn(`⚠️ USD values differ by ${(ratio * 100).toFixed(1)}%:`, {
-            input: `${inputToken.symbol} = $${inVal.toFixed(2)}`,
-            output: `${outputToken.symbol} = $${outVal.toFixed(2)}`
-          })
+        if (ratio > 0.1) {
+          console.warn(
+            `⚠️ USD values differ by ${(ratio * 100).toFixed(1)}%:`,
+            {
+              input: `${inputToken.symbol} = $${inVal.toFixed(2)}`,
+              output: `${outputToken.symbol} = $${outVal.toFixed(2)}`,
+            }
+          )
           // Use the input value as source of truth and derive output
           outVal = inVal * 0.9925
-          console.log(`✅ Fixed: Using input value, output now = $${outVal.toFixed(2)}`)
+          console.log(
+            `✅ Fixed: Using input value, output now = $${outVal.toFixed(2)}`
+          )
         }
       }
     }
@@ -980,12 +1014,9 @@ const RightSidebarNew = ({
     return { inputUsdValue: inVal, outputUsdValue: outVal }
   }, [inputAmount, outputAmount, inputToken, outputToken, quote])
 
-
-
   return (
     <>
       {/* Toast Container */}
-
 
       {/* Token Selection Modals */}
       <TokenSelectionModal
@@ -1022,14 +1053,15 @@ const RightSidebarNew = ({
               </a>
             </div>
             <div className="d-flex align-items-center gap-2">
-
-              {isLoading && <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
-                <span>
-                  <RiLoader2Fill
-                    className={isLoadingQuote ? "animate-spin" : ""}
-                  />
-                </span>
-              </a>}
+              {isLoading && (
+                <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
+                  <span>
+                    <RiLoader2Fill
+                      className={isLoadingQuote ? "animate-spin" : ""}
+                    />
+                  </span>
+                </a>
+              )}
             </div>
           </div>
           <div className="market-card">
@@ -1168,129 +1200,149 @@ const RightSidebarNew = ({
 
             <div>
               <div className="trade-interface-wrapper">
-                <>
-                  <div className="trade-box ">
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <span className="trade-label">SELLING</span>
+                <div className="trade-box ">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <span className="trade-label">SELLING</span>
+                    <div className="d-flex align-items-center gap-1">
+                      <span className="trade-label d-flex align-items-center gap-1">
+                        {" "}
+                        <IoWalletOutline />{" "}
+                        {wallet.connected
+                          ? inputBalance.toFixed(4)
+                          : "0.00"}{" "}
+                        {inputToken.symbol}
+                      </span>
                       <div className="d-flex align-items-center gap-1">
-                        <span className="trade-label d-flex align-items-center gap-1"> <IoWalletOutline /> {wallet.connected ? inputBalance.toFixed(4) : '0.00'} {inputToken.symbol}</span>
-                        <div className="d-flex align-items-center gap-1">
-                          <button onClick={handleHalfClick} className="halft-max-btn" type="button">Half</button>
-                          <button onClick={handleMaxClick} className="halft-max-btn" type="button">Max</button>
-                        </div>
+                        <button
+                          onClick={handleHalfClick}
+                          className="halft-max-btn"
+                          type="button"
+                        >
+                          Half
+                        </button>
+                        <button
+                          onClick={handleMaxClick}
+                          className="halft-max-btn"
+                          type="button"
+                        >
+                          Max
+                        </button>
                       </div>
-
-
                     </div>
-                    <div className="trade-row">
-                      <button
-                        onClick={() => setIsInputModalOpen(true)}
-                        className="plan-btn"
-                        type="button"
-                      >
-                        <span className="dollar-pic-bx">
-                          <img
-                            src={inputToken.image || DefaultTokenImage}
-                            alt={inputToken.symbol}
-                            onError={(e) => {
-                              e.currentTarget.src = DefaultTokenImage
-                            }}
-                          />
-                        </span>
-                        <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
-                          {inputToken.symbol}
-                        </span>
-                        <FontAwesomeIcon icon={faChevronDown} />
-                      </button>
-
-                      <div className="amount-box">
-                        <input
-                          type="number"
-                          value={inputAmount}
-                          onChange={(e) => handleInputAmountChange(e.target.value)}
-                          placeholder="0.00"
-                          className="amount-input main-amount"
-                          // disabled={!wallet.connected}
-                          min="0"
-                          step="any"
+                  </div>
+                  <div className="trade-row">
+                    <button
+                      onClick={() => setIsInputModalOpen(true)}
+                      className="plan-btn"
+                      type="button"
+                    >
+                      <span className="dollar-pic-bx">
+                        <img
+                          src={inputToken.image || DefaultTokenImage}
+                          alt={inputToken.symbol}
+                          onError={(e) => {
+                            e.currentTarget.src = DefaultTokenImage
+                          }}
                         />
-                        <div className="d-flex justify-content-end align-items-center">
-                          <span className="text-xs text-gray-400">
-                            {inputUsdValue > 0
-                              ? `~$${inputUsdValue.toFixed(2)}`
+                      </span>
+                      <span style={{ color: "#EBEBEB", margin: "0px 5px" }}>
+                        {inputToken.symbol}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronDown} />
+                    </button>
+
+                    <div className="amount-box">
+                      <input
+                        type="number"
+                        value={inputAmount}
+                        onChange={(e) =>
+                          handleInputAmountChange(e.target.value)
+                        }
+                        placeholder="0.00"
+                        className="amount-input main-amount"
+                        // disabled={!wallet.connected}
+                        min="0"
+                        step="any"
+                      />
+                      <div className="d-flex justify-content-end align-items-center">
+                        <span className="text-xs text-gray-400">
+                          {inputUsdValue > 0
+                            ? `~$${inputUsdValue.toFixed(2)}`
+                            : "$0.00"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="swap-toggle-bx">
+                  <button
+                    type="button"
+                    className="swap-icon swap-icon-square rounded-none"
+                    onClick={handleToggleSwap}
+                    style={{ borderRadius: "0px" }}
+                  >
+                    ⇅
+                  </button>
+                </div>
+
+                <div className="trade-box trade-new-bx">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <span className="trade-label">buying</span>
+                    <span className="trade-label d-flex align-items-center gap-1">
+                      <IoWalletOutline />{" "}
+                      {wallet.connected ? outputBalance.toFixed(4) : "0.00"}{" "}
+                      {outputToken.symbol}
+                    </span>
+                  </div>
+                  <div className="trade-row">
+                    <button
+                      onClick={() => setIsOutputModalOpen(true)}
+                      className="plan-btn"
+                      type="button"
+                    >
+                      <span className="dollar-pic-bx">
+                        <img
+                          src={outputToken.image || DefaultTokenImage}
+                          alt={outputToken.symbol}
+                          onError={(e) => {
+                            e.currentTarget.src = DefaultTokenImage
+                          }}
+                        />
+                      </span>
+                      <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
+                        {outputToken.symbol}
+                      </span>
+                      <FontAwesomeIcon icon={faChevronDown} />
+                    </button>
+                    <div className="amount-box">
+                      {isLoadingQuote || isLoading ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-end",
+                            gap: "4px",
+                          }}
+                        >
+                          <div className="h-7 w-36 bg-[#1a1a1a] animate-pulse" />
+                          <div className="h-4 w-20 bg-[#1a1a1a] animate-pulse" />
+                        </div>
+                      ) : (
+                        <>
+                          <h2>{outputAmount || "0.00"}</h2>
+                          <span>
+                            {outputUsdValue > 0
+                              ? `~$${outputUsdValue.toFixed(2)}`
                               : "$0.00"}
                           </span>
-
-                        </div>
-                      </div>
+                        </>
+                      )}
                     </div>
                   </div>
-
-                  <div className="swap-toggle-bx">
-                    <button
-                      type="button"
-                      className="swap-icon"
-                      onClick={handleToggleSwap}
-                    >
-                      ⇅
-                    </button>
-                  </div>
-
-                  <div className="trade-box trade-new-bx">
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <span className="trade-label">buying</span>
-                      <span className="trade-label d-flex align-items-center gap-1">
-
-                        <IoWalletOutline /> {wallet.connected ? outputBalance.toFixed(4) : '0.00'} {outputToken.symbol}
-                      </span>
-                    </div>
-                    <div className="trade-row">
-                      <button
-                        onClick={() => setIsOutputModalOpen(true)}
-                        className="plan-btn"
-                        type="button"
-                      >
-                        <span className="dollar-pic-bx">
-                          <img
-                            src={outputToken.image || DefaultTokenImage}
-                            alt={outputToken.symbol}
-                            onError={(e) => {
-                              e.currentTarget.src = DefaultTokenImage
-                            }}
-                          />
-                        </span>
-                        <span style={{ color: "#EBEBEB", margin: "0px 4px" }}>
-                          {outputToken.symbol}
-                        </span>
-                        <FontAwesomeIcon icon={faChevronDown} />
-                      </button>
-                      <div className="amount-box">
-                        {isLoadingQuote || isLoading ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                            <div className="h-7 w-36 bg-[#1a1a1a] animate-pulse" />
-                            <div className="h-4 w-20 bg-[#1a1a1a] animate-pulse" />
-                          </div>
-                        ) : (
-                          <>
-                            <h2>{outputAmount || "0.00"}</h2>
-                            <span>
-                              {outputUsdValue > 0
-                                ? `~$${outputUsdValue.toFixed(2)}`
-                                : "$0.00"}
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-
-
-                    </div>
-                  </div>
-                </>
+                </div>
               </div>
-
             </div>
-
 
             {/* <div>
                   {!wallet.connected ? (
@@ -1348,15 +1400,15 @@ const RightSidebarNew = ({
                       <span className="corner bottom-left"></span>
                     </button>
                   )}
-               
+
             </div> */}
 
-
-            <div style={{ marginTop: '10px' }}>
-              {!wallet.connected ? (
+            <div style={{ marginTop: "10px" }}>
+              {!wallet?.connected ? (
                 <button
                   onClick={handleConnectWallet}
-                  className="connect-wallet-btn "
+                  className="connect-wallet-btn"
+                  style={{ backgroundColor: "#162ECD" }}
                   disabled={isWalletLoading}
                   type="button"
                 >
@@ -1366,7 +1418,7 @@ const RightSidebarNew = ({
                       CONNECTING...
                     </span>
                   ) : (
-                    "CONNECT WALLET"
+                    "Connect"
                   )}
 
                   <span className="corner top-right"></span>
@@ -1377,12 +1429,13 @@ const RightSidebarNew = ({
                   onClick={handleSwap}
                   className="connect-wallet-btn"
                   style={{
-                    position: 'relative',
-                    overflow: 'hidden',
-                    backgroundColor: swapButtonStatus === 'executing' ? '#050508' : '#162ECD',
-                    transition: 'background-color 0.3s ease'
+                    position: "relative",
+                    overflow: "hidden",
+                    backgroundColor:
+                      swapButtonStatus === "executing" ? "#050508" : "#162ECD",
+                    transition: "background-color 0.3s ease",
                   }}
-                  disabled={isSwapDisabled || swapButtonStatus !== 'idle'}
+                  disabled={isSwapDisabled || swapButtonStatus !== "idle"}
                   type="button"
                   title={
                     !inputAmount || parseFloat(inputAmount) <= 0
@@ -1397,27 +1450,35 @@ const RightSidebarNew = ({
                   }
                 >
                   {/* Progress Bar Background */}
-                  {swapButtonStatus !== 'idle' && (
+                  {swapButtonStatus !== "idle" && (
                     <div
                       style={{
-                        position: 'absolute',
+                        position: "absolute",
                         top: 0,
                         left: 0,
-                        height: '100%',
+                        height: "100%",
                         width: `${swapProgress}%`,
-                        background: 'linear-gradient(90deg, #162ECD 0%, #162ECD 85%, rgba(22, 46, 205, 0) 100%)',
-                        filter: 'drop-shadow(0 0 10px rgba(22, 46, 205, 0.5))',
-                        transition: 'width 0.3s ease',
-                        zIndex: 0
+                        background:
+                          "linear-gradient(90deg, #162ECD 0%, #162ECD 85%, rgba(22, 46, 205, 0) 100%)",
+                        filter: "drop-shadow(0 0 10px rgba(22, 46, 205, 0.5))",
+                        transition: "width 0.3s ease",
+                        zIndex: 0,
                       }}
                     />
                   )}
 
                   {/* Button Text */}
-                  <span style={{ position: 'relative', zIndex: 1, fontWeight: 600, letterSpacing: '1px' }}>
-                    {swapButtonStatus === 'executing' ? (
+                  <span
+                    style={{
+                      position: "relative",
+                      zIndex: 1,
+                      fontWeight: 600,
+                      letterSpacing: "1px",
+                    }}
+                  >
+                    {swapButtonStatus === "executing" ? (
                       "EXECUTING TRANSACTION ..."
-                    ) : swapButtonStatus === 'success' ? (
+                    ) : swapButtonStatus === "success" ? (
                       "TRANSACTION SUCCESSFUL"
                     ) : isLoadingQuote ? (
                       <span className="flex items-center justify-center">
@@ -1434,11 +1495,6 @@ const RightSidebarNew = ({
                 </button>
               )}
             </div>
-
-
-
-
-
 
             {/* <div className="">
                             {!wallet.connected ? (
@@ -1496,7 +1552,7 @@ const RightSidebarNew = ({
                                     <span className="corner top-right"></span>
                                     <span className="corner bottom-left"></span>
                                 </button>
-                                
+
                             )}
              </div> */}
 
@@ -1601,7 +1657,9 @@ const RightSidebarNew = ({
       `}</style>
       <div className="market-bx ultra-pro-bx nw-market-bx">
         <div className="py-2">
-          <span className="trading-icon-title">{pageType === 'kol' ? 'HOT KOL COINS' : 'HOT COINS'}</span>
+          <span className="trading-icon-title">
+            {pageType === "kol" ? "HOT KOL COINS" : "HOT COINS"}
+          </span>
         </div>
         <div className="hot-coins-card">
           {isLoadingHotCoins ? (
@@ -1609,16 +1667,29 @@ const RightSidebarNew = ({
             Array.from({ length: 5 }).map((_, i) => (
               <div className="coin-row" key={`skeleton-${i}`}>
                 <div className="coin-left">
-                  <span className="rank" style={{ opacity: 0.3 }}>#{i + 1}</span>
-                  <div className="coin-circle bg-[#1a1a1a] animate-pulse" style={{ border: 'none', flexShrink: 0, background: '#1a1a1a' }} />
-                  <div className="coin-info" style={{ gap: '6px' }}>
+                  <span className="rank" style={{ opacity: 0.3 }}>
+                    #{i + 1}
+                  </span>
+                  <div
+                    className="coin-circle bg-[#1a1a1a] animate-pulse"
+                    style={{
+                      border: "none",
+                      flexShrink: 0,
+                      background: "#1a1a1a",
+                    }}
+                  />
+                  <div className="coin-info" style={{ gap: "6px" }}>
                     <div className="h-4 w-20 bg-[#1a1a1a] animate-pulse" />
                     <div className="h-3 w-12 bg-[#1a1a1a] animate-pulse" />
                   </div>
                 </div>
                 <button
                   className="quick-buy-btn"
-                  style={{ whiteSpace: 'nowrap', flexShrink: 0, pointerEvents: 'none' }}
+                  style={{
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    pointerEvents: "none",
+                  }}
                 >
                   QUICK BUY
                 </button>
@@ -1627,26 +1698,41 @@ const RightSidebarNew = ({
           ) : hotCoins.length > 0 ? (
             hotCoins.map((coin, index) => (
               <div className="coin-row" key={coin.address || index}>
-                <div className="coin-left" style={{ flex: 1, minWidth: 0, gap: '12px' }}>
-                  <span className="rank" style={{ minWidth: '20px' }}>#{index + 1}</span>
+                <div
+                  className="coin-left"
+                  style={{ flex: 1, minWidth: 0, gap: "12px" }}
+                >
+                  <span className="rank" style={{ minWidth: "20px" }}>
+                    #{index + 1}
+                  </span>
                   {coin.image ? (
                     <img
                       src={coin.image}
                       className="coin-img"
                       alt={coin.symbol}
                       style={{ flexShrink: 0 }}
-                      onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+                      onError={(
+                        e: React.SyntheticEvent<HTMLImageElement, Event>
+                      ) => {
                         e.currentTarget.src = DefaultTokenImage
                       }}
                     />
                   ) : (
                     <div className="coin-circle" style={{ flexShrink: 0 }}>
-                      <span>{coin.symbol?.charAt(0) || '?'}</span>
+                      <span>{coin.symbol?.charAt(0) || "?"}</span>
                     </div>
                   )}
                   <div className="coin-info" style={{ flex: 1, minWidth: 0 }}>
-                    <div className="coin-title" style={{ flexWrap: 'nowrap', overflow: 'hidden' }}>
-                      <span className="coin-name" style={{ whiteSpace: 'nowrap' }}>{coin.symbol || 'Unknown'}</span>
+                    <div
+                      className="coin-title"
+                      style={{ flexWrap: "nowrap", overflow: "hidden" }}
+                    >
+                      <span
+                        className="coin-name"
+                        style={{ whiteSpace: "nowrap" }}
+                      >
+                        {coin.symbol || "Unknown"}
+                      </span>
 
                       {/* Only show symbol for cleaner alignment in sidebar */}
                       {/* Name rendering removed to fix alignment gap */}
@@ -1656,20 +1742,51 @@ const RightSidebarNew = ({
                       </span>
 
                       {/* Scrolling Full Name */}
-                      <div className="local-marquee-container" style={{ marginLeft: '8px', width: '100px', flex: 'none' }}>
+                      <div
+                        className="local-marquee-container"
+                        style={{
+                          marginLeft: "8px",
+                          width: "100px",
+                          flex: "none",
+                        }}
+                      >
                         <div
                           className="local-marquee-track"
                           style={{ animationDelay: `-${Math.random() * 5}s` }}
                         >
-                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
-                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
-                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
-                          <span className="coin-sub" style={{ whiteSpace: 'nowrap' }}>{coin.name || 'Unknown'}</span>
+                          <span
+                            className="coin-sub"
+                            style={{ whiteSpace: "nowrap" }}
+                          >
+                            {coin.name || "Unknown"}
+                          </span>
+                          <span
+                            className="coin-sub"
+                            style={{ whiteSpace: "nowrap" }}
+                          >
+                            {coin.name || "Unknown"}
+                          </span>
+                          <span
+                            className="coin-sub"
+                            style={{ whiteSpace: "nowrap" }}
+                          >
+                            {coin.name || "Unknown"}
+                          </span>
+                          <span
+                            className="coin-sub"
+                            style={{ whiteSpace: "nowrap" }}
+                          >
+                            {coin.name || "Unknown"}
+                          </span>
                         </div>
                       </div>
                     </div>
                     <div className="coin-meta">
-                      MC: ${coin.marketCap ? (parseFloat(coin.marketCap) / 1000000).toFixed(2) : '0'}M
+                      MC: $
+                      {coin.marketCap
+                        ? (parseFloat(coin.marketCap) / 1000000).toFixed(2)
+                        : "0"}
+                      M
                     </div>
                   </div>
                 </div>
@@ -1686,14 +1803,14 @@ const RightSidebarNew = ({
                   aria-label={`Quick buy ${coin.symbol} token`}
                   title={`Quick buy this token with SOL`}
                   disabled={!wallet.connected}
-                  style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                  style={{ whiteSpace: "nowrap", flexShrink: 0 }}
                 >
                   QUICK BUY
                 </button>
               </div>
             ))
           ) : (
-            <div style={{ padding: '20px', textAlign: 'center', opacity: 0.5 }}>
+            <div style={{ padding: "20px", textAlign: "center", opacity: 0.5 }}>
               No hot coins available
             </div>
           )}
@@ -1713,7 +1830,8 @@ const RightSidebarNew = ({
           symbol: "SOL",
           name: "Solana",
           decimals: 9,
-          image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
+          image:
+            "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
         }}
         initialOutputToken={swapTokenInfo}
         initialAmount={quickBuyAmount}

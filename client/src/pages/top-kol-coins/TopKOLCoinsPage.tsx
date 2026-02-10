@@ -10,7 +10,10 @@ import { FaRegCopy } from "react-icons/fa6"
 import { TfiReload } from "react-icons/tfi"
 import { useToast } from "../../contexts/ToastContext"
 import { topCoinsAPI } from "../../lib/api"
-import { TopKolCoin, TopKolCoinsParams, Trade } from "../../lib/types"
+import { TopKolCoin, TopKolCoinsParams } from "../../lib/types"
+import MobileExpandedCard, {
+  ExtendedTrade,
+} from "../../components/MobileExpandedCard"
 import SwapModal from "../../components/swap/SwapModal"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import {
@@ -18,6 +21,7 @@ import {
   loadQuickBuyAmount,
 } from "../../utils/quickBuyValidation"
 import { formatNumber } from "../../utils/FormatNumber"
+import { truncateMiddle } from "../../utils/formatText"
 import DefaultTokenImage from "../../assets/default_token.svg"
 import { LastUpdatedTicker } from "../../components/TicketComponent"
 import { TokenInfo } from "../../components/swap/TokenSelectionModal"
@@ -233,13 +237,19 @@ function TopKOLCoinsPage() {
     return `${minutes}m ${remainingSeconds}s`
   }
 
-  const getCoinTrades = (coin: TopKolCoin): Trade[] => {
+  const getCoinTrades = (coin: TopKolCoin): ExtendedTrade[] => {
     if (!coin.chartData || coin.chartData.length === 0) {
       return []
     }
 
     // Get all trades from all chart data points
-    const allTrades = coin.chartData.flatMap((point) => point.trades || [])
+    const allTrades = coin.chartData.flatMap((point) => {
+      if (!point.trades) return []
+      return point.trades.map((trade) => ({
+        ...trade,
+        marketCap: point.marketCap,
+      }))
+    })
 
     // Filter out invalid trades and sort by timestamp (newest first)
     const validTrades = allTrades
@@ -291,12 +301,12 @@ function TopKOLCoinsPage() {
     const options: ApexOptions = {
       chart: {
         type: "line",
-        background: "#0A0A0A",
+        background: "transparent",
         foreColor: "#ebebeb",
         toolbar: { show: false },
         animations: { enabled: false },
       },
-      grid: { strokeDashArray: 3, borderColor: "#2a2a2a" },
+      grid: { strokeDashArray: 0, borderColor: "#2a2a2a" },
       xaxis: {
         categories,
         axisBorder: { color: "#2a2a2a" },
@@ -309,19 +319,23 @@ function TopKOLCoinsPage() {
             activeChartTab === "inflow" ? "NET INFLOW" : "NET OUTFLOW",
           labels: {
             formatter: (val: number) => {
-              if (val % 100000 === 0) return `${val / 1000}K($)`
+              if (val % 200000 === 0) return `${val / 1000}k`
               return ""
             },
             style: { colors: "#8f8f8f", fontSize: "11px" },
           },
           title: {
-            text: activeChartTab === "inflow"
-              ? "NET INFLOW (THOUSANDS USD)"
-              : "NET OUTFLOW (THOUSANDS USD)",
-            style: { color: "#8f8f8f", fontSize: "11px" },
+            text:
+              activeChartTab === "inflow"
+                ? "NET INFLOW (THOUSAND USD)"
+                : "NET OUTFLOW (THOUSAND USD)",
+            style: {
+              color: activeChartTab === "inflow" ? "#13904E" : "#DF2A4E",
+              fontSize: "11px",
+            },
           },
           min: 0,
-          max: 400000,
+          max: 800000,
           tickAmount: 8,
         },
         {
@@ -329,7 +343,7 @@ function TopKOLCoinsPage() {
           seriesName: "WHALE COUNT",
           labels: {
             formatter: (val: number) => {
-              if (val % 1 === 0) return val.toFixed(0)
+              if (val % 2 === 0) return val.toFixed(0)
               return ""
             },
             style: { colors: "#8f8f8f", fontSize: "11px" },
@@ -339,7 +353,7 @@ function TopKOLCoinsPage() {
             style: { color: "#8f8f8f", fontSize: "11px" },
           },
           min: 0,
-          max: 4,
+          max: 8,
           tickAmount: 8,
         },
       ],
@@ -727,7 +741,7 @@ function TopKOLCoinsPage() {
                                         alt={coin.symbol}
                                       />
                                     </span>
-                                    {coin.name}
+                                    {truncateMiddle(coin.name)}
                                     <span className="">
                                       <button
                                         className="tb-cpy-btn"
@@ -783,7 +797,7 @@ function TopKOLCoinsPage() {
 
                                               <div className="whale-card-info">
                                                 <h4 className="whale-card-title">
-                                                  {coin.name}
+                                                  {truncateMiddle(coin.name)}
                                                 </h4>
                                                 <p className="whale-card-symbol">
                                                   ${coin.symbol}
@@ -1126,379 +1140,14 @@ function TopKOLCoinsPage() {
 
                             {/* Expandable content for mobile */}
                             {openRows[coin.id] && (
-                              <>
-                                <div
-                                  className="mt-3 pt-3 border-top border-secondary"
-                                  style={{
-                                    margin: "0 -16px",
-                                    padding: "0 16px",
-                                  }}
-                                >
-                                  <div className="expand-tp-title mb-2">
-                                    <div className="">
-                                      <div className="text-center mb-3">
-                                        <p
-                                          className="text-uppercase mb-0"
-                                          style={{
-                                            color: "#8F8F8F",
-                                            fontSize: "11px",
-                                            letterSpacing: "1px",
-                                          }}
-                                        >
-                                          KOL ACTIVITY LAST {timeframeFilter}
-                                        </p>
-                                      </div>
-
-                                      {/* Coin Info Box - NO BORDER RADIUS */}
-                                      <div
-                                        className="p-3 mb-3"
-                                        style={{
-                                          backgroundColor: "#111",
-                                          borderRadius: "0px",
-                                          border: "1px solid #222",
-                                        }}
-                                      >
-                                        <div className="d-flex align-items-center gap-3 mb-3">
-                                          <img
-                                            src={
-                                              coin.imageUrl || DefaultTokenImage
-                                            }
-                                            alt={coin.symbol}
-                                            style={{
-                                              width: "48px",
-                                              height: "48px",
-                                              borderRadius: "0px",
-                                            }}
-                                          />
-                                          <div>
-                                            <h5
-                                              className="mb-0 fw-bold text-white"
-                                              style={{ fontSize: "16px" }}
-                                            >
-                                              {coin.name}
-                                            </h5>
-                                            <div className="d-flex align-items-center gap-2 mt-1">
-                                              <span
-                                                style={{
-                                                  color: "#8F8F8F",
-                                                  fontSize: "12px",
-                                                }}
-                                              >
-                                                ${coin.symbol}
-                                              </span>
-                                            </div>
-                                            <div className="d-flex align-items-center gap-1 mt-1">
-                                              <span
-                                                style={{
-                                                  color: "#8F8F8F",
-                                                  fontSize: "12px",
-                                                  fontFamily: "monospace",
-                                                }}
-                                              >
-                                                {coin.tokenAddress.slice(0, 4)}
-                                                ...{coin.tokenAddress.slice(-4)}
-                                              </span>
-                                              <button
-                                                className="p-0 border-0 bg-transparent"
-                                                onClick={(e) => {
-                                                  e.stopPropagation()
-                                                  handleCopyTokenAddress(
-                                                    coin.tokenAddress
-                                                  )
-                                                }}
-                                                style={{ color: "#8F8F8F" }}
-                                              >
-                                                <LuCopy size={12} />
-                                              </button>
-                                            </div>
-                                          </div>
-                                        </div>
-
-                                        <button
-                                          className="w-100 py-2 fw-bold text-white text-uppercase"
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleQuickBuy(coin)
-                                          }}
-                                          style={{
-                                            backgroundColor: "transparent",
-                                            border: "1px solid #333",
-                                            borderRadius: "0px",
-                                            fontSize: "13px",
-                                            letterSpacing: "0.5px",
-                                          }}
-                                        >
-                                          Quick Buy
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Stats Section */}
-                                <div className="mb-4 d-flex flex-column gap-2">
-                                  <div className="d-flex justify-content-between align-items-center">
-                                    <span
-                                      style={{
-                                        color: "#8F8F8F",
-                                        fontSize: "11px",
-                                        textTransform: "uppercase",
-                                      }}
-                                    >
-                                      TOTAL BUYS:
-                                    </span>
-                                    <div className="text-end">
-                                      <span
-                                        className="fw-medium font-monospace"
-                                        style={{
-                                          color: "#00fa9a",
-                                          fontSize: "12px",
-                                        }}
-                                      >
-                                        +{formatNumber(coin.totalBuys)}
-                                      </span>
-                                      <span
-                                        style={{
-                                          color: "#8F8F8F",
-                                          fontSize: "12px",
-                                          marginLeft: "6px",
-                                        }}
-                                      >
-                                        ({coin.buyCount})
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="d-flex justify-content-between align-items-center">
-                                    <span
-                                      style={{
-                                        color: "#8F8F8F",
-                                        fontSize: "11px",
-                                        textTransform: "uppercase",
-                                      }}
-                                    >
-                                      TOTAL SELLS:
-                                    </span>
-                                    <div className="text-end">
-                                      <span
-                                        className="fw-medium font-monospace"
-                                        style={{
-                                          color: "#df2a4e",
-                                          fontSize: "12px",
-                                        }}
-                                      >
-                                        -{formatNumber(coin.totalSells)}
-                                      </span>
-                                      <span
-                                        style={{
-                                          color: "#8F8F8F",
-                                          fontSize: "12px",
-                                          marginLeft: "6px",
-                                        }}
-                                      >
-                                        ({coin.sellCount})
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="d-flex justify-content-between align-items-center pt-2 border-top border-secondary mt-1">
-                                    <span
-                                      style={{
-                                        color: "#8F8F8F",
-                                        fontSize: "11px",
-                                        textTransform: "uppercase",
-                                      }}
-                                    >
-                                      NET INFLOW:
-                                    </span>
-                                    <div className="text-end">
-                                      <span
-                                        className="fw-medium font-monospace"
-                                        style={{
-                                          color:
-                                            coin.netInflow >= 0
-                                              ? "#00fa9a"
-                                              : "#df2a4e",
-                                          fontSize: "12px",
-                                        }}
-                                      >
-                                        {formatNumber(coin.netInflow)}
-                                      </span>
-                                      <span
-                                        style={{
-                                          color: "#8F8F8F",
-                                          fontSize: "12px",
-                                          marginLeft: "6px",
-                                        }}
-                                      >
-                                        ({coin.buyCount + coin.sellCount})
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Transaction List Header */}
-                                <div
-                                  className="d-flex text-uppercase mb-2 px-2 py-1"
-                                  style={{
-                                    color: "#8F8F8F",
-                                    fontSize: "10px",
-                                    fontWeight: 600,
-                                  }}
-                                >
-                                  <div style={{ width: "15%" }}>TYPE</div>
-                                  <div style={{ width: "35%" }}>MAKER</div>
-                                  <div
-                                    style={{ width: "25%", textAlign: "right" }}
-                                  >
-                                    USD
-                                  </div>
-                                  <div
-                                    style={{ width: "25%", textAlign: "right" }}
-                                  >
-                                    MC
-                                  </div>
-                                </div>
-
-                                <div className="d-flex flex-column gap-1">
-                                  {getCoinTrades(coin).length === 0 ? (
-                                    <div
-                                      className="text-center py-3"
-                                      style={{
-                                        color: "#8F8F8F",
-                                        fontSize: "12px",
-                                      }}
-                                    >
-                                      No recent transactions
-                                    </div>
-                                  ) : (
-                                    getCoinTrades(coin).map((trade, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="d-flex align-items-center px-2 py-2 gap-2"
-                                        style={{
-                                          backgroundColor: "#0A0A0A",
-                                          borderRadius: "0px",
-                                        }}
-                                      >
-                                        {/* Type Column: B/S Badge + Time */}
-                                        <div
-                                          style={{ width: "18%" }}
-                                          className="d-flex align-items-center gap-1"
-                                        >
-                                          <div
-                                            className="d-flex align-items-center justify-content-center fw-bold text-white"
-                                            style={{
-                                              minWidth: "18px",
-                                              width: "18px",
-                                              height: "18px",
-                                              backgroundColor:
-                                                trade.type === "buy"
-                                                  ? "#00fa9a"
-                                                  : "#df2a4e",
-                                              borderRadius: "0px",
-                                              fontSize: "10px",
-                                              lineHeight: 1,
-                                            }}
-                                          >
-                                            {trade.type === "buy" ? "B" : "S"}
-                                          </div>
-                                          <div
-                                            style={{
-                                              color:
-                                                trade.type === "buy"
-                                                  ? "#00fa9a"
-                                                  : "#df2a4e",
-                                              fontSize: "10px",
-                                              fontWeight: "500",
-                                            }}
-                                          >
-                                            {(() => {
-                                              const diff =
-                                                new Date().getTime() -
-                                                new Date(
-                                                  trade.timestamp
-                                                ).getTime()
-                                              const seconds = Math.floor(
-                                                diff / 1000
-                                              )
-                                              if (seconds < 60)
-                                                return `${seconds}S`
-                                              return `${Math.floor(seconds / 60)}M`
-                                            })()}
-                                          </div>
-                                        </div>
-
-                                        {/* Maker Column: Name on top, Address below in grey */}
-                                        <div
-                                          style={{ width: "32%" }}
-                                          className="d-flex flex-column"
-                                        >
-                                          <div
-                                            className="text-white text-truncate"
-                                            style={{
-                                              fontSize: "11px",
-                                              fontWeight: "400",
-                                              fontFamily:
-                                                "IBM Plex Mono, monospace",
-                                            }}
-                                          >
-                                            Whale
-                                          </div>
-                                          <div
-                                            style={{
-                                              color: "#666",
-                                              fontSize: "9px",
-                                              fontFamily:
-                                                "IBM Plex Mono, monospace",
-                                            }}
-                                          >
-                                            {trade.whaleAddress.slice(0, 4)}...
-                                            {trade.whaleAddress.slice(-4)}
-                                          </div>
-                                        </div>
-
-                                        {/* USD Column */}
-                                        <div
-                                          style={{
-                                            width: "25%",
-                                            textAlign: "right",
-                                          }}
-                                        >
-                                          <span
-                                            className={
-                                              trade.type === "buy"
-                                                ? "sold-title"
-                                                : "sold-out-title"
-                                            }
-                                            style={{ fontSize: "11px" }}
-                                          >
-                                            ${formatNumber(trade.amount)}
-                                          </span>
-                                        </div>
-
-                                        {/* MC Column */}
-                                        <div
-                                          style={{
-                                            width: "25%",
-                                            textAlign: "right",
-                                          }}
-                                        >
-                                          <div
-                                            className="text-white"
-                                            style={{
-                                              fontSize: "11px",
-                                              fontWeight: "400",
-                                              fontFamily:
-                                                "IBM Plex Mono, monospace",
-                                            }}
-                                          >
-                                            ${formatNumber(coin.marketCap)}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                              </>
+                              <MobileExpandedCard
+                                coin={coin}
+                                timeframe={timeframeFilter}
+                                trades={getCoinTrades(coin)}
+                                onCopyAddress={handleCopyTokenAddress}
+                                onQuickBuy={handleQuickBuy}
+                                title="KOL ACTIVITY"
+                              />
                             )}
                           </div>
                         ))}
@@ -1557,14 +1206,18 @@ function TopKOLCoinsPage() {
                       </div>
                     </div>
                     <div style={{ padding: "0 12px" }}>
-                      <ReactApexChart
-                        options={desktopChartData.options}
-                        series={desktopChartData.series}
-                        height={380}
-                      />
+                      <div className="chart-canvas-wrapper">
+                        <ReactApexChart
+                          options={desktopChartData.options}
+                          series={desktopChartData.series}
+                          height={380}
+                        />
+                      </div>
                     </div>
                   </div>
-                  <div className={`mobile-chart-view d-lg-none ${activeView === "chart" ? "" : "d-none"}`}>
+                  <div
+                    className={`mobile-chart-view d-lg-none ${activeView === "chart" ? "" : "d-none"}`}
+                  >
                     <div className="mobile-chart-header">
                       <h4>
                         WHALE NET{" "}

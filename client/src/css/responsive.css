@@ -1,7 +1,7 @@
 /* Global mobile overflow fix */
 html,
 body {
-  max-width: 100vw !important;
+  max-width: 100% !important;
   overflow-x: hidden !important;
 }
 
@@ -17,13 +17,23 @@ body {
   }
 }
 
+@media (min-width: 769px) {
+  .popup-close-btn {
+    display: none !important;
+  }
+}
+
 @media (max-width: 991px) {
+  /* Global box-sizing for mobile to prevent border clipping */
+  * {
+    box-sizing: border-box;
+  }
 
   /* Force everything to fit viewport */
   html,
   body,
   #root {
-    max-width: 100vw !important;
+    max-width: 100% !important;
     overflow-x: hidden !important;
     width: 100% !important;
   }
@@ -45,7 +55,7 @@ body {
     min-height: 100vh;
     overflow-y: auto !important;
     overflow-x: hidden !important;
-    max-width: 100vw !important;
+    max-width: 100% !important;
     width: 100% !important;
   }
 
@@ -53,7 +63,7 @@ body {
     height: auto !important;
     min-height: 100vh;
     overflow: visible !important;
-    max-width: 100vw !important;
+    max-width: 100% !important;
     width: 100% !important;
   }
 
@@ -63,7 +73,7 @@ body {
     min-height: 0;
     padding: 8px 16px !important;
     grid-template-columns: 1fr;
-    max-width: 100vw !important;
+    max-width: 100% !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
@@ -378,6 +388,7 @@ body {
 
   .mobile-searching-bx {
     flex-direction: column;
+    gap: 12px;
   }
 
   .search-container {
@@ -390,6 +401,19 @@ body {
 
   .nw-quick-bx .quick-btn {
     line-height: 0px;
+  }
+
+  /* Mobile filter buttons alignment */
+  .plan-btn {
+    justify-content: space-between !important;
+    text-align: left !important;
+  }
+
+  /* Filter icon button - center aligned */
+  .plan-btn.d-block {
+    justify-content: center !important;
+    text-align: center !important;
+    display: flex !important;
   }
 }
 
@@ -455,7 +479,7 @@ body {
   /* === TELEGRAM SUBSCRIPTION PAGE MOBILE FIX === */
   .telegram-subscription-section {
     padding: 16px 8px !important;
-    max-width: 100vw !important;
+    max-width: 100% !important;
     overflow-x: hidden !important;
   }
 
@@ -479,49 +503,114 @@ body {
   }
 
   /* === WHALE/KOL ALERT POPUP MOBILE FIX === */
+  /* Revert to sticky behavior (absolute relative to button) */
   .filter-dropdown-menu {
-    position: fixed !important;
-    left: 50% !important;
-    top: 50% !important;
-    transform: translate(-50%, -50%) !important;
+    position: absolute !important;
+    top: 100% !important;
+    bottom: auto !important;
+    left: auto !important;
+    transform: none !important;
     max-width: 90vw !important;
-    max-height: 80vh !important;
+    max-height: 400px !important;
     overflow-y: auto !important;
-    z-index: 9999 !important;
+    z-index: 1000 !important;
     width: auto !important;
-    min-width: 280px !important;
+    min-width: 160px !important;
+    margin-top: 5px !important;
+  }
+
+  /* Handle alignment to prevent off-screen overflow */
+  .plan-btn-list li:nth-child(1) .filter-dropdown-menu,
+  .plan-btn-list li:nth-child(2) .filter-dropdown-menu {
+    left: 0 !important;
+    right: auto !important;
+  }
+
+  .plan-btn-list li:nth-child(3) .filter-dropdown-menu,
+  .plan-btn-list li:nth-child(4) .filter-dropdown-menu {
+    right: 0 !important;
+    left: auto !important;
   }
 
   .filter-dropdown-menu.w-sm {
+    width: 280px !important;
     max-width: 90vw !important;
-    width: 90vw !important;
   }
 
   .filter-dropdown-menu.w-xs {
+    width: 220px !important;
     max-width: 85vw !important;
-    width: 85vw !important;
   }
 
   /* Overlay for mobile popups */
-  .filter-dropdown-menu::before {
-    content: '';
+  .mobile-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.7);
-    z-index: -1;
+    z-index: 999; /* Below dropdown (1000) but above everything else */
+    pointer-events: auto;
+    cursor: default;
   }
 
+  /* Dropdown Header Alignment */
+  .filter-dropdown-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding-right: 8px !important; /* Space for close button if needed */
+  }
+
+  /* Close button for mobile popups */
+  .popup-close-btn {
+    display: flex !important;
+    background: transparent;
+    border: none;
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    margin-left: auto; /* Push to right if not in space-between flex */
+  }
+
+  /* Remove absolute positioning since we are putting it in flex header */
+  .filter-dropdown-menu .popup-close-btn {
+    position: static !important;
+  }
+
+  /* Specific adjustment for Subscription/KOL Alert popup */
+  /* Re-align close button in the sub-drop-header */
+  .sub-drop-header .popup-close-btn {
+     position: static !important;
+     margin-left: auto;
+  }
+}
+
+@media (min-width: 769px) {
+  .popup-close-btn {
+    display: none !important;
+  }
+  .mobile-overlay {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
   .parent-dropdown-content {
     padding: 12px !important;
   }
 
   .sub-drop-header {
-    flex-direction: column !important;
+    flex-direction: row !important;
     gap: 12px !important;
-    align-items: flex-start !important;
+    align-items: center !important;
+    justify-content: space-between !important;
   }
 
   .subscription-dropdown-menu {

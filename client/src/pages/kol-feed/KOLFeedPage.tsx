@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from "react"
 import { io } from "socket.io-client"
 import { useNavigate } from "react-router-dom"
@@ -6,33 +5,42 @@ import TransactionListSkeleton from "../../components/skeletons/TransactionListS
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { IoMdTrendingUp } from "react-icons/io"
 import { HiChevronUpDown } from "react-icons/hi2"
-import { faArrowRight, faArrowTrendDown, faClose, faFilter, faSearch } from "@fortawesome/free-solid-svg-icons"
+import {
+  faArrowRight,
+  faArrowTrendDown,
+  faClose,
+  faFilter,
+  faSearch,
+} from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import { useToast } from "../../contexts/ToastContext"
 import DefaultTokenImage from "../../assets/default_token.svg"
-import TwitterVerified from "../../assets/twitter_verified.svg"
 import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
 import RightSidebarNew from "../home/RightSidebarNew"
-import { faCopy } from "@fortawesome/free-regular-svg-icons";
-import { RiFileCopyLine } from "react-icons/ri";
+import { faCopy } from "@fortawesome/free-regular-svg-icons"
+import { RiFileCopyLine, RiVerifiedBadgeFill } from "react-icons/ri"
 
 import SwapModal from "../../components/swap/SwapModal"
-import { validateQuickBuyAmount, saveQuickBuyAmount, loadQuickBuyAmount } from "../../utils/quickBuyValidation"
+import {
+  validateQuickBuyAmount,
+  saveQuickBuyAmount,
+  loadQuickBuyAmount,
+} from "../../utils/quickBuyValidation"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useAuth } from "../../contexts/AuthContext"
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
-import KOLAlertPopup from "./KOLAlertPopup";
+import KOLAlertPopup from "./KOLAlertPopup"
 
 const hotnessOptions = [
   { label: "All", value: null },
   { label: "High (8-10)", value: "high" },
   { label: "Medium (5-7)", value: "medium" },
-  { label: "Low (1-4)", value: "low" }
+  { label: "Low (1-4)", value: "low" },
 ]
 
 const amountOptions = [
@@ -40,10 +48,8 @@ const amountOptions = [
   { label: ">$1,000", value: "1000" },
   { label: ">$2,500", value: "2500" },
   { label: ">$5,000", value: "5000" },
-  { label: ">$10,000", value: "10000" }
+  { label: ">$10,000", value: "10000" },
 ]
-
-
 
 const socket = io(import.meta.env.VITE_BASE_URL || "http://localhost:9090", {
   transports: ["websocket"],
@@ -231,7 +237,9 @@ const KOLFeedPage = () => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [newTxIds, setNewTxIds] = useState<Set<string>>(new Set())
   const [isOpen, setIsOpen] = useState(false)
-  const [quickBuyAmount, setQuickBuyAmount] = useState(() => loadQuickBuyAmount() || "0")
+  const [quickBuyAmount, setQuickBuyAmount] = useState(
+    () => loadQuickBuyAmount() || "0"
+  )
   const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
   const [searchQuery, setSearchQuery] = useState("")
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
@@ -310,7 +318,8 @@ const KOLFeedPage = () => {
 
         // Added influencer checks
         const influencerName = transaction.influencerName?.toLowerCase() || ""
-        const influencerUsername = transaction.influencerUsername?.toLowerCase() || ""
+        const influencerUsername =
+          transaction.influencerUsername?.toLowerCase() || ""
 
         if (
           !tokenInSymbol.includes(query) &&
@@ -447,7 +456,14 @@ const KOLFeedPage = () => {
 
       if (node) observer.current.observe(node)
     },
-    [isLoadingMore, hasMore, currentPage, itemsPerPage, fetchTransactions, isAllTxLoading]
+    [
+      isLoadingMore,
+      hasMore,
+      currentPage,
+      itemsPerPage,
+      fetchTransactions,
+      isAllTxLoading,
+    ]
   )
 
   // WebSocket event handlers - Updated for KOL
@@ -464,7 +480,10 @@ const KOLFeedPage = () => {
 
         if (matchesFilters) {
           if (currentPage === 1) {
-            const expandedTransactions = expandTransactions([transaction], "200")
+            const expandedTransactions = expandTransactions(
+              [transaction],
+              "200"
+            )
             setTransactions((prev: any[]) => {
               const updated = [...expandedTransactions, ...prev]
               return updated.slice(0, itemsPerPage)
@@ -480,7 +499,9 @@ const KOLFeedPage = () => {
           }
         } else {
           setPendingLiveTransactions((prev) => {
-            const exists = prev.some((tx) => tx.signature === transaction.signature)
+            const exists = prev.some(
+              (tx) => tx.signature === transaction.signature
+            )
             if (exists) return prev
             return [transaction, ...prev].slice(0, 50)
           })
@@ -518,18 +539,27 @@ const KOLFeedPage = () => {
     return 0
   }
 
-
-
-  const handleTransactionInfoAll = (signature: string, transactiontype: string) => {
-    navigate(`/transaction/${signature}?type=kol&transaction=${transactiontype}`)
+  const handleTransactionInfoAll = (
+    signature: string,
+    transactiontype: string
+  ) => {
+    navigate(
+      `/transaction/${signature}?type=kol&transaction=${transactiontype}`
+    )
   }
 
-  const handleTransactionInfoNewTab = (signature: string, transactiontype: string) => {
+  const handleTransactionInfoNewTab = (
+    signature: string,
+    transactiontype: string
+  ) => {
     const url = `/transaction/${signature}?type=kol&transaction=${transactiontype}`
     window.open(url, "_blank", "noopener,noreferrer")
   }
 
-  const handleCopyTokenAddress = async (tokenAddress: string, _transactionId: string) => {
+  const handleCopyTokenAddress = async (
+    tokenAddress: string,
+    _transactionId: string
+  ) => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(tokenAddress)
@@ -557,7 +587,10 @@ const KOLFeedPage = () => {
     // Validate quick buy amount
     const validation = validateQuickBuyAmount(quickBuyAmount)
     if (!validation.isValid) {
-      showToast(validation.error || "Please enter a valid SOL amount for quick buy", "error")
+      showToast(
+        validation.error || "Please enter a valid SOL amount for quick buy",
+        "error"
+      )
       return
     }
 
@@ -569,10 +602,16 @@ const KOLFeedPage = () => {
 
     // Extract token info from clicked item
     const tokenInfo = {
-      symbol: tx.type === 'buy' ? tx.transaction.tokenOut.symbol : tx.transaction.tokenIn.symbol,
-      name: tx.type === 'buy' ? tx.transaction.tokenOut.name : tx.transaction.tokenIn.name,
-      address: tx.type === 'buy' ? tx.tokenOutAddress : tx.tokenInAddress,
-      image: tx.type === 'buy' ? tx.outTokenURL : tx.inTokenURL,
+      symbol:
+        tx.type === "buy"
+          ? tx.transaction.tokenOut.symbol
+          : tx.transaction.tokenIn.symbol,
+      name:
+        tx.type === "buy"
+          ? tx.transaction.tokenOut.name
+          : tx.transaction.tokenIn.name,
+      address: tx.type === "buy" ? tx.tokenOutAddress : tx.tokenInAddress,
+      image: tx.type === "buy" ? tx.outTokenURL : tx.inTokenURL,
       decimals: 9, // Default for most Solana tokens
     }
 
@@ -581,16 +620,18 @@ const KOLFeedPage = () => {
     setIsSwapModalOpen(true)
   }
 
-  const handleQuickBuyAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuickBuyAmountChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const value = e.target.value
     setQuickBuyAmount(value)
 
     // Validate and show error if invalid
     const validation = validateQuickBuyAmount(value)
-    if (!validation.isValid && value !== '') {
-      setQuickBuyAmountError(validation.error || '')
+    if (!validation.isValid && value !== "") {
+      setQuickBuyAmountError(validation.error || "")
     } else {
-      setQuickBuyAmountError('')
+      setQuickBuyAmountError("")
     }
 
     // Save to session storage if valid
@@ -603,7 +644,7 @@ const KOLFeedPage = () => {
     setActiveFilter(filterType)
     const newFilters = {
       ...activeFilters,
-      transactionType: filterType === "all" ? null : filterType
+      transactionType: filterType === "all" ? null : filterType,
     }
     setActiveFilters(newFilters)
   }
@@ -611,7 +652,7 @@ const KOLFeedPage = () => {
   const handleFilterUpdate = (key: string, value: any) => {
     const newFilters = {
       ...activeFilters,
-      [key]: value
+      [key]: value,
     }
     setActiveFilters(newFilters)
     setOpenDropdown(null)
@@ -623,7 +664,7 @@ const KOLFeedPage = () => {
       ? currentTags.filter((t: string) => t !== tag)
       : [...currentTags, tag]
 
-    handleFilterUpdate('tags', newTags)
+    handleFilterUpdate("tags", newTags)
   }
 
   // Close dropdown when clicking outside
@@ -633,63 +674,65 @@ const KOLFeedPage = () => {
     return () => document.removeEventListener("click", handleClickOutside)
   }, [])
 
-  const searchRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false)
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside)
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   const quickBuyInputRef = useRef<HTMLInputElement>(null)
 
   // Extract unique tokens from transactions for autocomplete
   const uniqueTokenOptions = React.useMemo(() => {
-    const uniqueTokens = new Map();
+    const uniqueTokens = new Map()
 
-    transactions.forEach(tx => {
+    transactions.forEach((tx) => {
       // Check both tokenIn (sell) and tokenOut (buy)
       if (tx.transaction?.tokenIn) {
-        const address = tx.tokenInAddress;
+        const address = tx.tokenInAddress
         if (address && !uniqueTokens.has(address)) {
           uniqueTokens.set(address, {
             id: address,
             titles: tx.transaction.tokenIn.symbol,
             descriptions: tx.transaction.tokenIn.name || "NA",
-            images: tx.inTokenURL || DefaultTokenImage
-          });
+            images: tx.inTokenURL || DefaultTokenImage,
+          })
         }
       }
 
       if (tx.transaction?.tokenOut) {
-        const address = tx.tokenOutAddress;
+        const address = tx.tokenOutAddress
         if (address && !uniqueTokens.has(address)) {
           uniqueTokens.set(address, {
             id: address,
             titles: tx.transaction.tokenOut.symbol,
             descriptions: tx.transaction.tokenOut.name || "NA",
-            images: tx.outTokenURL || DefaultTokenImage
-          });
+            images: tx.outTokenURL || DefaultTokenImage,
+          })
         }
       }
-    });
+    })
 
-    return Array.from(uniqueTokens.values());
-  }, [transactions]);
+    return Array.from(uniqueTokens.values())
+  }, [transactions])
 
-  const [filteredOptions, setFilteredOptions] = useState<any[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredOptions, setFilteredOptions] = useState<any[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
 
   const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault()
 
     // If there's a search query, apply it as a filter
     if (searchQuery.trim()) {
@@ -697,69 +740,63 @@ const KOLFeedPage = () => {
       setActiveFilters({
         ...activeFilters,
         searchQuery: searchQuery.trim(),
-        searchType: 'all'
-      });
+        searchType: "all",
+      })
 
       // Clear the input field after searching
-      setSearchQuery("");
+      setSearchQuery("")
 
       // Close dropdown
-      setShowDropdown(false);
+      setShowDropdown(false)
     }
-  };
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
+    const value = e.target.value
+    setSearchQuery(value)
 
     if (value.trim() === "") {
-      setFilteredOptions([]);
-      setShowDropdown(false);
-      return;
+      setFilteredOptions([])
+      setShowDropdown(false)
+      return
     }
 
-    const filtered = uniqueTokenOptions.filter((option) =>
-      option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
-      option.id?.toLowerCase()?.includes(value?.toLowerCase()) ||
-      option.descriptions?.toLowerCase()?.includes(value?.toLowerCase())
-    ).slice(0, 10); // Limit to 10 results
+    const filtered = uniqueTokenOptions
+      .filter(
+        (option) =>
+          option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
+          option.id?.toLowerCase()?.includes(value?.toLowerCase()) ||
+          option.descriptions?.toLowerCase()?.includes(value?.toLowerCase())
+      )
+      .slice(0, 10) // Limit to 10 results
 
-    setFilteredOptions(filtered);
-    setShowDropdown(filtered.length > 0);
-  };
+    setFilteredOptions(filtered)
+    setShowDropdown(filtered.length > 0)
+  }
 
   const handleSelect = (option: any) => {
     // Apply the selected option as a search filter
     setActiveFilters({
       ...activeFilters,
       searchQuery: option.titles,
-      searchType: 'all'
-    });
+      searchType: "all",
+    })
 
     // Clear input and close dropdown
-    setSearchQuery("");
-    setShowDropdown(false);
-  };
+    setSearchQuery("")
+    setShowDropdown(false)
+  }
 
   const handleClearInput = () => {
-    setSearchQuery("");
-    setShowDropdown(false);
-  };
+    setSearchQuery("")
+    setShowDropdown(false)
+  }
 
+  const [amount, setAmount] = useState("$1K")
 
+  const [isSaved, setIsSaved] = useState(false)
 
-
-
-
-  const [amount, setAmount] = useState("$1K");
-
-
-
-
-  const [isSaved, setIsSaved] = useState(false);
-
-
-  const [hotness, setHotness] = useState(10);
+  const [hotness, setHotness] = useState(10)
 
   // Handle KOL alert subscription
   const handleKOLAlertConnect = async () => {
@@ -772,14 +809,19 @@ const KOLFeedPage = () => {
 
       // Check if Telegram is connected
       if (!user?.telegramChatId) {
-        showToast("Please connect your Telegram account first from the Telegram Subscription page", "error")
+        showToast(
+          "Please connect your Telegram account first from the Telegram Subscription page",
+          "error"
+        )
         return
       }
 
       validateAccess(async () => {
         try {
           // Convert amount string to number
-          const minBuyAmount = parseFloat(amount.replace(/[$,K]/g, '')) * (amount.includes('K') ? 1000 : 1)
+          const minBuyAmount =
+            parseFloat(amount.replace(/[$,K]/g, "")) *
+            (amount.includes("K") ? 1000 : 1)
 
           // Create KOL alert subscription
           const response = await axios.post(
@@ -803,7 +845,8 @@ const KOLFeedPage = () => {
         } catch (error: any) {
           console.error("KOL alert subscription error:", error)
           showToast(
-            error.response?.data?.message || "Failed to create KOL alert subscription",
+            error.response?.data?.message ||
+              "Failed to create KOL alert subscription",
             "error"
           )
         }
@@ -811,12 +854,12 @@ const KOLFeedPage = () => {
     } catch (error: any) {
       console.error("KOL alert subscription error:", error)
       showToast(
-        error.response?.data?.message || "Failed to create KOL alert subscription",
+        error.response?.data?.message ||
+          "Failed to create KOL alert subscription",
         "error"
       )
     }
   }
-
 
   return (
     <>
@@ -824,10 +867,11 @@ const KOLFeedPage = () => {
         <div className="row">
           {/* Right Sidebar - Shows first on mobile, second on desktop */}
           <div className="col-lg-4 order-1 order-lg-2 mb-4 mb-lg-0 right-side-bar">
-            <div className="custom-scrollbar" style={{ maxHeight: 'calc(100vh - 60px)', overflowY: 'auto' }}>
-              <RightSidebarNew
-                pageType="kol"
-              />
+            <div
+              className="custom-scrollbar"
+              style={{ maxHeight: "calc(100vh - 60px)", overflowY: "auto" }}
+            >
+              <RightSidebarNew pageType="kol" />
             </div>
           </div>
 
@@ -838,16 +882,23 @@ const KOLFeedPage = () => {
                 <span className="trading-icon-title">Recent transactions</span>
               </div>
               <div>
-                <a href="javascript:void(0)" className="visualize-btn" onClick={() => setIsOpen(true)}>
+                <a
+                  href="javascript:void(0)"
+                  className="visualize-btn"
+                  onClick={() => setIsOpen(true)}
+                >
                   VISUALIZE <PiMagicWand />
                 </a>
               </div>
             </div>
 
             {/* Search and Quick Buy */}
-            <div className="d-flex align-items-center mobile-searching-bx" style={{ gap: '12px', marginBottom: '12px' }}>
+            <div
+              className="d-flex align-items-center mobile-searching-bx"
+              style={{ marginBottom: "16px", gap: "12px" }}
+            >
               <div className="search-container flex-grow-1" ref={searchRef}>
-                <form className="custom-frm-bx" onSubmit={handleSearch}>
+                <form className="custom-frm-bx mb-0" onSubmit={handleSearch}>
                   <input
                     type="text"
                     className="form-control pe-5"
@@ -885,14 +936,24 @@ const KOLFeedPage = () => {
                           className="dropdown-item d-flex align-items-start"
                           onClick={() => handleSelect(item)}
                         >
-                          <img src={item?.images} alt="" className="dropdown-img" />
+                          <img
+                            src={item?.images}
+                            alt=""
+                            className="dropdown-img"
+                          />
 
                           <div className="dropdown-content flex-grow-1">
                             <h6 className="dropdown-title">{item?.titles}</h6>
-                            <p className="dropdown-desc">{item?.descriptions}</p>
+                            <p className="dropdown-desc">
+                              {item?.descriptions}
+                            </p>
                             <span className="dropdown-id">
-                              <span className="cpy-title">CA:</span>{item?.id}
-                              <a href="javascript:void(0)" className="drop-cpy-btn ms-1">
+                              <span className="cpy-title">CA:</span>
+                              {item?.id}
+                              <a
+                                href="javascript:void(0)"
+                                className="drop-cpy-btn ms-1"
+                              >
                                 <FontAwesomeIcon icon={faCopy} />
                               </a>
                             </span>
@@ -901,8 +962,8 @@ const KOLFeedPage = () => {
                           <button
                             className="dropdown-close"
                             onClick={(e) => {
-                              e.stopPropagation();
-                              setShowDropdown(false);
+                              e.stopPropagation()
+                              setShowDropdown(false)
                             }}
                           >
                             ×
@@ -910,20 +971,24 @@ const KOLFeedPage = () => {
                         </li>
                       ))}
                     </ul>
-
                   </div>
-
                 )}
               </div>
 
-              <div className="custom-frm-bx nw-quick-bx mobile-quick-buy-desktop">
+              <div className="custom-frm-bx nw-quick-bx mobile-quick-buy-desktop mb-0">
                 <button
                   className="quick-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    width: "100%",
+                    padding: "4px 8px",
+                    height: "32px",
+                  }}
                   onClick={() => quickBuyInputRef.current?.focus()}
                 >
                   <img src="/quick-btn.png" alt="" /> quick buy amount
-                  <div style={{ flexGrow: 1 }} />
                   <input
                     ref={quickBuyInputRef}
                     type="number"
@@ -934,27 +999,31 @@ const KOLFeedPage = () => {
                     min="0"
                     step="0.1"
                     style={{
-                      background: 'transparent',
-                      border: quickBuyAmountError ? '1px solid #ef4444' : 'none',
-                      color: '#fff',
-                      width: '60px',
-                      textAlign: 'right',
-                      outline: 'none',
-                      fontSize: '14px',
-                      borderRadius: '4px',
-                      padding: '2px 4px'
+                      background: "transparent",
+                      border: quickBuyAmountError
+                        ? "1px solid #ef4444"
+                        : "none",
+                      color: "#fff",
+                      flexGrow: 1,
+                      textAlign: "right",
+                      outline: "none",
+                      fontSize: "14px",
+                      borderRadius: "4px",
+                      padding: "2px 4px",
                     }}
-                    title={quickBuyAmountError || ''}
+                    title={quickBuyAmountError || ""}
                   />
-                  <span style={{ color: '#fff', fontSize: '14px' }}>SOL</span>
+                  <span style={{ color: "#fff", fontSize: "14px" }}>SOL</span>
                 </button>
                 {quickBuyAmountError && (
-                  <div style={{
-                    color: '#ef4444',
-                    fontSize: '11px',
-                    marginTop: '4px',
-                    paddingLeft: '8px'
-                  }}>
+                  <div
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "11px",
+                      marginTop: "4px",
+                      paddingLeft: "8px",
+                    }}
+                  >
                     {quickBuyAmountError}
                   </div>
                 )}
@@ -967,11 +1036,17 @@ const KOLFeedPage = () => {
               <div className="custom-frm-bx nw-quick-bx mobile-quick-buy-mobile">
                 <button
                   className="quick-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', padding: '4px 8px', height: '32px' }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "5px",
+                    width: "100%",
+                    padding: "4px 8px",
+                    height: "32px",
+                  }}
                   onClick={() => quickBuyInputRef.current?.focus()}
                 >
                   <img src="/quick-btn.png" alt="" /> quick buy amount
-                  <div style={{ flexGrow: 1 }} />
                   <input
                     ref={quickBuyInputRef}
                     type="number"
@@ -982,27 +1057,31 @@ const KOLFeedPage = () => {
                     min="0"
                     step="0.1"
                     style={{
-                      background: 'transparent',
-                      border: quickBuyAmountError ? '1px solid #ef4444' : 'none',
-                      color: '#fff',
-                      width: '60px',
-                      textAlign: 'right',
-                      outline: 'none',
-                      fontSize: '14px',
-                      borderRadius: '4px',
-                      padding: '2px 4px'
+                      background: "transparent",
+                      border: quickBuyAmountError
+                        ? "1px solid #ef4444"
+                        : "none",
+                      color: "#fff",
+                      flexGrow: 1,
+                      textAlign: "right",
+                      outline: "none",
+                      fontSize: "14px",
+                      borderRadius: "4px",
+                      padding: "2px 4px",
                     }}
-                    title={quickBuyAmountError || ''}
+                    title={quickBuyAmountError || ""}
                   />
-                  <span style={{ color: '#fff', fontSize: '14px' }}>SOL</span>
+                  <span style={{ color: "#fff", fontSize: "14px" }}>SOL</span>
                 </button>
                 {quickBuyAmountError && (
-                  <div style={{
-                    color: '#ef4444',
-                    fontSize: '11px',
-                    marginTop: '4px',
-                    paddingLeft: '8px'
-                  }}>
+                  <div
+                    style={{
+                      color: "#ef4444",
+                      fontSize: "11px",
+                      marginTop: "4px",
+                      paddingLeft: "8px",
+                    }}
+                  >
                     {quickBuyAmountError}
                   </div>
                 )}
@@ -1015,27 +1094,27 @@ const KOLFeedPage = () => {
                     <ul className="nav nav-tabs custom-tabs" role="tablist">
                       <li className="nav-item" role="presentation">
                         <a
-                          className={`nav-link ${activeFilter === 'all' ? 'active' : ''}`}
-                          onClick={() => handleFilterTabChange('all')}
-                          style={{ cursor: 'pointer' }}
+                          className={`nav-link ${activeFilter === "all" ? "active" : ""}`}
+                          onClick={() => handleFilterTabChange("all")}
+                          style={{ cursor: "pointer" }}
                         >
                           ALL
                         </a>
                       </li>
                       <li className="nav-item" role="presentation">
                         <a
-                          className={`nav-link ${activeFilter === 'buy' ? 'active' : ''}`}
-                          onClick={() => handleFilterTabChange('buy')}
-                          style={{ cursor: 'pointer' }}
+                          className={`nav-link ${activeFilter === "buy" ? "active" : ""}`}
+                          onClick={() => handleFilterTabChange("buy")}
+                          style={{ cursor: "pointer" }}
                         >
                           BUY
                         </a>
                       </li>
                       <li className="nav-item" role="presentation">
                         <a
-                          className={`nav-link ${activeFilter === 'sell' ? 'active' : ''}`}
-                          onClick={() => handleFilterTabChange('sell')}
-                          style={{ cursor: 'pointer' }}
+                          className={`nav-link ${activeFilter === "sell" ? "active" : ""}`}
+                          onClick={() => handleFilterTabChange("sell")}
+                          style={{ cursor: "pointer" }}
                         >
                           SELL
                         </a>
@@ -1045,140 +1124,269 @@ const KOLFeedPage = () => {
                   <div>
                     <ul className="plan-btn-list">
                       <li onClick={(e) => e.stopPropagation()}>
-                        <a href="javascript:void(0)"
-                          className={`plan-btn ${activeFilters.hotness ? 'active' : ''}`}
-                          onClick={() => setOpenDropdown(openDropdown === 'hotness' ? null : 'hotness')}>
+                        <a
+                          href="javascript:void(0)"
+                          className={`plan-btn ${activeFilters.hotness ? "active" : ""}`}
+                          onClick={() =>
+                            setOpenDropdown(
+                              openDropdown === "hotness" ? null : "hotness"
+                            )
+                          }
+                        >
                           {activeFilters.hotness
-                            ? `HOTNESS: ${hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}`
-                            : 'hotness'} <HiChevronUpDown />
+                            ? `HOTNESS: ${hotnessOptions.find((o) => o.value === activeFilters.hotness)?.label.split(" ")[0]}`
+                            : "hotness"}{" "}
+                          <HiChevronUpDown />
                         </a>
-                        {openDropdown === 'hotness' && (
-                          <div className="filter-dropdown-menu">
-                            <div className="filter-dropdown-header">Hotness Score</div>
-                            {hotnessOptions.map(opt => (
-                              <button
-                                key={opt.label}
-                                className={`filter-dropdown-item ${activeFilters.hotness === opt.value ? 'active' : ''}`}
-                                onClick={() => handleFilterUpdate('hotness', opt.value)}
-                              >
-                                {opt.label}
-                              </button>
-                            ))}
-                          </div>
+                        {openDropdown === "hotness" && (
+                          <>
+                            <div
+                              className="mobile-overlay"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenDropdown(null)
+                              }}
+                            />
+                            <div className="filter-dropdown-menu">
+                              <div className="filter-dropdown-header">
+                                Hotness Score
+                                <button
+                                  className="popup-close-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setOpenDropdown(null)
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faClose} />
+                                </button>
+                              </div>
+                              {hotnessOptions.map((opt) => (
+                                <button
+                                  key={opt.label}
+                                  className={`filter-dropdown-item ${activeFilters.hotness === opt.value ? "active" : ""}`}
+                                  onClick={() =>
+                                    handleFilterUpdate("hotness", opt.value)
+                                  }
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </>
                         )}
                       </li>
                       <li onClick={(e) => e.stopPropagation()}>
-                        <a href="javascript:void(0)"
-                          className={`plan-btn ${activeFilters.amount ? 'active' : ''}`}
-                          onClick={() => setOpenDropdown(openDropdown === 'amount' ? null : 'amount')}>
+                        <a
+                          href="javascript:void(0)"
+                          className={`plan-btn ${activeFilters.amount ? "active" : ""}`}
+                          onClick={() =>
+                            setOpenDropdown(
+                              openDropdown === "amount" ? null : "amount"
+                            )
+                          }
+                        >
                           {activeFilters.amount
-                            ? `AMOUNT: ${amountOptions.find(o => o.value === activeFilters.amount)?.label}`
-                            : 'amount'} <HiChevronUpDown />
+                            ? `AMOUNT: ${amountOptions.find((o) => o.value === activeFilters.amount)?.label}`
+                            : "amount"}{" "}
+                          <HiChevronUpDown />
                         </a>
-                        {openDropdown === 'amount' && (
-                          <div className="filter-dropdown-menu">
-                            <div className="filter-dropdown-header">Min Amount</div>
-                            {amountOptions.map(opt => (
-                              <button
-                                key={opt.label}
-                                className={`filter-dropdown-item ${activeFilters.amount === opt.value ? 'active' : ''}`}
-                                onClick={() => handleFilterUpdate('amount', opt.value)}
-                              >
-                                {opt.label}
+                        {openDropdown === "amount" && (
+                          <>
+                            <div
+                              className="mobile-overlay"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenDropdown(null)
+                              }}
+                            />
+                            <div className="filter-dropdown-menu">
+                              <div className="filter-dropdown-header">
+                                Min Amount
+                                <button
+                                  className="popup-close-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setOpenDropdown(null)
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faClose} />
+                                </button>
+                              </div>
+                              {amountOptions.map((opt) => (
+                                <button
+                                  key={opt.label}
+                                  className={`filter-dropdown-item ${activeFilters.amount === opt.value ? "active" : ""}`}
+                                  onClick={() =>
+                                    handleFilterUpdate("amount", opt.value)
+                                  }
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                              <div className="custm-input-filed">
+                                <input
+                                  type="text"
+                                  className="custom-amount-frm"
+                                  placeholder="Custom..."
+                                />
+                              </div>
 
-                              </button>
-
-
-                            ))}
-                            <div className="custm-input-filed">
-                              <input type="text" className="custom-amount-frm" placeholder="Custom..." />
+                              <div className="quick-nw-btn">
+                                <button>Submit</button>
+                              </div>
                             </div>
-
-                            <div className="quick-nw-btn">
-                              <button>Submit</button>
-                            </div>
-                          </div>
+                          </>
                         )}
                       </li>
 
-
                       <li onClick={(e) => e.stopPropagation()}>
-                        <a href="javascript:void(0)"
-                          className={`plan-btn ${openDropdown === 'subs' ? 'active' : ''}`}
-                          onClick={() => setOpenDropdown(openDropdown === 'subs' ? null : 'subs')}>
+                        <a
+                          href="javascript:void(0)"
+                          className={`plan-btn ${openDropdown === "subs" ? "active" : ""}`}
+                          onClick={() =>
+                            setOpenDropdown(
+                              openDropdown === "subs" ? null : "subs"
+                            )
+                          }
+                        >
                           Subscription <HiChevronUpDown />
                         </a>
-                        {openDropdown === 'subs' && (
-                          <KOLAlertPopup
-                            hotness={hotness}
-                            setHotness={setHotness}
-                            amount={amount}
-                            setAmount={setAmount}
-                            onActivate={handleKOLAlertConnect}
-                            isSaved={isSaved}
-                            setIsSaved={setIsSaved}
-                            user={user}
-                            onClose={() => setOpenDropdown(null)}
-                          />
+                        {openDropdown === "subs" && (
+                          <>
+                            <div
+                              className="mobile-overlay"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenDropdown(null)
+                              }}
+                            />
+                            <KOLAlertPopup
+                              hotness={hotness}
+                              setHotness={setHotness}
+                              amount={amount}
+                              setAmount={setAmount}
+                              onActivate={handleKOLAlertConnect}
+                              isSaved={isSaved}
+                              setIsSaved={setIsSaved}
+                              user={user}
+                              onClose={() => setOpenDropdown(null)}
+                            />
+                          </>
                         )}
                       </li>
 
                       <li onClick={(e) => e.stopPropagation()}>
-                        <a href="javascript:void(0)"
-                          className={`plan-btn d-block ${(activeFilters.ageMin || activeFilters.ageMax || activeFilters.marketCapMin || activeFilters.marketCapMax) ? 'active' : ''}`}
-                          onClick={() => setOpenDropdown(openDropdown === 'newFilter' ? null : 'newFilter')}>
-                          {[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length > 0
+                        <a
+                          href="javascript:void(0)"
+                          className={`plan-btn d-block ${activeFilters.ageMin || activeFilters.ageMax || activeFilters.marketCapMin || activeFilters.marketCapMax ? "active" : ""}`}
+                          onClick={() =>
+                            setOpenDropdown(
+                              openDropdown === "newFilter" ? null : "newFilter"
+                            )
+                          }
+                        >
+                          {[
+                            activeFilters.ageMin,
+                            activeFilters.ageMax,
+                            activeFilters.marketCapMin,
+                            activeFilters.marketCapMax,
+                          ].filter(Boolean).length > 0
                             ? `: ${[activeFilters.ageMin, activeFilters.ageMax, activeFilters.marketCapMin, activeFilters.marketCapMax].filter(Boolean).length}`
-                            : ''} <FontAwesomeIcon icon={faFilter} />
+                            : ""}{" "}
+                          <FontAwesomeIcon icon={faFilter} />
                         </a>
-                        {openDropdown === 'newFilter' && (
-                          <div className="filter-dropdown-menu w-xs p-2">
-                            <div className="row">
+                        {openDropdown === "newFilter" && (
+                          <>
+                            <div
+                              className="mobile-overlay"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenDropdown(null)
+                              }}
+                            />
+                            <div className="filter-dropdown-menu w-xs p-2">
+                              <div className="filter-dropdown-header mb-2">
+                                Filters
+                                <button
+                                  className="popup-close-btn"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setOpenDropdown(null)
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faClose} />
+                                </button>
+                              </div>
+                              <div className="row">
+                                <div className="col-lg-6">
+                                  <div className="custom-frm-bx ">
+                                    <label htmlFor="">Age (minutes)</label>
+                                    <input
+                                      type="text"
+                                      name=""
+                                      id=""
+                                      className="form-control text-end"
+                                      placeholder="min"
+                                      value="min"
+                                    />
+                                  </div>
+                                </div>
 
-                              <div className="col-lg-6">
-                                <div className="custom-frm-bx ">
-                                  <label htmlFor="">Age (minutes)</label>
-                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
+                                <div className="col-lg-6">
+                                  <div className="custom-frm-bx">
+                                    <label htmlFor=""></label>
+                                    <input
+                                      type="text"
+                                      name=""
+                                      id=""
+                                      className="form-control text-end"
+                                      placeholder="max"
+                                      value="max"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="col-lg-6">
+                                  <div className="custom-frm-bx mb-0">
+                                    <label htmlFor="">Market Cap (K)</label>
+                                    <input
+                                      type="text"
+                                      name=""
+                                      id=""
+                                      className="form-control text-end"
+                                      placeholder="min"
+                                      value="min"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="col-lg-6">
+                                  <div className="custom-frm-bx mb-0">
+                                    <label htmlFor=""></label>
+                                    <input
+                                      type="text"
+                                      name=""
+                                      id=""
+                                      className="form-control text-end"
+                                      placeholder="max"
+                                      value="max"
+                                    />
+                                  </div>
                                 </div>
                               </div>
-
-                              <div className="col-lg-6">
-
-                                <div className="custom-frm-bx">
-                                  <label htmlFor=""></label>
-                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
-                                </div>
-                              </div>
-
-                              <div className="col-lg-6">
-                                <div className="custom-frm-bx mb-0">
-                                  <label htmlFor="">Market Cap (K)</label>
-                                  <input type="text" name="" id="" className="form-control text-end" placeholder="min" value="min" />
-                                </div>
-                              </div>
-
-                              <div className="col-lg-6">
-
-                                <div className="custom-frm-bx mb-0">
-                                  <label htmlFor=""></label>
-                                  <input type="text" name="" id="" className="form-control text-end" placeholder="max" value="max" />
-                                </div>
-                              </div>
-
                             </div>
-
-
-
-                          </div>
+                          </>
                         )}
                       </li>
-
                     </ul>
                   </div>
                 </div>
 
                 {/* Active Filter Indicators - Only show when filters are active */}
-                {(activeFilters.hotness || activeFilters.amount || activeFilters.tags.length > 0 || activeFilters.searchQuery) && (
+                {(activeFilters.hotness ||
+                  activeFilters.amount ||
+                  activeFilters.tags.length > 0 ||
+                  activeFilters.searchQuery) && (
                   <div className="category-remove-filting">
                     <ul>
                       {/* Search Filter Indicator */}
@@ -1193,7 +1401,9 @@ const KOLFeedPage = () => {
                                 <a
                                   href="javascript:void(0)"
                                   className="filter-remv-btn"
-                                  onClick={() => handleFilterUpdate('searchQuery', "")}
+                                  onClick={() =>
+                                    handleFilterUpdate("searchQuery", "")
+                                  }
                                 >
                                   <FontAwesomeIcon icon={faClose} />
                                 </a>
@@ -1209,13 +1419,24 @@ const KOLFeedPage = () => {
                           <div className="category-filtering-add">
                             <div className="category-filter-items">
                               <h6>
-                                Hotness Score: <span>{hotnessOptions.find(o => o.value === activeFilters.hotness)?.label.split(' ')[0]}</span>
+                                Hotness Score:{" "}
+                                <span>
+                                  {
+                                    hotnessOptions
+                                      .find(
+                                        (o) => o.value === activeFilters.hotness
+                                      )
+                                      ?.label.split(" ")[0]
+                                  }
+                                </span>
                               </h6>
                               <span>
                                 <a
                                   href="javascript:void(0)"
                                   className="filter-remv-btn"
-                                  onClick={() => handleFilterUpdate('hotness', null)}
+                                  onClick={() =>
+                                    handleFilterUpdate("hotness", null)
+                                  }
                                 >
                                   <FontAwesomeIcon icon={faClose} />
                                 </a>
@@ -1231,13 +1452,22 @@ const KOLFeedPage = () => {
                           <div className="category-filtering-add">
                             <div className="category-filter-items">
                               <h6>
-                                Amount: <span>{amountOptions.find(o => o.value === activeFilters.amount)?.label}</span>
+                                Amount:{" "}
+                                <span>
+                                  {
+                                    amountOptions.find(
+                                      (o) => o.value === activeFilters.amount
+                                    )?.label
+                                  }
+                                </span>
                               </h6>
                               <span>
                                 <a
                                   href="javascript:void(0)"
                                   className="filter-remv-btn"
-                                  onClick={() => handleFilterUpdate('amount', null)}
+                                  onClick={() =>
+                                    handleFilterUpdate("amount", null)
+                                  }
                                 >
                                   <FontAwesomeIcon icon={faClose} />
                                 </a>
@@ -1275,22 +1505,40 @@ const KOLFeedPage = () => {
             </div>
 
             {/* Transactions List */}
-            <div className="tab-content custom-tab-content custom-scrollbar" style={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', flex: 1 }}>
+            <div
+              className="tab-content custom-tab-content custom-scrollbar"
+              style={{
+                maxHeight: "calc(100vh - 180px)",
+                overflowY: "auto",
+                flex: 1,
+              }}
+            >
               {isAllTxLoading ? (
                 <TransactionListSkeleton variant="kol" count={12} />
               ) : transactions.length === 0 ? (
-                <div className="d-flex align-items-center justify-content-center flex-grow-1" style={{ minHeight: '300px' }}>
-                  <p style={{ color: '#8F8F8F' }}>No transactions available. Try adjusting your filters.</p>
+                <div
+                  className="d-flex align-items-center justify-content-center flex-grow-1"
+                  style={{ minHeight: "300px" }}
+                >
+                  <p style={{ color: "#8F8F8F" }}>
+                    No transactions available. Try adjusting your filters.
+                  </p>
                 </div>
               ) : (
                 <div className="transaction-container">
                   {transactions.map((tx: any, index: number) => (
                     <div
                       key={tx._id}
-                      ref={index === transactions.length - 1 ? lastTransactionRef : null}
-                      className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? 'animate-slide-up' : ''}`}
-                      onClick={() => handleTransactionInfoAll(tx.signature, tx.type)}
-                      style={{ cursor: 'pointer' }}
+                      ref={
+                        index === transactions.length - 1
+                          ? lastTransactionRef
+                          : null
+                      }
+                      className={`mb-3 nw-custm-trade-bx ${newTxIds.has(tx._id) ? "animate-slide-up" : ""}`}
+                      onClick={() =>
+                        handleTransactionInfoAll(tx.signature, tx.type)
+                      }
+                      style={{ cursor: "pointer" }}
                       onAnimationEnd={() =>
                         setNewTxIds((prev) => {
                           const updated = new Set(prev)
@@ -1301,22 +1549,31 @@ const KOLFeedPage = () => {
                     >
                       <div className="d-flex align-items-center justify-content-between nw-btm-brd">
                         <div>
-                          <h6 className="nw-trade-title">{getTimeAgo(tx.timestamp)}</h6>
+                          <h6 className="nw-trade-title">
+                            {getTimeAgo(tx.timestamp)}
+                          </h6>
                         </div>
                         <div>
                           <ul className="quick-list">
                             {tx.hotnessScore > 0 && (
-                              <li><span className="hotness-title">Hotness score: {tx.hotnessScore}/10</span></li>
+                              <li>
+                                <span className="hotness-title">
+                                  Hotness score: {tx.hotnessScore}/10
+                                </span>
+                              </li>
                             )}
                             <li className="quick-item">
                               <a
                                 href="javascript:void(0)"
                                 className="quick-nw-btn"
-                                onClick={(e) => { e.stopPropagation(); handleQuickBuy(tx) }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleQuickBuy(tx)
+                                }}
                                 role="button"
                                 tabIndex={0}
                                 onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
+                                  if (e.key === "Enter" || e.key === " ") {
                                     e.preventDefault()
                                     e.stopPropagation()
                                     handleQuickBuy(tx)
@@ -1333,8 +1590,13 @@ const KOLFeedPage = () => {
                                 href="javascript:void(0)"
                                 className="quick-nw-btn quick-copy-btn"
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCopyTokenAddress(tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress, tx.signature)
+                                  e.stopPropagation()
+                                  handleCopyTokenAddress(
+                                    tx.type === "sell"
+                                      ? tx.tokenInAddress
+                                      : tx.tokenOutAddress,
+                                    tx.signature
+                                  )
                                 }}
                               >
                                 <RiFileCopyLine />
@@ -1344,65 +1606,112 @@ const KOLFeedPage = () => {
                               <a
                                 href="javascript:void(0)"
                                 className="quick-nw-btn quick-arrow-btn"
-                                onClick={(e) => { e.stopPropagation(); handleTransactionInfoNewTab(tx.signature, tx.type) }}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleTransactionInfoNewTab(
+                                    tx.signature,
+                                    tx.type
+                                  )
+                                }}
                               >
-                                <FontAwesomeIcon icon={faArrowRight} className="nw-arrow-tp" />
+                                <FontAwesomeIcon
+                                  icon={faArrowRight}
+                                  className="nw-arrow-tp"
+                                />
                               </a>
                             </li>
                           </ul>
                         </div>
                       </div>
 
-                      <div className={`custom-card ${tx.type === 'buy' ? 'buy-animate' : 'sell-animate'}`}>
+                      <div
+                        className={`custom-card ${tx.type === "buy" ? "buy-animate" : "sell-animate"}`}
+                      >
                         <div className="left-item-bx">
                           <img
-                            src={tx.influencerProfileImageUrl || DefaultTokenImage}
+                            src={
+                              tx.influencerProfileImageUrl || DefaultTokenImage
+                            }
                             alt="influencer"
                             onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/kol-feed-profile/${tx.influencerUsername?.replace(/^@/, '')}`);
+                              e.stopPropagation()
+                              navigate(
+                                `/kol-feed-profile/${tx.influencerUsername?.replace(/^@/, "")}`
+                              )
                             }}
-                            onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-                              const target = e.currentTarget;
-                              if (target.src.indexOf(DefaultTokenImage) === -1) {
-                                target.src = DefaultTokenImage;
+                            onError={(
+                              e: React.SyntheticEvent<HTMLImageElement, Event>
+                            ) => {
+                              const target = e.currentTarget
+                              if (
+                                target.src.indexOf(DefaultTokenImage) === -1
+                              ) {
+                                target.src = DefaultTokenImage
                               }
                             }}
-                            style={{ cursor: 'pointer' }}
+                            style={{ cursor: "pointer" }}
                           />
-                          <div className="whale-content flex-grow-1" style={{ display: 'flex', flexDirection: 'column', height: '64px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '4px' }}>
+                          <div
+                            className="whale-content flex-grow-1"
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              height: "64px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                                marginBottom: "4px",
+                              }}
+                            >
                               <h4 className="username">{tx.influencerName}</h4>
-                              <img
-                                src={TwitterVerified}
-                                alt="verified"
-                                style={{ width: '14px', height: '14px', flexShrink: 0 }}
+                              <RiVerifiedBadgeFill
+                                style={{
+                                  color: "#fff",
+                                  fontSize: "14px",
+                                  flexShrink: 0,
+                                }}
                               />
                             </div>
                             {/* Twitter handle in place of tags */}
-                            <div className="tags" style={{ marginBottom: '4px' }}>
+                            <div
+                              className="tags"
+                              style={{ marginBottom: "4px" }}
+                            >
                               <a
-                                href={`https://x.com/${tx.influencerUsername?.replace(/^@/, '')}`}
+                                href={`https://x.com/${tx.influencerUsername?.replace(/^@/, "")}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="tag-title"
                                 style={{
-                                  textDecoration: 'none',
-                                  color: '#8f8f8f'
+                                  textDecoration: "none",
+                                  color: "#8f8f8f",
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                @{tx.influencerUsername?.replace(/^@/, '')}
+                                @{tx.influencerUsername?.replace(/^@/, "")}
                               </a>
                             </div>
-                            <div className={`sold-out-title ${tx.type === 'buy' ? 'buy-transaction' : ''}`} style={{ marginTop: 'auto' }}>
-                              {tx.type === 'sell' ? 'SOLD' : 'Bought'} ${Number(getTransactionAmount(tx) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <div
+                              className={`sold-out-title ${tx.type === "buy" ? "buy-transaction" : ""}`}
+                              style={{ marginTop: "auto" }}
+                            >
+                              {tx.type === "sell" ? "SOLD" : "Bought"} $
+                              {Number(
+                                getTransactionAmount(tx) || 0
+                              ).toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
                             </div>
                           </div>
                         </div>
 
                         <div className="sell-trade-bx">
-                          {tx.type === 'sell' ? (
+                          {tx.type === "sell" ? (
                             <span className="sell-title">
                               <FontAwesomeIcon icon={faArrowTrendDown} /> SELL
                             </span>
@@ -1415,15 +1724,40 @@ const KOLFeedPage = () => {
 
                         <div className="right-info text-end">
                           <div className="left-crd-content">
-                            <h5>{tx.type === 'sell' ? tx.transaction?.tokenIn?.symbol : tx.transaction?.tokenOut?.symbol}</h5>
-                            <p>{tx.type === 'sell' ? tx.transaction?.tokenIn?.name?.substring(0, 20) : tx.transaction?.tokenOut?.name?.substring(0, 20)}</p>
-                            <small className="mc-title">MC: ${formatNumber(getMarketCap(tx))} / AGE: {tx.age}</small>
+                            <h5>
+                              {tx.type === "sell"
+                                ? tx.transaction?.tokenIn?.symbol
+                                : tx.transaction?.tokenOut?.symbol}
+                            </h5>
+                            <p>
+                              {tx.type === "sell"
+                                ? tx.transaction?.tokenIn?.name?.substring(
+                                    0,
+                                    20
+                                  )
+                                : tx.transaction?.tokenOut?.name?.substring(
+                                    0,
+                                    20
+                                  )}
+                            </p>
+                            <small className="mc-title">
+                              MC: ${formatNumber(getMarketCap(tx))} / AGE:{" "}
+                              {tx.age}
+                            </small>
                           </div>
                           <div className="right-img">
                             <img
-                              src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
+                              src={
+                                tx.type === "sell"
+                                  ? tx.inTokenURL || DefaultTokenImage
+                                  : tx.outTokenURL || DefaultTokenImage
+                              }
                               alt="token"
-                              onError={(e: React.SyntheticEvent<HTMLImageElement, Event>) => { e.currentTarget.src = DefaultTokenImage }}
+                              onError={(
+                                e: React.SyntheticEvent<HTMLImageElement, Event>
+                              ) => {
+                                e.currentTarget.src = DefaultTokenImage
+                              }}
                             />
                           </div>
                         </div>
@@ -1445,10 +1779,14 @@ const KOLFeedPage = () => {
             </div>
           </div>
         </div>
-      </section >
+      </section>
 
       <ReactFlowProvider>
-        <WhaleFilterModal isOpen={isOpen} onClose={() => setIsOpen(false)} type="kol" />
+        <WhaleFilterModal
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+          type="kol"
+        />
       </ReactFlowProvider>
 
       <SwapModal
@@ -1463,7 +1801,8 @@ const KOLFeedPage = () => {
           symbol: "SOL",
           name: "Solana",
           decimals: 9,
-          image: "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
+          image:
+            "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504",
         }}
         initialOutputToken={swapTokenInfo}
         initialAmount={quickBuyAmount}

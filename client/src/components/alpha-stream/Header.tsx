@@ -266,9 +266,23 @@ function Header({ onOpenSidebar }: HeaderProps) {
                       justifyContent: "center",
                       width: "20px",
                       height: "20px",
+                      borderRadius: "50%",
+                      overflow: "hidden",
                     }}
                   >
-                    <User size={14} />
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt="User"
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+                    ) : (
+                      <User size={14} />
+                    )}
                   </span>
                   {getDisplayName()} <HiChevronUpDown />
                 </button>

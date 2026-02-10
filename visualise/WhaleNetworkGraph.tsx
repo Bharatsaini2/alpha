@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useMemo, useState, useEffect } from "react"
+import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
   ReactFlow,
   Node,
@@ -23,52 +23,50 @@ import {
   useViewport,
   NodeToolbar,
   useUpdateNodeInternals,
-} from "@xyflow/react"
-import {
-  faPaperPlane,
-} from "@fortawesome/free-solid-svg-icons"
-import "@xyflow/react/dist/style.css"
-import { motion, AnimatePresence } from "framer-motion"
-import { toPng, toSvg } from "html-to-image"
-import { CheckIcon, ChevronDown, X, RefreshCw, Save } from "lucide-react"
-import axios from "axios"
-import CopyIcon from "../assets/Copy.svg"
-import ExternalLinkIcon from "../assets/ExternalLink.svg"
-import DefaultTokenImage from "../assets/default_token.svg"
-import solanalogo from "../assets/solana.svg"
-import { applyForceLayout } from "../utils/ForceLayout"
-import ErrorPopup from "./ui/ErrorPopup"
-import { useToast } from "./ui/Toast"
-import { LastUpdatedTicker } from "./TicketComponent"
-import { useRandomBubbleAnimation } from "../hooks/useBubbleAnimation"
+} from "@xyflow/react";
+import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
+import "@xyflow/react/dist/style.css";
+import { motion, AnimatePresence } from "framer-motion";
+import { toPng, toSvg } from "html-to-image";
+import { CheckIcon, ChevronDown, X, RefreshCw, Save } from "lucide-react";
+import axios from "axios";
+import CopyIcon from "../assets/Copy.svg";
+import ExternalLinkIcon from "../assets/ExternalLink.svg";
+import DefaultTokenImage from "../assets/default_token.svg";
+import solanalogo from "../assets/solana.svg";
+import { applyForceLayout } from "../utils/ForceLayout";
+import ErrorPopup from "./ui/ErrorPopup";
+import { useToast } from "./ui/Toast";
+import { LastUpdatedTicker } from "./TicketComponent";
+import { useRandomBubbleAnimation } from "../hooks/useBubbleAnimation";
 import { FaArrowRightLong, FaRegCopy } from "react-icons/fa6";
-import { IoChevronDownOutline, } from "react-icons/io5";
+import { IoChevronDownOutline } from "react-icons/io5";
 import { SiTelegram } from "react-icons/si";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 interface Whale {
-  id: string
-  address: string
-  buyVolume: number
-  sellVolume: number
-  lastAction: string
-  trades: { type: string; amount: number; timestamp: string }[]
+  id: string;
+  address: string;
+  buyVolume: number;
+  sellVolume: number;
+  lastAction: string;
+  trades: { type: string; amount: number; timestamp: string }[];
 }
 
 interface Coin {
-  id: string
-  symbol: string
-  name: string
-  imageUrl: string
-  totalBuyInflow: number
+  id: string;
+  symbol: string;
+  name: string;
+  imageUrl: string;
+  totalBuyInflow: number;
 }
 
 interface CoinWithWhales {
-  coin: Coin
-  whales: Whale[]
+  coin: Coin;
+  whales: Whale[];
 }
 
-const BASE_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:9090"
+const BASE_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:9090";
 
 // Custom Coin Node Component
 const makeEdgeId = (
@@ -76,30 +74,30 @@ const makeEdgeId = (
   whaleNodeId: string,
   type: string,
   ts: number,
-  amt: number
-) => `edge_${coinId}_${whaleNodeId}_${type}_${ts}_${Math.round(amt * 1000)}`
+  amt: number,
+) => `edge_${coinId}_${whaleNodeId}_${type}_${ts}_${Math.round(amt * 1000)}`;
 
 // -----------------------------
 // Custom Coin Node
 // -----------------------------
 const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
-  const [isHovered, setIsHovered] = useState(false)
-  const bubbleAnimation = useRandomBubbleAnimation()
-  const updateNodeInternals = useUpdateNodeInternals()
+  const [isHovered, setIsHovered] = useState(false);
+  const bubbleAnimation = useRandomBubbleAnimation();
+  const updateNodeInternals = useUpdateNodeInternals();
   useEffect(() => {
     // Throttle updates to avoid performance issues
     const timeoutId = setTimeout(() => {
-      updateNodeInternals(id)
-    }, 100) // Update every 100ms instead of on every frame
+      updateNodeInternals(id);
+    }, 100); // Update every 100ms instead of on every frame
 
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timeoutId);
   }, [
     Math.round(bubbleAnimation.x / 5) * 5, // Quantize to reduce update frequency
     Math.round(bubbleAnimation.y / 5) * 5,
     Math.round(bubbleAnimation.scale * 20) / 20,
     updateNodeInternals,
     id,
-  ])
+  ]);
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
@@ -145,7 +143,7 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           <img
             src={
               (data.symbol as string) === "SOL" ||
-                (data.symbol as string) === "WSOL"
+              (data.symbol as string) === "WSOL"
                 ? solanalogo
                 : (data.imageUrl as string) || DefaultTokenImage
             }
@@ -173,39 +171,39 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         </motion.div>
       </div>
     </motion.div>
-  )
-}
+  );
+};
 
 // -----------------------------
 // Custom Whale Node
 // -----------------------------
 const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
-  const [isHovered, setIsHovered] = useState(false)
-  const bubbleAnimation = useRandomBubbleAnimation()
-  const updateNodeInternals = useUpdateNodeInternals()
+  const [isHovered, setIsHovered] = useState(false);
+  const bubbleAnimation = useRandomBubbleAnimation();
+  const updateNodeInternals = useUpdateNodeInternals();
 
   useEffect(() => {
     // Throttle updates to avoid performance issues
     const timeoutId = setTimeout(() => {
-      updateNodeInternals(id)
-    }, 100) // Update every 100ms instead of on every frame
+      updateNodeInternals(id);
+    }, 100); // Update every 100ms instead of on every frame
 
-    return () => clearTimeout(timeoutId)
+    return () => clearTimeout(timeoutId);
   }, [
     Math.round(bubbleAnimation.x / 5) * 5, // Quantize to reduce update frequency
     Math.round(bubbleAnimation.y / 5) * 5,
     Math.round(bubbleAnimation.scale * 20) / 20,
     updateNodeInternals,
     id,
-  ])
+  ]);
 
   const getWhaleColor = () => {
-    const totalBuyAmount = data.totalBuyAmount || 0
-    const totalSellAmount = data.totalSellAmount || 0
-    if (totalBuyAmount > totalSellAmount) return "#06DF73"
-    if (totalSellAmount > totalBuyAmount) return "#FF6467"
-    return "#999999"
-  }
+    const totalBuyAmount = data.totalBuyAmount || 0;
+    const totalSellAmount = data.totalSellAmount || 0;
+    if (totalBuyAmount > totalSellAmount) return "#06DF73";
+    if (totalSellAmount > totalBuyAmount) return "#FF6467";
+    return "#999999";
+  };
   return (
     <motion.div
       initial={{ scale: 0, opacity: 0 }}
@@ -271,8 +269,8 @@ const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         </motion.div>
       </div>
     </motion.div>
-  )
-}
+  );
+};
 
 // -----------------------------
 // Custom Edge for Multiple Trades
@@ -285,22 +283,22 @@ const CustomEdge: React.FC<EdgeProps> = ({
   targetY,
   data,
 }) => {
-  const [isHovered, setIsHovered] = useState(false)
+  const [isHovered, setIsHovered] = useState(false);
 
-  const edgeOffset = (data?.edgeOffset as number) ?? 0
+  const edgeOffset = (data?.edgeOffset as number) ?? 0;
 
-  const midX = (sourceX + targetX) / 2
-  const midY = (sourceY + targetY) / 2
-  const dx = targetX - sourceX
-  const dy = targetY - sourceY
-  const len = Math.sqrt(dx * dx + dy * dy) || 1
+  const midX = (sourceX + targetX) / 2;
+  const midY = (sourceY + targetY) / 2;
+  const dx = targetX - sourceX;
+  const dy = targetY - sourceY;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
 
   // Create perpendicular offset for multiple edges
-  const perpX = (-dy / len) * edgeOffset
-  const perpY = (dx / len) * edgeOffset
-  const controlX = midX + perpX
-  const controlY = midY + perpY
-  const edgePath = `M ${sourceX} ${sourceY} Q ${controlX} ${controlY} ${targetX} ${targetY}`
+  const perpX = (-dy / len) * edgeOffset;
+  const perpY = (dx / len) * edgeOffset;
+  const controlX = midX + perpX;
+  const controlY = midY + perpY;
+  const edgePath = `M ${sourceX} ${sourceY} Q ${controlX} ${controlY} ${targetX} ${targetY}`;
 
   return (
     <motion.g
@@ -325,46 +323,43 @@ const CustomEdge: React.FC<EdgeProps> = ({
         transition={{ duration: 0.2 }}
       />
     </motion.g>
-  )
-}
+  );
+};
 
 // Tooltip Component
 const Tooltip: React.FC<{
-  tooltip: any
-  showToast: (message: string, type: "success" | "error") => void
+  tooltip: any;
+  showToast: (message: string, type: "success" | "error") => void;
 }> = ({ tooltip, showToast }) => {
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-  if (!tooltip) return null
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  if (!tooltip) return null;
   const copyToClipboard = (text: string, field: string) => {
     try {
       // Try modern clipboard API first
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
+        navigator.clipboard.writeText(text);
       } else {
         // Fallback for older browsers or mobile devices
-        const textArea = document.createElement("textarea")
-        textArea.value = text
-        textArea.style.position = "fixed"
-        textArea.style.left = "-999999px"
-        textArea.style.top = "-999999px"
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        document.execCommand("copy")
-        document.body.removeChild(textArea)
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
       }
 
-      setCopiedField(field)
-      showToast("Address copied to clipboard!", "success")
-      setTimeout(() => setCopiedField(null), 2000) // Hide after 2 seconds
+      setCopiedField(field);
+      showToast("Address copied to clipboard!", "success");
+      setTimeout(() => setCopiedField(null), 2000); // Hide after 2 seconds
     } catch (error) {
-      console.error("Failed to copy to clipboard:", error)
-      showToast("Failed to copy address", "error")
+      console.error("Failed to copy to clipboard:", error);
+      showToast("Failed to copy address", "error");
     }
-  }
-
-
-
+  };
 
   return (
     <>
@@ -438,146 +433,146 @@ const Tooltip: React.FC<{
         </div>
       )}
     </>
-  )
-}
+  );
+};
 
 const isIOS = () => {
-  const ua = navigator.userAgent || ""
-  const isTouchMac = ua.includes("Mac") && "ontouchend" in document
-  return /iPad|iPhone|iPod/.test(ua) || isTouchMac
-}
+  const ua = navigator.userAgent || "";
+  const isTouchMac = ua.includes("Mac") && "ontouchend" in document;
+  return /iPad|iPhone|iPod/.test(ua) || isTouchMac;
+};
 
 const drawSvgToPng = async (
   svgMarkup: string,
   width: number,
   height: number,
-  pixelRatio = 2
+  pixelRatio = 2,
 ) => {
-  const img = new Image()
-  img.decoding = "async"
+  const img = new Image();
+  img.decoding = "async";
   const svgDataUrl =
-    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgMarkup)
-  img.src = svgDataUrl
-  await img.decode()
+    "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgMarkup);
+  img.src = svgDataUrl;
+  await img.decode();
 
-  const canvas = document.createElement("canvas")
-  canvas.width = Math.round(width * pixelRatio)
-  canvas.height = Math.round(height * pixelRatio)
-  const ctx = canvas.getContext("2d")!
-  ctx.imageSmoothingEnabled = true
-  ctx.imageSmoothingQuality = "high"
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-  return canvas.toDataURL("image/png")
-}
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(width * pixelRatio);
+  canvas.height = Math.round(height * pixelRatio);
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/png");
+};
 
 const toPngWithRetry = async (el: HTMLElement, opts: any, attempts = 3) => {
-  let last = ""
+  let last = "";
   for (let i = 0; i < attempts; i++) {
-    const url = await toPng(el, opts)
-    if (url.length > last.length) return url
-    last = url
-    await new Promise((r) => setTimeout(r, 150))
+    const url = await toPng(el, opts);
+    if (url.length > last.length) return url;
+    last = url;
+    await new Promise((r) => setTimeout(r, 150));
   }
-  return last
-}
+  return last;
+};
 
 const DownloadButton: React.FC = () => {
-  const { getNodes } = useReactFlow()
-  const [showErrorPopup, setShowErrorPopup] = useState(false)
+  const { getNodes } = useReactFlow();
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
 
   const downloadImage = (dataUrl: string) => {
-    const a = document.createElement("a")
-    a.setAttribute("download", "whale-network-graph.png")
-    a.setAttribute("href", dataUrl)
-    a.click()
-  }
+    const a = document.createElement("a");
+    a.setAttribute("download", "whale-network-graph.png");
+    a.setAttribute("href", dataUrl);
+    a.click();
+  };
 
-  const imageWidth = 1920
-  const imageHeight = 1080
+  const imageWidth = 1920;
+  const imageHeight = 1080;
 
   // Replace external images with local default images to avoid CORS
   const fetchImageAsDataUrl = async (url: string): Promise<string | null> => {
     try {
       const response = await fetch(`${BASE_URL}/proxy-image?url=${url}`, {
         mode: "cors",
-      })
-      const blob = await response.blob()
+      });
+      const blob = await response.blob();
       return await new Promise((resolve) => {
-        const reader = new FileReader()
-        reader.onloadend = () => resolve(reader.result as string)
-        reader.readAsDataURL(blob)
-      })
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
     } catch (err) {
-      console.error("⚠️ Failed to fetch image:", url, err)
-      return null
+      console.error("⚠️ Failed to fetch image:", url, err);
+      return null;
     }
-  }
+  };
 
   const prepareImagesForScreenshot = async () => {
-    const images = document.querySelectorAll(".react-flow__viewport img")
+    const images = document.querySelectorAll(".react-flow__viewport img");
     const originalSources: Array<{
-      element: HTMLImageElement
-      originalSrc: string
-    }> = []
+      element: HTMLImageElement;
+      originalSrc: string;
+    }> = [];
 
     images.forEach(async (img) => {
-      const imgElement = img as HTMLImageElement
-      const originalSrc = imgElement.src
+      const imgElement = img as HTMLImageElement;
+      const originalSrc = imgElement.src;
       if (originalSrc && originalSrc.startsWith("http")) {
-        originalSources.push({ element: imgElement, originalSrc })
-        const dataUrl = await fetchImageAsDataUrl(originalSrc)
+        originalSources.push({ element: imgElement, originalSrc });
+        const dataUrl = await fetchImageAsDataUrl(originalSrc);
         if (dataUrl) {
-          imgElement.src = dataUrl
+          imgElement.src = dataUrl;
         } else {
-          imgElement.src = DefaultTokenImage
+          imgElement.src = DefaultTokenImage;
         }
       }
-    })
+    });
 
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    return originalSources
-  }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return originalSources;
+  };
 
   const restoreOriginalImages = (
-    originalSources: Array<{ element: HTMLImageElement; originalSrc: string }>
+    originalSources: Array<{ element: HTMLImageElement; originalSrc: string }>,
   ) => {
     originalSources.forEach(({ element, originalSrc }) => {
-      element.src = originalSrc
-    })
-  }
+      element.src = originalSrc;
+    });
+  };
 
   const handleRetry = () => {
-    onClick()
-  }
+    onClick();
+  };
 
   const onClick = async () => {
     let originalSources: Array<{
-      element: HTMLImageElement
-      originalSrc: string
-    }> = []
+      element: HTMLImageElement;
+      originalSrc: string;
+    }> = [];
     const targetEl = document.querySelector(
-      ".react-flow__viewport"
-    ) as HTMLElement | null
-    if (!targetEl) return
+      ".react-flow__viewport",
+    ) as HTMLElement | null;
+    if (!targetEl) return;
 
-    const root = document.querySelector(".react-flow") || document.body
-    const nodesBounds = getNodesBounds(getNodes())
+    const root = document.querySelector(".react-flow") || document.body;
+    const nodesBounds = getNodesBounds(getNodes());
     const viewport = getViewportForBounds(
       nodesBounds,
       imageWidth,
       imageHeight,
       0.5,
       2,
-      0.5
-    )
+      0.5,
+    );
 
     try {
-      originalSources = await prepareImagesForScreenshot()
+      originalSources = await prepareImagesForScreenshot();
 
       // Enter snapshot mode to stabilize Safari foreignObject rendering
-      root.classList.add("snapshot-mode")
+      root.classList.add("snapshot-mode");
 
-      let dataUrl = ""
+      let dataUrl = "";
 
       if (isIOS()) {
         // Prefer SVG on iOS/Safari; rasterize to PNG
@@ -593,8 +588,8 @@ const DownloadButton: React.FC = () => {
           skipFonts: true,
           skipAutoScale: true,
           preferredFontFormat: "woff2",
-        })
-        dataUrl = await drawSvgToPng(svgMarkup, imageWidth, imageHeight, 2)
+        });
+        dataUrl = await drawSvgToPng(svgMarkup, imageWidth, imageHeight, 2);
       } else {
         // Chromium/Android path
         dataUrl = await toPngWithRetry(
@@ -613,13 +608,13 @@ const DownloadButton: React.FC = () => {
             skipAutoScale: true,
             preferredFontFormat: "woff2",
           },
-          2
-        )
+          2,
+        );
       }
 
-      downloadImage(dataUrl)
+      downloadImage(dataUrl);
     } catch (error) {
-      console.error("Error downloading image:", error)
+      console.error("Error downloading image:", error);
       try {
         // Minimal fallback
         const dataUrl = await toPng(targetEl, {
@@ -634,22 +629,22 @@ const DownloadButton: React.FC = () => {
           pixelRatio: 1,
           skipFonts: true,
           skipAutoScale: true,
-        })
-        downloadImage(dataUrl)
+        });
+        downloadImage(dataUrl);
       } catch (fallbackError) {
-        console.error("Fallback download also failed:", fallbackError)
-        setShowErrorPopup(true)
+        console.error("Fallback download also failed:", fallbackError);
+        setShowErrorPopup(true);
       }
     } finally {
       // Exit snapshot mode and restore originals
-      root.classList.remove("snapshot-mode")
+      root.classList.remove("snapshot-mode");
       if (originalSources.length > 0) {
         setTimeout(() => {
-          restoreOriginalImages(originalSources)
-        }, 100)
+          restoreOriginalImages(originalSources);
+        }, 100);
       }
     }
-  }
+  };
 
   return (
     <>
@@ -673,188 +668,180 @@ const DownloadButton: React.FC = () => {
         onRetry={handleRetry}
       />
     </>
-  )
-}
+  );
+};
 
-type TooltipAnchor = { type: "whale"; nodeId: string }
+type TooltipAnchor = { type: "whale"; nodeId: string };
 // Main Network Graph Component
+import { useWalletConnection } from "../client/src/hooks/useWalletConnection";
+
 const WhaleNetworkGraph: React.FC<{
-  isOpen: boolean
-  onClose: () => void
+  isOpen: boolean;
+  onClose: () => void;
 }> = ({ isOpen, onClose }) => {
-  const [apiData, setApiData] = useState<CoinWithWhales[]>([])
-  const [loading, setLoading] = useState(false)
+  const { wallet, connect } = useWalletConnection();
+  const [apiData, setApiData] = useState<CoinWithWhales[]>([]);
+  const [loading, setLoading] = useState(false);
   // const [tooltip, setTooltip] = useState<TooltipData | null>(null)
-  const [tooltipAnchor, setTooltipAnchor] = useState<TooltipAnchor | null>(null)
-  const [toolbarSide, setToolbarSide] = useState<Position>(Position.Right)
-  const { showToast, ToastContainer } = useToast()
-  const { x: vpX, y: vpY, zoom } = useViewport()
+  const [tooltipAnchor, setTooltipAnchor] = useState<TooltipAnchor | null>(
+    null,
+  );
+  const [toolbarSide, setToolbarSide] = useState<Position>(Position.Right);
+  const { showToast, ToastContainer } = useToast();
+  const { x: vpX, y: vpY, zoom } = useViewport();
   const [filters, setFilters] = useState({
     timeframe: "5m",
     whales: "2",
     volume: "5K",
-  })
+  });
   const [touched, setTouched] = useState({
     timeframe: false,
     whales: false,
     volume: false,
-  })
+  });
 
-  const [dropdown, setDropdown] = useState<string | null>(null)
-  const [customWhales, setCustomWhales] = useState("")
-  const [customVolume, setCustomVolume] = useState("")
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [lastUpdatedTime, setLastUpdatedTime] = useState<Date | null>(null)
+  const [dropdown, setDropdown] = useState<string | null>(null);
+  const [customWhales, setCustomWhales] = useState("");
+  const [customVolume, setCustomVolume] = useState("");
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<Date | null>(null);
 
   // State for data management
-  const [mergedData, setMergedData] = useState<CoinWithWhales[]>([])
+  const [mergedData, setMergedData] = useState<CoinWithWhales[]>([]);
   const positionsRef = React.useRef<Record<string, { x: number; y: number }>>(
-    {}
-  )
-  const layoutAppliedRef = React.useRef(false)
+    {},
+  );
+  const layoutAppliedRef = React.useRef(false);
   const nodeTypes: NodeTypes = useMemo(
     () => ({
       coin: CoinNode,
       whale: WhaleNode,
     }),
-    []
-  )
+    [],
+  );
 
   const edgeTypes: EdgeTypes = useMemo(
     () => ({
       custom: CustomEdge,
     }),
-    []
-  )
+    [],
+  );
 
-
-
-
-  const [triggerOpen, setTriggerOpen] = useState(false)
-  const [walletTypeOpen, setWalletTypeOpen] = useState(false)
-  const [amountOpen, setAmountOpen] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-  const [amount, setAmount] = useState("$1K")
-  const [customAmount, setCustomAmount] = useState("")
-
+  const [triggerOpen, setTriggerOpen] = useState(false);
+  const [walletTypeOpen, setWalletTypeOpen] = useState(false);
+  const [amountOpen, setAmountOpen] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [amount, setAmount] = useState("$1K");
+  const [customAmount, setCustomAmount] = useState("");
 
   const closeAll = () => {
-    setTriggerOpen(false)
-    setWalletTypeOpen(false)
-    setAmountOpen(false)
-
-  }
+    setTriggerOpen(false);
+    setWalletTypeOpen(false);
+    setAmountOpen(false);
+  };
 
   useEffect(() => {
-    document.addEventListener("click", closeAll)
-    return () => document.removeEventListener("click", closeAll)
-  }, [])
+    document.addEventListener("click", closeAll);
+    return () => document.removeEventListener("click", closeAll);
+  }, []);
 
-  const [walletTypes, setWalletTypes] = useState([])
+  const [walletTypes, setWalletTypes] = useState([]);
 
   const toggleWalletType = (value) => {
     setWalletTypes((prev) =>
       prev.includes(value)
         ? prev.filter((item) => item !== value)
-        : [...prev, value]
-    )
-  }
+        : [...prev, value],
+    );
+  };
 
-  const [isSaved, setIsSaved] = useState(false)
+  const [isSaved, setIsSaved] = useState(false);
 
-  const [hotness, setHotness] = useState(10)
+  const [hotness, setHotness] = useState(10);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (!e.target.closest(".nav-item.dropdown")) {
-        setOpenDropdown(null)
+        setOpenDropdown(null);
       }
-    }
-    document.addEventListener("click", handleClickOutside)
-    return () => document.removeEventListener("click", handleClickOutside)
-  }, [])
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (isSaved) {
-      setOpenDropdown(null)
+      setOpenDropdown(null);
     }
-  }, [isSaved])
+  }, [isSaved]);
 
+  const [openSelect, setOpenSelect] = useState(null);
 
-
-
-
-
-
-  const [openSelect, setOpenSelect] = useState(null)
-
-  const [timeframe, setTimeframe] = useState("15m")
-  const [whaleCount, setWhaleCount] = useState("3 Whales")
-
-
+  const [timeframe, setTimeframe] = useState("15m");
+  const [whaleCount, setWhaleCount] = useState("3 Whales");
 
   // Helper function to update data directly (no merging or fade-out logic)
   const updateDataDirectly = useCallback((newData: CoinWithWhales[]) => {
     // Simply replace the data with new data from API
-    setMergedData(newData)
-  }, [])
+    setMergedData(newData);
+  }, []);
 
   // Fetch data
   const fetchData = useCallback(
     async (isRefresh = false) => {
       if (isRefresh) {
-        setIsRefreshing(true)
+        setIsRefreshing(true);
       } else {
-        setLoading(true)
+        setLoading(true);
       }
 
       try {
         // Use custom values if provided, otherwise use filter values
-        const whaleCount = customWhales || filters.whales
-        const volumeValue = customVolume || filters.volume
+        const whaleCount = customWhales || filters.whales;
+        const volumeValue = customVolume || filters.volume;
 
         // Convert volume from "K" format to actual number for backend
         // Backend now handles all filtering: whale count and buy volume only
         const numericVolume = volumeValue.toString().includes("K")
           ? parseInt(volumeValue.replace("K", ""), 10) * 1000
-          : parseInt(volumeValue, 10) || 0
+          : parseInt(volumeValue, 10) || 0;
 
         const res = await axios.get(
-          `${BASE_URL}/whale/visualize-whales?timeframe=${filters.timeframe}&minWhales=${whaleCount}&minInflow=${numericVolume}`
-        )
+          `${BASE_URL}/whale/visualize-whales?timeframe=${filters.timeframe}&minWhales=${whaleCount}&minInflow=${numericVolume}`,
+        );
 
-        const newData = res.data.data || []
-        setApiData(newData)
+        const newData = res.data.data || [];
+        setApiData(newData);
 
         // Update data directly (no merging or fade-out logic)
-        updateDataDirectly(newData)
+        updateDataDirectly(newData);
 
         // Update last updated time and reset timer
-        setLastUpdatedTime(new Date())
+        setLastUpdatedTime(new Date());
       } catch (err) {
-        console.error("❌ Error fetching visualizeWhales:", err)
-        setApiData([])
+        console.error("❌ Error fetching visualizeWhales:", err);
+        setApiData([]);
       } finally {
         if (isRefresh) {
-          setIsRefreshing(false)
+          setIsRefreshing(false);
         } else {
-          setLoading(false)
+          setLoading(false);
         }
       }
     },
-    [filters, customWhales, customVolume, updateDataDirectly]
-  )
+    [filters, customWhales, customVolume, updateDataDirectly],
+  );
 
   // Process data for React Flow
   const { nodes, edges } = useMemo(() => {
-    let flowNodes: Node[] = []
-    const flowEdges: Edge[] = []
+    let flowNodes: Node[] = [];
+    const flowEdges: Edge[] = [];
 
     // Use merged data instead of raw apiData
-    const dataToProcess = mergedData.length > 0 ? mergedData : apiData
+    const dataToProcess = mergedData.length > 0 ? mergedData : apiData;
 
     if (!dataToProcess || dataToProcess.length === 0) {
-      return { nodes: flowNodes, edges: flowEdges }
+      return { nodes: flowNodes, edges: flowEdges };
     }
 
     // Flatten all trades
@@ -874,18 +861,18 @@ const WhaleNetworkGraph: React.FC<{
             typeof trade.timestamp === "string"
               ? new Date(trade.timestamp).getTime()
               : Number(trade.timestamp),
-        }))
-      )
-    )
+        })),
+      ),
+    );
 
     // Filter trades by timeframe only (backend handles volume and whale count filtering)
-    const now = Date.now()
-    const timePeriodMinutes = parseInt(filters.timeframe.replace("m", ""), 10)
+    const now = Date.now();
+    const timePeriodMinutes = parseInt(filters.timeframe.replace("m", ""), 10);
 
     const filteredTrades = allTrades.filter((trade) => {
-      const timeCheck = now - trade.timestamp <= timePeriodMinutes * 60 * 1000
-      return timeCheck
-    })
+      const timeCheck = now - trade.timestamp <= timePeriodMinutes * 60 * 1000;
+      return timeCheck;
+    });
 
     // Group by coin
     const tradesByCoin = filteredTrades.reduce(
@@ -894,20 +881,20 @@ const WhaleNetworkGraph: React.FC<{
           acc[trade.coinId] = {
             coin: dataToProcess.find((d) => d.coin.id === trade.coinId)?.coin,
             trades: [],
-          }
+          };
         }
-        acc[trade.coinId].trades.push(trade)
-        return acc
+        acc[trade.coinId].trades.push(trade);
+        return acc;
       },
-      {} as Record<string, { coin: any; trades: any[] }>
-    )
+      {} as Record<string, { coin: any; trades: any[] }>,
+    );
 
     // Create nodes and edges
     Object.values(tradesByCoin).forEach((coinData, coinIndex) => {
-      const coinId = `coin_${coinData.coin.id}`
+      const coinId = `coin_${coinData.coin.id}`;
 
       // Calculate total trades for this coin
-      const totalTrades = coinData.trades.length
+      const totalTrades = coinData.trades.length;
 
       // Add coin node
       flowNodes.push({
@@ -920,37 +907,37 @@ const WhaleNetworkGraph: React.FC<{
           nodeType: "coin",
           totalTrades: totalTrades,
         },
-      })
+      });
 
       // Group trades by whale
       const tradesByWhale = coinData.trades.reduce(
         (
           acc: Record<string, { whaleAddress: string; trades: any[] }>,
-          trade: any
+          trade: any,
         ) => {
           if (!acc[trade.whaleId]) {
             acc[trade.whaleId] = {
               whaleAddress: trade.whaleAddress,
               trades: [],
-            }
+            };
           }
-          acc[trade.whaleId].trades.push(trade)
-          return acc
+          acc[trade.whaleId].trades.push(trade);
+          return acc;
         },
-        {} as Record<string, { whaleAddress: string; trades: any[] }>
-      )
+        {} as Record<string, { whaleAddress: string; trades: any[] }>,
+      );
 
       // Create whale nodes and edges
       Object.entries(tradesByWhale).forEach(
         ([whaleId, whaleData], whaleIndex) => {
-          const whaleNodeId = `whale_${coinData.coin.id}_${whaleId}`
+          const whaleNodeId = `whale_${coinData.coin.id}_${whaleId}`;
 
           const totalBuyAmount = whaleData.trades
             .filter((t: any) => t.type === "buy")
-            .reduce((sum: number, t: any) => sum + t.amount, 0)
+            .reduce((sum: number, t: any) => sum + t.amount, 0);
           const totalSellAmount = whaleData.trades
             .filter((t: any) => t.type === "sell")
-            .reduce((sum: number, t: any) => sum + t.amount, 0)
+            .reduce((sum: number, t: any) => sum + t.amount, 0);
 
           // Add whale node
           flowNodes.push({
@@ -967,7 +954,7 @@ const WhaleNetworkGraph: React.FC<{
               totalSellAmount,
               nodeType: "whale",
             },
-          })
+          });
 
           // Add individual edges for each trade
           whaleData.trades.forEach((trade: any, tradeIndex: number) => {
@@ -976,11 +963,11 @@ const WhaleNetworkGraph: React.FC<{
               whaleNodeId,
               trade.type,
               trade.timestamp,
-              trade.amount
-            )
+              trade.amount,
+            );
 
             // Create a slight offset for multiple edges between same nodes
-            const edgeOffset = tradeIndex * 2 - (whaleData.trades.length - 1)
+            const edgeOffset = tradeIndex * 2 - (whaleData.trades.length - 1);
 
             flowEdges.push({
               id: edgeId,
@@ -995,169 +982,170 @@ const WhaleNetworkGraph: React.FC<{
                 edgeOffset: edgeOffset,
               },
               animated: trade.type === "sell",
-            })
-          })
-        }
-      )
-    })
+            });
+          });
+        },
+      );
+    });
 
     if (!layoutAppliedRef.current) {
-      flowNodes = applyForceLayout(flowNodes, flowEdges, 1200, 800)
-      layoutAppliedRef.current = true
+      flowNodes = applyForceLayout(flowNodes, flowEdges, 1200, 800);
+      layoutAppliedRef.current = true;
     } else {
       flowNodes = flowNodes.map((n) => ({
         ...n,
         position: positionsRef.current[n.id] ?? n.position,
-      }))
+      }));
     }
 
-    return { nodes: flowNodes, edges: flowEdges }
-  }, [mergedData, apiData, filters, customVolume])
+    return { nodes: flowNodes, edges: flowEdges };
+  }, [mergedData, apiData, filters, customVolume]);
 
-  const [nodesState, setNodes, onNodesChange] = useNodesState([] as Node[])
-  const [edgesState, setEdges, onEdgesChange] = useEdgesState([] as Edge[])
+  const [nodesState, setNodes, onNodesChange] = useNodesState([] as Node[]);
+  const [edgesState, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => addEdge(params, eds) as any),
-    [setEdges]
-  )
+    [setEdges],
+  );
   useEffect(() => {
     setNodes((prev: Node[]) => {
-      const prevMap = new Map(prev.map((n) => [n.id, n])) // prev is Node[]
+      const prevMap = new Map(prev.map((n) => [n.id, n])); // prev is Node[]
       return (nodes as Node[]).map((n) => {
-        const old = prevMap.get(n.id)
+        const old = prevMap.get(n.id);
         return old
           ? {
-            ...old,
-            data: n.data,
-            style: n.style,
-            type: n.type,
-            // keep old.position/width/height to avoid geometry shift
-          }
-          : n
-      })
-    })
+              ...old,
+              data: n.data,
+              style: n.style,
+              type: n.type,
+              // keep old.position/width/height to avoid geometry shift
+            }
+          : n;
+      });
+    });
     setEdges((prev: Edge[]) => {
-      const prevMap = new Map(prev.map((e) => [e.id, e])) // prev is Edge[]
+      const prevMap = new Map(prev.map((e) => [e.id, e])); // prev is Edge[]
       return (edges as Edge[]).map((e) => {
-        const old = prevMap.get(e.id)
+        const old = prevMap.get(e.id);
         return old
           ? {
-            ...old,
-            data: e.data,
-            animated: e.animated,
-            type: e.type,
-            // keep any internal geometry React Flow manages
-          }
-          : e
-      })
-    })
-  }, [nodes, edges, setNodes, setEdges])
+              ...old,
+              data: e.data,
+              animated: e.animated,
+              type: e.type,
+              // keep any internal geometry React Flow manages
+            }
+          : e;
+      });
+    });
+  }, [nodes, edges, setNodes, setEdges]);
 
   // Handle node click for tooltip (whales) and copy (coins)
   const onNodeClick = useCallback(
     (_event: React.MouseEvent<Element, MouseEvent>, node: Node) => {
       if (node.type === "whale") {
         // Show tooltip for whale nodes
-        setTooltipAnchor({ type: "whale", nodeId: node.id })
+        setTooltipAnchor({ type: "whale", nodeId: node.id });
       } else if (node.type === "coin") {
         // Copy token address for coin nodes
         const tokenAddress = (node.data?.id ||
           node.data?.coinId ||
-          node.id) as string
+          node.id) as string;
         if (tokenAddress && typeof tokenAddress === "string") {
           navigator.clipboard
             .writeText(tokenAddress)
             .then(() => {
-              showToast("Address copied to clipboard!", "success")
+              showToast("Address copied to clipboard!", "success");
             })
             .catch(() => {
-              showToast("Failed to copy address", "error")
-            })
+              showToast("Failed to copy address", "error");
+            });
         }
       }
     },
-    [showToast]
-  )
+    [showToast],
+  );
 
   // Close tooltip when clicking elsewhere
   const onPaneClick = useCallback(() => {
-    setTooltipAnchor(null)
-  }, [])
+    setTooltipAnchor(null);
+  }, []);
 
   // Manual refresh function
   const handleManualRefresh = useCallback(() => {
-    fetchData(true)
-  }, [fetchData])
+    fetchData(true);
+  }, [fetchData]);
 
   // Fetch data when filters change
   useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchData();
+  }, [fetchData]);
 
   // Auto-refresh every 5 seconds for live updates
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchData(true) // true indicates this is a refresh
-    }, 5000) // 5 seconds for live updates
+      fetchData(true); // true indicates this is a refresh
+    }, 5000); // 5 seconds for live updates
 
-    return () => clearInterval(interval)
-  }, [fetchData])
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
-  const nodesInitialized = useNodesInitialized()
-  const { fitView } = useReactFlow()
-  const [didFit, setDidFit] = useState(false)
+  const nodesInitialized = useNodesInitialized();
+  const { fitView } = useReactFlow();
+  const [didFit, setDidFit] = useState(false);
 
   useEffect(() => {
     if (!didFit && nodesInitialized && nodesState.length > 0) {
-      fitView({ padding: 0.2 })
-      setDidFit(true)
+      fitView({ padding: 0.2 });
+      setDidFit(true);
     }
-  }, [didFit, nodesInitialized, nodesState.length, fitView])
+  }, [didFit, nodesInitialized, nodesState.length, fitView]);
 
-  const timeframeOptions = ["1m", "3m", "5m", "7m", "10m", "15m"]
-  const whaleOptions = ["2", "3", "4", "5", "7", "10"]
-  const volumeOptions = ["3K", "5K", "10K", "15K", "25K"]
+  const timeframeOptions = ["1m", "3m", "5m", "7m", "10m", "15m"];
+  const whaleOptions = ["2", "3", "4", "5", "7", "10"];
+  const volumeOptions = ["3K", "5K", "10K", "15K", "25K"];
 
   // Helper function to format time display
   const formatTimeSinceUpdate = (seconds: number) => {
     if (seconds < 60) {
-      return `${seconds}s`
+      return `${seconds}s`;
     } else {
-      const minutes = Math.floor(seconds / 60)
-      const remainingSeconds = seconds % 60
-      return `${minutes}m ${remainingSeconds}s`
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
     }
-  }
+  };
 
   useEffect(() => {
-    if (!tooltipAnchor) return
-    const pane = document.querySelector(".react-flow") as HTMLElement | null
-    if (!pane) return
+    if (!tooltipAnchor) return;
+    const pane = document.querySelector(".react-flow") as HTMLElement | null;
+    if (!pane) return;
 
-    const rect = pane.getBoundingClientRect()
-    const node = nodesState.find((n) => n.id === tooltipAnchor.nodeId)
-    if (!node) return
+    const rect = pane.getBoundingClientRect();
+    const node = nodesState.find((n) => n.id === tooltipAnchor.nodeId);
+    if (!node) return;
 
     // node size fallbacks
-    const width = node.width ?? 48
-    const height = node.height ?? 48
+    const width = node.width ?? 48;
+    const height = node.height ?? 48;
 
     // node center in pane pixel space (using viewport transform)
-    const nodeCenterX = vpX + node.position.x * zoom + (width * zoom) / 2
-    const nodeCenterY = vpY + node.position.y * zoom + (height * zoom) / 2
+    const nodeCenterX = vpX + node.position.x * zoom + (width * zoom) / 2;
+    const nodeCenterY = vpY + node.position.y * zoom + (height * zoom) / 2;
 
     // estimated tooltip box size (adjust if your content differs)
-    const estTooltipWidth = 260
-    const estTooltipHeight = 140
-    const gap = 12
+    const estTooltipWidth = 260;
+    const estTooltipHeight = 140;
+    const gap = 12;
 
     // available pixels to each side within pane bounds
-    const availableRight = rect.width - (nodeCenterX + (width * zoom) / 2) - gap
-    const availableLeft = nodeCenterX - (width * zoom) / 2 - gap
+    const availableRight =
+      rect.width - (nodeCenterX + (width * zoom) / 2) - gap;
+    const availableLeft = nodeCenterX - (width * zoom) / 2 - gap;
     const availableBottom =
-      rect.height - (nodeCenterY + (height * zoom) / 2) - gap
-    const availableTop = nodeCenterY - (height * zoom) / 2 - gap
+      rect.height - (nodeCenterY + (height * zoom) / 2) - gap;
+    const availableTop = nodeCenterY - (height * zoom) / 2 - gap;
 
     // Score each side by how much room remains after placing the tooltip
     const scores: Array<{ side: Position; score: number; fits: boolean }> = [
@@ -1181,26 +1169,24 @@ const WhaleNetworkGraph: React.FC<{
         score: availableTop - estTooltipHeight,
         fits: availableTop >= estTooltipHeight,
       },
-    ]
+    ];
 
     // Prefer any side that "fits"; otherwise choose the maximum score as fallback
-    const fitting = scores.filter((s) => s.fits)
+    const fitting = scores.filter((s) => s.fits);
     const chosen = (fitting.length > 0 ? fitting : scores).reduce(
-      (best, cur) => (cur.score > best.score ? cur : best)
-    )
+      (best, cur) => (cur.score > best.score ? cur : best),
+    );
 
-    setToolbarSide(chosen.side)
-  }, [tooltipAnchor, nodesState, vpX, vpY, zoom])
+    setToolbarSide(chosen.side);
+  }, [tooltipAnchor, nodesState, vpX, vpY, zoom]);
 
   React.useEffect(() => {
     if (isOpen) {
-      setTouched({ timeframe: false, whales: false, volume: false })
+      setTouched({ timeframe: false, whales: false, volume: false });
     }
-  }, [isOpen])
+  }, [isOpen]);
 
-  if (!isOpen) return null
-
-
+  if (!isOpen) return null;
 
   return (
     <motion.div
@@ -1258,8 +1244,9 @@ const WhaleNetworkGraph: React.FC<{
           {/* Mobile Timeframe */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
-                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
+                dropdown === "timeframe" ? "text-white" : "text-gray-400"
+              } ${dropdown === "timeframe" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "timeframe" ? null : "timeframe")
               }
@@ -1279,9 +1266,9 @@ const WhaleNetworkGraph: React.FC<{
                     key={option}
                     className="w-full px-2 py-1 text-left text-white hover:text-white/70 transition-colors text-xs"
                     onClick={() => {
-                      setFilters((prev) => ({ ...prev, timeframe: option }))
-                      setTouched((t) => ({ ...t, timeframe: true }))
-                      setDropdown(null)
+                      setFilters((prev) => ({ ...prev, timeframe: option }));
+                      setTouched((t) => ({ ...t, timeframe: true }));
+                      setDropdown(null);
                     }}
                   >
                     {option}
@@ -1294,8 +1281,9 @@ const WhaleNetworkGraph: React.FC<{
           {/* Mobile Whales */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "whales" ? "text-white" : "text-gray-400"
-                } ${dropdown === "whales" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
+                dropdown === "whales" ? "text-white" : "text-gray-400"
+              } ${dropdown === "whales" ? "font-bold" : "font-normal"} transition-colors cursor-pointer`}
               onClick={() =>
                 setDropdown(dropdown === "whales" ? null : "whales")
               }
@@ -1315,10 +1303,10 @@ const WhaleNetworkGraph: React.FC<{
                     key={option}
                     className="w-full px-2 py-1 text-left text-white hover:text-white/70 transition-colors text-xs"
                     onClick={() => {
-                      setFilters((prev) => ({ ...prev, whales: option }))
-                      setCustomWhales("")
-                      setTouched((t) => ({ ...t, whales: true }))
-                      setDropdown(null)
+                      setFilters((prev) => ({ ...prev, whales: option }));
+                      setCustomWhales("");
+                      setTouched((t) => ({ ...t, whales: true }));
+                      setDropdown(null);
                     }}
                   >
                     •{option}
@@ -1338,10 +1326,10 @@ const WhaleNetworkGraph: React.FC<{
                         setFilters((prev) => ({
                           ...prev,
                           whales: customWhales,
-                        }))
-                        setCustomWhales("")
-                        setTouched((t) => ({ ...t, whales: true }))
-                        setDropdown(null)
+                        }));
+                        setCustomWhales("");
+                        setTouched((t) => ({ ...t, whales: true }));
+                        setDropdown(null);
                       }
                     }}
                     className="w-full mt-1 px-2 py-1 bg-[#06DF73] text-black rounded text-xs font-medium hover:bg-[#05C96A] transition-colors"
@@ -1356,8 +1344,9 @@ const WhaleNetworkGraph: React.FC<{
           {/* Mobile Volume */}
           <div className="relative flex-1">
             <button
-              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${dropdown === "volume" ? "text-white" : "text-gray-400"
-                } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer transition-colors`}
+              className={`flex items-center justify-between w-full px-2 py-2 border border-[#2B2B2D] rounded-lg text-xs ${
+                dropdown === "volume" ? "text-white" : "text-gray-400"
+              } ${dropdown === "volume" ? "font-bold" : "font-normal"} cursor-pointer transition-colors`}
               onClick={() =>
                 setDropdown(dropdown === "volume" ? null : "volume")
               }
@@ -1377,10 +1366,10 @@ const WhaleNetworkGraph: React.FC<{
                     key={option}
                     className="w-full px-2 py-1 text-left text-white hover:text-white/70 transition-colors text-xs"
                     onClick={() => {
-                      setFilters((prev) => ({ ...prev, volume: option }))
-                      setCustomVolume("")
-                      setTouched((t) => ({ ...t, volume: true }))
-                      setDropdown(null)
+                      setFilters((prev) => ({ ...prev, volume: option }));
+                      setCustomVolume("");
+                      setTouched((t) => ({ ...t, volume: true }));
+                      setDropdown(null);
                     }}
                   >
                     {option}
@@ -1400,10 +1389,10 @@ const WhaleNetworkGraph: React.FC<{
                         setFilters((prev) => ({
                           ...prev,
                           volume: customVolume + "K",
-                        }))
-                        setCustomVolume("")
-                        setTouched((t) => ({ ...t, volume: true }))
-                        setDropdown(null)
+                        }));
+                        setCustomVolume("");
+                        setTouched((t) => ({ ...t, volume: true }));
+                        setDropdown(null);
                       }
                     }}
                     className="w-full mt-1 px-2 py-1 bg-[#06DF73] text-black rounded text-xs font-medium hover:bg-[#05C96A] transition-colors"
@@ -1420,224 +1409,228 @@ const WhaleNetworkGraph: React.FC<{
         <div className="hidden md:flex flex-wrap gap-4 justify-end mb-6">
           {/* Timeframe */}
 
-            <div className="relative">
-      {/* MAIN BUTTON */}
-      <button
-        className="plan-btn"
-        onClick={() =>
-          setDropdown(dropdown === "telegram" ? null : "telegram")
-        }
-      >
-        <SiTelegram className="me-1" />
-        Subscribe
-        <ChevronDown
-          className={`w-4 h-4 transition-transform ${
-            dropdown === "telegram" ? "rotate-180 text-white" : "text-gray-400"
-          }`}
-        />
-      </button>
+          <div className="relative">
+            {/* MAIN BUTTON */}
+            <button
+              className="plan-btn"
+              onClick={() =>
+                setDropdown(dropdown === "telegram" ? null : "telegram")
+              }
+            >
+              <SiTelegram className="me-1" />
+              Subscribe
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  dropdown === "telegram"
+                    ? "rotate-180 text-white"
+                    : "text-gray-400"
+                }`}
+              />
+            </button>
 
-      {/* DROPDOWN */}
-      {dropdown === "telegram" && (
-        <div
-          className="filter-dropdown-menu w-sm filter-mobile-subscription"
-          onClick={closeAll}
-        >
-          {!isSaved && <div className="parent-dropdown-content">
-
-            {/* HEADER */}
-            <div className="sub-drop-header">
-              <div className="sub-drop-content">
-                <h6>System Config</h6>
-                <h4>Whale Feed Alerts</h4>
-              </div>
-
-              <button className="paper-plan-connect-btn">
-                <FontAwesomeIcon icon={faPaperPlane} /> Connected
-              </button>
-            </div>
-
-            {/* TIMEFRAME */}
-            <div className="custom-frm-bx position-relative pt-2">
-              <label className="nw-label">Timeframe Window</label>
-
+            {/* DROPDOWN */}
+            {dropdown === "telegram" && (
               <div
-                className="form-select cursor-pointer text-start"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setOpenSelect(openSelect === "time" ? null : "time")
-                }}
+                className="filter-dropdown-menu w-sm filter-mobile-subscription"
+                onClick={closeAll}
               >
-                {timeframe}
-              </div>
+                {!isSaved && (
+                  <div className="parent-dropdown-content">
+                    {/* HEADER */}
+                    <div className="sub-drop-header">
+                      <div className="sub-drop-content">
+                        <h6>System Config</h6>
+                        <h4>Whale Feed Alerts</h4>
+                      </div>
 
-              {openSelect === "time" && (
-                <ul className="subscription-dropdown-menu show w-100">
-                  {["5m", "15m", "30m", "1h"].map((item) => (
-                    <li
-                      key={item}
-                      className="subs-items"
-                      onClick={() => {
-                        setTimeframe(item)
-                        closeAll()
-                      }}
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      <button className="paper-plan-connect-btn">
+                        <FontAwesomeIcon icon={faPaperPlane} /> Connected
+                      </button>
+                    </div>
 
-            {/* WHALE COUNT */}
-            <div className="custom-frm-bx position-relative">
-              <label className="nw-label">Min Whale Count</label>
+                    {/* TIMEFRAME */}
+                    <div className="custom-frm-bx position-relative pt-2">
+                      <label className="nw-label">Timeframe Window</label>
 
-              <div
-                className="form-select cursor-pointer text-start"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setOpenSelect(openSelect === "whale" ? null : "whale")
-                }}
-              >
-                {whaleCount}
-              </div>
-
-              {openSelect === "whale" && (
-                <ul className="subscription-dropdown-menu show w-100">
-                  {["1 Whale", "3 Whales", "5 Whales", "10 Whales"].map(
-                    (item) => (
-                      <li
-                        key={item}
-                        className="subs-items"
-                        onClick={() => {
-                          setWhaleCount(item)
-                          closeAll()
+                      <div
+                        className="form-select cursor-pointer text-start"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenSelect(openSelect === "time" ? null : "time");
                         }}
                       >
-                        {item}
-                      </li>
-                    )
-                  )}
-                </ul>
-              )}
-            </div>
+                        {timeframe}
+                      </div>
 
-            {/* AMOUNT */}
-            <div className="custom-frm-bx position-relative">
-              <label className="nw-label">Min Wallet Amount</label>
+                      {openSelect === "time" && (
+                        <ul className="subscription-dropdown-menu show w-100">
+                          {["5m", "15m", "30m", "1h"].map((item) => (
+                            <li
+                              key={item}
+                              className="subs-items"
+                              onClick={() => {
+                                setTimeframe(item);
+                                closeAll();
+                              }}
+                            >
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
 
-              <div
-                className="form-select cursor-pointer text-start"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setOpenSelect(openSelect === "amount" ? null : "amount")
-                }}
-              >
-                {amount}
-              </div>
+                    {/* WHALE COUNT */}
+                    <div className="custom-frm-bx position-relative">
+                      <label className="nw-label">Min Whale Count</label>
 
-              {openSelect === "amount" && (
-                <ul className="subscription-dropdown-menu show w-100">
-                  {["$1K", "$5K", "$10K", "$25K", "$50K"].map((item) => (
-                    <li
-                      key={item}
-                      className="subs-items"
-                      onClick={() => {
-                        setAmount(item)
-                        closeAll()
+                      <div
+                        className="form-select cursor-pointer text-start"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenSelect(
+                            openSelect === "whale" ? null : "whale",
+                          );
+                        }}
+                      >
+                        {whaleCount}
+                      </div>
+
+                      {openSelect === "whale" && (
+                        <ul className="subscription-dropdown-menu show w-100">
+                          {["1 Whale", "3 Whales", "5 Whales", "10 Whales"].map(
+                            (item) => (
+                              <li
+                                key={item}
+                                className="subs-items"
+                                onClick={() => {
+                                  setWhaleCount(item);
+                                  closeAll();
+                                }}
+                              >
+                                {item}
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* AMOUNT */}
+                    <div className="custom-frm-bx position-relative">
+                      <label className="nw-label">Min Wallet Amount</label>
+
+                      <div
+                        className="form-select cursor-pointer text-start"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenSelect(
+                            openSelect === "amount" ? null : "amount",
+                          );
+                        }}
+                      >
+                        {amount}
+                      </div>
+
+                      {openSelect === "amount" && (
+                        <ul className="subscription-dropdown-menu show w-100">
+                          {["$1K", "$5K", "$10K", "$25K", "$50K"].map(
+                            (item) => (
+                              <li
+                                key={item}
+                                className="subs-items"
+                                onClick={() => {
+                                  setAmount(item);
+                                  closeAll();
+                                }}
+                              >
+                                {item}
+                              </li>
+                            ),
+                          )}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="alert-preview">
+                      Alert if
+                      <span className="green">
+                        {" "}
+                        {whaleCount.replace(/\D/g, "")}{" "}
+                      </span>
+                      whales buy
+                      <span className="green"> {amount} </span>
+                      in
+                      <span className="green"> {timeframe} </span>
+                    </div>
+
+                    {/* ACTIVATE */}
+                    <button
+                      className="connect-wallet-btn"
+                      style={{ backgroundColor: "#162ECD" }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!wallet?.connected) {
+                          connect();
+                        } else {
+                          setIsSaved(true);
+                        }
                       }}
                     >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      {!wallet?.connected ? "Connect" : "ACTIVATE ALERT"}
+                      <span className="corner top-right"></span>
+                      <span className="corner bottom-left"></span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
-            <div className="alert-preview">
-              Alert if
-              <span className="green"> {whaleCount.replace(/\D/g, "")} </span>
-               whales buy
-              <span className="green"> {amount}  </span>
-              in
-              <span className="green"> {timeframe} </span>
-            </div>
+            {/* SAVED MODAL */}
+            {isSaved && (
+              <div className="config-overlay">
+                <div className="config-modal">
+                  <h3 className="config-title">CONFIGURATION SAVED</h3>
 
-            {/* ACTIVATE */}
-             <button
-              className="connect-wallet-btn"
-              onClick={() => setIsSaved(true)}
-            >
-              ACTIVATE ALERT
-              <span className="corner top-right"></span>
-                <span className="corner bottom-left"></span>
-            </button>
-          </div>}
-          
-        </div>
-        
-      )}
+                  <div className="config-box">
+                    <div className="config-row">
+                      <span>Feed Type</span>
+                      <span>Whale Cluster</span>
+                    </div>
 
-      {/* SAVED MODAL */}
-      {isSaved && (
-        <div className="config-overlay">
-    <div className="config-modal">
+                    <div className="config-row">
+                      <span>Window</span>
+                      <span className="green">{timeframe}</span>
+                    </div>
 
-      <h3 className="config-title">
-        CONFIGURATION SAVED
-      </h3>
+                    <div className="config-row">
+                      <span>Min Whales</span>
+                      <span>{whaleCount.replace(/\D/g, "")}</span>
+                    </div>
 
-      <div className="config-box">
+                    <div className="config-row">
+                      <span>Min Volume</span>
+                      <span>{amount}</span>
+                    </div>
 
-        <div className="config-row">
-          <span>Feed Type</span>
-          <span>Whale Cluster</span>
-        </div>
+                    <div className="config-row">
+                      <span>Status</span>
+                      <span className="status-active">
+                        Active <i className="green-dot"></i>
+                      </span>
+                    </div>
+                  </div>
 
-        <div className="config-row">
-          <span>Window</span>
-          <span className="green">
-            {timeframe}
-          </span>
-        </div>
-
-        <div className="config-row">
-          <span>Min Whales</span>
-          <span>
-            {whaleCount.replace(/\D/g, "")}
-          </span>
-        </div>
-
-        <div className="config-row">
-          <span>Min Volume</span>
-          <span>
-            {amount}
-          </span>
-        </div>
-
-        <div className="config-row">
-          <span>Status</span>
-          <span className="status-active">
-            Active <i className="green-dot"></i>
-          </span>
-        </div>
-
-      </div>
-
-      <button
-        className="close-btn"
-        onClick={() => setIsSaved(false)}
-      >
-        CLOSE
-      </button>
-    </div>
-  </div>
-        
-      )}
-      
-    </div>
-
+                  <button
+                    className="close-btn"
+                    onClick={() => setIsSaved(false)}
+                  >
+                    CLOSE
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="relative">
             {/* <button
@@ -1646,15 +1639,15 @@ const WhaleNetworkGraph: React.FC<{
 
             <button
               className="plan-btn"
-
               onClick={() =>
                 setDropdown(dropdown === "timeframe" ? null : "timeframe")
               }
             >
               {touched.timeframe ? filters.timeframe : "Timeframe"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "timeframe" ? "rotate-180" : ""} ${dropdown === "timeframe" ? "text-white" : "text-gray-400"
-                  } ${dropdown === "timeframe" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "timeframe" ? "rotate-180" : ""} ${
+                  dropdown === "timeframe" ? "text-white" : "text-gray-400"
+                } ${dropdown === "timeframe" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "timeframe" && (
@@ -1667,9 +1660,9 @@ const WhaleNetworkGraph: React.FC<{
                     key={option}
                     className="w-full px-4 py-2 text-left text-white hover:text-white/70 transition-colors cursor-pointer"
                     onClick={() => {
-                      setFilters((prev) => ({ ...prev, timeframe: option }))
-                      setTouched((t) => ({ ...t, timeframe: true }))
-                      setDropdown(null)
+                      setFilters((prev) => ({ ...prev, timeframe: option }));
+                      setTouched((t) => ({ ...t, timeframe: true }));
+                      setDropdown(null);
                     }}
                   >
                     {option}
@@ -1686,18 +1679,15 @@ const WhaleNetworkGraph: React.FC<{
               //   } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
 
               className="plan-btn"
-
-
-
-
               onClick={() =>
                 setDropdown(dropdown === "whales" ? null : "whales")
               }
             >
               {touched.whales ? `${filters.whales}W` : "No.Whales"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "whales" ? "rotate-180" : ""} ${dropdown === "whales" ? "text-white" : "text-gray-400"
-                  } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "whales" ? "rotate-180" : ""} ${
+                  dropdown === "whales" ? "text-white" : "text-gray-400"
+                } ${dropdown === "whales" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "whales" && (
@@ -1710,10 +1700,10 @@ const WhaleNetworkGraph: React.FC<{
                     key={option}
                     className="w-full px-4 py-2 text-left text-white hover:text-white/70 transition-colors cursor-pointer"
                     onClick={() => {
-                      setFilters((prev) => ({ ...prev, whales: option }))
-                      setCustomWhales("")
-                      setTouched((t) => ({ ...t, whales: true }))
-                      setDropdown(null)
+                      setFilters((prev) => ({ ...prev, whales: option }));
+                      setCustomWhales("");
+                      setTouched((t) => ({ ...t, whales: true }));
+                      setDropdown(null);
                     }}
                   >
                     •{option}
@@ -1734,10 +1724,10 @@ const WhaleNetworkGraph: React.FC<{
                         setFilters((prev) => ({
                           ...prev,
                           whales: customWhales,
-                        }))
-                        setCustomWhales("")
-                        setTouched((t) => ({ ...t, whales: true }))
-                        setDropdown(null)
+                        }));
+                        setCustomWhales("");
+                        setTouched((t) => ({ ...t, whales: true }));
+                        setDropdown(null);
                       }
                     }}
                     className="w-full mt-2 px-3 py-1 bg-[#06DF73] text-black rounded text-sm font-medium hover:bg-[#05C96A] transition-colors"
@@ -1761,8 +1751,9 @@ const WhaleNetworkGraph: React.FC<{
             >
               {touched.volume ? filters.volume : "Volume"}
               <ChevronDown
-                className={`w-4 h-4 transition-transform ${dropdown === "volume" ? "rotate-180" : ""} ${dropdown === "volume" ? "text-white" : "text-gray-400"
-                  } ${dropdown === "volume" ? "font-bold" : "font-normal"}`}
+                className={`w-4 h-4 transition-transform ${dropdown === "volume" ? "rotate-180" : ""} ${
+                  dropdown === "volume" ? "text-white" : "text-gray-400"
+                } ${dropdown === "volume" ? "font-bold" : "font-normal"}`}
               />
             </button>
             {dropdown === "volume" && (
@@ -1775,10 +1766,10 @@ const WhaleNetworkGraph: React.FC<{
                     key={option}
                     className="w-full px-4 py-2 text-left text-white hover:text-white/70 transition-colors cursor-pointer"
                     onClick={() => {
-                      setFilters((prev) => ({ ...prev, volume: option }))
-                      setCustomVolume("")
-                      setTouched((t) => ({ ...t, volume: true }))
-                      setDropdown(null)
+                      setFilters((prev) => ({ ...prev, volume: option }));
+                      setCustomVolume("");
+                      setTouched((t) => ({ ...t, volume: true }));
+                      setDropdown(null);
                     }}
                   >
                     {option}
@@ -1799,10 +1790,10 @@ const WhaleNetworkGraph: React.FC<{
                         setFilters((prev) => ({
                           ...prev,
                           volume: customVolume + "K",
-                        }))
-                        setCustomVolume("")
-                        setTouched((t) => ({ ...t, volume: true }))
-                        setDropdown(null)
+                        }));
+                        setCustomVolume("");
+                        setTouched((t) => ({ ...t, volume: true }));
+                        setDropdown(null);
                       }
                     }}
                     className="w-full mt-2 px-3 py-1 bg-[#06DF73] text-black rounded text-sm font-medium hover:bg-[#05C96A] transition-colors"
@@ -1905,8 +1896,7 @@ const WhaleNetworkGraph: React.FC<{
             </>
           )} */}
 
-
-        <div className="alpha-total-value-bx border-0 nw-visual-modal nw-xl-modal ">
+          <div className="alpha-total-value-bx border-0 nw-visual-modal nw-xl-modal ">
             <div className="total-value-content">
               <div className="z-cash-parent-bx position-relative">
                 <div className="">
@@ -1916,10 +1906,9 @@ const WhaleNetworkGraph: React.FC<{
                     </div>
                   </div>
 
-                  <h5><span className="trans-id">zcash</span></h5>
-
-
-
+                  <h5>
+                    <span className="trans-id">zcash</span>
+                  </h5>
                 </div>
                 <div className="cash-line"></div>
                 <div>
@@ -1938,14 +1927,28 @@ const WhaleNetworkGraph: React.FC<{
 
                   <div className="trans-data-bx">
                     <ul className="trans-list">
-                      <li><span className="nw-trasn-title">3ACpt...WEyFdW</span></li>
-                      <li><a href="javascript:void(0)" className="quick-nw-btn"><FaRegCopy /></a></li>
-                      <li><a href="javascript:void(0)" className="quick-nw-btn"><FaArrowRightLong className="nw-arrow-tp" /></a></li>
+                      <li>
+                        <span className="nw-trasn-title">3ACpt...WEyFdW</span>
+                      </li>
+                      <li>
+                        <a href="javascript:void(0)" className="quick-nw-btn">
+                          <FaRegCopy />
+                        </a>
+                      </li>
+                      <li>
+                        <a href="javascript:void(0)" className="quick-nw-btn">
+                          <FaArrowRightLong className="nw-arrow-tp" />
+                        </a>
+                      </li>
                     </ul>
 
                     <ul className="buy-trans-list">
-                      <li className="buy-trans-item"><span className="trans-buy">Buys:</span> 9($6,875)</li>
-                      <li className="buy-trans-item"><span className="trans-sell">Buys:</span> 9($6,875)</li>
+                      <li className="buy-trans-item">
+                        <span className="trans-buy">Buys:</span> 9($6,875)
+                      </li>
+                      <li className="buy-trans-item">
+                        <span className="trans-sell">Buys:</span> 9($6,875)
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -1960,7 +1963,7 @@ const WhaleNetworkGraph: React.FC<{
                 </div>
               </div>
             </div>
-          </div> 
+          </div>
 
           {/* <div className="alpha-total-value-bx border-0 nw-visual-modal nw-xl-modal ">
                       <div className="total-value-content">
@@ -2017,8 +2020,7 @@ const WhaleNetworkGraph: React.FC<{
                       </div>
              </div> */}
 
-
-         {/* <div className="alpha-total-value-bx border-0 nw-visual-modal nw-xl-modal ">
+          {/* <div className="alpha-total-value-bx border-0 nw-visual-modal nw-xl-modal ">
                       <div className="total-value-content justify-content-center">
                         <div className="position-relative">
                           <div className="">
@@ -2081,10 +2083,13 @@ const WhaleNetworkGraph: React.FC<{
                         </div>
                       </div>
                </div> */}
-
         </div>
         <div className="flex items-center justify-start gap-1 alpha-visual-para">
-          <img src="/AppIcon.png" className="h-[10px] md:h-[18px]" style={{ width: "11px", height: "12px" }} />
+          <img
+            src="/AppIcon.png"
+            className="h-[10px] md:h-[18px]"
+            style={{ width: "11px", height: "12px" }}
+          />
           <div
             className="color-[#B4B4B4] text-[10px] md:text-[16px]"
             style={{ color: "#B4B4B4" }}
@@ -2100,7 +2105,7 @@ const WhaleNetworkGraph: React.FC<{
         <ToastContainer />
       </motion.div>
     </motion.div>
-  )
-}
+  );
+};
 
-export default WhaleNetworkGraph
+export default WhaleNetworkGraph;
