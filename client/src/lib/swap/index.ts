@@ -16,7 +16,6 @@ export type {
   TrackTradeResponse,
   SwapState,
   SwapApiError,
-  TransactionStatus,
   TransactionState,
   WalletState,
   TokenSelectorProps,

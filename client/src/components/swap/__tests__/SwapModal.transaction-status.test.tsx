@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { SwapModal } from '../SwapModal'
-import { useWalletConnection } from '../../../hooks/useWalletConnection'
-import { useSwapApi } from '../../../hooks/useSwapApi'
-import { useToast } from '../../ui/Toast'
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { SwapModal } from "../SwapModal"
+import { useWalletConnection } from "../../../hooks/useWalletConnection"
+import { useSwapApi } from "../../../hooks/useSwapApi"
+import { useToast } from "../../../contexts/ToastContext"
 
 // Mock dependencies
-vi.mock('../../../hooks/useWalletConnection')
-vi.mock('../../../hooks/useSwapApi')
-vi.mock('../../ui/Toast')
+vi.mock("../../../hooks/useWalletConnection")
+vi.mock("../../../hooks/useSwapApi")
+vi.mock("../../../contexts/ToastContext")
 
-describe('SwapModal - Transaction Status Feedback', () => {
+describe("SwapModal - Transaction Status Feedback", () => {
   const mockOnClose = vi.fn()
   const mockSendTransaction = vi.fn()
   const mockGetQuote = vi.fn()
@@ -23,13 +23,13 @@ describe('SwapModal - Transaction Status Feedback', () => {
 
   const mockWallet = {
     connected: true,
-    publicKey: { toBase58: () => 'mockPublicKey123' },
-    address: 'mockPublicKey123',
+    publicKey: { toBase58: () => "mockPublicKey123" },
+    address: "mockPublicKey123",
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Setup default mocks
     vi.mocked(useWalletConnection).mockReturnValue({
       wallet: mockWallet,
@@ -55,7 +55,7 @@ describe('SwapModal - Transaction Status Feedback', () => {
     } as any)
 
     mockGetBalance.mockResolvedValue(10)
-    
+
     // Mock clipboard API
     Object.assign(navigator, {
       clipboard: {
@@ -66,23 +66,23 @@ describe('SwapModal - Transaction Status Feedback', () => {
 
   it('should display "Please sign the transaction in your wallet" during signing (Requirement 15.1)', async () => {
     const user = userEvent.setup()
-    
+
     // Mock quote response
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     // Mock swap transaction response
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
     // Mock sendTransaction to simulate signing delay
     mockSendTransaction.mockImplementation(() => {
       return new Promise((resolve) => {
-        setTimeout(() => resolve('mockSignature123'), 100)
+        setTimeout(() => resolve("mockSignature123"), 100)
       })
     })
 
@@ -92,18 +92,18 @@ describe('SwapModal - Transaction Status Feedback', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -115,30 +115,30 @@ describe('SwapModal - Transaction Status Feedback', () => {
     })
 
     // Click confirm button
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Verify "Please sign the transaction in your wallet" message is shown
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        'Please sign the transaction in your wallet',
-        'info'
+        "Please sign the transaction in your wallet",
+        "info"
       )
     })
   })
 
   it('should display "Transaction submitted" with signature after submission (Requirement 15.2)', async () => {
     const user = userEvent.setup()
-    const mockSignature = 'abc12345xyz67890'
-    
+    const mockSignature = "abc12345xyz67890"
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
     mockSendTransaction.mockResolvedValue(mockSignature)
@@ -149,18 +149,18 @@ describe('SwapModal - Transaction Status Feedback', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -170,32 +170,32 @@ describe('SwapModal - Transaction Status Feedback', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Verify "Transaction submitted" message with signature is shown
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        expect.stringContaining('Transaction submitted'),
-        'success'
+        expect.stringContaining("Transaction submitted"),
+        "success"
       )
     })
   })
 
   it('should display "Transaction successful!" on success (Requirement 15.3)', async () => {
     const user = userEvent.setup()
-    
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
-    mockSendTransaction.mockResolvedValue('mockSignature123')
+    mockSendTransaction.mockResolvedValue("mockSignature123")
 
     render(
       <SwapModal
@@ -203,18 +203,18 @@ describe('SwapModal - Transaction Status Feedback', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -224,30 +224,30 @@ describe('SwapModal - Transaction Status Feedback', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Verify "Transaction successful!" message is shown
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        expect.stringContaining('Transaction successful'),
-        'success'
+        expect.stringContaining("Transaction successful"),
+        "success"
       )
     })
   })
 
-  it('should display error message with failure reason on error (Requirement 15.4)', async () => {
+  it("should display error message with failure reason on error (Requirement 15.4)", async () => {
     const user = userEvent.setup()
-    const errorMessage = 'Insufficient funds for transaction'
-    
+    const errorMessage = "Insufficient funds for transaction"
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
     mockSendTransaction.mockRejectedValue(new Error(errorMessage))
@@ -258,18 +258,18 @@ describe('SwapModal - Transaction Status Feedback', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -279,33 +279,30 @@ describe('SwapModal - Transaction Status Feedback', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Verify error message is shown
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        errorMessage,
-        'error'
-      )
+      expect(mockShowToast).toHaveBeenCalledWith(errorMessage, "error")
     })
   })
 
   it('should display "Transaction cancelled" as info message when user cancels (Requirement 15.5)', async () => {
     const user = userEvent.setup()
-    
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
     // Simulate user rejection
-    const userRejectionError = new Error('User rejected the request')
+    const userRejectionError = new Error("User rejected the request.") as any
     userRejectionError.code = 4001
     mockSendTransaction.mockRejectedValue(userRejectionError)
 
@@ -315,18 +312,18 @@ describe('SwapModal - Transaction Status Feedback', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -336,14 +333,14 @@ describe('SwapModal - Transaction Status Feedback', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Verify "Transaction cancelled" is shown as info (not error)
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        'Transaction cancelled',
-        'info'
+        "Transaction cancelled",
+        "info"
       )
     })
   })

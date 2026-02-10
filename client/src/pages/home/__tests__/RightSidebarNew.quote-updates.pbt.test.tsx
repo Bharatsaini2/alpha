@@ -2,7 +2,7 @@
  * Property-Based Test for Real-time Quote Updates
  * **Feature: jupiter-swap-engine, Property 11: Real-time quote updates**
  * **Validates: Requirements 13.3**
- * 
+ *
  * This test verifies that amount input changes trigger debounced quote fetching
  * and that quotes are fetched within 500ms of user inactivity.
  */
@@ -40,10 +40,13 @@ describe("Property 11: Real-time quote updates", () => {
     await fc.assert(
       fc.asyncProperty(
         // Generate a sequence of amount changes (1-10 changes)
-        fc.array(fc.integer({ min: 1, max: 1000000 }), { minLength: 1, maxLength: 10 }),
+        fc.array(fc.integer({ min: 1, max: 1000000 }), {
+          minLength: 1,
+          maxLength: 10,
+        }),
         async (amounts) => {
           let callCount = 0
-          const mockApiCall = vi.fn(() => {
+          const mockApiCall = vi.fn((_amount: number) => {
             callCount++
           })
 
@@ -52,7 +55,7 @@ describe("Property 11: Real-time quote updates", () => {
           // Simulate rapid amount changes
           for (const amount of amounts) {
             debouncedCall(amount)
-            
+
             // Advance time by less than 500ms between changes
             vi.advanceTimersByTime(100)
           }
@@ -84,7 +87,7 @@ describe("Property 11: Real-time quote updates", () => {
         fc.integer({ min: 1, max: 1000000000 }),
         async (amount) => {
           let called = false
-          const mockApiCall = vi.fn(() => {
+          const mockApiCall = vi.fn((_amount: number) => {
             called = true
           })
 
@@ -117,7 +120,10 @@ describe("Property 11: Real-time quote updates", () => {
     await fc.assert(
       fc.asyncProperty(
         // Generate a sequence of different amounts
-        fc.array(fc.integer({ min: 1, max: 1000000 }), { minLength: 2, maxLength: 5 }),
+        fc.array(fc.integer({ min: 1, max: 1000000 }), {
+          minLength: 2,
+          maxLength: 5,
+        }),
         async (amounts) => {
           let callCount = 0
           let lastAmount = 0
@@ -202,13 +208,16 @@ describe("Property 11: Real-time quote updates", () => {
         // Generate random token addresses (simplified)
         fc.string({ minLength: 32, maxLength: 44 }),
         fc.string({ minLength: 32, maxLength: 44 }),
-        fc.array(fc.integer({ min: 1, max: 1000000 }), { minLength: 1, maxLength: 5 }),
+        fc.array(fc.integer({ min: 1, max: 1000000 }), {
+          minLength: 1,
+          maxLength: 5,
+        }),
         async (inputMint, outputMint, amounts) => {
           // Skip if tokens are the same
           if (inputMint === outputMint) return true
 
           let callCount = 0
-          const mockApiCall = vi.fn(() => {
+          const mockApiCall = vi.fn((_amount: number) => {
             callCount++
           })
 
@@ -243,7 +252,7 @@ describe("Property 11: Real-time quote updates", () => {
         fc.integer({ min: 2, max: 20 }), // Number of rapid inputs
         async (numInputs) => {
           let callCount = 0
-          const mockApiCall = vi.fn(() => {
+          const mockApiCall = vi.fn((_input: number) => {
             callCount++
           })
 

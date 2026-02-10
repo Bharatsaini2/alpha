@@ -3,6 +3,7 @@ import "../../css/KolFeedPortfolio.css"
 import { useState } from "react"
 import { HiChevronUpDown } from "react-icons/hi2"
 import { TfiReload } from "react-icons/tfi"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import { faArrowRotateBack } from "@fortawesome/free-solid-svg-icons"
 
 function Notification() {

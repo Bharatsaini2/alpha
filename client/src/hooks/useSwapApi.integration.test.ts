@@ -3,38 +3,44 @@
  * Tests the hook's interaction with mock API endpoints
  */
 
-import axios from 'axios'
-import { useSwapApi, QuoteParams, SwapParams, TrackTradeParams } from './useSwapApi'
+import { describe, it, expect, vi, beforeEach, type Mocked } from "vitest"
+import axios from "axios"
+import {
+  useSwapApi,
+  QuoteParams,
+  SwapParams,
+  TrackTradeParams,
+} from "./useSwapApi"
 
 // Mock axios
-jest.mock('axios')
-const mockedAxios = axios as jest.Mocked<typeof axios>
+vi.mock("axios")
+const mockedAxios = axios as unknown as Mocked<typeof axios>
 
 // Mock React hooks
-const mockSetState = jest.fn()
-const mockUseState = jest.fn()
-const mockUseCallback = jest.fn()
-const mockUseRef = jest.fn()
-const mockUseEffect = jest.fn()
+const mockSetState = vi.fn()
+const mockUseState = vi.fn()
+const mockUseCallback = vi.fn()
+const mockUseRef = vi.fn()
+const mockUseEffect = vi.fn()
 
-jest.mock('react', () => ({
+vi.mock("react", () => ({
   useState: mockUseState,
   useCallback: mockUseCallback,
   useRef: mockUseRef,
   useEffect: mockUseEffect,
 }))
 
-describe('useSwapApi Integration Tests', () => {
+describe("useSwapApi Integration Tests", () => {
   let mockApiClient: any
   // let hook: ReturnType<typeof useSwapApi>
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
 
     // Mock API client
     mockApiClient = {
-      get: jest.fn(),
-      post: jest.fn(),
+      get: vi.fn(),
+      post: vi.fn(),
     }
 
     mockedAxios.create.mockReturnValue(mockApiClient)
@@ -60,30 +66,30 @@ describe('useSwapApi Integration Tests', () => {
     useSwapApi()
   })
 
-  describe('getQuote', () => {
-    it('should call the quote endpoint with correct parameters', async () => {
+  describe("getQuote", () => {
+    it("should call the quote endpoint with correct parameters", async () => {
       const mockQuoteResponse = {
-        inputMint: 'So11111111111111111111111111111111111111112',
-        outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-        inAmount: '1000000',
-        outAmount: '950000',
-        otherAmountThreshold: '940000',
-        swapMode: 'ExactIn',
+        inputMint: "So11111111111111111111111111111111111111112",
+        outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        inAmount: "1000000",
+        outAmount: "950000",
+        otherAmountThreshold: "940000",
+        swapMode: "ExactIn",
         slippageBps: 50,
         platformFee: {
-          amount: '7500',
-          mint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+          amount: "7500",
+          mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
           pct: 0.0075,
         },
-        priceImpactPct: '0.1',
+        priceImpactPct: "0.1",
         routePlan: [],
       }
 
       mockApiClient.get.mockResolvedValue({ data: mockQuoteResponse })
 
       const params: QuoteParams = {
-        inputMint: 'So11111111111111111111111111111111111111112',
-        outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        inputMint: "So11111111111111111111111111111111111111112",
+        outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         amount: 1000000,
         slippageBps: 50,
       }
@@ -93,7 +99,7 @@ describe('useSwapApi Integration Tests', () => {
       const result = await new Promise((resolve, reject) => {
         setTimeout(async () => {
           try {
-            const response = await mockApiClient.get('/quote', {
+            const response = await mockApiClient.get("/quote", {
               params: {
                 inputMint: params.inputMint,
                 outputMint: params.outputMint,
@@ -101,167 +107,132 @@ describe('useSwapApi Integration Tests', () => {
                 slippageBps: params.slippageBps,
               },
             })
-            resolve(response.data)
-          } catch (error) {
-            reject(error)
+            resolve(response)
+          } catch (err) {
+            reject(err)
           }
-        }, 500)
+        }, 0)
       })
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/quote', {
+      expect(mockApiClient.get).toHaveBeenCalledWith("/quote", {
         params: {
-          inputMint: 'So11111111111111111111111111111111111111112',
-          outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-          amount: 1000000,
-          slippageBps: 50,
+          inputMint: params.inputMint,
+          outputMint: params.outputMint,
+          amount: params.amount,
+          slippageBps: params.slippageBps,
         },
       })
-
-      expect(result).toEqual(mockQuoteResponse)
-    })
-
-    it('should handle API errors correctly', async () => {
-      const mockError = {
-        response: {
-          status: 400,
-          data: {
-            error: {
-              message: 'Invalid token address',
-            },
-          },
-        },
-      }
-
-      mockApiClient.get.mockRejectedValue(mockError)
-
-      try {
-        await mockApiClient.get('/quote', {
-          params: {
-            inputMint: 'invalid-address',
-            outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-            amount: 1000000,
-            slippageBps: 50,
-          },
-        })
-        fail('Expected API call to throw error')
-      } catch (error) {
-        expect(error).toEqual(mockError)
-      }
+      expect((result as any).data).toEqual(mockQuoteResponse)
     })
   })
 
-  describe('getSwapTransaction', () => {
-    it('should call the swap endpoint with correct parameters', async () => {
+  describe("swap", () => {
+    it("should call the swap endpoint with correct parameters", async () => {
       const mockSwapResponse = {
-        swapTransaction: 'base64-encoded-transaction',
-        lastValidBlockHeight: 123456789,
+        swapTransaction: "base64-transaction-data",
+        lastValidBlockHeight: 12345678,
       }
 
       mockApiClient.post.mockResolvedValue({ data: mockSwapResponse })
 
-      const params: SwapParams = {
-        quoteResponse: {
-          inputMint: 'So11111111111111111111111111111111111111112',
-          outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-          inAmount: '1000000',
-          outAmount: '950000',
-          otherAmountThreshold: '940000',
-          swapMode: 'ExactIn',
-          slippageBps: 50,
-          priceImpactPct: '0.1',
-          routePlan: [],
-        },
-        userPublicKey: 'So11111111111111111111111111111111111111112',
-        wrapUnwrapSOL: true,
+      const mockQuoteResponse = {
+        inputMint: "So11111111111111111111111111111111111111112",
+        outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        inAmount: "1000000",
+        outAmount: "950000",
+        otherAmountThreshold: "940000",
+        swapMode: "ExactIn",
+        slippageBps: 50,
+        priceImpactPct: "0.1",
+        routePlan: [],
       }
 
-      const result = await mockApiClient.post('/swap', {
+      const params: SwapParams = {
+        quoteResponse: mockQuoteResponse,
+        userPublicKey: "So11111111111111111111111111111111111111112",
+        wrapUnwrapSOL: true,
+        prioritizationFeeLamports: 1000,
+      }
+
+      const result = await mockApiClient.post("/swap", {
         quoteResponse: params.quoteResponse,
         userPublicKey: params.userPublicKey,
         wrapUnwrapSOL: params.wrapUnwrapSOL,
+        prioritizationFeeLamports: params.prioritizationFeeLamports,
       })
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('/swap', {
+      expect(mockApiClient.post).toHaveBeenCalledWith("/swap", {
         quoteResponse: params.quoteResponse,
         userPublicKey: params.userPublicKey,
-        wrapUnwrapSOL: true,
+        wrapUnwrapSOL: params.wrapUnwrapSOL,
+        prioritizationFeeLamports: params.prioritizationFeeLamports,
       })
-
       expect(result.data).toEqual(mockSwapResponse)
     })
   })
 
-  describe('trackTrade', () => {
-    it('should call the track endpoint with correct parameters', async () => {
+  describe("trackTrade", () => {
+    it("should call the track endpoint with correct parameters", async () => {
       const mockTrackResponse = {
         success: true,
-        message: 'Trade tracked successfully',
-        trade: {
-          signature: 'test-signature',
-          walletAddress: 'So11111111111111111111111111111111111111112',
-          inputMint: 'So11111111111111111111111111111111111111112',
-          outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
-          inputAmount: 1000000,
-          outputAmount: 950000,
-          platformFee: 7500,
-        },
+        message: "Trade tracked successfully",
       }
 
       mockApiClient.post.mockResolvedValue({ data: mockTrackResponse })
 
       const params: TrackTradeParams = {
-        signature: 'test-signature',
-        walletAddress: 'So11111111111111111111111111111111111111112',
-        inputMint: 'So11111111111111111111111111111111111111112',
-        outputMint: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        signature: "test-signature",
+        walletAddress: "So11111111111111111111111111111111111111112",
+        inputMint: "So11111111111111111111111111111111111111112",
+        outputMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         inputAmount: 1000000,
         outputAmount: 950000,
         platformFee: 7500,
       }
 
-      const result = await mockApiClient.post('/track', params)
+      const result = await mockApiClient.post("/track", params)
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('/track', params)
+      expect(mockApiClient.post).toHaveBeenCalledWith("/track", params)
       expect(result.data).toEqual(mockTrackResponse)
     })
   })
 
-  describe('Error Handling', () => {
-    it('should handle network errors', async () => {
-      const networkError = new Error('Network Error')
-      networkError.name = 'NetworkError'
+  describe("Error Handling", () => {
+    it("should handle network errors", async () => {
+      const networkError = new Error("Network Error")
+      networkError.name = "NetworkError"
 
       mockApiClient.get.mockRejectedValue(networkError)
 
       try {
-        await mockApiClient.get('/quote')
-        fail('Expected network error')
+        await mockApiClient.get("/quote")
+        expect.fail("Expected network error")
       } catch (error) {
         expect(error).toEqual(networkError)
       }
     })
 
-    it('should handle timeout errors', async () => {
-      const timeoutError = new Error('Request timeout')
-      timeoutError.name = 'ECONNABORTED'
+    it("should handle timeout errors", async () => {
+      const timeoutError = new Error("Request timeout")
+      timeoutError.name = "ECONNABORTED"
 
       mockApiClient.post.mockRejectedValue(timeoutError)
 
       try {
-        await mockApiClient.post('/swap')
-        fail('Expected timeout error')
+        await mockApiClient.post("/swap")
+        expect.fail("Expected timeout error")
       } catch (error) {
         expect(error).toEqual(timeoutError)
       }
     })
 
-    it('should handle rate limit errors', async () => {
+    it("should handle rate limit errors", async () => {
       const rateLimitError = {
         response: {
           status: 429,
           data: {
             error: {
-              message: 'Rate limit exceeded',
+              message: "Rate limit exceeded",
             },
           },
         },
@@ -270,20 +241,20 @@ describe('useSwapApi Integration Tests', () => {
       mockApiClient.get.mockRejectedValue(rateLimitError)
 
       try {
-        await mockApiClient.get('/quote')
-        fail('Expected rate limit error')
+        await mockApiClient.get("/quote")
+        expect.fail("Expected rate limit error")
       } catch (error) {
         expect(error).toEqual(rateLimitError)
       }
     })
   })
 
-  describe('API Client Configuration', () => {
-    it('should create axios client with correct configuration', () => {
+  describe("API Client Configuration", () => {
+    it("should create axios client with correct configuration", () => {
       expect(mockedAxios.create).toHaveBeenCalledWith({
-        baseURL: 'http://localhost:9090/api/v1/trade',
+        baseURL: "http://localhost:9090/api/v1/trade",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         withCredentials: true,
         timeout: 10000,

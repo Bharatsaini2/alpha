@@ -202,7 +202,7 @@ describe("Property 14: Token balance validation", () => {
             )
 
             // Should NOT display insufficient balance warning
-            const warningText = container.textContent
+            const warningText = container.textContent || ""
             if (warningText.includes("Insufficient")) {
               // If warning is shown, amount must have exceeded balance due to rounding
               expect(amount).toBeGreaterThan(balance)

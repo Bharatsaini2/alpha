@@ -1,17 +1,17 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { SwapModal } from '../SwapModal'
-import { useWalletConnection } from '../../../hooks/useWalletConnection'
-import { useSwapApi } from '../../../hooks/useSwapApi'
-import { useToast } from '../../ui/Toast'
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { SwapModal } from "../SwapModal"
+import { useWalletConnection } from "../../../hooks/useWalletConnection"
+import { useSwapApi } from "../../../hooks/useSwapApi"
+import { useToast } from "../../../contexts/ToastContext"
 
 // Mock dependencies
-vi.mock('../../../hooks/useWalletConnection')
-vi.mock('../../../hooks/useSwapApi')
-vi.mock('../../ui/Toast')
+vi.mock("../../../hooks/useWalletConnection")
+vi.mock("../../../hooks/useSwapApi")
+vi.mock("../../../contexts/ToastContext")
 
-describe('SwapModal - Auto-Close Behavior', () => {
+describe("SwapModal - Auto-Close Behavior", () => {
   const mockOnClose = vi.fn()
   const mockSendTransaction = vi.fn()
   const mockGetQuote = vi.fn()
@@ -23,14 +23,14 @@ describe('SwapModal - Auto-Close Behavior', () => {
 
   const mockWallet = {
     connected: true,
-    publicKey: { toBase58: () => 'mockPublicKey123' },
-    address: 'mockPublicKey123',
+    publicKey: { toBase58: () => "mockPublicKey123" },
+    address: "mockPublicKey123",
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
-    
+
     // Setup default mocks
     vi.mocked(useWalletConnection).mockReturnValue({
       wallet: mockWallet,
@@ -56,7 +56,7 @@ describe('SwapModal - Auto-Close Behavior', () => {
     } as any)
 
     mockGetBalance.mockResolvedValue(10)
-    
+
     // Mock clipboard API
     Object.assign(navigator, {
       clipboard: {
@@ -69,20 +69,20 @@ describe('SwapModal - Auto-Close Behavior', () => {
     vi.useRealTimers()
   })
 
-  it('should keep modal open for exactly 3 seconds after successful transaction (Requirement 17.1)', async () => {
+  it("should keep modal open for exactly 3 seconds after successful transaction (Requirement 17.1)", async () => {
     const user = userEvent.setup({ delay: null })
-    
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
-    mockSendTransaction.mockResolvedValue('mockSignature123')
+    mockSendTransaction.mockResolvedValue("mockSignature123")
     mockTrackTrade.mockResolvedValue(undefined)
 
     render(
@@ -91,18 +91,18 @@ describe('SwapModal - Auto-Close Behavior', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -112,7 +112,7 @@ describe('SwapModal - Auto-Close Behavior', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Wait for transaction to complete
@@ -129,20 +129,20 @@ describe('SwapModal - Auto-Close Behavior', () => {
     expect(mockOnClose).not.toHaveBeenCalled()
   })
 
-  it('should auto-close modal after 3 seconds (Requirement 17.2)', async () => {
+  it("should auto-close modal after 3 seconds (Requirement 17.2)", async () => {
     const user = userEvent.setup({ delay: null })
-    
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
-    mockSendTransaction.mockResolvedValue('mockSignature123')
+    mockSendTransaction.mockResolvedValue("mockSignature123")
     mockTrackTrade.mockResolvedValue(undefined)
 
     render(
@@ -151,18 +151,18 @@ describe('SwapModal - Auto-Close Behavior', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -172,7 +172,7 @@ describe('SwapModal - Auto-Close Behavior', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Wait for transaction to complete
@@ -189,21 +189,21 @@ describe('SwapModal - Auto-Close Behavior', () => {
     })
   })
 
-  it('should keep modal open on transaction failure to allow retry (Requirement 17.4)', async () => {
+  it("should keep modal open on transaction failure to allow retry (Requirement 17.4)", async () => {
     const user = userEvent.setup({ delay: null })
-    
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
     // Simulate transaction failure
-    mockSendTransaction.mockRejectedValue(new Error('Transaction failed'))
+    mockSendTransaction.mockRejectedValue(new Error("Transaction failed"))
 
     render(
       <SwapModal
@@ -211,18 +211,18 @@ describe('SwapModal - Auto-Close Behavior', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -232,15 +232,12 @@ describe('SwapModal - Auto-Close Behavior', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Wait for transaction to fail
     await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.any(String),
-        'error'
-      )
+      expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), "error")
     })
 
     // Advance time by 5 seconds
@@ -250,20 +247,20 @@ describe('SwapModal - Auto-Close Behavior', () => {
     expect(mockOnClose).not.toHaveBeenCalled()
   })
 
-  it('should cancel pending operations when user manually closes modal (Requirement 17.5)', async () => {
+  it("should cancel pending operations when user manually closes modal (Requirement 17.5)", async () => {
     const user = userEvent.setup({ delay: null })
-    
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
-    mockSendTransaction.mockResolvedValue('mockSignature123')
+    mockSendTransaction.mockResolvedValue("mockSignature123")
     mockTrackTrade.mockResolvedValue(undefined)
 
     const { rerender } = render(
@@ -272,18 +269,18 @@ describe('SwapModal - Auto-Close Behavior', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -293,7 +290,7 @@ describe('SwapModal - Auto-Close Behavior', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Wait for transaction to complete
@@ -311,18 +308,18 @@ describe('SwapModal - Auto-Close Behavior', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -334,29 +331,29 @@ describe('SwapModal - Auto-Close Behavior', () => {
     // onClose should not be called again (timer was cancelled)
     // The initial call count should remain the same
     const callCount = mockOnClose.mock.calls.length
-    
+
     // Wait a bit more to ensure no additional calls
     vi.advanceTimersByTime(1000)
-    
+
     // Call count should not increase
     expect(mockOnClose.mock.calls.length).toBe(callCount)
   })
 
-  it('should keep modal open on user cancellation to allow retry (Requirement 17.4)', async () => {
+  it("should keep modal open on user cancellation to allow retry (Requirement 17.4)", async () => {
     const user = userEvent.setup({ delay: null })
-    
+
     mockGetQuote.mockResolvedValue({
-      outAmount: '1000000000',
-      priceImpactPct: '0.5',
-      platformFee: { amount: '7500000' },
+      outAmount: "1000000000",
+      priceImpactPct: "0.5",
+      platformFee: { amount: "7500000" },
     })
 
     mockGetSwapTransaction.mockResolvedValue({
-      swapTransaction: Buffer.from('mock-transaction').toString('base64'),
+      swapTransaction: Buffer.from("mock-transaction").toString("base64"),
     })
 
     // Simulate user cancellation
-    const userRejectionError = new Error('User rejected the request')
+    const userRejectionError = new Error("User rejected the request.") as any
     userRejectionError.code = 4001
     mockSendTransaction.mockRejectedValue(userRejectionError)
 
@@ -366,18 +363,18 @@ describe('SwapModal - Auto-Close Behavior', () => {
         onClose={mockOnClose}
         mode="quickBuy"
         initialInputToken={{
-          address: 'So11111111111111111111111111111111111111112',
-          symbol: 'SOL',
-          name: 'Solana',
+          address: "So11111111111111111111111111111111111111112",
+          symbol: "SOL",
+          name: "Solana",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialOutputToken={{
-          address: 'mockTokenAddress',
-          symbol: 'MOCK',
-          name: 'Mock Token',
+          address: "mockTokenAddress",
+          symbol: "MOCK",
+          name: "Mock Token",
           decimals: 9,
-          image: '',
+          image: "",
         }}
         initialAmount="1"
       />
@@ -387,14 +384,14 @@ describe('SwapModal - Auto-Close Behavior', () => {
       expect(mockGetQuote).toHaveBeenCalled()
     })
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByText("Confirm")
     await user.click(confirmButton)
 
     // Wait for cancellation message
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
-        'Transaction cancelled',
-        'info'
+        "Transaction cancelled",
+        "info"
       )
     })
 
