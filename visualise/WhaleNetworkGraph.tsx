@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useMemo, useState, useEffect } from "react";
 import {
@@ -30,15 +31,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toPng, toSvg } from "html-to-image";
 import { CheckIcon, ChevronDown, X, RefreshCw, Save } from "lucide-react";
 import axios from "axios";
-import CopyIcon from "../assets/Copy.svg";
-import ExternalLinkIcon from "../assets/ExternalLink.svg";
-import DefaultTokenImage from "../assets/default_token.svg";
-import solanalogo from "../assets/solana.svg";
-import { applyForceLayout } from "../utils/ForceLayout";
-import ErrorPopup from "./ui/ErrorPopup";
-import { useToast } from "./ui/Toast";
+import CopyIcon from "../client/src/assets/Copy.svg";
+import ExternalLinkIcon from "../client/src/assets/ExternalLink.svg";
+import DefaultTokenImage from "../client/src/assets/default_token.svg";
+import solanalogo from "../client/src/assets/solana.svg";
+import { applyForceLayout } from "../client/src/utils/ForceLayout";
+import ErrorPopup from "../client/src/components/ui/ErrorPopup";
+import { useToast } from "../client/src/contexts/ToastContext";
 import { LastUpdatedTicker } from "./TicketComponent";
-import { useRandomBubbleAnimation } from "../hooks/useBubbleAnimation";
+import { useRandomBubbleAnimation } from "../client/src/hooks/useBubbleAnimation";
 import { FaArrowRightLong, FaRegCopy } from "react-icons/fa6";
 import { IoChevronDownOutline } from "react-icons/io5";
 import { SiTelegram } from "react-icons/si";
@@ -687,7 +688,7 @@ const WhaleNetworkGraph: React.FC<{
     null,
   );
   const [toolbarSide, setToolbarSide] = useState<Position>(Position.Right);
-  const { showToast, ToastContainer } = useToast();
+  const { showToast } = useToast();
   const { x: vpX, y: vpY, zoom } = useViewport();
   const [filters, setFilters] = useState({
     timeframe: "5m",
@@ -745,9 +746,9 @@ const WhaleNetworkGraph: React.FC<{
     return () => document.removeEventListener("click", closeAll);
   }, []);
 
-  const [walletTypes, setWalletTypes] = useState([]);
+  const [walletTypes, setWalletTypes] = useState<string[]>([]);
 
-  const toggleWalletType = (value) => {
+  const toggleWalletType = (value: string) => {
     setWalletTypes((prev) =>
       prev.includes(value)
         ? prev.filter((item) => item !== value)
@@ -760,7 +761,7 @@ const WhaleNetworkGraph: React.FC<{
   const [hotness, setHotness] = useState(10);
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
+    const handleClickOutside = (e: any) => {
       if (!e.target.closest(".nav-item.dropdown")) {
         setOpenDropdown(null);
       }
@@ -775,7 +776,7 @@ const WhaleNetworkGraph: React.FC<{
     }
   }, [isSaved]);
 
-  const [openSelect, setOpenSelect] = useState(null);
+  const [openSelect, setOpenSelect] = useState<string | null>(null);
 
   const [timeframe, setTimeframe] = useState("15m");
   const [whaleCount, setWhaleCount] = useState("3 Whales");
@@ -1190,7 +1191,7 @@ const WhaleNetworkGraph: React.FC<{
 
   return (
     <motion.div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-3"
+      className="fixed inset-0 bg-black flex items-center justify-center z-50 px-3"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1408,7 +1409,164 @@ const WhaleNetworkGraph: React.FC<{
         {/* Desktop Filters - End Aligned */}
         <div className="hidden md:flex flex-wrap gap-4 justify-end mb-6">
           {/* Timeframe */}
+          <div
+            className="custom-frm-bx position-relative"
+            style={{ width: "160px" }}
+          >
+            <label className="nw-label">Timeframe</label>
+            <div
+              className="form-select cursor-pointer text-start"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdown(dropdown === "timeframe" ? null : "timeframe");
+              }}
+            >
+              {touched.timeframe ? filters.timeframe : "Timeframe"}
+            </div>
+            {dropdown === "timeframe" && (
+              <ul className="subscription-dropdown-menu show w-100">
+                {timeframeOptions.map((option) => (
+                  <li
+                    key={option}
+                    className="subs-items"
+                    onClick={() => {
+                      setFilters((prev) => ({ ...prev, timeframe: option }));
+                      setTouched((t) => ({ ...t, timeframe: true }));
+                      setDropdown(null);
+                    }}
+                  >
+                    {option}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
+          {/* No. of Whales */}
+          <div
+            className="custom-frm-bx position-relative"
+            style={{ width: "160px" }}
+          >
+            <label className="nw-label">No. Whales</label>
+            <div
+              className="form-select cursor-pointer text-start"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdown(dropdown === "whales" ? null : "whales");
+              }}
+            >
+              {touched.whales ? `${filters.whales}W` : "No. Whales"}
+            </div>
+            {dropdown === "whales" && (
+              <ul className="subscription-dropdown-menu show w-100">
+                {whaleOptions.map((option) => (
+                  <li
+                    key={option}
+                    className="subs-items"
+                    onClick={() => {
+                      setFilters((prev) => ({ ...prev, whales: option }));
+                      setCustomWhales("");
+                      setTouched((t) => ({ ...t, whales: true }));
+                      setDropdown(null);
+                    }}
+                  >
+                    •{option}
+                  </li>
+                ))}
+                {/* Custom input for whales */}
+                <div className="px-3 py-2">
+                  <input
+                    type="number"
+                    placeholder="Custom count"
+                    value={customWhales}
+                    onChange={(e) => setCustomWhales(e.target.value)}
+                    className="w-full px-2 py-2 bg-[#1A1A1E] border border-[#2B2B2D] rounded-[10px] text-white text-sm placeholder-gray-400"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    onClick={() => {
+                      if (customWhales) {
+                        setFilters((prev) => ({
+                          ...prev,
+                          whales: customWhales,
+                        }));
+                        setCustomWhales("");
+                        setTouched((t) => ({ ...t, whales: true }));
+                        setDropdown(null);
+                      }
+                    }}
+                    className="mt-2 w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </ul>
+            )}
+          </div>
+
+          {/* Volume */}
+          <div
+            className="custom-frm-bx position-relative"
+            style={{ width: "160px" }}
+          >
+            <label className="nw-label">Min Volume</label>
+            <div
+              className="form-select cursor-pointer text-start"
+              onClick={(e) => {
+                e.stopPropagation();
+                setDropdown(dropdown === "volume" ? null : "volume");
+              }}
+            >
+              {touched.volume ? filters.volume : "Min Volume"}
+            </div>
+            {dropdown === "volume" && (
+              <ul className="subscription-dropdown-menu show w-100">
+                {volumeOptions.map((option) => (
+                  <li
+                    key={option}
+                    className="subs-items"
+                    onClick={() => {
+                      setFilters((prev) => ({ ...prev, volume: option }));
+                      setCustomVolume("");
+                      setTouched((t) => ({ ...t, volume: true }));
+                      setDropdown(null);
+                    }}
+                  >
+                    {option}
+                  </li>
+                ))}
+                {/* Custom input for volume */}
+                <div className="px-3 py-2">
+                  <input
+                    type="number"
+                    placeholder="Custom volume"
+                    value={customVolume}
+                    onChange={(e) => setCustomVolume(e.target.value)}
+                    className="w-full px-2 py-2 bg-[#1A1A1E] border border-[#2B2B2D] rounded-[10px] text-white text-sm placeholder-gray-400"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    onClick={() => {
+                      if (customVolume) {
+                        setFilters((prev) => ({
+                          ...prev,
+                          volume: customVolume + "K",
+                        }));
+                        setCustomVolume("");
+                        setTouched((t) => ({ ...t, volume: true }));
+                        setDropdown(null);
+                      }
+                    }}
+                    className="mt-2 w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs text-white transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
+              </ul>
+            )}
+          </div>
+
+          {/* Subscribe Button (Existing) */}
           <div className="relative">
             {/* MAIN BUTTON */}
             <button
@@ -2102,7 +2260,6 @@ const WhaleNetworkGraph: React.FC<{
             <h6> AlphaBlock AI </h6>
           </div>
         </div>
-        <ToastContainer />
       </motion.div>
     </motion.div>
   );

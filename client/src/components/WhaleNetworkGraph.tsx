@@ -1,5 +1,5 @@
-
 import React, { useCallback, useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import {
   ReactFlow,
   Node,
@@ -18,7 +18,6 @@ import {
   getNodesBounds,
   getViewportForBounds,
   useUpdateNodeInternals,
-
   Background,
   MiniMap,
   BackgroundVariant,
@@ -38,7 +37,7 @@ import ErrorPopup from "./ui/ErrorPopup"
 import { useToast } from "../contexts/ToastContext"
 import { LastUpdatedTicker } from "./TicketComponent"
 import { useRandomBubbleAnimation } from "../hooks/useBubbleAnimation"
-import { SiTelegram } from "react-icons/si";
+import { SiTelegram } from "react-icons/si"
 
 interface Whale {
   id: string
@@ -117,7 +116,7 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
       }}
       exit={{ scale: 0, opacity: 0 }}
       transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      style={{ borderRadius: '0px', willChange: "transform" }}
+      style={{ borderRadius: "0px", willChange: "transform" }}
     >
       <Handle
         type="source"
@@ -147,18 +146,18 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           <img
             src={
               (data.symbol as string) === "SOL" ||
-                (data.symbol as string) === "WSOL"
+              (data.symbol as string) === "WSOL"
                 ? solanalogo
                 : (data.imageUrl as string) || DefaultTokenImage
             }
             alt={(data.symbol as string) || "Token"}
-            className="w-12 h-12 rounded-none object-cover !rounded-none"
-            style={{ borderRadius: '0px !important' }}
+            className="w-12 h-12 rounded-none object-cover"
+            style={{ borderRadius: "0px !important" }}
           />
         </motion.div>
         <motion.div
-          className="absolute inset-0 rounded-none bg-gradient-to-r from-[#06DF73]/20 to-[#05C96A]/20 blur-md -z-10 !rounded-none"
-          style={{ borderRadius: '0px !important' }}
+          className="absolute inset-0 rounded-none bg-gradient-to-r from-[#06DF73]/20 to-[#05C96A]/20 blur-md -z-10"
+          style={{ borderRadius: "0px !important" }}
           animate={{
             opacity: isHovered ? 1 : 0,
             scale: isHovered ? 1.2 : 1,
@@ -329,14 +328,13 @@ const CustomEdge: React.FC<EdgeProps> = ({
   // Instead of straight lines, we use a quadratic bezier or cubic bezier to "pinch" them.
   // We want them to start at source, curve towards the center pinch point, then curve to target.
 
-
   // Control Point 1: Near Source but shifted
-  const cp1X = sourceX + (dx * 0.4) + (nx * spread * 0.5)
-  const cp1Y = sourceY + (dy * 0.4) + (ny * spread * 0.5)
+  const cp1X = sourceX + dx * 0.4 + nx * spread * 0.5
+  const cp1Y = sourceY + dy * 0.4 + ny * spread * 0.5
 
   // Control Point 2: Near Target but shifted (inverted)
-  const cp2X = targetX - (dx * 0.4) - (nx * spread * 0.5)
-  const cp2Y = targetY - (dy * 0.4) - (ny * spread * 0.5)
+  const cp2X = targetX - dx * 0.4 - nx * spread * 0.5
+  const cp2Y = targetY - dy * 0.4 - ny * spread * 0.5
 
   // A smooth "S" shape or "Hourglass" with curves
   const edgePath = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`
@@ -460,7 +458,8 @@ const Tooltip: React.FC<{
           <div className="flex justify-between items-center text-[10px] font-medium tracking-wide">
             <span className="text-red-500 uppercase">Sell:</span>
             <span className="text-white font-bold">
-              {tooltip.trades?.filter((t: any) => t.type === "sell").length || 0}
+              {tooltip.trades?.filter((t: any) => t.type === "sell").length ||
+                0}
               <span className="text-white ml-1 font-normal opacity-80">
                 ($
                 {Math.round(tooltip.totalSellAmount || 0).toLocaleString()})
@@ -679,10 +678,20 @@ const DownloadButton: React.FC = () => {
 
   return (
     <>
-      <Panel position="bottom-left" className="m-2 pointer-events-none select-none">
+      <Panel
+        position="bottom-left"
+        className="m-2 pointer-events-none select-none"
+      >
         <div className="flex items-center gap-2 opacity-60">
-          <img src="/logo.png" alt="AlphaBlock" className="w-3 h-3 md:w-4 md:h-4 opacity-80" onError={(e) => e.currentTarget.style.display = 'none'} />
-          <span className="text-[10px] md:text-[11px] text-white font-medium tracking-widest uppercase font-mono">POWERED BY ALPHABLOCK AI</span>
+          <img
+            src="/logo.png"
+            alt="AlphaBlock"
+            className="w-3 h-3 md:w-4 md:h-4 opacity-80"
+            onError={(e) => (e.currentTarget.style.display = "none")}
+          />
+          <span className="text-[10px] md:text-[11px] text-white font-medium tracking-widest uppercase font-mono">
+            POWERED BY ALPHABLOCK AI
+          </span>
         </div>
       </Panel>
       <ErrorPopup
@@ -709,9 +718,7 @@ const WhaleNetworkGraph: React.FC<{
   const { showToast } = useToast()
   // const { x: vpX, y: vpY, zoom } = useViewport()
 
-  const [rfInstance, setRfInstance] = useState<any>(null);
-
-
+  const [rfInstance, setRfInstance] = useState<any>(null)
 
   const [filters, setFilters] = useState({
     timeframe: "15m",
@@ -814,8 +821,14 @@ const WhaleNetworkGraph: React.FC<{
           whaleId: whale.id,
           whaleAddress: whale.address,
           influencerName: whale.influencerName,
-          amount: typeof trade.amount === "string" ? parseFloat(trade.amount) : trade.amount,
-          timestamp: typeof trade.timestamp === "string" ? new Date(trade.timestamp).getTime() : Number(trade.timestamp),
+          amount:
+            typeof trade.amount === "string"
+              ? parseFloat(trade.amount)
+              : trade.amount,
+          timestamp:
+            typeof trade.timestamp === "string"
+              ? new Date(trade.timestamp).getTime()
+              : Number(trade.timestamp),
         }))
       )
     )
@@ -829,9 +842,13 @@ const WhaleNetworkGraph: React.FC<{
 
     // 1. Group trades by Whale Address to calculate total volume
     const whaleVolumes: Record<string, number> = {}
-    allTrades.forEach(trade => {
-      const vol = typeof trade.amount === "string" ? parseFloat(trade.amount) : trade.amount
-      whaleVolumes[trade.whaleAddress] = (whaleVolumes[trade.whaleAddress] || 0) + vol
+    allTrades.forEach((trade) => {
+      const vol =
+        typeof trade.amount === "string"
+          ? parseFloat(trade.amount)
+          : trade.amount
+      whaleVolumes[trade.whaleAddress] =
+        (whaleVolumes[trade.whaleAddress] || 0) + vol
     })
 
     // 2. Sort whales by volume desc and take top N
@@ -844,13 +861,13 @@ const WhaleNetworkGraph: React.FC<{
 
     // 3. Filter trades to only include these top whales
     const tradesByCoin = filteredTrades
-      .filter(t => topWhaleAddresses.has(t.whaleAddress))
+      .filter((t) => topWhaleAddresses.has(t.whaleAddress))
       .reduce(
         (acc, trade) => {
           if (!acc[trade.coinId]) {
             acc[trade.coinId] = {
               coin: dataToProcess.find((d) => d.coin.id === trade.coinId)?.coin,
-              trades: []
+              trades: [],
             }
           }
           acc[trade.coinId].trades.push(trade)
@@ -871,14 +888,24 @@ const WhaleNetworkGraph: React.FC<{
           ...coinData.coin,
           imageUrl: coinData.coin.imageUrl,
           nodeType: "coin",
-          totalTrades: totalTrades
-        }
+          totalTrades: totalTrades,
+        },
       })
 
       const tradesByWhale = coinData.trades.reduce(
-        (acc: Record<string, { whaleAddress: string; trades: any[]; influencerName?: string }>, trade: any) => {
+        (
+          acc: Record<
+            string,
+            { whaleAddress: string; trades: any[]; influencerName?: string }
+          >,
+          trade: any
+        ) => {
           if (!acc[trade.whaleId]) {
-            acc[trade.whaleId] = { whaleAddress: trade.whaleAddress, trades: [], influencerName: trade.influencerName }
+            acc[trade.whaleId] = {
+              whaleAddress: trade.whaleAddress,
+              trades: [],
+              influencerName: trade.influencerName,
+            }
           }
           acc[trade.whaleId].trades.push(trade)
           return acc
@@ -886,47 +913,66 @@ const WhaleNetworkGraph: React.FC<{
         {}
       )
 
-      Object.entries(tradesByWhale).forEach(([whaleId, whaleData], whaleIndex) => {
-        const whaleNodeId = `whale_${coinData.coin.id}_${whaleId}`
-        const totalBuyAmount = whaleData.trades.filter((t: any) => t.type === 'buy').reduce((sum: number, t: any) => sum + t.amount, 0)
-        const totalSellAmount = whaleData.trades.filter((t: any) => t.type === 'sell').reduce((sum: number, t: any) => sum + t.amount, 0)
+      Object.entries(tradesByWhale).forEach(
+        ([whaleId, whaleData], whaleIndex) => {
+          const whaleNodeId = `whale_${coinData.coin.id}_${whaleId}`
+          const totalBuyAmount = whaleData.trades
+            .filter((t: any) => t.type === "buy")
+            .reduce((sum: number, t: any) => sum + t.amount, 0)
+          const totalSellAmount = whaleData.trades
+            .filter((t: any) => t.type === "sell")
+            .reduce((sum: number, t: any) => sum + t.amount, 0)
 
-        flowNodes.push({
-          id: whaleNodeId,
-          type: "whale",
-          position: { x: 100 + coinIndex * 200 + (whaleIndex - 1) * 80, y: 250 + whaleIndex * 60 },
-          data: {
-            address: whaleData.whaleAddress,
-            trades: whaleData.trades,
-            totalBuyAmount,
-            totalSellAmount,
-            nodeType: "whale",
-            influencerName: whaleData.influencerName
-          }
-        })
-
-        const maxBundleWidth = 15; // increased max width for better visibility
-        const step = Math.min(2, maxBundleWidth / Math.max(1, whaleData.trades.length));
-
-        whaleData.trades.forEach((trade: any, tradeIndex: number) => {
-          const edgeId = makeEdgeId(coinId, whaleNodeId, trade.type, trade.timestamp, trade.amount)
-          const edgeOffset = tradeIndex * step - ((whaleData.trades.length - 1) * step) / 2
-          flowEdges.push({
-            id: edgeId,
-            source: coinId,
-            target: whaleNodeId,
-            type: "custom",
-            data: {
-              type: trade.type,
-              amount: trade.amount,
-              timestamp: trade.timestamp,
-              tradeIndex: tradeIndex,
-              edgeOffset: edgeOffset
+          flowNodes.push({
+            id: whaleNodeId,
+            type: "whale",
+            position: {
+              x: 100 + coinIndex * 200 + (whaleIndex - 1) * 80,
+              y: 250 + whaleIndex * 60,
             },
-            animated: trade.type === 'sell'
+            data: {
+              address: whaleData.whaleAddress,
+              trades: whaleData.trades,
+              totalBuyAmount,
+              totalSellAmount,
+              nodeType: "whale",
+              influencerName: whaleData.influencerName,
+            },
           })
-        })
-      })
+
+          const maxBundleWidth = 15 // increased max width for better visibility
+          const step = Math.min(
+            2,
+            maxBundleWidth / Math.max(1, whaleData.trades.length)
+          )
+
+          whaleData.trades.forEach((trade: any, tradeIndex: number) => {
+            const edgeId = makeEdgeId(
+              coinId,
+              whaleNodeId,
+              trade.type,
+              trade.timestamp,
+              trade.amount
+            )
+            const edgeOffset =
+              tradeIndex * step - ((whaleData.trades.length - 1) * step) / 2
+            flowEdges.push({
+              id: edgeId,
+              source: coinId,
+              target: whaleNodeId,
+              type: "custom",
+              data: {
+                type: trade.type,
+                amount: trade.amount,
+                timestamp: trade.timestamp,
+                tradeIndex: tradeIndex,
+                edgeOffset: edgeOffset,
+              },
+              animated: trade.type === "sell",
+            })
+          })
+        }
+      )
     })
 
     if (!layoutAppliedRef.current) {
@@ -935,7 +981,7 @@ const WhaleNetworkGraph: React.FC<{
     } else {
       flowNodes = flowNodes.map((n) => ({
         ...n,
-        position: positionsRef.current[n.id] ?? n.position
+        position: positionsRef.current[n.id] ?? n.position,
       }))
     }
 
@@ -948,17 +994,16 @@ const WhaleNetworkGraph: React.FC<{
   useEffect(() => {
     if (rfInstance && nodesState.length > 0) {
       const timer = setTimeout(() => {
-        rfInstance.fitView({ padding: 0.2, duration: 800 });
-      }, 600);
-      return () => clearTimeout(timer);
+        rfInstance.fitView({ padding: 0.2, duration: 800 })
+      }, 600)
+      return () => clearTimeout(timer)
     }
-  }, [rfInstance, nodesState.length, isOpen]);
+  }, [rfInstance, nodesState.length, isOpen])
 
   const onConnect = useCallback(
     (params: any) => setEdges((eds) => addEdge(params, eds) as any),
     [setEdges]
   )
-
 
   useEffect(() => {
     setNodes((prev: Node[]) => {
@@ -968,9 +1013,7 @@ const WhaleNetworkGraph: React.FC<{
         if (old) {
           positionsRef.current[old.id] = old.position
         }
-        return old
-          ? { ...old, data: n.data, style: n.style, type: n.type }
-          : n
+        return old ? { ...old, data: n.data, style: n.style, type: n.type } : n
       })
     })
     setEdges((prev: Edge[]) => {
@@ -984,7 +1027,6 @@ const WhaleNetworkGraph: React.FC<{
     })
   }, [nodes, edges, setNodes, setEdges])
 
-
   const onNodeClick = useCallback(
     (_event: React.MouseEvent<Element, MouseEvent>, node: Node) => {
       if (node.type === "whale") {
@@ -992,7 +1034,10 @@ const WhaleNetworkGraph: React.FC<{
       } else if (node.type === "coin") {
         const tokenAddress = (node.data?.id || node.id) as string
         if (tokenAddress && typeof tokenAddress === "string") {
-          navigator.clipboard.writeText(tokenAddress).then(() => showToast("Address copied!", "success")).catch(() => showToast("Failed to copy", "error"))
+          navigator.clipboard
+            .writeText(tokenAddress)
+            .then(() => showToast("Address copied!", "success"))
+            .catch(() => showToast("Failed to copy", "error"))
         }
       }
     },
@@ -1013,8 +1058,6 @@ const WhaleNetworkGraph: React.FC<{
     }, 5000)
     return () => clearInterval(interval)
   }, [fetchData])
-
-
 
   const timeframeOptions = ["1m", "3m", "5m", "7m", "10m", "15m"]
   const whaleOptions = ["1", "2", "3", "4", "5", "7", "10"]
@@ -1050,19 +1093,34 @@ const WhaleNetworkGraph: React.FC<{
     const availableTop = nodeCenterY - (height * 1) / 2 - gap
 
     const scores = [
-      { side: Position.Right, score: availableRight - estTooltipWidth, fits: availableRight >= estTooltipWidth },
-      { side: Position.Left, score: availableLeft - estTooltipWidth, fits: availableLeft >= estTooltipWidth },
-      { side: Position.Bottom, score: availableBottom - estTooltipHeight, fits: availableBottom >= estTooltipHeight },
-      { side: Position.Top, score: availableTop - estTooltipHeight, fits: availableTop >= estTooltipHeight }
+      {
+        side: Position.Right,
+        score: availableRight - estTooltipWidth,
+        fits: availableRight >= estTooltipWidth,
+      },
+      {
+        side: Position.Left,
+        score: availableLeft - estTooltipWidth,
+        fits: availableLeft >= estTooltipWidth,
+      },
+      {
+        side: Position.Bottom,
+        score: availableBottom - estTooltipHeight,
+        fits: availableBottom >= estTooltipHeight,
+      },
+      {
+        side: Position.Top,
+        score: availableTop - estTooltipHeight,
+        fits: availableTop >= estTooltipHeight,
+      },
     ]
 
     const fitting = scores.filter((s) => s.fits)
-    const chosen = (fitting.length > 0 ? fitting : scores).reduce((best, cur) => (cur.score > best.score ? cur : best))
+    const chosen = (fitting.length > 0 ? fitting : scores).reduce(
+      (best, cur) => (cur.score > best.score ? cur : best)
+    )
     setToolbarSide(chosen.side)
   }, [tooltipAnchor, nodesState])
-
-
-
 
   const closeAll = () => {
     setDropdown(null)
@@ -1071,7 +1129,7 @@ const WhaleNetworkGraph: React.FC<{
   // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdown && !(event.target as Element).closest('.relative')) {
+      if (dropdown && !(event.target as Element).closest(".relative")) {
         setDropdown(null)
       }
     }
@@ -1081,13 +1139,11 @@ const WhaleNetworkGraph: React.FC<{
     }
   }, [dropdown])
 
-
-
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     <motion.div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-3 nw-visual-modal"
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[2147483647] px-3 nw-visual-modal isolate"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1095,13 +1151,12 @@ const WhaleNetworkGraph: React.FC<{
       onClick={onClose}
     >
       <motion.div
-        className="relative w-full max-w-7xl mx-auto bg-[#000000] shadow-xl p-3 md:p-6 lg:p-8 border border-[#333] rounded-none max-h-[90vh] md:max-h-[95vh] overflow-y-auto md:overflow-visible"
+        className="relative w-full max-w-7xl mx-auto bg-[#000000] shadow-xl p-3 md:p-6 lg:p-8 rounded-none max-h-[90vh] md:max-h-[95vh] overflow-y-auto md:overflow-visible"
         initial={{ opacity: 0, scale: 0.9, y: 100 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 100 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
-        style={{ border: '1px solid #333' }}
       >
         {/* Header - Row 1: Controls (Save, Last Updated, Refresh, Close) */}
         <div className="w-full flex flex-row items-center justify-between mb-4 gap-2">
@@ -1114,7 +1169,10 @@ const WhaleNetworkGraph: React.FC<{
             {lastUpdatedTime && (
               <div className="flex items-center space-x-2 text-[10px] text-gray-500 uppercase tracking-wider font-bold whitespace-nowrap">
                 <span>LAST REFRESHED:</span>
-                <LastUpdatedTicker lastUpdated={lastUpdatedTime} format={formatTimeSinceUpdate} />
+                <LastUpdatedTicker
+                  lastUpdated={lastUpdatedTime}
+                  format={formatTimeSinceUpdate}
+                />
               </div>
             )}
             <button
@@ -1122,146 +1180,250 @@ const WhaleNetworkGraph: React.FC<{
               disabled={isRefreshing}
               className="flex items-center space-x-2 text-[10px] text-gray-500 hover:text-white transition-colors disabled:opacity-50 cursor-pointer uppercase tracking-wider font-bold whitespace-nowrap"
             >
-              <RefreshCw className={`w-3 h-3 text-gray-500 ${isRefreshing ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-3 h-3 text-gray-500 ${isRefreshing ? "animate-spin" : ""}`}
+              />
               <span>REFRESH</span>
             </button>
           </div>
 
           <button
             className="text-white p-1.5 cursor-pointer hover:bg-white/10 transition-colors bg-[#1A1A1E] rounded-none"
-            style={{ border: '1px solid #333' }}
+            style={{ border: "1px solid #333" }}
             onClick={onClose}
           >
             <X className="w-3 h-3 text-white" />
           </button>
         </div>
 
-        {/* Header - Row 2: Filters (2x2 Grid) */}
-        <div className="w-full grid grid-cols-2 gap-2 mb-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
-
-          {/* 1. Subscribe */}
-          <div className="relative w-full">
-            <button
-              className="w-full h-10 flex items-center justify-center bg-black text-white text-[12px] uppercase font-bold tracking-wider hover:bg-[#111] transition-colors rounded-none"
-              style={{ border: '1px solid #333' }}
-              onClick={() => setDropdown(dropdown === "telegram" ? null : "telegram")}
+        {/* Header - Row 2: Filters */}
+        <div className="w-full mb-4">
+          <ul className="plan-btn-list w-full flex flex-wrap justify-end gap-2">
+            {/* 1. Subscribe */}
+            <li
+              className="relative w-auto"
+              onClick={(e) => e.stopPropagation()}
             >
-              <SiTelegram className="mr-2 w-3 h-3" /> SUBSCRIBE
-            </button>
-            {/* Dropdown Content */}
-            {dropdown === "telegram" && (
-              <div className="absolute top-full left-0 mt-2 z-50 w-full min-w-[200px] bg-black border border-[#2A2A2A] shadow-xl p-4" onClick={closeAll}>
-                {!isSaved ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="text-left">
-                      <h6 className="text-[10px] text-gray-500 uppercase">System Config</h6>
-                      <h4 className="text-sm font-bold text-white">Whale Feed Alerts</h4>
+              <a
+                href="javascript:void(0)"
+                className={`plan-btn inline-flex items-center gap-2 px-3 py-2 text-[13px] ${dropdown === "telegram" ? "active" : ""}`}
+                onClick={() =>
+                  setDropdown(dropdown === "telegram" ? null : "telegram")
+                }
+              >
+                <span className="flex items-center gap-1">
+                  <SiTelegram className="me-1" />
+                  Subscribe
+                </span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${dropdown === "telegram" ? "rotate-180" : ""}`}
+                />
+              </a>
+              {dropdown === "telegram" && (
+                <div
+                  className="filter-dropdown-menu w-sm filter-mobile-subscription"
+                  onClick={closeAll}
+                >
+                  {!isSaved && (
+                    <div className="parent-dropdown-content">
+                      <div className="sub-drop-header">
+                        <div className="sub-drop-content">
+                          <h6>System Config</h6>
+                          <h4>Whale Feed Alerts</h4>
+                        </div>
+                        <button
+                          className="paper-plan-connect-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setIsSaved(true)
+                          }}
+                        >
+                          Activate Alert
+                        </button>
+                      </div>
                     </div>
+                  )}
+                </div>
+              )}
+              {isSaved && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80">
+                  <div className="bg-black border border-[#2A2A2A] p-6 text-center max-w-sm mx-4">
+                    <h3 className="text-white font-bold mb-4">
+                      CONFIGURATION SAVED
+                    </h3>
                     <button
-                      className="w-full py-2 bg-white text-black text-xs font-bold uppercase hover:bg-gray-200 transaction-colors"
-                      onClick={(e) => { e.stopPropagation(); setIsSaved(true); }}
+                      className="px-4 py-2 bg-white text-black text-xs font-bold uppercase"
+                      onClick={() => setIsSaved(false)}
                     >
-                      ACTIVATE ALERT
+                      CLOSE
                     </button>
                   </div>
-                ) : (
-                  <div className="text-center text-green-500 text-xs font-bold">ALERTS ACTIVE</div>
-                )}
-              </div>
-            )}
-            {isSaved && (
-              <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80">
-                <div className="bg-black border border-[#2A2A2A] p-6 text-center max-w-sm mx-4">
-                  <h3 className="text-white font-bold mb-4">CONFIGURATION SAVED</h3>
-                  <button className="px-4 py-2 bg-white text-black text-xs font-bold uppercase" onClick={() => setIsSaved(false)}>CLOSE</button>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </li>
 
-          {/* 2. Timeframe */}
-          <div className="relative w-full">
-            <button
-              className="w-full h-10 flex items-center justify-between px-3 bg-black text-white text-[12px] uppercase font-bold tracking-wider hover:bg-[#111] transition-colors rounded-none"
-              style={{ border: '1px solid #333' }}
-              onClick={() => setDropdown(dropdown === "timeframe" ? null : "timeframe")}
+            {/* 2. Timeframe */}
+            <li
+              className="relative w-auto"
+              onClick={(e) => e.stopPropagation()}
             >
-              <span>TIME: {filters.timeframe}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform text-white ${dropdown === "timeframe" ? "rotate-180" : ""}`} />
-            </button>
-            {dropdown === "timeframe" && (
-              <div className="absolute top-full right-0 mt-2 w-full min-w-[120px] bg-black border border-[#2A2A2A] shadow-xl z-50 max-h-60 overflow-y-auto">
-                {timeframeOptions.map(opt => (
-                  <button key={opt} className="w-full px-4 py-2 text-left text-white text-xs hover:bg-[#111] uppercase" onClick={() => {
-                    setFilters(prev => ({ ...prev, timeframe: opt })); setDropdown(null);
-                  }}>{opt}</button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* 3. Whales */}
-          <div className="relative w-full">
-            <button
-              className="w-full h-10 flex items-center justify-between px-3 bg-black text-white text-[12px] uppercase font-bold tracking-wider hover:bg-[#111] transition-colors rounded-none"
-              style={{ border: '1px solid #333' }}
-              onClick={() => setDropdown(dropdown === "whales" ? null : "whales")}
-            >
-              <span>WHALES: {filters.whales}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform text-white ${dropdown === "whales" ? "rotate-180" : ""}`} />
-            </button>
-            {dropdown === "whales" && (
-              <div className="absolute top-full left-0 mt-2 w-full min-w-[120px] bg-black border border-[#2A2A2A] shadow-xl z-50 max-h-60 overflow-y-auto">
-                {whaleOptions.map(opt => (
-                  <button key={opt} className="w-full px-4 py-2 text-left text-white text-xs hover:bg-[#111]" onClick={() => {
-                    setFilters(prev => ({ ...prev, whales: opt })); setCustomWhales(""); setDropdown(null);
-                  }}>• {opt}</button>
-                ))}
-                <div className="p-2 bg-black border-t border-[#2A2A2A]">
-                  <input type="number" placeholder="Custom" value={customWhales} onChange={e => setCustomWhales(e.target.value)} className="w-full p-2 bg-[#111] border border-[#2A2A2A] text-white text-xs mb-2 focus:outline-none" />
-                  <button onClick={() => {
-                    if (customWhales) {
-                      setFilters(prev => ({ ...prev, whales: customWhales })); setCustomWhales(""); setDropdown(null);
-                    }
-                  }} className="w-full py-1 bg-white text-black text-xs font-bold uppercase hover:bg-gray-200">Apply</button>
+              <a
+                href="javascript:void(0)"
+                className={`plan-btn inline-flex items-center gap-2 px-3 py-2 text-[13px] ${dropdown === "timeframe" ? "active" : ""}`}
+                onClick={() =>
+                  setDropdown(dropdown === "timeframe" ? null : "timeframe")
+                }
+              >
+                <span>Time: {filters.timeframe}</span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${dropdown === "timeframe" ? "rotate-180" : ""}`}
+                />
+              </a>
+              {dropdown === "timeframe" && (
+                <div className="filter-dropdown-menu w-full">
+                  <div className="filter-dropdown-header">Timeframe</div>
+                  {timeframeOptions.map((opt) => (
+                    <button
+                      key={opt}
+                      className={`filter-dropdown-item ${filters.timeframe === opt ? "active" : ""}`}
+                      onClick={() => {
+                        setFilters((prev) => ({ ...prev, timeframe: opt }))
+                        setDropdown(null)
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </li>
 
-          {/* 4. Volume */}
-          <div className="relative w-full">
-            <button
-              className="w-full h-10 flex items-center justify-between px-3 bg-black text-white text-[12px] uppercase font-bold tracking-wider hover:bg-[#111] transition-colors rounded-none"
-              style={{ border: '1px solid #333' }}
-              onClick={() => setDropdown(dropdown === "volume" ? null : "volume")}
+            {/* 3. Whales */}
+            <li
+              className="relative w-auto"
+              onClick={(e) => e.stopPropagation()}
             >
-              <span>VOL: {filters.volume}</span>
-              <ChevronDown className={`w-3 h-3 transition-transform text-white ${dropdown === "volume" ? "rotate-180" : ""}`} />
-            </button>
-            {dropdown === "volume" && (
-              <div className="absolute top-full right-0 mt-2 w-full min-w-[120px] bg-black border border-[#2A2A2A] shadow-xl z-50 max-h-60 overflow-y-auto">
-                {volumeOptions.map(opt => (
-                  <button key={opt} className="w-full px-4 py-2 text-left text-white text-xs hover:bg-[#111]" onClick={() => {
-                    setFilters(prev => ({ ...prev, volume: opt })); setCustomVolume(""); setDropdown(null);
-                  }}>{opt}</button>
-                ))}
-                <div className="p-2 bg-black border-t border-[#2b2a2a]">
-                  <input type="number" placeholder="Custom" value={customVolume} onChange={e => setCustomVolume(e.target.value)} className="w-full p-2 bg-[#111] border border-[#2b2a2a] text-white text-xs mb-2 focus:outline-none" />
-                  <button onClick={() => {
-                    if (customVolume) {
-                      setFilters(prev => ({ ...prev, volume: customVolume + "K" })); setCustomVolume(""); setDropdown(null);
-                    }
-                  }} className="w-full py-1 bg-white text-black text-xs font-bold uppercase hover:bg-gray-200">Apply</button>
+              <a
+                href="javascript:void(0)"
+                className={`plan-btn inline-flex items-center gap-2 px-3 py-2 text-[13px] ${dropdown === "whales" ? "active" : ""}`}
+                onClick={() =>
+                  setDropdown(dropdown === "whales" ? null : "whales")
+                }
+              >
+                <span>Whales: {filters.whales}</span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${dropdown === "whales" ? "rotate-180" : ""}`}
+                />
+              </a>
+              {dropdown === "whales" && (
+                <div className="filter-dropdown-menu w-full">
+                  <div className="filter-dropdown-header">Whales</div>
+                  {whaleOptions.map((opt) => (
+                    <button
+                      key={opt}
+                      className={`filter-dropdown-item ${filters.whales === opt ? "active" : ""}`}
+                      onClick={() => {
+                        setFilters((prev) => ({ ...prev, whales: opt }))
+                        setCustomWhales("")
+                        setDropdown(null)
+                      }}
+                    >
+                      • {opt}
+                    </button>
+                  ))}
+                  <div className="p-2">
+                    <input
+                      type="number"
+                      placeholder="Custom"
+                      value={customWhales}
+                      onChange={(e) => setCustomWhales(e.target.value)}
+                      className="custom-amount-frm"
+                    />
+                    <button
+                      onClick={() => {
+                        if (customWhales) {
+                          setFilters((prev) => ({
+                            ...prev,
+                            whales: customWhales,
+                          }))
+                          setCustomWhales("")
+                          setDropdown(null)
+                        }
+                      }}
+                      className="plan-btn w-full justify-center mt-2 px-3 py-2 text-[13px]"
+                    >
+                      Apply
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </li>
 
+            {/* 4. Volume */}
+            <li
+              className="relative w-full md:w-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <a
+                href="javascript:void(0)"
+                className={`plan-btn w-full justify-between px-3 py-2 text-[13px] ${dropdown === "volume" ? "active" : ""}`}
+                onClick={() =>
+                  setDropdown(dropdown === "volume" ? null : "volume")
+                }
+              >
+                <span>Vol: {filters.volume}</span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${dropdown === "volume" ? "rotate-180" : ""}`}
+                />
+              </a>
+              {dropdown === "volume" && (
+                <div className="filter-dropdown-menu w-full">
+                  <div className="filter-dropdown-header">Volume</div>
+                  {volumeOptions.map((opt) => (
+                    <button
+                      key={opt}
+                      className={`filter-dropdown-item ${filters.volume === opt ? "active" : ""}`}
+                      onClick={() => {
+                        setFilters((prev) => ({ ...prev, volume: opt }))
+                        setCustomVolume("")
+                        setDropdown(null)
+                      }}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                  <div className="p-2">
+                    <input
+                      type="number"
+                      placeholder="Custom"
+                      value={customVolume}
+                      onChange={(e) => setCustomVolume(e.target.value)}
+                      className="custom-amount-frm"
+                    />
+                    <button
+                      onClick={() => {
+                        if (customVolume) {
+                          setFilters((prev) => ({
+                            ...prev,
+                            volume: `${customVolume}K`,
+                          }))
+                          setCustomVolume("")
+                          setDropdown(null)
+                        }
+                      }}
+                      className="plan-btn w-full justify-center mt-2 px-3 py-2 text-[13px]"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              )}
+            </li>
+          </ul>
         </div>
 
         {/* Graph Container */}
-        <div className="w-full h-[50vh] min-h-[400px] md:h-[700px] overflow-hidden bg-black relative rounded-none" style={{ border: '1px solid #333' }}>
+        <div className="w-full h-[50vh] min-h-[400px] md:h-[700px] overflow-hidden bg-black relative rounded-none">
           {isRefreshing && (
             <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] z-10 flex items-center justify-center">
               <div className="flex items-center space-x-2 text-sm text-white/80">
@@ -1275,8 +1437,9 @@ const WhaleNetworkGraph: React.FC<{
           <div
             className="absolute inset-0 pointer-events-none z-10"
             style={{
-              background: 'radial-gradient(circle at center, transparent 30%, black 100%)',
-              opacity: 0.8
+              background:
+                "radial-gradient(circle at center, transparent 30%, black 100%)",
+              opacity: 0.8,
             }}
           />
 
@@ -1301,28 +1464,50 @@ const WhaleNetworkGraph: React.FC<{
               fitView
               onInit={setRfInstance}
               className="bg-black"
+              style={{ width: "100%", height: "100%", clipPath: "inset(0)" }}
               defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               onConnect={onConnect}
               minZoom={0.5}
               maxZoom={2}
             >
-              <Background color="#333" gap={12} size={1} variant={BackgroundVariant.Dots} />
-              <MiniMap style={{ background: '#111', border: '1px solid #333' }} nodeColor={() => '#333'} maskColor="rgba(0,0,0,0.5)" />
+              <Background
+                color="#333"
+                gap={12}
+                size={1}
+                variant={BackgroundVariant.Dots}
+              />
+              <MiniMap
+                style={{ background: "#111", border: "1px solid #333" }}
+                nodeColor={() => "#333"}
+                maskColor="rgba(0,0,0,0.5)"
+              />
               <DownloadButton />
               {tooltipAnchor && (
-                <Panel position={toolbarSide as any} className="bg-black/90 p-3 border border-[#2b2a2a] backdrop-blur-md shadow-2xl max-w-xs min-w-[200px] pointer-events-auto">
+                <Panel
+                  position={toolbarSide as any}
+                  className="bg-black/90 p-3 border border-[#2b2a2a] backdrop-blur-md shadow-2xl max-w-xs min-w-[200px] pointer-events-auto"
+                >
                   <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#2b2a2a]">
-                    <h3 className="text-white font-bold text-[10px] uppercase tracking-wider">Whale Address</h3>
+                    <h3 className="text-white font-bold text-[10px] uppercase tracking-wider">
+                      Whale Address
+                    </h3>
                     <div className="flex gap-2">
                       {/* Icons moved here if needed or kept in tooltip */}
                     </div>
-                    <button onClick={() => setTooltipAnchor(null)} className="text-gray-400 hover:text-white">
+                    <button
+                      onClick={() => setTooltipAnchor(null)}
+                      className="text-gray-400 hover:text-white"
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </div>
                   {(() => {
-                    const node = nodesState.find(n => n.id === tooltipAnchor.nodeId);
-                    return <Tooltip tooltip={node?.data} showToast={showToast} />;
+                    const node = nodesState.find(
+                      (n) => n.id === tooltipAnchor.nodeId
+                    )
+                    return (
+                      <Tooltip tooltip={node?.data} showToast={showToast} />
+                    )
                   })()}
                 </Panel>
               )}
@@ -1333,7 +1518,8 @@ const WhaleNetworkGraph: React.FC<{
         {/* Removed Bottom Subscription as it moved to Top */}
         <div className="mb-2"></div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   )
 }
 

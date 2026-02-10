@@ -249,17 +249,6 @@ body {
     min-width: 16px !important;
   }
 
-  /* Plan buttons list - wrap on mobile */
-  .plan-btn-list {
-    flex-wrap: wrap !important;
-    gap: 3px !important;
-  }
-
-  .plan-btn {
-    font-size: 10px !important;
-    /* padding: 3px 5px !important; */
-  }
-
   .left-crd-content {
     text-align: end;
   }
@@ -274,6 +263,22 @@ body {
   .custom-tabs .nav-link {
     font-size: 12px !important;
     padding: 4px 16px !important;
+  }
+
+  .nw-visual-modal .plan-btn-list {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .nw-visual-modal .plan-btn-list li {
+    flex: 0 0 calc(50% - 4px) !important;
+    max-width: calc(50% - 4px) !important;
+  }
+
+  .nw-visual-modal .plan-btn-list .plan-btn {
+    width: 100% !important;
+    justify-content: space-between !important;
   }
 
   /* Rate box */
@@ -401,12 +406,6 @@ body {
 
   .nw-quick-bx .quick-btn {
     line-height: 0px;
-  }
-
-  /* Mobile filter buttons alignment */
-  .plan-btn {
-    justify-content: space-between !important;
-    text-align: left !important;
   }
 
   /* Filter icon button - center aligned */
