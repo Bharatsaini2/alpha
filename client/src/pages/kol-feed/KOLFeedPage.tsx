@@ -569,10 +569,10 @@ const KOLFeedPage = () => {
 
     // Extract token info from clicked item
     const tokenInfo = {
-      symbol: tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol,
-      name: tx.type === 'sell' ? tx.transaction.tokenIn.name : tx.transaction.tokenOut.name,
-      address: tx.type === 'sell' ? tx.tokenInAddress : tx.tokenOutAddress,
-      image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
+      symbol: tx.type === 'buy' ? tx.transaction.tokenOut.symbol : tx.transaction.tokenIn.symbol,
+      name: tx.type === 'buy' ? tx.transaction.tokenOut.name : tx.transaction.tokenIn.name,
+      address: tx.type === 'buy' ? tx.tokenOutAddress : tx.tokenInAddress,
+      image: tx.type === 'buy' ? tx.outTokenURL : tx.inTokenURL,
       decimals: 9, // Default for most Solana tokens
     }
 

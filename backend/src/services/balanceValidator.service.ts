@@ -172,14 +172,19 @@ export class BalanceValidatorService {
         await this.disconnectUserForLowBalance(user, balanceResult.currentBalance)
       }
     } catch (error) {
+      // RPC error - DO NOT disconnect user
+      // Log the error and skip this user for now
       logger.error({
         component: 'BalanceValidatorService',
         operation: 'validateUserBalance',
         userId: user._id,
+        walletAddress: walletForCheck,
         error: {
           message: error instanceof Error ? error.message : 'Unknown error',
         },
+        message: '⚠️ RPC error checking balance - skipping user (will not disconnect)',
       })
+      // Don't throw - continue with other users
     }
   }
 

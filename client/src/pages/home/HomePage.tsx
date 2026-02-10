@@ -807,10 +807,10 @@ const HomePage = () => {
 
     // Extract token info from clicked item
     const tokenInfo = {
-      symbol: tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol,
-      name: tx.type === 'sell' ? tx.transaction.tokenIn.name : tx.transaction.tokenOut.name,
-      address: tx.type === 'sell' ? tx.tokenInAddress : tx.tokenOutAddress,
-      image: tx.type === 'sell' ? tx.inTokenURL : tx.outTokenURL,
+      symbol: tx.type === 'buy' ? tx.transaction.tokenOut.symbol : tx.transaction.tokenIn.symbol,
+      name: tx.type === 'buy' ? tx.transaction.tokenOut.name : tx.transaction.tokenIn.name,
+      address: tx.type === 'buy' ? tx.tokenOutAddress : tx.tokenInAddress,
+      image: tx.type === 'buy' ? tx.outTokenURL : tx.inTokenURL,
       decimals: 9, // Default for most Solana tokens
     }
 
@@ -2772,13 +2772,13 @@ const HomePage = () => {
                           <div className="text-right">
                             {/* Token Name */}
                             <h4 className="text-white font-bold text-sm uppercase mb-0.5">
-                              {tx.type === 'sell' ? tx.transaction.tokenIn.symbol : tx.transaction.tokenOut.symbol}
+                              {tx.type === 'buy' ? tx.transaction.tokenOut.symbol : tx.transaction.tokenIn.symbol}
                             </h4>
                             {/* Token Description/Tagline */}
                             <p className="text-xs text-gray-500 mb-1.5 uppercase tracking-wide">
-                              {tx.type === 'sell'
-                                ? (tx.transaction.tokenIn.name || 'NA').substring(0, 20)
-                                : (tx.transaction.tokenOut.name || 'NA').substring(0, 20)}
+                              {tx.type === 'buy'
+                                ? (tx.transaction.tokenOut.name || 'NA').substring(0, 20)
+                                : (tx.transaction.tokenIn.name || 'NA').substring(0, 20)}
                             </p>
                             {/* MC / Age Stats */}
                             <div className="text-[10px] text-gray-500 uppercase tracking-wide whitespace-nowrap">
@@ -2790,12 +2790,12 @@ const HomePage = () => {
                             className="relative w-14 h-14 flex-shrink-0 cursor-pointer group"
                             onClick={(e) => {
                               e.stopPropagation()
-                              const tokenAddress = tx.type === "sell" ? tx.tokenInAddress : tx.tokenOutAddress
+                              const tokenAddress = tx.type === "buy" ? tx.tokenOutAddress : tx.tokenInAddress
                               handleCopyTokenAddress(tokenAddress, tx.signature)
                             }}
                           >
                             <img
-                              src={tx.type === "sell" ? (tx.inTokenURL || DefaultTokenImage) : (tx.outTokenURL || DefaultTokenImage)}
+                              src={tx.type === "buy" ? (tx.outTokenURL || DefaultTokenImage) : (tx.inTokenURL || DefaultTokenImage)}
                               alt="Token"
                               className="w-14 h-14 rounded-full transition-transform duration-200 group-hover:scale-105 border-2 border-[#2A2A2D]"
                               onError={(e) => { e.currentTarget.src = DefaultTokenImage }}

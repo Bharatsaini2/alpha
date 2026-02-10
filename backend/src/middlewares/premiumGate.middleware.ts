@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { PublicKey } from '@solana/web3.js'
 import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token'
-import { solConnection } from '../config/solana-config'
+import { solConnection, executeWithFallback } from '../config/solana-config'
 import { redisClient } from '../config/redis'
 import { User } from '../models/user.model'
 import logger from '../utils/logger'
@@ -27,9 +27,10 @@ export const ALPHA_TOKEN_MINT = '3wtGGWZ8wLWW6BqtC5rxmkHdqvM62atUcGTH4cw3pump'
 export const PREMIUM_BALANCE_THRESHOLD = 500000
 
 /**
- * Cache TTL for balance checks (5 minutes in seconds)
+ * Cache TTL for balance checks (1 hour in seconds)
+ * Matches the validation interval to prevent cache expiration during checks
  */
-const BALANCE_CACHE_TTL = 300
+const BALANCE_CACHE_TTL = 3600
 
 /**
  * Generate Redis cache key for wallet balance
@@ -139,24 +140,67 @@ export async function validateSOLBalance(
       publicKey
     )
 
-    // Query blockchain for ALPHA token balance
+    // Query blockchain for ALPHA token balance with retry logic and fallback RPCs
     balanceInAlpha = 0
-    try {
-      const tokenAccountInfo = await solConnection.getTokenAccountBalance(tokenAccount)
-      if (tokenAccountInfo.value) {
-        // Convert from token units to actual tokens (assuming 6 decimals for ALPHA)
-        balanceInAlpha = parseFloat(tokenAccountInfo.value.amount) / Math.pow(10, tokenAccountInfo.value.decimals)
+    let rpcSuccess = false
+    const maxRetries = 3
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Use executeWithFallback to automatically try backup RPCs
+        const tokenAccountInfo = await executeWithFallback(
+          async (connection) => connection.getTokenAccountBalance(tokenAccount),
+          'getTokenAccountBalance'
+        )
+        
+        if (tokenAccountInfo.value) {
+          // Convert from token units to actual tokens (assuming 6 decimals for ALPHA)
+          balanceInAlpha = parseFloat(tokenAccountInfo.value.amount) / Math.pow(10, tokenAccountInfo.value.decimals)
+          rpcSuccess = true
+          break
+        }
+      } catch (error) {
+        const isLastAttempt = attempt === maxRetries
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        
+        // Check if it's a "token account not found" error (user has no ALPHA)
+        const isAccountNotFound = errorMessage.includes('could not find account') || 
+                                   errorMessage.includes('Invalid param: could not find account')
+        
+        if (isAccountNotFound) {
+          // Legitimate case: user has no ALPHA token account
+          logger.debug({
+            component: 'PremiumGate',
+            operation: 'validateAlphaBalance',
+            message: 'ALPHA token account not found (user has no ALPHA)',
+            walletAddress,
+          })
+          balanceInAlpha = 0
+          rpcSuccess = true
+          break
+        }
+        
+        // RPC error - log and retry
+        logger.warn({
+          component: 'PremiumGate',
+          operation: 'validateAlphaBalance',
+          attempt,
+          maxRetries,
+          message: `RPC error fetching ALPHA balance${isLastAttempt ? ' (final attempt)' : ', retrying...'}`,
+          walletAddress,
+          error: errorMessage,
+        })
+        
+        if (!isLastAttempt) {
+          // Wait before retry (exponential backoff: 1s, 2s, 4s)
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt - 1) * 1000))
+        }
       }
-    } catch (error) {
-      // Token account doesn't exist or other error - balance is 0
-      logger.debug({
-        component: 'PremiumGate',
-        operation: 'validateAlphaBalance',
-        message: 'ALPHA token account not found or error fetching balance',
-        walletAddress,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
-      balanceInAlpha = 0
+    }
+    
+    // If all RPC attempts failed (including fallbacks), throw error instead of assuming 0 balance
+    if (!rpcSuccess) {
+      throw new Error('Unable to verify ALPHA balance after multiple attempts across all RPC endpoints.')
     }
 
     // Cache the balance
