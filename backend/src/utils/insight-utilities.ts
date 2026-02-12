@@ -68,7 +68,7 @@ export const isTokenVolumeSpike = async (
       $match: {
         tokenOutAddress: tokenAddress,
         timestamp: { $gte: sevenMinsAgo },
-        $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+        type: 'buy',  // ✅ Updated: Split swaps now create separate BUY records
       },
     },
     { $unwind: '$amount' },
@@ -76,7 +76,7 @@ export const isTokenVolumeSpike = async (
     { $unwind: '$bothType' },
     {
       $match: {
-        $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+        type: 'buy',  // ✅ Updated: Simplified query
       },
     },
     {
@@ -127,14 +127,14 @@ export const isTokenVolumeSpike = async (
   const last1min = await whaleAllTransactionModelV2.countDocuments({
     tokenOutAddress: tokenAddress,
     timestamp: { $gte: oneMinAgo },
-    $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+    type: 'buy',  // ✅ Updated: Split swaps now create separate BUY records
   })
 
   // list of buys in last 2 min
   const last2min = await whaleAllTransactionModelV2.countDocuments({
     tokenOutAddress: tokenAddress,
     timestamp: { $gte: twoMinAgo },
-    $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+    type: 'buy',  // ✅ Updated: Split swaps now create separate BUY records
   })
 
   let matchedSpecialCondition: string[] = []
@@ -185,14 +185,14 @@ export const isTokenVolumeSpike = async (
       $match: {
         tokenOutAddress: tokenAddress,
         timestamp: { $gte: dayAgo },
-        $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+        type: 'buy',  // ✅ Updated: Split swaps now create separate BUY records
       },
     },
     { $unwind: '$amount' },
     { $unwind: '$bothType' },
     {
       $match: {
-        $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+        type: 'buy',  // ✅ Updated: Simplified query
       },
     },
     {

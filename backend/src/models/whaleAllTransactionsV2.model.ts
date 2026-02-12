@@ -1,4 +1,6 @@
 import { Document, Schema, model } from 'mongoose'
+import logger from '../utils/logger'
+import { PRIORITY_ASSETS } from '../utils/shyftParserV2.types'
 
 export interface IWhaleAllTransactionsV2 extends Document {
   map(arg0: (tx: any) => any): unknown
@@ -80,6 +82,7 @@ export interface IWhaleAllTransactionsV2 extends Document {
     buyType: boolean
     sellType: boolean
   }[]
+  classificationSource?: string // e.g., 'v2_parser_split_sell', 'v2_parser_split_buy'
   hotnessScore: number
   timestamp: Date
   createdAt?: Date
@@ -91,7 +94,9 @@ export interface IWhaleAllTransactionsV2 extends Document {
 
 const whaleAddressSchemaV2 = new Schema<IWhaleAllTransactionsV2>(
   {
-    signature: { type: String, unique: true, required: true },
+    // ✅ FIXED: Removed unique constraint to allow split swaps (2 records per signature)
+    // Compound unique index (signature, type) is added below
+    signature: { type: String, required: true, index: true },
 
     amount: {
       buyAmount: { type: String },
@@ -171,6 +176,7 @@ const whaleAddressSchemaV2 = new Schema<IWhaleAllTransactionsV2>(
         sellType: { type: Boolean, default: false },
       },
     ],
+    classificationSource: { type: String, index: true }, // e.g., 'v2_parser_split_sell', 'v2_parser_split_buy'
     timestamp: {
       type: Date,
       default: Date.now,
@@ -188,6 +194,281 @@ const whaleAllTransactionModelV2 = model<IWhaleAllTransactionsV2>(
   'whaleAllTransactionV2',
   whaleAddressSchemaV2,
 )
+
+// ✅ CRITICAL: Compound unique index to allow split swaps (same signature, different type)
+// This replaces the old unique constraint on signature alone
+whaleAllTransactionModelV2.schema.index(
+  { signature: 1, type: 1 },
+  { unique: true, name: 'signature_type_unique' }
+)
+
+// 🔥 CRITICAL: Model-level pre-save hook validation
+// Prevents bypassing controller validation
+whaleAllTransactionModelV2.schema.pre('save', function(next) {
+  const doc = this as IWhaleAllTransactionsV2
+  
+  // ✅ Validate numeric values (catch NaN)
+  const buyAmount = parseFloat(doc.amount.buyAmount)
+  const sellAmount = parseFloat(doc.amount.sellAmount)
+  
+  if (isNaN(buyAmount)) {
+    const error = new Error(
+      `Architectural violation: amount.buyAmount is not a valid number. ` +
+      `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${doc.amount.buyAmount}`
+    )
+    
+    logger.error(
+      {
+        signature: doc.signature,
+        type: doc.type,
+        buyAmount: doc.amount.buyAmount,
+      },
+      'Model-level validation failed: Invalid buyAmount (NaN)'
+    )
+    
+    return next(error)
+  }
+  
+  if (isNaN(sellAmount)) {
+    const error = new Error(
+      `Architectural violation: amount.sellAmount is not a valid number. ` +
+      `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${doc.amount.sellAmount}`
+    )
+    
+    logger.error(
+      {
+        signature: doc.signature,
+        type: doc.type,
+        sellAmount: doc.amount.sellAmount,
+      },
+      'Model-level validation failed: Invalid sellAmount (NaN)'
+    )
+    
+    return next(error)
+  }
+  
+  // ✅ Validate non-negative amounts
+  if (buyAmount < 0) {
+    const error = new Error(
+      `Architectural violation: amount.buyAmount cannot be negative. ` +
+      `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${buyAmount}`
+    )
+    
+    logger.error(
+      {
+        signature: doc.signature,
+        type: doc.type,
+        buyAmount,
+      },
+      'Model-level validation failed: Negative buyAmount'
+    )
+    
+    return next(error)
+  }
+  
+  if (sellAmount < 0) {
+    const error = new Error(
+      `Architectural violation: amount.sellAmount cannot be negative. ` +
+      `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${sellAmount}`
+    )
+    
+    logger.error(
+      {
+        signature: doc.signature,
+        type: doc.type,
+        sellAmount,
+      },
+      'Model-level validation failed: Negative sellAmount'
+    )
+    
+    return next(error)
+  }
+  
+  // ✅ Validate SOL amounts are null when SOL not involved
+  // ✅ Fix #1: Use mint address, not symbol (symbols are not stable)
+  const tokenInAddress = doc.transaction?.tokenIn?.address || doc.tokenInAddress
+  const tokenOutAddress = doc.transaction?.tokenOut?.address || doc.tokenOutAddress
+  
+  const hasSOLInTransaction = 
+    tokenInAddress === PRIORITY_ASSETS.SOL ||
+    tokenInAddress === PRIORITY_ASSETS.WSOL ||
+    tokenOutAddress === PRIORITY_ASSETS.SOL ||
+    tokenOutAddress === PRIORITY_ASSETS.WSOL
+  
+  if (!hasSOLInTransaction) {
+    const buySolAmount = doc.solAmount?.buySolAmount
+    const sellSolAmount = doc.solAmount?.sellSolAmount
+    
+    // Check if SOL amounts are non-null and non-empty
+    const hasBuySolAmount = buySolAmount !== null && buySolAmount !== undefined && buySolAmount !== ''
+    const hasSellSolAmount = sellSolAmount !== null && sellSolAmount !== undefined && sellSolAmount !== ''
+    
+    if (hasBuySolAmount || hasSellSolAmount) {
+      const error = new Error(
+        `Architectural violation: SOL amounts must be null when SOL not involved. ` +
+        `Signature: ${doc.signature}, Type: ${doc.type}`
+      )
+      
+      logger.error(
+        {
+          signature: doc.signature,
+          type: doc.type,
+          buySolAmount: doc.solAmount?.buySolAmount,
+          sellSolAmount: doc.solAmount?.sellSolAmount,
+          tokenInAddress,
+          tokenOutAddress,
+        },
+        'Model-level validation failed: Fabricated SOL amounts detected'
+      )
+      
+      return next(error)
+    }
+  }
+  
+  // ✅ Validate SOL amounts are non-negative when not null
+  if (doc.solAmount?.buySolAmount !== null && doc.solAmount?.buySolAmount !== undefined && doc.solAmount?.buySolAmount !== '') {
+    const buySolAmount = parseFloat(doc.solAmount.buySolAmount)
+    
+    if (isNaN(buySolAmount)) {
+      const error = new Error(
+        `Architectural violation: solAmount.buySolAmount is not a valid number. ` +
+        `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${doc.solAmount.buySolAmount}`
+      )
+      
+      logger.error(
+        {
+          signature: doc.signature,
+          type: doc.type,
+          buySolAmount: doc.solAmount.buySolAmount,
+        },
+        'Model-level validation failed: Invalid buySolAmount (NaN)'
+      )
+      
+      return next(error)
+    }
+    
+    if (buySolAmount < 0) {
+      const error = new Error(
+        `Architectural violation: solAmount.buySolAmount cannot be negative. ` +
+        `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${buySolAmount}`
+      )
+      
+      logger.error(
+        {
+          signature: doc.signature,
+          type: doc.type,
+          buySolAmount,
+        },
+        'Model-level validation failed: Negative buySolAmount'
+      )
+      
+      return next(error)
+    }
+  }
+  
+  if (doc.solAmount?.sellSolAmount !== null && doc.solAmount?.sellSolAmount !== undefined && doc.solAmount?.sellSolAmount !== '') {
+    const sellSolAmount = parseFloat(doc.solAmount.sellSolAmount)
+    
+    if (isNaN(sellSolAmount)) {
+      const error = new Error(
+        `Architectural violation: solAmount.sellSolAmount is not a valid number. ` +
+        `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${doc.solAmount.sellSolAmount}`
+      )
+      
+      logger.error(
+        {
+          signature: doc.signature,
+          type: doc.type,
+          sellSolAmount: doc.solAmount.sellSolAmount,
+        },
+        'Model-level validation failed: Invalid sellSolAmount (NaN)'
+      )
+      
+      return next(error)
+    }
+    
+    if (sellSolAmount < 0) {
+      const error = new Error(
+        `Architectural violation: solAmount.sellSolAmount cannot be negative. ` +
+        `Signature: ${doc.signature}, Type: ${doc.type}, Value: ${sellSolAmount}`
+      )
+      
+      logger.error(
+        {
+          signature: doc.signature,
+          type: doc.type,
+          sellSolAmount,
+        },
+        'Model-level validation failed: Negative sellSolAmount'
+      )
+      
+      return next(error)
+    }
+  }
+  
+  // ✅ Validate split swaps are not merged into "both" type
+  if (doc.type === 'both' && doc.classificationSource?.includes('v2_parser_split')) {
+    const error = new Error(
+      `Architectural violation: Split swaps must be stored as separate records. ` +
+      `Signature: ${doc.signature}`
+    )
+    
+    logger.error(
+      {
+        signature: doc.signature,
+        classificationSource: doc.classificationSource,
+      },
+      'Model-level validation failed: Attempted to create merged "both" record for split swap'
+    )
+    
+    return next(error)
+  }
+  
+  // ✅ Validate USD contamination guard
+  // Check if amount fields suspiciously match USD amounts
+  // This is a heuristic check - if amount fields are very close to USD amounts,
+  // it's likely USD contamination
+  if (doc.transaction?.tokenIn?.usdAmount && doc.transaction?.tokenOut?.usdAmount) {
+    const tokenInUsd = parseFloat(doc.transaction.tokenIn.usdAmount)
+    const tokenOutUsd = parseFloat(doc.transaction.tokenOut.usdAmount)
+    
+    if (!isNaN(tokenInUsd) && !isNaN(tokenOutUsd)) {
+      // Check if buyAmount or sellAmount suspiciously matches USD amounts
+      // Allow 1% tolerance for rounding
+      const buyMatchesInUsd = Math.abs(buyAmount - tokenInUsd) / Math.max(tokenInUsd, 1) < 0.01
+      const buyMatchesOutUsd = Math.abs(buyAmount - tokenOutUsd) / Math.max(tokenOutUsd, 1) < 0.01
+      const sellMatchesInUsd = Math.abs(sellAmount - tokenInUsd) / Math.max(tokenInUsd, 1) < 0.01
+      const sellMatchesOutUsd = Math.abs(sellAmount - tokenOutUsd) / Math.max(tokenOutUsd, 1) < 0.01
+      
+      // If amount fields match USD values AND they're different from each other
+      // (same values could be coincidence), flag it
+      if ((buyMatchesInUsd || buyMatchesOutUsd || sellMatchesInUsd || sellMatchesOutUsd) && 
+          Math.abs(buyAmount - sellAmount) > 0.01) {
+        logger.warn(
+          {
+            signature: doc.signature,
+            type: doc.type,
+            buyAmount,
+            sellAmount,
+            tokenInUsd,
+            tokenOutUsd,
+            buyMatchesInUsd,
+            buyMatchesOutUsd,
+            sellMatchesInUsd,
+            sellMatchesOutUsd,
+          },
+          'Model-level validation warning: Amount fields suspiciously match USD amounts (possible contamination)'
+        )
+        
+        // Note: We log a warning but don't block the save
+        // This is because legitimate cases might match USD values
+        // The warning allows monitoring for patterns
+      }
+    }
+  }
+  
+  next()
+})
 
 // Enhanced indexes for better query performance
 whaleAllTransactionModelV2.schema.index({ whaleAddress: 1, timestamp: -1 })

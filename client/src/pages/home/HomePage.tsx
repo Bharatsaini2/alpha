@@ -747,8 +747,14 @@ const HomePage = () => {
     setClearSearchTrigger((prev) => prev + 1)
   }
 
-  // Helper function to get transaction amount
+  // Helper function to get transaction amount (USD value)
   const getTransactionAmount = (tx: any) => {
+    if (tx.type === "buy" && tx.transaction?.tokenOut?.usdAmount) {
+      return parseFloat(tx.transaction.tokenOut.usdAmount)
+    } else if (tx.type === "sell" && tx.transaction?.tokenIn?.usdAmount) {
+      return parseFloat(tx.transaction.tokenIn.usdAmount)
+    }
+    // Fallback to legacy amount fields if transaction object not available
     if (tx.type === "buy" && tx.amount?.buyAmount) {
       return tx.amount.buyAmount
     } else if (tx.type === "sell" && tx.amount?.sellAmount) {

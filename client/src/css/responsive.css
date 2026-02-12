@@ -406,6 +406,12 @@ body {
 
   .nw-quick-bx .quick-btn {
     line-height: 0px;
+    max-width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .nw-quick-bx .quick-btn input {
+    margin-left: auto !important;
   }
 
   /* Filter icon button - center aligned */
@@ -446,6 +452,11 @@ body {
 
   .coppied-content {
     gap: 8px !important;
+  }
+
+  /* Mobile hotness score - smaller on mobile */
+  .hotness-title {
+    font-size: 10px !important;
   }
 
   .coppied-content p {

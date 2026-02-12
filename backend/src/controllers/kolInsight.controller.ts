@@ -120,7 +120,7 @@ export const getKolHotnessScore = async (
         $match: {
           tokenOutAddress: tokenAddress,
           timestamp: { $gte: fifteenMinsAgo },
-          $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+          type: 'buy',  // ✅ Updated: Split swaps now create separate BUY records
         },
       },
       { $unwind: '$amount' },
@@ -128,7 +128,7 @@ export const getKolHotnessScore = async (
       { $unwind: '$bothType' },
       {
         $match: {
-          $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+          type: 'buy',  // ✅ Updated: Simplified query
         },
       },
       {
@@ -161,14 +161,14 @@ export const getKolHotnessScore = async (
           $match: {
             tokenOutAddress: tokenAddress,
             timestamp: { $gte: dayAgo },
-            $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+            type: 'buy',  // ✅ Updated: Split swaps now create separate BUY records
           },
         },
         { $unwind: '$amount' },
         { $unwind: '$bothType' },
         {
           $match: {
-            $or: [{ type: 'buy' }, { type: 'both', 'bothType.buyType': true }],
+            type: 'buy',  // ✅ Updated: Simplified query
           },
         },
         {
@@ -269,10 +269,8 @@ async function computeWinRateAndAvgROIForWhale(
     const buyPrice = parseFloat(tx.tokenPrice?.buyTokenPrice || '0')
     const sellPrice = parseFloat(tx.tokenPrice?.sellTokenPrice || '0')
 
-    const isBuy =
-      tx.type === 'buy' || (tx.type === 'both' && tx.bothType?.[0]?.buyType)
-    const isSell =
-      tx.type === 'sell' || (tx.type === 'both' && tx.bothType?.[0]?.sellType)
+    const isBuy = tx.type === 'buy'  // ✅ Updated: Simplified type detection
+    const isSell = tx.type === 'sell'  // ✅ Updated: Simplified type detection
 
     // Handle BUY part
     if (isBuy) {

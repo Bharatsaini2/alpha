@@ -1,6 +1,6 @@
 /**
- * List all collections in the database
- * Run: node list-all-collections.js
+ * Check alerts in the CORRECT collection: user_alerts
+ * Run: node check-user-alerts-correct.js
  */
 
 const mongoose = require('mongoose');
@@ -8,34 +8,37 @@ require('dotenv').config();
 
 const MONGO_URI = process.env.MONGO_URI;
 
-async function listCollections() {
+async function checkUserAlerts() {
   try {
     console.log('\n🔍 Connecting to MongoDB...');
     await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB\n');
 
     const db = mongoose.connection.db;
-    const collections = await db.listCollections().toArray();
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📊 ALL COLLECTIONS IN DATABASE');
+    console.log('📊 ALERTS IN user_alerts COLLECTION');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     
-    console.log(`Total collections: ${collections.length}\n`);
+    const alerts = await db.collection('user_alerts').find({}).toArray();
     
-    for (const collection of collections) {
-      const collectionName = collection.name;
-      const count = await db.collection(collectionName).countDocuments();
+    console.log(`Total alerts: ${alerts.length}\n`);
+    
+    if (alerts.length > 0) {
+      alerts.forEach((alert, index) => {
+        console.log(`${index + 1}. Alert ID: ${alert._id}`);
+        console.log(`   User ID: ${alert.userId}`);
+        console.log(`   Telegram Chat ID: ${alert.telegramChatId || 'N/A'}`);
+        console.log(`   Type: ${alert.type}`);
+        console.log(`   Enabled: ${alert.enabled ? '✅ Yes' : '❌ No'}`);
+        console.log(`   Config: ${JSON.stringify(alert.config, null, 2)}`);
+        console.log(`   Created: ${alert.createdAt}`);
+        console.log('');
+      });
       
-      console.log(`📁 ${collectionName}`);
-      console.log(`   Documents: ${count}`);
-      
-      // Show sample document for non-empty collections
-      if (count > 0 && count < 100000) {
-        const sample = await db.collection(collectionName).findOne();
-        console.log(`   Sample keys: ${Object.keys(sample).slice(0, 10).join(', ')}`);
-      }
-      console.log('');
+      console.log('✅ YOUR ALERTS ARE SAFE! They are in the user_alerts collection.\n');
+    } else {
+      console.log('⚠️  No alerts found in user_alerts collection.\n');
     }
     
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
@@ -52,7 +55,7 @@ async function listCollections() {
 }
 
 console.log('\n╔════════════════════════════════════════╗');
-console.log('║     List All Collections               ║');
+console.log('║   Check user_alerts Collection         ║');
 console.log('╚════════════════════════════════════════╝');
 
-listCollections();
+checkUserAlerts();

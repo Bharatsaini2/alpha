@@ -906,7 +906,7 @@ input[type="number"] {
 .quick-btn {
   background-color: #0a0a0a;
   font-weight: 400;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 120%;
   text-transform: uppercase;
   color: #525252;
@@ -914,7 +914,8 @@ input[type="number"] {
   padding: 7px 8px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  max-width: 280px;
 }
 
 .custom-tabs {
@@ -1102,7 +1103,7 @@ input[type="number"] {
 
 .hotness-title {
   font-weight: 500;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 140%;
   text-align: center;
   letter-spacing: 0.5px;
@@ -2266,6 +2267,8 @@ font-size: 16px;
     padding: 6px 8px !important;
     height: 32px !important;
     white-space: nowrap !important;
+    max-width: 100% !important;
+    justify-content: space-between !important;
   }
 
   .mobile-filters-quick-row .mobile-quick-buy-mobile img {
@@ -2276,6 +2279,7 @@ font-size: 16px;
   .mobile-filters-quick-row .mobile-quick-buy-mobile input {
     width: 45px !important;
     font-size: 11px !important;
+    margin-left: auto !important;
   }
 
   /* Filters container - comes AFTER quick buy */

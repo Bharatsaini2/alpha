@@ -520,6 +520,12 @@ const KOLFeedPage = () => {
 
   // Helper functions
   const getTransactionAmount = (tx: any) => {
+    if (tx.type === "buy" && tx.transaction?.tokenOut?.usdAmount) {
+      return parseFloat(tx.transaction.tokenOut.usdAmount)
+    } else if (tx.type === "sell" && tx.transaction?.tokenIn?.usdAmount) {
+      return parseFloat(tx.transaction.tokenIn.usdAmount)
+    }
+    // Fallback to legacy amount fields if transaction object not available
     if (tx.type === "buy" && tx.amount?.buyAmount) {
       return tx.amount.buyAmount
     } else if (tx.type === "sell" && tx.amount?.sellAmount) {
@@ -995,7 +1001,7 @@ const KOLFeedPage = () => {
                     value={quickBuyAmount}
                     onChange={handleQuickBuyAmountChange}
                     onClick={(e) => e.stopPropagation()}
-                    placeholder="0.5"
+                    placeholder={quickBuyAmount ? "" : "0.5"}
                     min="0"
                     step="0.1"
                     style={{
@@ -1005,15 +1011,17 @@ const KOLFeedPage = () => {
                         : "none",
                       color: "#fff",
                       flexGrow: 1,
+                      minWidth: "40px",
+                      maxWidth: "60px",
                       textAlign: "right",
                       outline: "none",
-                      fontSize: "14px",
+                      fontSize: "13px",
                       borderRadius: "4px",
                       padding: "2px 4px",
                     }}
                     title={quickBuyAmountError || ""}
                   />
-                  <span style={{ color: "#fff", fontSize: "14px" }}>SOL</span>
+                  <span style={{ color: "#fff", fontSize: "13px", flexShrink: 0 }}>SOL</span>
                 </button>
                 {quickBuyAmountError && (
                   <div
@@ -1053,7 +1061,7 @@ const KOLFeedPage = () => {
                     value={quickBuyAmount}
                     onChange={handleQuickBuyAmountChange}
                     onClick={(e) => e.stopPropagation()}
-                    placeholder="0.5"
+                    placeholder={quickBuyAmount ? "" : "0.5"}
                     min="0"
                     step="0.1"
                     style={{
@@ -1063,15 +1071,17 @@ const KOLFeedPage = () => {
                         : "none",
                       color: "#fff",
                       flexGrow: 1,
+                      minWidth: "40px",
+                      maxWidth: "60px",
                       textAlign: "right",
                       outline: "none",
-                      fontSize: "14px",
+                      fontSize: "13px",
                       borderRadius: "4px",
                       padding: "2px 4px",
                     }}
                     title={quickBuyAmountError || ""}
                   />
-                  <span style={{ color: "#fff", fontSize: "14px" }}>SOL</span>
+                  <span style={{ color: "#fff", fontSize: "13px", flexShrink: 0 }}>SOL</span>
                 </button>
                 {quickBuyAmountError && (
                   <div

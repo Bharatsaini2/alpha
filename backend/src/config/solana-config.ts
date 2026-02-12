@@ -70,6 +70,16 @@ export async function executeWithFallback<T>(
         })
         throw new Error(`All RPC endpoints failed for ${operationName}`)
       }
+      
+      // ✅ CRITICAL FIX: Add delay before trying next RPC to prevent request storm
+      // Exponential backoff: 1s, 2s, 4s, 8s...
+      const waitTime = Math.min(1000 * Math.pow(2, i), 8000)
+      logger.info({
+        component: 'SolanaConfig',
+        operation: 'executeWithFallback',
+        message: `⏳ Waiting ${waitTime / 1000}s before trying next RPC...`,
+      })
+      await new Promise(resolve => setTimeout(resolve, waitTime))
     }
   }
 

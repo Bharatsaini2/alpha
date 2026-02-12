@@ -149,33 +149,8 @@ const generateKolSummary = async (
         (trade.marketCap as any)?.sellMarketCap,
         trade.transaction?.tokenIn?.usdAmount as any,
       )
-    } else if (trade.type === 'both') {
-      // Process as two logical entries
-      if (trade.bothType?.[0]?.buyType) {
-        handleTrade(
-          'buy',
-          trade.tokenOutSymbol,
-          trade.transaction?.tokenOut?.name,
-          trade.outTokenURL,
-          trade.tokenOutAddress,
-          (trade.amount as any)?.buyAmount,
-          (trade.marketCap as any)?.buyMarketCap,
-          trade.transaction?.tokenOut?.usdAmount as any,
-        )
-      }
-      if (trade.bothType?.[0]?.sellType) {
-        handleTrade(
-          'sell',
-          trade.tokenInSymbol,
-          trade.transaction?.tokenIn?.name,
-          trade.inTokenURL,
-          trade.tokenInAddress,
-          (trade.amount as any)?.sellAmount,
-          (trade.marketCap as any)?.sellMarketCap,
-          trade.transaction?.tokenIn?.usdAmount as any,
-        )
-      }
     }
+    // ✅ Note: 'both' type handling removed - split swaps now create separate 'buy' and 'sell' records
   }
 
   const summary: any = {

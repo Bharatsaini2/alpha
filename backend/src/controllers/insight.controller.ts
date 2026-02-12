@@ -416,30 +416,8 @@ const generateWhaleSummary = async (hours: number, label: string) => {
         (trade.amount as any)?.sellAmount,
         (trade.marketCap as any)?.sellMarketCap,
       )
-    } else if (trade.type === 'both') {
-      // Process as two logical entries
-      if (trade.bothType?.[0]?.buyType) {
-        handleTrade(
-          'buy',
-          trade.tokenOutSymbol,
-          trade.outTokenURL,
-          trade.tokenOutAddress,
-          (trade.amount as any)?.buyAmount,
-          (trade.marketCap as any)?.buyMarketCap,
-        )
-      }
-
-      if (trade.bothType?.[0]?.sellType) {
-        handleTrade(
-          'sell',
-          trade.tokenInSymbol,
-          trade.inTokenURL,
-          trade.tokenInAddress,
-          (trade.amount as any)?.sellAmount,
-          (trade.marketCap as any)?.sellMarketCap,
-        )
-      }
     }
+    // ✅ Note: 'both' type handling removed - split swaps now create separate 'buy' and 'sell' records
   }
 
   const summary: any = {
@@ -601,9 +579,9 @@ const calculateSniperLabelForWallet = async (wallet: string) => {
   for (const trade of trades) {
     // let token: string
 
-    // if (trade.type === 'buy' || (trade.type === 'both' && trade.bothType?.[0]?.buyType)) {
+    // if (trade.type === 'buy'  // ✅ Updated: Simplified type detection) {
     //   token = trade.tokenOutSymbol
-    // } else if (trade.type === 'sell' || (trade.type === 'both' && trade.bothType?.[0]?.sellType)) {
+    // } else if (trade.type === 'sell'  // ✅ Updated: Simplified type detection) {
     //   token = trade.tokenInSymbol
     // } else {
     //   continue
@@ -721,12 +699,8 @@ const calculateFlipperLabelForWallet = async (wallet: string) => {
       tradeValueUSD = Number(trade.transaction?.tokenOut?.usdAmount || 0)
     } else if (trade.type === 'sell') {
       tradeValueUSD = Number(trade.transaction?.tokenIn?.usdAmount || 0)
-    } else if (trade.type === 'both') {
-      // For 'both' type, use the higher of the two amounts
-      const buyAmount = Number(trade.transaction?.tokenOut?.usdAmount || 0)
-      const sellAmount = Number(trade.transaction?.tokenIn?.usdAmount || 0)
-      tradeValueUSD = Math.max(buyAmount, sellAmount)
     }
+    // ✅ Note: 'both' type handling removed - split swaps now create separate 'buy' and 'sell' records
 
     return tradeValueUSD >= minTradeValueUSD
   })
@@ -981,9 +955,9 @@ async function computeWinRateAndAvgROIForWhale(
     const sellPrice = parseFloat(tx.tokenPrice?.sellTokenPrice || '0')
 
     const isBuy =
-      tx.type === 'buy' || (tx.type === 'both' && tx.bothType?.[0]?.buyType)
+      tx.type === 'buy'  // ✅ Updated: Simplified type detection
     const isSell =
-      tx.type === 'sell' || (tx.type === 'both' && tx.bothType?.[0]?.sellType)
+      tx.type === 'sell'  // ✅ Updated: Simplified type detection
 
     // Handle BUY part - only count if meets minimum transaction size
     if (isBuy && buyAmount >= minTransactionSize) {
@@ -1149,7 +1123,7 @@ async function findHeavyAccumulators(): Promise<Candidate[]> {
     {
       $match: {
         timestamp: { $gte: accumulationWindowStart },
-        $or: [{ type: 'buy' }, { type: 'both', 'bothType.0.buyType': true }],
+        type: 'buy'  // ✅ Updated: Split swaps now create separate BUY records,
       },
     },
     // Step 2: Group buys by whale and tokenOut
@@ -1231,12 +1205,7 @@ async function checkCurrentHoldings(whaleAddress: string): Promise<number> {
       $match: {
         whaleAddress,
         timestamp: { $gte: sevenDaysAgo },
-        $or: [
-          { type: 'buy' },
-          { type: 'both', 'bothType.0.buyType': true },
-          { type: 'sell' },
-          { type: 'both', 'bothType.0.sellType': true },
-        ],
+        $or: [{ type: 'buy' }, { type: 'sell' }]  // ✅ Updated: Simplified query,
       },
     },
     {
@@ -1250,7 +1219,7 @@ async function checkCurrentHoldings(whaleAddress: string): Promise<number> {
                   { $eq: ['$type', 'buy'] },
                   {
                     $and: [
-                      { $eq: ['$type', 'both'] },
+                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps
                       { $eq: ['$bothType.0.buyType', true] },
                     ],
                   },
@@ -1276,7 +1245,7 @@ async function checkCurrentHoldings(whaleAddress: string): Promise<number> {
                   { $eq: ['$type', 'sell'] },
                   {
                     $and: [
-                      { $eq: ['$type', 'both'] },
+                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps
                       { $eq: ['$bothType.0.sellType', true] },
                     ],
                   },
@@ -2017,7 +1986,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                       { $eq: ['$type', 'buy'] },
                       {
                         $and: [
-                          { $eq: ['$type', 'both'] },
+                          { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                           {
                             $eq: [
                               { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -2039,7 +2008,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                       { $eq: ['$type', 'buy'] },
                       {
                         $and: [
-                          { $eq: ['$type', 'both'] },
+                          { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                           {
                             $eq: [
                               { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -2061,7 +2030,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                       { $eq: ['$type', 'buy'] },
                       {
                         $and: [
-                          { $eq: ['$type', 'both'] },
+                          { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                           {
                             $eq: [
                               { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -2085,7 +2054,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                           { $eq: ['$type', 'buy'] },
                           {
                             $and: [
-                              { $eq: ['$type', 'both'] },
+                              { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                               {
                                 $eq: [
                                   { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -2114,7 +2083,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                           { $eq: ['$type', 'buy'] },
                           {
                             $and: [
-                              { $eq: ['$type', 'both'] },
+                              { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                               {
                                 $eq: [
                                   { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -2160,7 +2129,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                               { $eq: ['$type', 'buy'] },
                               {
                                 $and: [
-                                  { $eq: ['$type', 'both'] },
+                                  { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                   {
                                     $eq: [
                                       {
@@ -2187,7 +2156,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                               { $eq: ['$type', 'buy'] },
                               {
                                 $and: [
-                                  { $eq: ['$type', 'both'] },
+                                  { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                   {
                                     $eq: [
                                       {
@@ -2217,7 +2186,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                                   { $eq: ['$type', 'buy'] },
                                   {
                                     $and: [
-                                      { $eq: ['$type', 'both'] },
+                                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                       {
                                         $eq: [
                                           {
@@ -2252,7 +2221,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                                   { $eq: ['$type', 'buy'] },
                                   {
                                     $and: [
-                                      { $eq: ['$type', 'both'] },
+                                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                       {
                                         $eq: [
                                           {
@@ -2288,7 +2257,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                                   { $eq: ['$type', 'sell'] },
                                   {
                                     $and: [
-                                      { $eq: ['$type', 'both'] },
+                                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                       {
                                         $eq: [
                                           {
@@ -2323,7 +2292,7 @@ export const getLeaderBoardPNL = catchAsyncErrors(
                                   { $eq: ['$type', 'sell'] },
                                   {
                                     $and: [
-                                      { $eq: ['$type', 'both'] },
+                                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                       {
                                         $eq: [
                                           {
@@ -2686,7 +2655,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                   { $eq: ['$type', 'buy'] },
                   {
                     $and: [
-                      { $eq: ['$type', 'both'] },
+                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                       {
                         $eq: [{ $arrayElemAt: ['$bothType.buyType', 0] }, true],
                       },
@@ -2705,7 +2674,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                   { $eq: ['$type', 'buy'] },
                   {
                     $and: [
-                      { $eq: ['$type', 'both'] },
+                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                       {
                         $eq: [{ $arrayElemAt: ['$bothType.buyType', 0] }, true],
                       },
@@ -2724,7 +2693,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                   { $eq: ['$type', 'buy'] },
                   {
                     $and: [
-                      { $eq: ['$type', 'both'] },
+                      { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                       {
                         $eq: [{ $arrayElemAt: ['$bothType.buyType', 0] }, true],
                       },
@@ -2745,7 +2714,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                       { $eq: ['$type', 'buy'] },
                       {
                         $and: [
-                          { $eq: ['$type', 'both'] },
+                          { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                           {
                             $eq: [
                               { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -2774,7 +2743,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                       { $eq: ['$type', 'buy'] },
                       {
                         $and: [
-                          { $eq: ['$type', 'both'] },
+                          { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                           {
                             $eq: [
                               { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -2818,7 +2787,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                           { $eq: ['$type', 'buy'] },
                           {
                             $and: [
-                              { $eq: ['$type', 'both'] },
+                              { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                               {
                                 $eq: [
                                   {
@@ -2844,7 +2813,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                           { $eq: ['$type', 'buy'] },
                           {
                             $and: [
-                              { $eq: ['$type', 'both'] },
+                              { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                               {
                                 $eq: [
                                   {
@@ -2873,7 +2842,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                               { $eq: ['$type', 'buy'] },
                               {
                                 $and: [
-                                  { $eq: ['$type', 'both'] },
+                                  { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                   {
                                     $eq: [
                                       {
@@ -2904,7 +2873,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                               { $eq: ['$type', 'buy'] },
                               {
                                 $and: [
-                                  { $eq: ['$type', 'both'] },
+                                  { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                   {
                                     $eq: [
                                       {
@@ -2936,7 +2905,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                               { $eq: ['$type', 'sell'] },
                               {
                                 $and: [
-                                  { $eq: ['$type', 'both'] },
+                                  { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                   {
                                     $eq: [
                                       {
@@ -2967,7 +2936,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
                               { $eq: ['$type', 'sell'] },
                               {
                                 $and: [
-                                  { $eq: ['$type', 'both'] },
+                                  { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                                   {
                                     $eq: [
                                       {
@@ -3012,7 +2981,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
           //               { $eq: ['$type', 'buy'] },
           //               {
           //                 $and: [
-          //                   { $eq: ['$type', 'both'] },
+          //                   { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
           //                   {
           //                     $eq: [
           //                       { $arrayElemAt: ['$bothType.buyType', 0] },
@@ -3058,7 +3027,7 @@ export const getWalletStats = async (req: Request, res: Response) => {
               $project: {
                 entries: {
                   $cond: [
-                    { $eq: ['$type', 'both'] },
+                    { $eq: ['$type', 'never_match'] },  // ✅ Updated: 'both' type no longer created for split swaps,
                     [
                       {
                         type: 'buy',
@@ -3546,3 +3515,6 @@ export const getTopPicks = catchAsyncErrors(
     }
   },
 )
+
+
+

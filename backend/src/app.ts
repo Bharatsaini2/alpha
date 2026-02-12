@@ -468,15 +468,17 @@ process.on('SIGHUP', async () => {
   await performShutdown('SIGHUP')
 })
 
-// Force exit on uncaught exceptions
-process.on('uncaughtException', async (error) => {
-  console.error('🚨 Uncaught Exception:', error)
-  await performShutdown('uncaughtException')
+// ==================================================
+// 🧟 ZOMBIE MODE: Log errors but NEVER STOP
+// ==================================================
+process.on('uncaughtException', (error) => {
+  console.error('⚠️ [IGNORED] Uncaught Exception:', error)
+  // Intentional: We are NOT calling performShutdown() to keep the server alive
 })
 
-process.on('unhandledRejection', async (reason, promise) => {
-  console.error('🚨 Unhandled Rejection at:', promise, 'reason:', reason)
-  await performShutdown('unhandledRejection')
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('⚠️ [IGNORED] Unhandled Rejection:', reason)
+  // Intentional: We are NOT calling performShutdown() to keep the server alive
 })
 
 // Shutdown function

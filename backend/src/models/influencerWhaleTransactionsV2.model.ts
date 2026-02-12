@@ -71,6 +71,7 @@ export interface IInfluencerWhaleTransactionsV2 extends Document {
     buyType: boolean
     sellType: boolean
   }[]
+  classificationSource?: string // e.g., 'v2_parser_split_sell', 'v2_parser_split_buy'
   hotnessScore: number
   timestamp: Date
   createdAt?: Date
@@ -83,7 +84,9 @@ export interface IInfluencerWhaleTransactionsV2 extends Document {
 const influencerWhaleAddressSchemaV2 =
   new Schema<IInfluencerWhaleTransactionsV2>(
     {
-      signature: { type: String, unique: true, required: true },
+      // ✅ FIXED: Removed unique constraint to allow split swaps (2 records per signature)
+      // Compound unique index (signature, type) is added below
+      signature: { type: String, required: true, index: true },
       influencerName: String,
       influencerUsername: String,
       influencerFollowerCount: { type: Number },
@@ -154,6 +157,7 @@ const influencerWhaleAddressSchemaV2 =
           sellType: { type: Boolean, default: false },
         },
       ],
+      classificationSource: { type: String, index: true }, // e.g., 'v2_parser_split_sell', 'v2_parser_split_buy'
       timestamp: {
         type: Date,
         default: Date.now,
@@ -173,6 +177,13 @@ const influencerWhaleTransactionsModelV2 =
     'influencerWhaleTransactionsV2',
     influencerWhaleAddressSchemaV2,
   )
+
+// ✅ CRITICAL: Compound unique index to allow split swaps (same signature, different type)
+// This replaces the old unique constraint on signature alone
+influencerWhaleTransactionsModelV2.schema.index(
+  { signature: 1, type: 1 },
+  { unique: true, name: 'signature_type_unique' }
+)
 
 // Enhanced indexes for better query performance
 influencerWhaleTransactionsModelV2.schema.index({

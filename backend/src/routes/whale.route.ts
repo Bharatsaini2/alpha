@@ -1,4 +1,4 @@
-import express from 'express'
+import express, { RequestHandler } from 'express'
 import {
   getAllWhaleTransactions,
   getLatestWhaleAlert,
@@ -10,6 +10,10 @@ import {
   getCoinSuggestions,
   getQueueStats,
 } from '../controllers/whale.controller'
+import {
+  getAggregatedSplitSwap,
+  getAggregatedSplitSwaps,
+} from '../controllers/splitSwapAggregation.controller'
 import whaleAllTransactionModel from '../models/whale-all-transactions.model'
 import { registerInterval, processManager } from '../config/processManager'
 
@@ -196,5 +200,68 @@ whaleRouter.get('/visualize-whales', visualizeWhales)
 
 // Coin suggestions endpoint
 whaleRouter.get('/coin-suggestions', getCoinSuggestions as any)
+
+// Split swap aggregation endpoints (Task 10.1)
+whaleRouter.get('/split-swap/:signature', (async (req: any, res: any) => {
+  try {
+    const { signature } = req.params
+    
+    if (!signature) {
+      return res.status(400).json({ 
+        status: 'error',
+        message: 'Signature parameter is required' 
+      })
+    }
+    
+    const aggregated = await getAggregatedSplitSwap(signature)
+    
+    if (!aggregated) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Split swap not found or incomplete'
+      })
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: aggregated
+    })
+  } catch (error: any) {
+    console.error('❌ Error in /split-swap/:signature:', error)
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Internal Server Error',
+      error: error.message 
+    })
+  }
+}) as any)
+
+whaleRouter.post('/split-swaps/batch', (async (req: any, res: any) => {
+  try {
+    const { signatures } = req.body
+    
+    if (!Array.isArray(signatures) || signatures.length === 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'signatures array is required in request body'
+      })
+    }
+    
+    const aggregated = await getAggregatedSplitSwaps(signatures)
+    
+    res.status(200).json({
+      status: 'success',
+      data: aggregated,
+      count: aggregated.length
+    })
+  } catch (error: any) {
+    console.error('❌ Error in /split-swaps/batch:', error)
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal Server Error',
+      error: error.message
+    })
+  }
+}) as any)
 
 export default whaleRouter

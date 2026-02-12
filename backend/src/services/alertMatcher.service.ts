@@ -548,12 +548,12 @@ export class AlertMatcherService {
 
     for (const sub of subscriptions) {
       try {
-        // Send alerts for BUY, BOTH, and SWAP transactions (skip SELL-only)
-        // Transaction types: 'buy', 'sell', 'both', 'swap'
-        // - 'buy': Pure buy transaction ✅
+        // Send alerts for BUY and SWAP transactions (skip SELL-only)
+        // Transaction types: 'buy', 'sell', 'swap'
+        // - 'buy': Pure buy transaction ✅ (includes split swap BUY records)
         // - 'sell': Pure sell transaction ❌
-        // - 'both': Swap with buy+sell components ✅
         // - 'swap': Token swap transaction ✅
+        // Note: Split swaps now create separate 'buy' and 'sell' records
         if (tx.type === 'sell') {
           logger.debug({
             component: 'AlertMatcherService',
@@ -657,12 +657,12 @@ export class AlertMatcherService {
 
     for (const sub of subscriptions) {
       try {
-        // Send alerts for BUY, BOTH, and SWAP transactions (skip SELL-only)
-        // Transaction types: 'buy', 'sell', 'both', 'swap'
-        // - 'buy': Pure buy transaction ✅
+        // Send alerts for BUY and SWAP transactions (skip SELL-only)
+        // Transaction types: 'buy', 'sell', 'swap'
+        // - 'buy': Pure buy transaction ✅ (includes split swap BUY records)
         // - 'sell': Pure sell transaction ❌
-        // - 'both': Swap with buy+sell components ✅
         // - 'swap': Token swap transaction ✅
+        // Note: Split swaps now create separate 'buy' and 'sell' records
         if (tx.type === 'sell') {
           logger.debug({
             component: 'AlertMatcherService',

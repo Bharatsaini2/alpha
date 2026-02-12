@@ -758,7 +758,14 @@ const storeInfluencerTransactionInDB = async (
   }
 
   let typeValue: 'buy' | 'sell' | 'both'
-  if (isBuy && isSell) {
+  
+  // ✅ FIX: Use classification source to determine type
+  // Split swaps now create separate 'sell' and 'buy' records
+  if (classificationSource === 'v2_parser_split_sell') {
+    typeValue = 'sell'
+  } else if (classificationSource === 'v2_parser_split_buy') {
+    typeValue = 'buy'
+  } else if (isBuy && isSell) {
     typeValue = 'both'
   } else if (isBuy) {
     typeValue = 'buy'
@@ -932,6 +939,7 @@ const storeInfluencerTransactionInDB = async (
         sellType: typeValue === 'both' ? true : false,
       },
     ],
+    classificationSource: classificationSource, // ✅ Store classification source
     hotnessScore: clampedHotnessScore,
     timestamp: new Date(),
     age: tokenInAge, // Keep for backward compatibility - use tokenInAge as default

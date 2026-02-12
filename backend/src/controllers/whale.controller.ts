@@ -49,6 +49,10 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { ExpressAdapter } from '@bull-board/express'
 import { parseShyftTransaction, ShyftTransaction } from '../utils/shyftParser'
 import { parseShyftTransactionV2 } from '../utils/shyftParserV2'
+import { 
+  mapParserAmountsToStorage, 
+  mapSOLAmounts 
+} from '../utils/splitSwapStorageMapper'
 dotenv.config()
 
 function startOfUTCDay(date: Date): Date {
@@ -900,44 +904,86 @@ const processSignature = async (signatureJson: any): Promise<void> => {
     if (parseResult.success && parseResult.data) {
       const swapData = parseResult.data
 
-      // ✅ Handle SplitSwapPair by creating SINGLE "both" type transaction
-      // Frontend expects ONE record with type="both" that it expands into 2 display items
+      // ✅ Handle SplitSwapPair by creating TWO separate records (SELL and BUY)
+      // Use MongoDB transaction for atomic writes
       if ('sellRecord' in swapData) {
         logger.info(
-          pc.magenta(`🔄 Split Swap Pair detected - creating single "both" type transaction`)
+          pc.magenta(`🔄 Split Swap Pair detected - creating separate SELL and BUY records`)
         )
         
-        // Merge sell and buy records into a single "both" type transaction
-        // Note: ParsedSwap now has nested structure with quoteAsset, baseAsset, amounts
-        const mergedSwapData = {
-          ...swapData.sellRecord,
-          // Override with buy-specific data from the buyRecord
-          // The buyRecord contains the token being purchased
-          baseAsset: swapData.buyRecord.baseAsset,
-          quoteAsset: swapData.buyRecord.quoteAsset,
-          amounts: {
-            ...swapData.sellRecord.amounts,
-            ...swapData.buyRecord.amounts,
-          },
-          // Mark as both buy and sell
-          direction: 'BUY' as const, // Primary direction is BUY
+        // 🔥 CRITICAL: Use MongoDB transaction for atomic writes
+        const session = await mongoose.startSession()
+        
+        try {
+          await session.startTransaction()
+          
+          // Create SELL record
+          await processSingleSwapTransaction(
+            swapData.sellRecord,
+            signature,
+            parsedTx,
+            txStatus,
+            whaleAddress,
+            protocolName,
+            gasFee,
+            'v2_parser_split_sell',
+            session // Pass session for transaction
+          )
+          
+          // Create BUY record
+          await processSingleSwapTransaction(
+            swapData.buyRecord,
+            signature,
+            parsedTx,
+            txStatus,
+            whaleAddress,
+            protocolName,
+            gasFee,
+            'v2_parser_split_buy',
+            session // Pass session for transaction
+          )
+          
+          // Commit only if both succeed
+          await session.commitTransaction()
+          
+          logger.info(
+            pc.green(`✅ Split swap pair processed - created separate SELL and BUY records for ${signature}`)
+          )
+          
+          // Increment success metric (structured logging for observability)
+          logger.info({
+            metric: 'split_swap_records_created',
+            signature,
+            swapper: swapData.swapper,
+            count: 2
+          }, 'Split swap records created successfully')
+          
+        } catch (error) {
+          // Abort transaction on any failure
+          await session.abortTransaction()
+          
+          logger.error(
+            { 
+              signature, 
+              error: error instanceof Error ? error.message : String(error),
+              swapper: swapData.swapper
+            },
+            'Split swap transaction failed, rolled back'
+          )
+          
+          // Increment failure metric (structured logging for observability)
+          logger.error({
+            metric: 'split_swap_transaction_failures',
+            signature,
+            swapper: swapData.swapper,
+            error: error instanceof Error ? error.message : String(error)
+          }, 'Split swap transaction failed')
+          
+          throw error
+        } finally {
+          session.endSession()
         }
         
-        // Create single "both" type transaction
-        await processSingleSwapTransaction(
-          mergedSwapData,
-          signature,
-          parsedTx,
-          txStatus,
-          whaleAddress,
-          protocolName,
-          gasFee,
-          'v2_parser_split_both'
-        )
-        
-        logger.info(
-          pc.green(`✅ Split swap pair processed - created single "both" type transaction for ${signature}`)
-        )
         return // Exit early, transaction processed
       } else {
         // Handle regular ParsedSwap - single transaction
@@ -996,7 +1042,8 @@ async function processSingleSwapTransaction(
   whaleAddress: string,
   protocolName: string,
   gasFee: number,
-  classificationSource: string
+  classificationSource: string,
+  session?: mongoose.ClientSession // Optional MongoDB session for transactions
 ) {
   try {
     logger.info(
@@ -1343,6 +1390,9 @@ async function processSingleSwapTransaction(
           txStatus,
           classificationSource,
           confidence.toString(), // Convert number to string
+          parsedSwap, // Pass parsedSwap for amount mapping
+          session, // Pass session for transaction
+          safeSolPrice // Pass SOL price for SOL equivalent calculation
         )
       }
 
@@ -1555,11 +1605,7 @@ const getRealizedPnLAndEntryDetails = async (
       whaleAddress,
       tokenOutAddress: tokenAddress,
       $or: [
-        { type: 'buy' },
-        {
-          type: 'both',
-          bothType: { $elemMatch: { buyType: true } },
-        },
+        { type: 'buy' }  // ✅ Updated: Split swaps now create separate BUY records,
       ],
     })
     .sort({ timestamp: 1 })
@@ -1583,11 +1629,7 @@ const getRealizedPnLAndEntryDetails = async (
       whaleAddress,
       tokenInAddress: tokenAddress,
       $or: [
-        { type: 'sell' },
-        {
-          type: 'both',
-          bothType: { $elemMatch: { sellType: true } },
-        },
+        { type: 'sell' }  // ✅ Updated: Split swaps now create separate SELL records,
       ],
     })
     .lean()
@@ -1761,6 +1803,9 @@ const storeTransactionInDB = async (
   txStatus: any,
   classificationSource?: string,
   confidence?: string,
+  parsedSwap?: any, // Parser V2 output for amount mapping
+  session?: mongoose.ClientSession, // MongoDB session for transactions
+  solPrice?: number // SOL price for SOL equivalent calculation
 ): Promise<void> => {
   let clampedHotnessScore = 0
 
@@ -1779,10 +1824,12 @@ const storeTransactionInDB = async (
 
   let typeValue: 'buy' | 'sell' | 'both'
   
-  // ✅ FIX: Check if this is a merged split swap (non-core to non-core)
-  // Split swaps should always be 'both' type so frontend can expand them
-  if (classificationSource === 'v2_parser_split_both') {
-    typeValue = 'both'
+  // ✅ FIX: Use classification source to determine type
+  // Split swaps now create separate 'sell' and 'buy' records
+  if (classificationSource === 'v2_parser_split_sell') {
+    typeValue = 'sell'
+  } else if (classificationSource === 'v2_parser_split_buy') {
+    typeValue = 'buy'
   } else if (isBuy && isSell) {
     typeValue = 'both'
   } else if (isBuy) {
@@ -1875,18 +1922,45 @@ const storeTransactionInDB = async (
     details.sellMarketCapSol = tokenSolMarketCap / details.tokenOutPrice
   }
 
-  // ✅ CRITICAL FIX: Both buyAmount and sellAmount should show the SAME transaction value
-  // For BUY: User spends SOL/USDC to buy token → show SOL/USDC value
-  // For SELL: User sells token for SOL/USDC → show SOL/USDC value
-  // The transaction value is ALWAYS the priority asset (SOL/USDC/USDT) value
-  const transactionValue = Math.max(details.tokenOutUsdAmount || 0, details.tokenInUsdAmount || 0);
+  // ✅ PHASE B FIX: Use new amount mapping utilities from Phase A
+  // Map Parser V2 amounts to storage fields (actual token amounts, not USD values)
+  let amountMapping
+  let solAmountMapping
+  
+  if (parsedSwap) {
+    // Use Phase A utilities for correct amount mapping
+    const storageAmounts = mapParserAmountsToStorage(parsedSwap)
+    amountMapping = storageAmounts.amount
+    
+    // ✅ FIX: Pass USD amounts and SOL price for SOL equivalent calculation
+    solAmountMapping = mapSOLAmounts(
+      parsedSwap,
+      details.tokenInUsdAmount,
+      details.tokenOutUsdAmount,
+      solPrice  // Use solPrice parameter
+    )
+  } else {
+    // Fallback for legacy code paths (should not happen with V2 parser)
+    const transactionValue = Math.max(details.tokenOutUsdAmount || 0, details.tokenInUsdAmount || 0)
+    amountMapping = {
+      buyAmount: transactionValue,
+      sellAmount: transactionValue,
+    }
+    solAmountMapping = {
+      buySolAmount: details.tokenOutSolAmount || 0,
+      sellSolAmount: details.tokenInSolAmount || 0,
+    }
+    
+    logger.warn({
+      signature,
+      classificationSource,
+      message: 'Using fallback amount mapping - parsedSwap not provided'
+    })
+  }
   
   const transactionData = {
     signature, // ✅ FIX: Add signature to the transaction data
-    amount: {
-      buyAmount: transactionValue,
-      sellAmount: transactionValue,
-    },
+    amount: amountMapping,
 
     tokenAmount: {
       buyTokenAmount: details.tokenOutAmount || 0,
@@ -1900,10 +1974,7 @@ const storeTransactionInDB = async (
       sellTokenPriceSol: details.buyTokenPriceSol || 0,
     },
 
-    solAmount: {
-      buySolAmount: details.tokenOutSolAmount || 0,
-      sellSolAmount: details.tokenInSolAmount || 0,
-    },
+    solAmount: solAmountMapping,
 
     // Enhanced transaction object with new fields
     transaction: {
@@ -1959,8 +2030,8 @@ const storeTransactionInDB = async (
     type: typeValue,
     bothType: [
       {
-        buyType: typeValue === 'both' ? true : false,
-        sellType: typeValue === 'both' ? true : false,
+        buyType: false,  // ✅ Updated: No longer using 'both' type for split swaps
+        sellType: false,  // ✅ Updated: No longer using 'both' type for split swaps
       },
     ],
     hotnessScore: clampedHotnessScore,
@@ -1970,8 +2041,14 @@ const storeTransactionInDB = async (
     tokenOutAge: tokenOutAge,
   }
 
-  const savedTransaction =
-    await whaleAllTransactionModelV2.create(transactionData)
+  // Save transaction with optional session for atomic operations
+  const savedTransaction = session
+    ? await whaleAllTransactionModelV2.create([transactionData], { session })
+    : await whaleAllTransactionModelV2.create(transactionData)
+  
+  // Extract the document (create with session returns an array)
+  const transactionDoc = Array.isArray(savedTransaction) ? savedTransaction[0] : savedTransaction
+  
   logger.info(
     pc.green('✅ Stored whale transaction in MongoDB with enhanced V2 fields'),
   )
@@ -1979,7 +2056,7 @@ const storeTransactionInDB = async (
   // Trigger alert matching asynchronously (non-blocking)
   setImmediate(() => {
     // Convert Mongoose document to plain object for alert matching
-    const plainTransaction = savedTransaction.toObject ? savedTransaction.toObject() : savedTransaction
+    const plainTransaction = transactionDoc.toObject ? transactionDoc.toObject() : transactionDoc
     
     alertMatcherService
       .processTransaction(plainTransaction)
@@ -1987,7 +2064,7 @@ const storeTransactionInDB = async (
         logger.error({
           component: 'whale.controller',
           operation: 'storeWhaleTransactionV2',
-          txHash: savedTransaction.signature,
+          txHash: transactionDoc.signature,
           error: {
             message: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined,
@@ -2000,7 +2077,7 @@ const storeTransactionInDB = async (
   // Emit event for all whale transactions
   broadcastTransaction({
     type: 'allWhaleTransactions',
-    data: savedTransaction,
+    data: transactionDoc,
   })
 }
 
