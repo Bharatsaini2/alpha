@@ -723,6 +723,45 @@ export class AlertMatcherService {
           }
         }
 
+        // Check market cap range filter
+        if (sub.config.minMarketCapUSD !== undefined || sub.config.maxMarketCapUSD !== undefined) {
+          const tokenOutMarketCap = parseFloat(tx.transaction.tokenOut.marketCap || '0')
+          
+          if (sub.config.minMarketCapUSD !== undefined && tokenOutMarketCap < sub.config.minMarketCapUSD) {
+            logger.debug({
+              component: 'AlertMatcherService',
+              operation: 'matchKOLProfile',
+              correlationId,
+              userId: sub.userId,
+              alertType: AlertType.KOL_PROFILE,
+              txHash: tx.signature,
+              marketCap: tokenOutMarketCap,
+              minThreshold: sub.config.minMarketCapUSD,
+              matchResult: false,
+              message: 'Market cap below minimum threshold',
+            })
+            continue
+          }
+          
+          if (sub.config.maxMarketCapUSD !== undefined && sub.config.maxMarketCapUSD < 50000000) {
+            if (tokenOutMarketCap > sub.config.maxMarketCapUSD) {
+              logger.debug({
+                component: 'AlertMatcherService',
+                operation: 'matchKOLProfile',
+                correlationId,
+                userId: sub.userId,
+                alertType: AlertType.KOL_PROFILE,
+                txHash: tx.signature,
+                marketCap: tokenOutMarketCap,
+                maxThreshold: sub.config.maxMarketCapUSD,
+                matchResult: false,
+                message: 'Market cap above maximum threshold',
+              })
+              continue
+            }
+          }
+        }
+
         // Resolve token symbol (inline for IInfluencerWhaleTransactionsV2)
         const isBuy = tx.type === 'buy'
         const token = isBuy ? tx.transaction.tokenOut : tx.transaction.tokenIn
@@ -815,7 +854,7 @@ export class AlertMatcherService {
   /**
    * Evaluate if a transaction matches whale alert subscription criteria
    * This method implements the whale alert matching logic for ALPHA_STREAM alerts
-   * with hotness score, minimum buy amount, and wallet label filters
+   * with hotness score, minimum buy amount, wallet label filters, and market cap range
    * 
    * @param tx - The whale transaction to evaluate
    * @param config - The alert subscription configuration
@@ -837,9 +876,28 @@ export class AlertMatcherService {
       }
     }
 
+    // Check market cap range filter
+    if (config.minMarketCapUSD !== undefined || config.maxMarketCapUSD !== undefined) {
+      // Get the market cap of the token being bought (tokenOut)
+      const tokenOutMarketCap = parseFloat(tx.transaction.tokenOut.marketCap || '0')
+      
+      // Check minimum market cap
+      if (config.minMarketCapUSD !== undefined && tokenOutMarketCap < config.minMarketCapUSD) {
+        return false
+      }
+      
+      // Check maximum market cap (50M+ means no upper limit)
+      if (config.maxMarketCapUSD !== undefined && config.maxMarketCapUSD < 50000000) {
+        if (tokenOutMarketCap > config.maxMarketCapUSD) {
+          return false
+        }
+      }
+      // If maxMarketCapUSD >= 50M, accept all (no upper limit)
+    }
+
     // Check wallet labels with OR logic
     // If ANY wallet labels are specified, accept ALL transactions (with or without labels)
-    // that meet the other criteria (USD amount, hotness score)
+    // that meet the other criteria (USD amount, hotness score, market cap)
     // This is intentional - selecting labels means "I want to see whale activity"
     // regardless of whether the wallet is labeled yet
     if (config.walletLabels && config.walletLabels.length > 0) {
@@ -887,6 +945,21 @@ export class AlertMatcherService {
       const usdAmount = parseFloat(tx.transaction.tokenOut.usdAmount || '0')
       if (usdAmount < config.minBuyAmountUSD) {
         return false
+      }
+    }
+
+    // Check market cap range filter
+    if (config.minMarketCapUSD !== undefined || config.maxMarketCapUSD !== undefined) {
+      const tokenOutMarketCap = parseFloat(tx.transaction.tokenOut.marketCap || '0')
+      
+      if (config.minMarketCapUSD !== undefined && tokenOutMarketCap < config.minMarketCapUSD) {
+        return false
+      }
+      
+      if (config.maxMarketCapUSD !== undefined && config.maxMarketCapUSD < 50000000) {
+        if (tokenOutMarketCap > config.maxMarketCapUSD) {
+          return false
+        }
       }
     }
 

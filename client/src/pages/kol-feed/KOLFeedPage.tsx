@@ -804,6 +804,42 @@ const KOLFeedPage = () => {
 
   const [hotness, setHotness] = useState(10)
 
+  // Market cap filter state
+  const [minMarketCap, setMinMarketCap] = useState(1000) // Start at 1K
+  const [maxMarketCap, setMaxMarketCap] = useState(50000000) // 50M+
+
+  // Helper functions for market cap
+  const formatMarketCap = (value: number): string => {
+    if (value >= 50000000) return "50M+"
+    if (value >= 1000000) {
+      const millions = value / 1000000
+      return millions >= 10 ? `${millions.toFixed(0)}M` : `${millions.toFixed(1)}M`
+    }
+    if (value >= 1000) {
+      const thousands = value / 1000
+      return thousands >= 100 ? `${thousands.toFixed(0)}K` : `${thousands.toFixed(1)}K`
+    }
+    return `${value}`
+  }
+
+  const sliderToMarketCap = (sliderValue: number): number => {
+    if (sliderValue === 100) return 50000000
+    if (sliderValue === 0) return 1000
+    const minLog = Math.log10(1000)
+    const maxLog = Math.log10(50000000)
+    const logValue = minLog + (sliderValue / 100) * (maxLog - minLog)
+    return Math.pow(10, logValue)
+  }
+
+  const marketCapToSlider = (mcap: number): number => {
+    if (mcap >= 50000000) return 100
+    if (mcap <= 1000) return 0
+    const minLog = Math.log10(1000)
+    const maxLog = Math.log10(50000000)
+    const logValue = Math.log10(mcap)
+    return ((logValue - minLog) / (maxLog - minLog)) * 100
+  }
+
   // Handle KOL alert subscription
   const handleKOLAlertConnect = async () => {
     try {
@@ -835,6 +871,8 @@ const KOLFeedPage = () => {
             {
               hotnessScoreThreshold: hotness,
               minBuyAmountUSD: minBuyAmount,
+              minMarketCapUSD: minMarketCap,
+              maxMarketCapUSD: maxMarketCap >= 50000000 ? 50000000 : maxMarketCap,
             },
             {
               headers: {
@@ -1280,6 +1318,13 @@ const KOLFeedPage = () => {
                               setIsSaved={setIsSaved}
                               user={user}
                               onClose={() => setOpenDropdown(null)}
+                              minMarketCap={minMarketCap}
+                              setMinMarketCap={setMinMarketCap}
+                              maxMarketCap={maxMarketCap}
+                              setMaxMarketCap={setMaxMarketCap}
+                              formatMarketCap={formatMarketCap}
+                              sliderToMarketCap={sliderToMarketCap}
+                              marketCapToSlider={marketCapToSlider}
                             />
                           </>
                         )}

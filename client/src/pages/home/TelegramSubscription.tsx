@@ -17,6 +17,8 @@ interface AlertConfig {
     hotnessScoreThreshold?: number;
     walletLabels?: string[];
     minBuyAmountUSD?: number;
+    minMarketCapUSD?: number;
+    maxMarketCapUSD?: number;
     // KOL Profile fields
     targetKolUsername?: string;
     targetKolAddress?: string;
@@ -328,6 +330,22 @@ function TelegramSubscription() {
 
         if (config.minBuyAmountUSD !== undefined) {
             parts.push(`Min Buy: $${config.minBuyAmountUSD.toLocaleString()}`);
+        }
+
+        // Market Cap Range
+        if (config.minMarketCapUSD !== undefined || config.maxMarketCapUSD !== undefined) {
+            const formatMcap = (value: number) => {
+                if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+                return `$${value}`;
+            };
+
+            const minMcap = config.minMarketCapUSD !== undefined ? formatMcap(config.minMarketCapUSD) : '$0';
+            const maxMcap = config.maxMarketCapUSD !== undefined && config.maxMarketCapUSD >= 50000000 
+                ? '$50M+' 
+                : config.maxMarketCapUSD !== undefined ? formatMcap(config.maxMarketCapUSD) : '∞';
+            
+            parts.push(`MCap: ${minMcap}-${maxMcap}`);
         }
 
         // KOL Profile specific fields

@@ -5,7 +5,7 @@ import { UserAlert } from '../models/userAlert.model'
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import { alertMatcherService } from '../services/alertMatcher.service'
 import { telegramService } from '../services/telegram.service'
-import { AlertType, Priority } from '../types/alert.types'
+import { AlertType, Priority, AlertConfig } from '../types/alert.types'
 import { validateSOLBalance } from '../middlewares/premiumGate.middleware'
 import logger from '../utils/logger'
 
@@ -98,7 +98,7 @@ export const createWhaleAlert = catchAsyncErrors(
       })
     }
 
-    const { hotnessScoreThreshold, walletLabels, minBuyAmountUSD } = req.body
+    const { hotnessScoreThreshold, walletLabels, minBuyAmountUSD, minMarketCapUSD, maxMarketCapUSD } = req.body
 
     // Validate input parameters
     if (hotnessScoreThreshold === undefined || hotnessScoreThreshold === null) {
@@ -126,6 +126,32 @@ export const createWhaleAlert = catchAsyncErrors(
       return res.status(400).json({
         success: false,
         message: 'Minimum buy amount must be positive',
+      })
+    }
+
+    // Validate market cap range (optional)
+    if (minMarketCapUSD !== undefined && minMarketCapUSD < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap must be at least 1K (1000 USD)',
+      })
+    }
+
+    if (maxMarketCapUSD !== undefined && maxMarketCapUSD < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum market cap must be at least 1K (1000 USD)',
+      })
+    }
+
+    if (
+      minMarketCapUSD !== undefined &&
+      maxMarketCapUSD !== undefined &&
+      minMarketCapUSD > maxMarketCapUSD
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap cannot be greater than maximum market cap',
       })
     }
 
@@ -219,10 +245,18 @@ export const createWhaleAlert = catchAsyncErrors(
       const sortedNormalizedLabels = normalizedLabels.slice().sort()
 
       // Create or update whale alert subscription
-      const config = {
+      const config: Partial<AlertConfig> = {
         hotnessScoreThreshold,
         walletLabels: sortedNormalizedLabels,
         minBuyAmountUSD,
+      }
+
+      // Add market cap filters if provided
+      if (minMarketCapUSD !== undefined) {
+        config.minMarketCapUSD = minMarketCapUSD
+      }
+      if (maxMarketCapUSD !== undefined) {
+        config.maxMarketCapUSD = maxMarketCapUSD
       }
 
       // Check if an alert with the same hotness score and min buy amount exists
@@ -1000,7 +1034,7 @@ export const createKolAlert = catchAsyncErrors(
       })
     }
 
-    const { hotnessScoreThreshold, minBuyAmountUSD } = req.body
+    const { hotnessScoreThreshold, minBuyAmountUSD, minMarketCapUSD, maxMarketCapUSD } = req.body
 
     // Validate input parameters
     if (hotnessScoreThreshold === undefined || hotnessScoreThreshold === null) {
@@ -1028,6 +1062,32 @@ export const createKolAlert = catchAsyncErrors(
       return res.status(400).json({
         success: false,
         message: 'Minimum buy amount must be positive',
+      })
+    }
+
+    // Validate market cap range (optional)
+    if (minMarketCapUSD !== undefined && minMarketCapUSD < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap must be at least 1K (1000 USD)',
+      })
+    }
+
+    if (maxMarketCapUSD !== undefined && maxMarketCapUSD < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum market cap must be at least 1K (1000 USD)',
+      })
+    }
+
+    if (
+      minMarketCapUSD !== undefined &&
+      maxMarketCapUSD !== undefined &&
+      minMarketCapUSD > maxMarketCapUSD
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap cannot be greater than maximum market cap',
       })
     }
 
@@ -1069,9 +1129,17 @@ export const createKolAlert = catchAsyncErrors(
       }
 
       // Create or update KOL alert subscription
-      const config = {
+      const config: Partial<AlertConfig> = {
         hotnessScoreThreshold,
         minBuyAmountUSD,
+      }
+
+      // Add market cap filters if provided
+      if (minMarketCapUSD !== undefined) {
+        config.minMarketCapUSD = minMarketCapUSD
+      }
+      if (maxMarketCapUSD !== undefined) {
+        config.maxMarketCapUSD = maxMarketCapUSD
       }
 
       // Check if an alert with the same config exists
@@ -1339,7 +1407,7 @@ export const createKolProfileAlert = catchAsyncErrors(
       })
     }
 
-    const { targetKolUsername, targetKolAddress, minHotnessScore, minAmount } = req.body
+    const { targetKolUsername, targetKolAddress, minHotnessScore, minAmount, minMarketCapUSD, maxMarketCapUSD } = req.body
 
     // Validate input parameters
     if (!targetKolUsername || !targetKolAddress) {
@@ -1374,6 +1442,32 @@ export const createKolProfileAlert = catchAsyncErrors(
       return res.status(400).json({
         success: false,
         message: 'Minimum amount must be positive',
+      })
+    }
+
+    // Validate market cap range (optional)
+    if (minMarketCapUSD !== undefined && minMarketCapUSD < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap must be at least $1,000',
+      })
+    }
+
+    if (maxMarketCapUSD !== undefined && maxMarketCapUSD < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum market cap must be at least $1,000',
+      })
+    }
+
+    if (
+      minMarketCapUSD !== undefined &&
+      maxMarketCapUSD !== undefined &&
+      minMarketCapUSD > maxMarketCapUSD
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap cannot be greater than maximum market cap',
       })
     }
 
@@ -1415,11 +1509,19 @@ export const createKolProfileAlert = catchAsyncErrors(
       }
 
       // Create or update KOL Profile alert subscription
-      const config = {
+      const config: Partial<AlertConfig> = {
         targetKolUsername,
         targetKolAddress,
         minHotnessScore,
         minAmount,
+      }
+
+      // Add market cap filters if provided
+      if (minMarketCapUSD !== undefined) {
+        config.minMarketCapUSD = minMarketCapUSD
+      }
+      if (maxMarketCapUSD !== undefined) {
+        config.maxMarketCapUSD = maxMarketCapUSD
       }
 
       // Check if an alert for this KOL with same config exists

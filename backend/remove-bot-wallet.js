@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const MONGO_URI = 'mongodb+srv://alphablockx:1DG1MB49WOmOJDfe@whale-tracker.mnwqbs6.mongodb.net/alpha-whale-tracker';
-const BOT_WALLET = '6kntKawNmZNKZqUHvRVGKMwp8LQU5upyhht7w1PL7dde';
+const BOT_WALLET = 'CcM9FGcjo7hS1ZoiCXxM6cUVfiGrDV3qMDYGCbdmmSWj';
 
 async function removeBotWallet() {
   try {

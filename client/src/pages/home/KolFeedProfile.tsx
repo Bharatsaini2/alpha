@@ -2,6 +2,7 @@ import { RiVerifiedBadgeFill } from "react-icons/ri"
 import { FaXTwitter } from "react-icons/fa6"
 import { FaRegCopy } from "react-icons/fa6"
 import { FaStar } from "react-icons/fa"
+import MarketCapRangeSlider from "../../components/MarketCapRangeSlider"
 import "../../css/KolFeedPortfolio.css"
 import { useEffect, useState, useMemo } from "react"
 import { HiChevronUpDown } from "react-icons/hi2"
@@ -30,9 +31,29 @@ function KolFeedProfile() {
   const [hotness, setHotness] = useState<number>(10)
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
 
+  // Market cap filter state
+  const [minMarketCap, setMinMarketCap] = useState(1000) // Start at 1K
+  const [maxMarketCap, setMaxMarketCap] = useState(50000000) // 50M+
+  const [mcapOpen, setMcapOpen] = useState(false)
+
+  // Helper function for market cap display
+  const formatMarketCap = (value: number): string => {
+    if (value >= 50000000) return "$50.0M+"
+    if (value >= 1000000) {
+      const millions = value / 1000000
+      return `$${millions.toFixed(1)}M`
+    }
+    if (value >= 1000) {
+      const thousands = value / 1000
+      return `$${thousands.toFixed(1)}K`
+    }
+    return `$${value}`
+  }
+
   const closeAll = () => {
     setTriggerOpen(false)
     setAmountOpen(false)
+    setMcapOpen(false)
   }
 
   useEffect(() => {
@@ -201,6 +222,8 @@ function KolFeedProfile() {
           targetKolAddress: profile.address,
           minHotnessScore: hotness,
           minAmount: numericAmount,
+          minMarketCapUSD: minMarketCap,
+          maxMarketCapUSD: maxMarketCap >= 50000000 ? 50000000 : maxMarketCap,
         },
         {
           headers: {
@@ -430,6 +453,37 @@ function KolFeedProfile() {
                                               onChange={(e) => {
                                                 setCustomAmount(e.target.value)
                                                 setAmount(e.target.value)
+                                              }}
+                                            />
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* MARKET CAP */}
+                                      <div className="custom-frm-bx position-relative">
+                                        <label className="nw-label">Market Cap</label>
+                                        <div
+                                          className="form-select cursor-pointer text-start"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setMcapOpen(!mcapOpen)
+                                          }}
+                                        >
+                                          {formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}
+                                        </div>
+
+                                        {mcapOpen && (
+                                          <div
+                                            className="subscription-dropdown-menu show w-100"
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{ padding: '8px 12px' }}
+                                          >
+                                            <MarketCapRangeSlider
+                                              minValue={minMarketCap}
+                                              maxValue={maxMarketCap}
+                                              onChange={(min, max) => {
+                                                setMinMarketCap(min)
+                                                setMaxMarketCap(max)
                                               }}
                                             />
                                           </div>

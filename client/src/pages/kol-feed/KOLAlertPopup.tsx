@@ -6,6 +6,7 @@ import {
   faClose,
 } from "@fortawesome/free-solid-svg-icons"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
+import MarketCapRangeSlider from "../../components/MarketCapRangeSlider"
 
 interface KOLAlertPopupProps {
   hotness: number
@@ -17,6 +18,13 @@ interface KOLAlertPopupProps {
   setIsSaved: (value: boolean) => void
   user: any
   onClose: () => void
+  minMarketCap: number
+  setMinMarketCap: (value: number) => void
+  maxMarketCap: number
+  setMaxMarketCap: (value: number) => void
+  formatMarketCap: (value: number) => string
+  sliderToMarketCap: (value: number) => number
+  marketCapToSlider: (value: number) => number
 }
 
 const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
@@ -29,10 +37,18 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
   setIsSaved,
   user,
   onClose,
+  minMarketCap,
+  setMinMarketCap,
+  maxMarketCap,
+  setMaxMarketCap,
+  formatMarketCap,
+  sliderToMarketCap,
+  marketCapToSlider,
 }) => {
   const { wallet, connect } = useWalletConnection()
   const [triggerOpen, setTriggerOpen] = useState(false)
   const [amountOpen, setAmountOpen] = useState(false)
+  const [mcapOpen, setMcapOpen] = useState(false)
   const [customAmount, setCustomAmount] = useState("")
 
   return (
@@ -171,6 +187,35 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
             )}
           </div>
 
+          <div className="custom-frm-bx position-relative">
+            <label className="nw-label">Market Cap</label>
+            <div
+              className="form-select cursor-pointer text-start"
+              onClick={(e) => {
+                e.stopPropagation()
+                setMcapOpen(!mcapOpen)
+              }}
+            >
+              {formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}
+            </div>
+
+            {mcapOpen && (
+              <div
+                className="subscription-dropdown-menu show w-100"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MarketCapRangeSlider
+                  minValue={minMarketCap}
+                  maxValue={maxMarketCap}
+                  onChange={(min, max) => {
+                    setMinMarketCap(min)
+                    setMaxMarketCap(max)
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
           <button
             className="connect-wallet-btn"
             onClick={(e) => {
@@ -213,6 +258,11 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
               <div className="config-row">
                 <span>Min Volume</span>
                 <span>{amount}</span>
+              </div>
+
+              <div className="config-row">
+                <span>Market Cap</span>
+                <span>{formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}</span>
               </div>
 
               <div className="config-row">

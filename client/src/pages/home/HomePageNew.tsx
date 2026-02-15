@@ -36,8 +36,9 @@ import {
   loadQuickBuyAmount,
 } from "../../utils/quickBuyValidation"
 import { useWalletConnection } from "../../hooks/useWalletConnection"
-import { useAuth } from "../../contexts/AuthContext"
+import MarketCapRangeSlider from "../../components/MarketCapRangeSlider"
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
+import { useAuth } from "../../contexts/AuthContext"
 
 const hotnessOptions = [
   { label: "All", value: null },
@@ -934,6 +935,7 @@ const HomePageNew = () => {
     setTriggerOpen(false)
     setWalletTypeOpen(false)
     setAmountOpen(false)
+    setMcapOpen(false)
     setOpenDropdown(null)
   }, [])
 
@@ -962,6 +964,48 @@ const HomePageNew = () => {
   const [isSaved, setIsSaved] = useState(false)
 
   const [hotness, setHotness] = useState(10)
+
+  // Market cap filter state (dual range) - Min: 1K, Max: 50M+
+  const [minMarketCap, setMinMarketCap] = useState(1000) // Start at 1K
+  const [maxMarketCap, setMaxMarketCap] = useState(50000000) // 50M+
+  const [mcapOpen, setMcapOpen] = useState(false)
+
+  // Helper function to format market cap for display (single decimal)
+  const formatMarketCap = (value: number): string => {
+    if (value >= 50000000) return "50M+"
+    if (value >= 1000000) {
+      const millions = value / 1000000
+      return millions >= 10 ? `${millions.toFixed(0)}M` : `${millions.toFixed(1)}M`
+    }
+    if (value >= 1000) {
+      const thousands = value / 1000
+      return thousands >= 100 ? `${thousands.toFixed(0)}K` : `${thousands.toFixed(1)}K`
+    }
+    return `${value}`
+  }
+
+  // Helper function to parse market cap from slider (logarithmic scale: 1K to 50M)
+  const sliderToMarketCap = (sliderValue: number): number => {
+    if (sliderValue === 100) return 50000000 // 50M+
+    if (sliderValue === 0) return 1000 // 1K minimum
+    
+    // Logarithmic mapping: 0-100 slider -> 1K to 50M
+    const minLog = Math.log10(1000) // log10(1K) = 3
+    const maxLog = Math.log10(50000000) // log10(50M) = 7.7
+    const logValue = minLog + (sliderValue / 100) * (maxLog - minLog)
+    return Math.pow(10, logValue)
+  }
+
+  // Helper function to convert market cap to slider value
+  const marketCapToSlider = (mcap: number): number => {
+    if (mcap >= 50000000) return 100
+    if (mcap <= 1000) return 0
+    
+    const minLog = Math.log10(1000)
+    const maxLog = Math.log10(50000000)
+    const logValue = Math.log10(mcap)
+    return ((logValue - minLog) / (maxLog - minLog)) * 100
+  }
 
   // Handle whale alert subscription
   const handleWhaleAlertConnect = async () => {
@@ -1012,6 +1056,8 @@ const HomePageNew = () => {
               hotnessScoreThreshold: hotness,
               walletLabels: labelsToSend,
               minBuyAmountUSD: minBuyAmount,
+              minMarketCapUSD: minMarketCap,
+              maxMarketCapUSD: maxMarketCap >= 50000000 ? 50000000 : maxMarketCap,
             },
             {
               headers: {
@@ -1578,22 +1624,17 @@ const HomePageNew = () => {
 
                                 {triggerOpen && (
                                   <div
-                                    className="subscription-dropdown-menu show w-100 p-3"
+                                    className="subscription-dropdown-menu show w-100"
                                     onClick={(e) => e.stopPropagation()}
+                                    style={{ padding: '8px 12px' }}
                                   >
-                                    <div className=" text-center mt-2">
-                                      <div>
-                                        <span className="range-value">
-                                          {hotness}
-                                        </span>
+                                    <div style={{ textAlign: 'center' }}>
+                                      <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                                        {hotness}
                                       </div>
-
-                                      <div className="range-title">
-                                        <h6 className="mb-0 text-sm">
-                                          Sensitivity TheresHold
-                                        </h6>
+                                      <div style={{ fontSize: '10px', color: '#8f8f8f', marginBottom: '8px' }}>
+                                        Sensitivity Threshold
                                       </div>
-
                                       <input
                                         type="range"
                                         min="0"
@@ -1603,11 +1644,10 @@ const HomePageNew = () => {
                                           setHotness(Number(e.target.value))
                                         }
                                         className="hotness-range"
-                                        style={
-                                          {
-                                            "--range-progress": `${(hotness / 10) * 100}%`,
-                                          } as React.CSSProperties
-                                        }
+                                        style={{
+                                          width: '100%',
+                                          "--range-progress": `${(hotness / 10) * 100}%`,
+                                        } as React.CSSProperties}
                                       />
                                     </div>
                                   </div>
@@ -1736,6 +1776,40 @@ const HomePageNew = () => {
                                 )}
                               </div>
 
+                              <div className="custom-frm-bx position-relative">
+                                <label className="nw-label">Market Cap</label>
+                                <div
+                                  className="form-select cursor-pointer text-start"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (!mcapOpen) {
+                                      setTriggerOpen(false)
+                                      setWalletTypeOpen(false)
+                                      setAmountOpen(false)
+                                    }
+                                    setMcapOpen(!mcapOpen)
+                                  }}
+                                >
+                                  {formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}
+                                </div>
+
+                                {mcapOpen && (
+                                  <div
+                                    className="subscription-dropdown-menu show w-100"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MarketCapRangeSlider
+                                      minValue={minMarketCap}
+                                      maxValue={maxMarketCap}
+                                      onChange={(min, max) => {
+                                        setMinMarketCap(min)
+                                        setMaxMarketCap(max)
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+
                               {isSaved && (
                                 <div className="config-overlay">
                                   <div className="config-modal">
@@ -1765,6 +1839,11 @@ const HomePageNew = () => {
                                       <div className="config-row">
                                         <span>Min Volume</span>
                                         <span>{amount}</span>
+                                      </div>
+
+                                      <div className="config-row">
+                                        <span>Market Cap</span>
+                                        <span>{formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}</span>
                                       </div>
 
                                       <div className="config-row">

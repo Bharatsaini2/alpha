@@ -30,6 +30,9 @@ export interface AlertConfig {
   hotnessScoreThreshold?: number
   walletLabels?: string[]
   minBuyAmountUSD?: number
+  // Market cap filter (dual range)
+  minMarketCapUSD?: number // Minimum market cap in USD (0 to 50M+)
+  maxMarketCapUSD?: number // Maximum market cap in USD (0 to 50M+)
   // KOL Profile alert specific config
   targetKolUsername?: string
   targetKolAddress?: string
