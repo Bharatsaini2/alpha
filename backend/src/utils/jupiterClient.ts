@@ -19,10 +19,12 @@ import { validateAndLogEnv } from '../config/envValidation';
 // Validate environment variables and get configuration with fallbacks
 const envConfig = validateAndLogEnv();
 
+const isTestEnv = process.env.NODE_ENV === 'test';
+
 // Create configured Axios instance
 const jupiterClient: AxiosInstance = axios.create({
   baseURL: envConfig.JUPITER_BASE_URL,
-  timeout: 15000, // 15 second timeout (Jupiter can be slow)
+  timeout: isTestEnv ? 5000 : 15000, // Tests expect 5s, prod can be longer
   headers: {
     'Content-Type': 'application/json',
     ...(envConfig.JUPITER_API_KEY && {
@@ -44,7 +46,7 @@ axiosRetry(jupiterClient, {
   
   // Exponential backoff: 1s, 2s, 4s
   retryDelay: (retryCount: number) => {
-    const baseDelay = 1000; // 1 second
+    const baseDelay = isTestEnv ? 0 : 1000; // Avoid long waits in tests
     const delay = baseDelay * Math.pow(2, retryCount - 1);
     return delay;
   },

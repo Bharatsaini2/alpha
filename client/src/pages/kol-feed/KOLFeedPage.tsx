@@ -10,7 +10,6 @@ import {
   faArrowTrendDown,
   faClose,
   faFilter,
-  faSearch,
 } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 
@@ -35,6 +34,9 @@ import { useWalletConnection } from "../../hooks/useWalletConnection"
 import { useAuth } from "../../contexts/AuthContext"
 import { usePremiumAccess } from "../../contexts/PremiumAccessContext"
 import KOLAlertPopup from "./KOLAlertPopup"
+import TokenizedSearchInputKol, {
+  TokenizedSearchInputHandle,
+} from "../../components/TokenizedSearchInputKol"
 
 const hotnessOptions = [
   { label: "All", value: null },
@@ -241,7 +243,6 @@ const KOLFeedPage = () => {
     () => loadQuickBuyAmount() || "0"
   )
   const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
-  const [searchQuery, setSearchQuery] = useState("")
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
   const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
   const { showToast } = useToast()
@@ -274,6 +275,7 @@ const KOLFeedPage = () => {
         return {
           searchQuery: "",
           searchType: null as "kol" | "coin" | "all" | null,
+          displayQuery: "",
           hotness: null as string | null,
           transactionType: null as string | null,
           tags: [] as string[],
@@ -288,6 +290,7 @@ const KOLFeedPage = () => {
     return {
       searchQuery: "",
       searchType: null as "kol" | "coin" | "all" | null,
+      displayQuery: "" as string,
       hotness: null as string | null,
       transactionType: null as string | null,
       tags: [] as string[],
@@ -680,127 +683,40 @@ const KOLFeedPage = () => {
     return () => document.removeEventListener("click", handleClickOutside)
   }, [])
 
-  const searchRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(event.target as Node)
-      ) {
-        setShowDropdown(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
   const quickBuyInputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<TokenizedSearchInputHandle>(null)
 
-  // Extract unique tokens from transactions for autocomplete
-  const uniqueTokenOptions = React.useMemo(() => {
-    const uniqueTokens = new Map()
-
-    transactions.forEach((tx) => {
-      // Check both tokenIn (sell) and tokenOut (buy)
-      if (tx.transaction?.tokenIn) {
-        const address = tx.tokenInAddress
-        if (address && !uniqueTokens.has(address)) {
-          uniqueTokens.set(address, {
-            id: address,
-            titles: tx.transaction.tokenIn.symbol,
-            descriptions: tx.transaction.tokenIn.name || "NA",
-            images: tx.inTokenURL || DefaultTokenImage,
-          })
-        }
-      }
-
-      if (tx.transaction?.tokenOut) {
-        const address = tx.tokenOutAddress
-        if (address && !uniqueTokens.has(address)) {
-          uniqueTokens.set(address, {
-            id: address,
-            titles: tx.transaction.tokenOut.symbol,
-            descriptions: tx.transaction.tokenOut.name || "NA",
-            images: tx.outTokenURL || DefaultTokenImage,
-          })
-        }
-      }
-    })
-
-    return Array.from(uniqueTokens.values())
-  }, [transactions])
-
-  const [filteredOptions, setFilteredOptions] = useState<any[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // If there's a search query, apply it as a filter
-    if (searchQuery.trim()) {
-      // Update active filters with the search query
-      setActiveFilters({
-        ...activeFilters,
-        searchQuery: searchQuery.trim(),
-        searchType: "all",
-      })
-
-      // Clear the input field after searching
-      setSearchQuery("")
-
-      // Close dropdown
-      setShowDropdown(false)
-    }
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setSearchQuery(value)
-
-    if (value.trim() === "") {
-      setFilteredOptions([])
-      setShowDropdown(false)
-      return
-    }
-
-    const filtered = uniqueTokenOptions
-      .filter(
-        (option) =>
-          option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
-          option.id?.toLowerCase()?.includes(value?.toLowerCase()) ||
-          option.descriptions?.toLowerCase()?.includes(value?.toLowerCase())
-      )
-      .slice(0, 10) // Limit to 10 results
-
-    setFilteredOptions(filtered)
-    setShowDropdown(filtered.length > 0)
-  }
-
-  const handleSelect = (option: any) => {
-    // Apply the selected option as a search filter
+  const handleUnifiedSearch = (searchData: {
+    searchQuery: string
+    searchType: "coin" | "kol" | "all"
+    tokens: Array<{ value: string; type: string }>
+    displayQuery?: string
+  }) => {
     setActiveFilters({
       ...activeFilters,
-      searchQuery: option.titles,
-      searchType: "all",
+      searchQuery: searchData.searchQuery || "",
+      searchType: searchData.searchQuery ? searchData.searchType : null,
+      displayQuery:
+        (searchData as any).displayQuery ||
+        searchData.displayQuery ||
+        searchData.searchQuery ||
+        "",
     })
-
-    // Clear input and close dropdown
-    setSearchQuery("")
-    setShowDropdown(false)
-  }
-
-  const handleClearInput = () => {
-    setSearchQuery("")
-    setShowDropdown(false)
+    setCurrentPage(1)
+    setTransactions([])
+    setHasMore(true)
   }
 
   const [amount, setAmount] = useState("$1K")
 
   const [isSaved, setIsSaved] = useState(false)
+  const [showConfigSavedModal, setShowConfigSavedModal] = useState(false)
+  const [savedConfig, setSavedConfig] = useState<{
+    hotness: number
+    amount: string
+    minMarketCap: number
+    maxMarketCap: number
+  } | null>(null)
 
   const [hotness, setHotness] = useState(10)
 
@@ -882,9 +798,15 @@ const KOLFeedPage = () => {
           )
 
           if (response.data.success) {
-            setIsSaved(true)
+            setOpenDropdown(null)
+            setSavedConfig({
+              hotness,
+              amount,
+              minMarketCap,
+              maxMarketCap,
+            })
+            setShowConfigSavedModal(true)
             showToast("KOL alert subscription created successfully!", "success")
-            setTimeout(() => setIsSaved(false), 3000)
           }
         } catch (error: any) {
           console.error("KOL alert subscription error:", error)
@@ -941,82 +863,16 @@ const KOLFeedPage = () => {
               className="d-flex align-items-center mobile-searching-bx"
               style={{ marginBottom: "16px", gap: "12px" }}
             >
-              <div className="search-container flex-grow-1" ref={searchRef}>
-                <form className="custom-frm-bx mb-0" onSubmit={handleSearch}>
-                  <input
-                    type="text"
-                    className="form-control pe-5"
-                    placeholder="Search by token name or address..."
-                    value={searchQuery}
-                    onChange={handleChange}
-                    onFocus={() => setShowDropdown(filteredOptions.length > 0)}
-                  />
-
-                  <div className="searching-bx">
-                    <button className="search-btn" type="submit">
-                      <FontAwesomeIcon icon={faSearch} />
-                    </button>
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        className="clear-input-btn"
-                        onClick={handleClearInput}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                </form>
-
-                {showDropdown && (
-                  <div className="dropdown-options">
-                    <div className="dropdown-header text-end all-data-clear">
-                      <button className="quick-nw-btn">Clear All</button>
-                    </div>
-                    <ul className="dropdown-scroll">
-                      {filteredOptions.map((item, index) => (
-                        <li
-                          key={index}
-                          className="dropdown-item d-flex align-items-start"
-                          onClick={() => handleSelect(item)}
-                        >
-                          <img
-                            src={item?.images}
-                            alt=""
-                            className="dropdown-img"
-                          />
-
-                          <div className="dropdown-content flex-grow-1">
-                            <h6 className="dropdown-title">{item?.titles}</h6>
-                            <p className="dropdown-desc">
-                              {item?.descriptions}
-                            </p>
-                            <span className="dropdown-id">
-                              <span className="cpy-title">CA:</span>
-                              {item?.id}
-                              <a
-                                href="javascript:void(0)"
-                                className="drop-cpy-btn ms-1"
-                              >
-                                <FontAwesomeIcon icon={faCopy} />
-                              </a>
-                            </span>
-                          </div>
-
-                          <button
-                            className="dropdown-close"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setShowDropdown(false)
-                            }}
-                          >
-                            ×
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              <div className="search-container flex-grow-1">
+                <TokenizedSearchInputKol
+                  ref={searchInputRef}
+                  onSearch={handleUnifiedSearch}
+                  placeholder="Search by token name or address..."
+                  className="w-full"
+                  page="kol-feed"
+                  transactions={transactions}
+                  simpleDesign={true}
+                />
               </div>
 
               <div className="custom-frm-bx nw-quick-bx mobile-quick-buy-desktop mb-0">
@@ -1450,15 +1306,25 @@ const KOLFeedPage = () => {
                           <div className="category-filtering-add">
                             <div className="category-filter-items">
                               <h6>
-                                Search: <span>{activeFilters.searchQuery}</span>
+                                Search:{" "}
+                                <span>
+                                  {(activeFilters as any).displayQuery ||
+                                    activeFilters.searchQuery}
+                                </span>
                               </h6>
                               <span>
                                 <a
                                   href="javascript:void(0)"
                                   className="filter-remv-btn"
-                                  onClick={() =>
-                                    handleFilterUpdate("searchQuery", "")
-                                  }
+                                  onClick={() => {
+                                    setActiveFilters({
+                                      ...activeFilters,
+                                      searchQuery: "",
+                                      searchType: null,
+                                      displayQuery: "",
+                                    })
+                                    searchInputRef.current?.clearAllTokens()
+                                  }}
                                 >
                                   <FontAwesomeIcon icon={faClose} />
                                 </a>
@@ -1862,6 +1728,61 @@ const KOLFeedPage = () => {
         initialOutputToken={swapTokenInfo}
         initialAmount={quickBuyAmount}
       />
+
+      {showConfigSavedModal && savedConfig && (
+        <div
+          className="config-overlay config-overlay-theme"
+          onClick={() => setShowConfigSavedModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="config-modal config-modal-theme"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="config-title config-title-theme">
+              CONFIGURATION SAVED
+            </h3>
+            <div className="config-box config-box-theme">
+              <div className="config-row">
+                <span>Feed Type</span>
+                <span>Kol Feed</span>
+              </div>
+              <div className="config-row">
+                <span>Min Score</span>
+                <span className="green">{savedConfig.hotness}</span>
+              </div>
+              <div className="config-row">
+                <span>Min Volume</span>
+                <span>{savedConfig.amount}</span>
+              </div>
+              <div className="config-row">
+                <span>Market Cap</span>
+                <span>
+                  {formatMarketCap(savedConfig.minMarketCap)} -{" "}
+                  {formatMarketCap(savedConfig.maxMarketCap)}
+                </span>
+              </div>
+              <div className="config-row">
+                <span>Status</span>
+                <span className="green-dot">
+                  Active <i></i>
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="close-btn close-btn-theme"
+              onClick={() => {
+                setShowConfigSavedModal(false)
+                setSavedConfig(null)
+              }}
+            >
+              CLOSE
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

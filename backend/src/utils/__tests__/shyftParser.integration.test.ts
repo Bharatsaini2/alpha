@@ -121,11 +121,14 @@ describe('SHYFT Parser - Integration Tests with Real Fixtures', () => {
         try {
           const tx = loadFixture(file)
           const result = parseShyftTransaction(tx)
-          results.push({
+          const entry: { file: string; parsed: boolean; side?: string; error?: string } = {
             file,
             parsed: result !== null,
-            side: result?.side,
-          })
+          }
+          if (result?.side) {
+            entry.side = result.side
+          }
+          results.push(entry)
         } catch (error) {
           results.push({
             file,

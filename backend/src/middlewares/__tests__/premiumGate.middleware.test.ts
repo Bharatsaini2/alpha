@@ -4,15 +4,12 @@ import {
   validateSOLBalance,
   PREMIUM_BALANCE_THRESHOLD,
 } from '../premiumGate.middleware'
-import { solConnection } from '../../config/solana-config'
+import { executeWithFallback } from '../../config/solana-config'
 import { redisClient } from '../../config/redis'
-import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 
 // Mock dependencies
 jest.mock('../../config/solana-config', () => ({
-  solConnection: {
-    getBalance: jest.fn(),
-  },
+  executeWithFallback: jest.fn(),
 }))
 
 jest.mock('../../config/redis', () => ({
@@ -28,6 +25,13 @@ jest.mock('../../utils/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
 }))
+
+const toTokenAccountInfo = (amount: number, decimals: number = 6) => ({
+  value: {
+    amount: Math.round(amount * Math.pow(10, decimals)).toString(),
+    decimals,
+  },
+})
 
 describe('Premium Gate Middleware Unit Tests', () => {
   let mockRequest: Partial<Request>
@@ -57,13 +61,14 @@ describe('Premium Gate Middleware Unit Tests', () => {
      * Test balance >= 0.0006 SOL grants access
      * Requirements: 1.2
      */
-    it('should grant access when balance >= 0.0006 SOL', async () => {
+    it('should grant access when balance >= 500000 ALPHA', async () => {
       // Mock cache miss
       jest.mocked(redisClient.get).mockResolvedValue(null)
 
-      // Mock balance of 1 SOL (well above threshold)
-      const balanceInLamports = 1 * LAMPORTS_PER_SOL
-      jest.mocked(solConnection.getBalance).mockResolvedValue(balanceInLamports)
+      // Mock balance of 600000 ALPHA (above threshold)
+      jest.mocked(executeWithFallback).mockResolvedValue(
+        toTokenAccountInfo(600000),
+      )
 
       // Mock cache set
       jest.mocked(redisClient.setex).mockResolvedValue('OK')
@@ -71,18 +76,18 @@ describe('Premium Gate Middleware Unit Tests', () => {
       const result = await validateSOLBalance(testWallet)
 
       expect(result.hasAccess).toBe(true)
-      expect(result.currentBalance).toBe(1)
+      expect(result.currentBalance).toBe(600000)
       expect(result.requiredBalance).toBe(PREMIUM_BALANCE_THRESHOLD)
       expect(result.difference).toBeUndefined()
 
       // Verify blockchain was queried
-      expect(solConnection.getBalance).toHaveBeenCalledTimes(1)
+      expect(executeWithFallback).toHaveBeenCalledTimes(1)
 
       // Verify result was cached
       expect(redisClient.setex).toHaveBeenCalledWith(
         `premium:balance:${testWallet.toLowerCase()}`,
-        300,
-        '1',
+        3600,
+        '600000',
       )
     })
 
@@ -90,13 +95,14 @@ describe('Premium Gate Middleware Unit Tests', () => {
      * Test balance < 0.0006 SOL denies access
      * Requirements: 1.3
      */
-    it('should deny access when balance < 0.0006 SOL', async () => {
+    it('should deny access when balance < 500000 ALPHA', async () => {
       // Mock cache miss
       jest.mocked(redisClient.get).mockResolvedValue(null)
 
-      // Mock balance of 0.0003 SOL (below threshold)
-      const balanceInLamports = 0.0003 * LAMPORTS_PER_SOL
-      jest.mocked(solConnection.getBalance).mockResolvedValue(balanceInLamports)
+      // Mock balance of 300000 ALPHA (below threshold)
+      jest.mocked(executeWithFallback).mockResolvedValue(
+        toTokenAccountInfo(300000),
+      )
 
       // Mock cache set
       jest.mocked(redisClient.setex).mockResolvedValue('OK')
@@ -104,12 +110,12 @@ describe('Premium Gate Middleware Unit Tests', () => {
       const result = await validateSOLBalance(testWallet)
 
       expect(result.hasAccess).toBe(false)
-      expect(result.currentBalance).toBe(0.0003)
+      expect(result.currentBalance).toBe(300000)
       expect(result.requiredBalance).toBe(PREMIUM_BALANCE_THRESHOLD)
-      expect(result.difference).toBeCloseTo(0.0003, 4)
+      expect(result.difference).toBe(200000)
 
       // Verify blockchain was queried
-      expect(solConnection.getBalance).toHaveBeenCalledTimes(1)
+      expect(executeWithFallback).toHaveBeenCalledTimes(1)
     })
 
     /**
@@ -121,19 +127,28 @@ describe('Premium Gate Middleware Unit Tests', () => {
       jest.mocked(redisClient.get).mockResolvedValue(null)
 
       // Mock blockchain error
-      jest.mocked(solConnection.getBalance).mockRejectedValue(
+      jest.mocked(executeWithFallback).mockRejectedValue(
         new Error('RPC connection failed'),
       )
+      const setTimeoutSpy = jest
+        .spyOn(global, 'setTimeout')
+        .mockImplementation((handler: (...args: any[]) => void) => {
+          if (typeof handler === 'function') {
+            handler()
+          }
+          return 0 as unknown as NodeJS.Timeout
+        })
 
       await expect(validateSOLBalance(testWallet)).rejects.toThrow(
-        'Unable to verify balance. Please try again.',
+        'Unable to verify ALPHA token balance. Please try again.',
       )
 
       // Verify blockchain was queried
-      expect(solConnection.getBalance).toHaveBeenCalledTimes(1)
+      expect(executeWithFallback).toHaveBeenCalledTimes(3)
 
       // Verify cache was not set
       expect(redisClient.setex).not.toHaveBeenCalled()
+      setTimeoutSpy.mockRestore()
     })
 
     /**
@@ -142,38 +157,39 @@ describe('Premium Gate Middleware Unit Tests', () => {
      */
     it('should use cached balance when available', async () => {
       // Mock cache hit with balance above threshold
-      jest.mocked(redisClient.get).mockResolvedValue('0.001')
+      jest.mocked(redisClient.get).mockResolvedValue('600000')
 
       const result = await validateSOLBalance(testWallet)
 
       expect(result.hasAccess).toBe(true)
-      expect(result.currentBalance).toBe(0.001)
+      expect(result.currentBalance).toBe(600000)
 
       // Verify blockchain was NOT queried
-      expect(solConnection.getBalance).not.toHaveBeenCalled()
+      expect(executeWithFallback).not.toHaveBeenCalled()
 
       // Verify cache was NOT updated
       expect(redisClient.setex).not.toHaveBeenCalled()
     })
 
-    it('should cache balance with 5-minute TTL', async () => {
+    it('should cache balance with 1-hour TTL', async () => {
       // Mock cache miss
       jest.mocked(redisClient.get).mockResolvedValue(null)
 
       // Mock balance
-      const balanceInLamports = 0.5 * LAMPORTS_PER_SOL
-      jest.mocked(solConnection.getBalance).mockResolvedValue(balanceInLamports)
+      jest.mocked(executeWithFallback).mockResolvedValue(
+        toTokenAccountInfo(600000),
+      )
 
       // Mock cache set
       jest.mocked(redisClient.setex).mockResolvedValue('OK')
 
       await validateSOLBalance(testWallet)
 
-      // Verify cache was set with 300 second TTL (5 minutes)
+      // Verify cache was set with 3600 second TTL (1 hour)
       expect(redisClient.setex).toHaveBeenCalledWith(
         `premium:balance:${testWallet.toLowerCase()}`,
-        300,
-        '0.5',
+        3600,
+        '600000',
       )
     })
   })
@@ -203,8 +219,9 @@ describe('Premium Gate Middleware Unit Tests', () => {
       jest.mocked(redisClient.get).mockResolvedValue(null)
 
       // Mock balance above threshold
-      const balanceInLamports = 1 * LAMPORTS_PER_SOL
-      jest.mocked(solConnection.getBalance).mockResolvedValue(balanceInLamports)
+      jest.mocked(executeWithFallback).mockResolvedValue(
+        toTokenAccountInfo(600000),
+      )
 
       // Mock cache set
       jest.mocked(redisClient.setex).mockResolvedValue('OK')
@@ -230,8 +247,9 @@ describe('Premium Gate Middleware Unit Tests', () => {
       jest.mocked(redisClient.get).mockResolvedValue(null)
 
       // Mock balance below threshold
-      const balanceInLamports = 0.0003 * LAMPORTS_PER_SOL
-      jest.mocked(solConnection.getBalance).mockResolvedValue(balanceInLamports)
+      jest.mocked(executeWithFallback).mockResolvedValue(
+        toTokenAccountInfo(300000),
+      )
 
       // Mock cache set
       jest.mocked(redisClient.setex).mockResolvedValue('OK')
@@ -245,9 +263,9 @@ describe('Premium Gate Middleware Unit Tests', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(403)
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: `Premium access required. Minimum balance: ${PREMIUM_BALANCE_THRESHOLD} SOL`,
+        message: `Premium access required. Minimum balance: ${PREMIUM_BALANCE_THRESHOLD} ALPHA tokens`,
         data: {
-          currentBalance: 0.0003,
+          currentBalance: 300000,
           requiredBalance: PREMIUM_BALANCE_THRESHOLD,
           difference: expect.any(Number),
         },
@@ -259,7 +277,7 @@ describe('Premium Gate Middleware Unit Tests', () => {
       mockRequest.query = { walletAddress: testWallet }
 
       // Mock cache hit
-      jest.mocked(redisClient.get).mockResolvedValue('1')
+      jest.mocked(redisClient.get).mockResolvedValue('600000')
 
       await checkPremiumAccess(
         mockRequest as Request,
@@ -278,9 +296,17 @@ describe('Premium Gate Middleware Unit Tests', () => {
       jest.mocked(redisClient.get).mockResolvedValue(null)
 
       // Mock blockchain error
-      jest.mocked(solConnection.getBalance).mockRejectedValue(
+      jest.mocked(executeWithFallback).mockRejectedValue(
         new Error('RPC connection failed'),
       )
+      const setTimeoutSpy = jest
+        .spyOn(global, 'setTimeout')
+        .mockImplementation((handler: (...args: any[]) => void) => {
+          if (typeof handler === 'function') {
+            handler()
+          }
+          return 0 as unknown as NodeJS.Timeout
+        })
 
       await checkPremiumAccess(
         mockRequest as Request,
@@ -291,9 +317,10 @@ describe('Premium Gate Middleware Unit Tests', () => {
       expect(mockResponse.status).toHaveBeenCalledWith(503)
       expect(mockResponse.json).toHaveBeenCalledWith({
         success: false,
-        message: 'Unable to verify balance. Please try again.',
+        message: 'Unable to verify ALPHA token balance. Please try again.',
       })
       expect(mockNext).not.toHaveBeenCalled()
+      setTimeoutSpy.mockRestore()
     })
   })
 })

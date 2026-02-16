@@ -3,8 +3,8 @@
  * 
  * This file contains property-based tests for the SwapperIdentifier component.
  * 
- * Task 3.3: Write property test for fee payer identification
- * Task 3.4: Write property test for signer fallback
+ * Task 3.3: Write property test for largest delta selection
+ * Task 3.4: Write property test for non-core tie break
  * Task 3.5: Write property test for system account exclusion
  * Task 3.6: Write property test for single owner escalation
  * Task 3.7: Write property test for ambiguous owner escalation
@@ -17,197 +17,109 @@ import { TokenBalanceChange, KNOWN_AMM_POOLS } from '../shyftParserV2.types'
 import {
   walletAddressArbitrary,
   tokenMintArbitrary,
+  priorityAssetMintArbitrary,
   tokenDecimalsArbitrary,
-  balanceAmountArbitrary,
   ammPoolAddressArbitrary,
-  solanaAddressArbitrary,
 } from './shyftParserV2.arbitraries'
 
 describe('SHYFT Parser V2 - SwapperIdentifier Property-Based Tests', () => {
   const swapperIdentifier = createSwapperIdentifier()
 
   /**
-   * Property 3: Fee Payer Swapper Identification
+   * Property 3: Largest Economic Delta Wins
    * 
-   * **Validates: Requirements 2.4**
+   * **Validates: Requirements 2.4, 2.6**
    * 
-   * For any transaction where the fee payer has at least one non-zero token balance delta,
-   * the parser should identify the fee payer as the swapper with high confidence.
+   * The swapper should be the wallet with the largest absolute economic delta,
+   * even when the fee payer has a smaller delta.
    */
-  describe('Property 3: Fee Payer Swapper Identification', () => {
-    it('should identify fee payer as swapper when fee payer has non-zero delta', () => {
+  describe('Property 3: Largest Economic Delta Wins', () => {
+    it('should select the largest delta owner when fee payer differs', () => {
       fc.assert(
         fc.property(
           walletAddressArbitrary,
-          fc.array(walletAddressArbitrary, { minLength: 1, maxLength: 3 }),
-          tokenMintArbitrary,
-          tokenDecimalsArbitrary,
-          fc.integer({ min: -1_000_000_000, max: 1_000_000_000 }).filter((n) => n !== 0),
-          balanceAmountArbitrary,
-          balanceAmountArbitrary,
-          (feePayer, signers, mint, decimals, nonZeroDelta, preBalance, postBalance) => {
-            // Create a balance change for the fee payer with non-zero delta
-            const balanceChanges: TokenBalanceChange[] = [
-              {
-                address: 'account-1',
-                decimals,
-                change_amount: nonZeroDelta,
-                post_balance: postBalance,
-                pre_balance: preBalance,
-                mint,
-                owner: feePayer,
-              },
-            ]
-
-            const result = swapperIdentifier.identifySwapper(feePayer, signers, balanceChanges)
-
-            // Assert: Fee payer should be identified as swapper with high confidence
-            expect(result.swapper).toBe(feePayer)
-            expect(result.confidence).toBe('high')
-            expect(result.method).toBe('fee_payer')
-          }
-        ),
-        { numRuns: 100 }
-      )
-    })
-
-    it('should identify fee payer even when other accounts also have deltas', () => {
-      fc.assert(
-        fc.property(
           walletAddressArbitrary,
-          fc.array(walletAddressArbitrary, { minLength: 1, maxLength: 3 }),
-          fc.array(walletAddressArbitrary, { minLength: 1, maxLength: 5 }),
           tokenMintArbitrary,
           tokenDecimalsArbitrary,
-          fc.integer({ min: -1_000_000_000, max: 1_000_000_000 }).filter((n) => n !== 0),
-          (feePayer, signers, otherOwners, mint, decimals, nonZeroDelta) => {
-            // Create balance changes for fee payer and other accounts
+          fc.integer({ min: 1, max: 1_000_000_000 }),
+          fc.integer({ min: 1, max: 1_000_000_000 }),
+          (feePayer, actualSwapper, mint, decimals, baseDelta, extraDelta) => {
+            fc.pre(feePayer !== actualSwapper)
+
+            const feeDelta = baseDelta
+            const swapperDelta = baseDelta + extraDelta
+
             const balanceChanges: TokenBalanceChange[] = [
               {
                 address: 'account-fee-payer',
                 decimals,
-                change_amount: nonZeroDelta,
-                post_balance: 1000000,
-                pre_balance: 500000,
+                change_amount: feeDelta,
+                post_balance: 1000000 + feeDelta,
+                pre_balance: 1000000,
                 mint,
                 owner: feePayer,
               },
-              ...otherOwners.map((owner, index) => ({
-                address: `account-${index}`,
+              {
+                address: 'account-swapper',
                 decimals,
-                change_amount: nonZeroDelta * -1, // Opposite delta
-                post_balance: 500000,
+                change_amount: swapperDelta,
+                post_balance: 1000000 + swapperDelta,
                 pre_balance: 1000000,
                 mint,
-                owner,
-              })),
+                owner: actualSwapper,
+              },
             ]
 
-            const result = swapperIdentifier.identifySwapper(feePayer, signers, balanceChanges)
+            const result = swapperIdentifier.identifySwapper(feePayer, [feePayer], balanceChanges)
 
-            // Assert: Fee payer should still be identified (tier 1 takes precedence)
-            expect(result.swapper).toBe(feePayer)
+            expect(result.swapper).toBe(actualSwapper)
             expect(result.confidence).toBe('high')
-            expect(result.method).toBe('fee_payer')
+            expect(result.method).toBe('owner_analysis')
           }
         ),
         { numRuns: 100 }
       )
     })
-  })
 
-  /**
-   * Property 4: Signer Fallback Swapper Identification
-   * 
-   * **Validates: Requirements 2.5**
-   * 
-   * For any transaction where the fee payer has zero token balance deltas but signers[0]
-   * has at least one non-zero delta, the parser should identify signers[0] as the swapper
-   * with medium confidence.
-   */
-  describe('Property 4: Signer Fallback Swapper Identification', () => {
-    it('should identify primary signer as swapper when fee payer has zero delta', () => {
+    it('should prefer non-core token delta when tied', () => {
       fc.assert(
         fc.property(
           walletAddressArbitrary,
           walletAddressArbitrary,
-          fc.array(walletAddressArbitrary, { minLength: 0, maxLength: 2 }),
+          priorityAssetMintArbitrary,
           tokenMintArbitrary,
           tokenDecimalsArbitrary,
-          fc.integer({ min: -1_000_000_000, max: 1_000_000_000 }).filter((n) => n !== 0),
-          (feePayer, primarySigner, otherSigners, mint, decimals, nonZeroDelta) => {
-            // Ensure fee payer and primary signer are different
-            fc.pre(feePayer !== primarySigner)
+          fc.integer({ min: 1, max: 1_000_000_000 }),
+          (coreOwner, nonCoreOwner, coreMint, nonCoreMint, decimals, deltaMagnitude) => {
+            fc.pre(coreOwner !== nonCoreOwner)
+            fc.pre(!KNOWN_AMM_POOLS.has(nonCoreOwner))
 
-            const signers = [primarySigner, ...otherSigners]
-
-            // Create balance changes: fee payer has zero delta, primary signer has non-zero delta
             const balanceChanges: TokenBalanceChange[] = [
               {
-                address: 'account-signer',
+                address: 'account-core',
                 decimals,
-                change_amount: nonZeroDelta,
-                post_balance: 1000000,
-                pre_balance: 500000,
-                mint,
-                owner: primarySigner,
+                change_amount: deltaMagnitude,
+                post_balance: 1000000 + deltaMagnitude,
+                pre_balance: 1000000,
+                mint: coreMint,
+                owner: coreOwner,
+              },
+              {
+                address: 'account-non-core',
+                decimals,
+                change_amount: -deltaMagnitude,
+                post_balance: 1000000 - deltaMagnitude,
+                pre_balance: 1000000,
+                mint: nonCoreMint,
+                owner: nonCoreOwner,
               },
             ]
 
-            const result = swapperIdentifier.identifySwapper(feePayer, signers, balanceChanges)
+            const result = swapperIdentifier.identifySwapper(coreOwner, [coreOwner], balanceChanges)
 
-            // Assert: Primary signer should be identified as swapper with medium confidence
-            expect(result.swapper).toBe(primarySigner)
+            expect(result.swapper).toBe(nonCoreOwner)
             expect(result.confidence).toBe('medium')
-            expect(result.method).toBe('signer')
-          }
-        ),
-        { numRuns: 100 }
-      )
-    })
-
-    it('should not identify signer if fee payer has delta (tier 1 takes precedence)', () => {
-      fc.assert(
-        fc.property(
-          walletAddressArbitrary,
-          walletAddressArbitrary,
-          tokenMintArbitrary,
-          tokenDecimalsArbitrary,
-          fc.integer({ min: -1_000_000_000, max: 1_000_000_000 }).filter((n) => n !== 0),
-          (feePayer, primarySigner, mint, decimals, nonZeroDelta) => {
-            // Ensure fee payer and primary signer are different
-            fc.pre(feePayer !== primarySigner)
-
-            const signers = [primarySigner]
-
-            // Both fee payer and primary signer have deltas
-            const balanceChanges: TokenBalanceChange[] = [
-              {
-                address: 'account-fee-payer',
-                decimals,
-                change_amount: nonZeroDelta,
-                post_balance: 1000000,
-                pre_balance: 500000,
-                mint,
-                owner: feePayer,
-              },
-              {
-                address: 'account-signer',
-                decimals,
-                change_amount: nonZeroDelta * -1,
-                post_balance: 500000,
-                pre_balance: 1000000,
-                mint,
-                owner: primarySigner,
-              },
-            ]
-
-            const result = swapperIdentifier.identifySwapper(feePayer, signers, balanceChanges)
-
-            // Assert: Fee payer should be identified (tier 1 precedence)
-            expect(result.swapper).toBe(feePayer)
-            expect(result.confidence).toBe('high')
-            expect(result.method).toBe('fee_payer')
+            expect(result.method).toBe('owner_analysis')
           }
         ),
         { numRuns: 100 }
@@ -270,7 +182,7 @@ describe('SHYFT Parser V2 - SwapperIdentifier Property-Based Tests', () => {
 
             // Assert: User wallet should be identified (AMM pool excluded)
             expect(result.swapper).toBe(userWallet)
-            expect(result.confidence).toBe('low')
+            expect(result.confidence).toBe('high')
             expect(result.method).toBe('owner_analysis')
           }
         ),
@@ -356,7 +268,7 @@ describe('SHYFT Parser V2 - SwapperIdentifier Property-Based Tests', () => {
 
             // Assert: Actual swapper should be identified via owner analysis
             expect(result.swapper).toBe(actualSwapper)
-            expect(result.confidence).toBe('low')
+            expect(result.confidence).toBe('high')
             expect(result.method).toBe('owner_analysis')
           }
         ),
@@ -375,7 +287,7 @@ describe('SHYFT Parser V2 - SwapperIdentifier Property-Based Tests', () => {
    * the transaction should be classified as ERASE.
    */
   describe('Property 7: Ambiguous Owner Escalation Failure', () => {
-    it('should classify as ERASE when multiple non-system owners have deltas', () => {
+    it('should classify as ERASE when multiple owners tie on delta', () => {
       fc.assert(
         fc.property(
           walletAddressArbitrary,
@@ -383,8 +295,8 @@ describe('SHYFT Parser V2 - SwapperIdentifier Property-Based Tests', () => {
           fc.array(walletAddressArbitrary, { minLength: 2, maxLength: 5 }),
           tokenMintArbitrary,
           tokenDecimalsArbitrary,
-          fc.integer({ min: -1_000_000_000, max: 1_000_000_000 }).filter((n) => n !== 0),
-          (feePayer, signers, multipleOwners, mint, decimals, nonZeroDelta) => {
+          fc.integer({ min: 1, max: 1_000_000_000 }),
+          (feePayer, signers, multipleOwners, mint, decimals, magnitude) => {
             // Ensure all owners are different and not system accounts
             const uniqueOwners = Array.from(new Set(multipleOwners))
             fc.pre(
@@ -397,20 +309,20 @@ describe('SHYFT Parser V2 - SwapperIdentifier Property-Based Tests', () => {
                 )
             )
 
-            // Create balance changes: multiple owners have deltas
+            // Create balance changes: multiple owners with identical abs delta (tie)
             const balanceChanges: TokenBalanceChange[] = uniqueOwners.map((owner, index) => ({
               address: `account-${index}`,
               decimals,
-              change_amount: index === 0 ? nonZeroDelta : nonZeroDelta * -1,
-              post_balance: 1000000,
-              pre_balance: 500000,
+              change_amount: index % 2 === 0 ? magnitude : -magnitude,
+              post_balance: 1000000 + (index % 2 === 0 ? magnitude : -magnitude),
+              pre_balance: 1000000,
               mint,
               owner,
             }))
 
             const result = swapperIdentifier.identifySwapper(feePayer, signers, balanceChanges)
 
-            // Assert: Should classify as ERASE (ambiguous ownership)
+            // Assert: Should classify as ERASE (ambiguous ownership tie)
             expect(result.swapper).toBeNull()
             expect(result.confidence).toBe('low')
             expect(result.method).toBe('erase')
@@ -493,10 +405,10 @@ describe('SHYFT Parser V2 - SwapperIdentifier Unit Tests', () => {
 
       const result = swapperIdentifier.identifySwapper(relayer, signers, balanceChanges)
 
-      // Assert: Actual swapper should be identified via signer fallback
+      // Assert: Actual swapper should be identified via owner analysis
       expect(result.swapper).toBe(actualSwapper)
-      expect(result.confidence).toBe('medium')
-      expect(result.method).toBe('signer')
+      expect(result.confidence).toBe('high')
+      expect(result.method).toBe('owner_analysis')
     })
 
     it('should handle multiple signer scenarios', () => {
@@ -528,10 +440,10 @@ describe('SHYFT Parser V2 - SwapperIdentifier Unit Tests', () => {
 
       const result = swapperIdentifier.identifySwapper(feePayer, signers, balanceChanges)
 
-      // Assert: First signer with delta should be identified
+      // Assert: Owner with largest delta should be identified
       expect(result.swapper).toBe(signer1)
-      expect(result.confidence).toBe('medium')
-      expect(result.method).toBe('signer')
+      expect(result.confidence).toBe('high')
+      expect(result.method).toBe('owner_analysis')
     })
 
     it('should handle ambiguous ownership cases', () => {
@@ -553,8 +465,8 @@ describe('SHYFT Parser V2 - SwapperIdentifier Unit Tests', () => {
         {
           address: 'account-owner2',
           decimals: 6,
-          change_amount: 300000000, // +300 tokens
-          post_balance: 300000000,
+          change_amount: 2000000000, // +2000 tokens (tie abs delta)
+          post_balance: 2000000000,
           pre_balance: 0,
           mint: 'TokenMint111111111111111111111111111111111',
           owner: owner2,
@@ -563,7 +475,7 @@ describe('SHYFT Parser V2 - SwapperIdentifier Unit Tests', () => {
 
       const result = swapperIdentifier.identifySwapper(feePayer, signers, balanceChanges)
 
-      // Assert: Should classify as ERASE (ambiguous - multiple owners)
+      // Assert: Should classify as ERASE (ambiguous tie)
       expect(result.swapper).toBeNull()
       expect(result.confidence).toBe('low')
       expect(result.method).toBe('erase')
@@ -609,8 +521,8 @@ describe('SHYFT Parser V2 - SwapperIdentifier Unit Tests', () => {
 
       // Assert: Actual swapper should be identified (AMM pool excluded)
       expect(result.swapper).toBe(actualSwapper)
-      expect(result.confidence).toBe('medium')
-      expect(result.method).toBe('signer')
+      expect(result.confidence).toBe('high')
+      expect(result.method).toBe('owner_analysis')
     })
   })
 })

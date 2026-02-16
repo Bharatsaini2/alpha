@@ -361,10 +361,14 @@ export class TelegramService {
 
       // Link the account atomically with Telegram user info
       user.telegramChatId = chatId
-      user.telegramUsername = username
-      user.telegramFirstName = firstName
-      user.telegramLinkToken = undefined
-      user.telegramLinkTokenExpiry = undefined
+      if (username !== undefined) {
+        user.telegramUsername = username
+      }
+      if (firstName !== undefined) {
+        user.telegramFirstName = firstName
+      }
+      user.set('telegramLinkToken', undefined)
+      user.set('telegramLinkTokenExpiry', undefined)
       await user.save()
 
       await this.sendMessage(

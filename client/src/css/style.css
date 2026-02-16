@@ -2161,6 +2161,82 @@ font-size: 16px;
   cursor: pointer;
 }
 
+/* Hotness slider: same design as MCAP (dual-thumb-slider) - circle thumb, white border, single slider */
+.hotness-range-mcap {
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+}
+
+.hotness-range-mcap::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    #162ECD 0%,
+    #4A5FFF var(--range-progress, 50%),
+    #2a2a2a var(--range-progress, 50%)
+  );
+}
+
+.hotness-range-mcap::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #162ECD;
+  border: 3px solid #fff;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  margin-top: -7px;
+  position: relative;
+}
+
+.hotness-range-mcap:hover::-webkit-slider-thumb {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  transform: scale(1.05);
+}
+
+.hotness-range-mcap::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    #162ECD 0%,
+    #4A5FFF var(--range-progress, 50%),
+    #2a2a2a var(--range-progress, 50%)
+  );
+}
+
+.hotness-range-mcap::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #162ECD;
+  border: 3px solid #fff;
+  cursor: pointer;
+  pointer-events: all;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.hotness-range-mcap:hover::-moz-range-thumb {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+  transform: scale(1.05);
+}
+
+.range-value-mcap {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
 /* Labels */
 .range-label {
   font-size: 12px;
@@ -2787,9 +2863,11 @@ font-size: 16px;
 
 .config-modal {
   background: #0b0b0b;
-  padding: 30px;
+  padding: 24px 30px;
   width: 420px;
-  border-radius: 12px;
+  border-radius: 0;
+  border: 1px solid #2a2a2a;
+  font-family: inherit;
 }
 
 .config-title {
@@ -2797,25 +2875,29 @@ font-size: 16px;
   letter-spacing: 2px;
   margin-bottom: 20px;
   color: #fff;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
 .config-box {
-  border: 1px dashed #2a2a2a;
+  border: 1px solid #2a2a2a;
   padding: 15px;
   margin-bottom: 20px;
+  border-radius: 0;
+  background: #111;
 }
 
 .config-row {
   display: flex;
   justify-content: space-between;
   padding: 8px 0;
-  font-size: 14px;
-  color: #aaa;
+  font-size: 13px;
+  color: #8f8f8f;
 }
 
 .config-row span:last-child {
-  color: #fff;
+  color: #ebebeb;
 }
 
 .green {
@@ -2840,13 +2922,26 @@ font-size: 16px;
   background: #1a1a1a;
   color: #fff;
   padding: 12px;
-  border-radius: 0px;
-  border: none;
+  border-radius: 0;
+  border: 1px solid #2a2a2a;
   cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  transition: background 0.2s;
 }
 
 .close-btn:hover {
   background: #222;
+}
+
+.config-modal-theme,
+.config-overlay-theme .config-modal,
+.config-title-theme,
+.config-box-theme,
+.close-btn-theme {
+  font-family: inherit;
 }
 
 .swap-transition-bx {

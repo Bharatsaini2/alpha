@@ -59,14 +59,48 @@ function arbitraryAmounts(): fc.Arbitrary<{
   baseAmount: number
   feeBreakdown: any
 }> {
-  return fc.record({
-    swapInputAmount: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    totalWalletCost: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    swapOutputAmount: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    netWalletReceived: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    baseAmount: fc.double({ min: 0.001, max: 1000000, noNaN: true }),
-    feeBreakdown: fc.constant({}),
-  })
+  const optionalNumber = fc.option(
+    fc.double({ min: 0.001, max: 1000000, noNaN: true }),
+    { nil: undefined },
+  )
+
+  return fc
+    .record({
+      swapInputAmount: optionalNumber,
+      totalWalletCost: optionalNumber,
+      swapOutputAmount: optionalNumber,
+      netWalletReceived: optionalNumber,
+      baseAmount: fc.double({ min: 0.001, max: 1000000, noNaN: true }),
+      feeBreakdown: fc.constant({}),
+    })
+    .map((record) => {
+      const result: {
+        swapInputAmount?: number
+        totalWalletCost?: number
+        swapOutputAmount?: number
+        netWalletReceived?: number
+        baseAmount: number
+        feeBreakdown: any
+      } = {
+        baseAmount: record.baseAmount,
+        feeBreakdown: record.feeBreakdown,
+      }
+
+      if (record.swapInputAmount !== undefined) {
+        result.swapInputAmount = record.swapInputAmount
+      }
+      if (record.totalWalletCost !== undefined) {
+        result.totalWalletCost = record.totalWalletCost
+      }
+      if (record.swapOutputAmount !== undefined) {
+        result.swapOutputAmount = record.swapOutputAmount
+      }
+      if (record.netWalletReceived !== undefined) {
+        result.netWalletReceived = record.netWalletReceived
+      }
+
+      return result
+    })
 }
 
 /**

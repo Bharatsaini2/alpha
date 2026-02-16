@@ -1129,10 +1129,11 @@ const HomePage = () => {
                 <TokenizedSearchInput
                   key={clearSearchTrigger}
                   onSearch={handleUnifiedSearch}
-                  placeholder="SEARCH"
+                  placeholder="Search tokens or contract address..."
                   className="w-full"
                   coinOnly={true}
                   page="home"
+                  transactions={transactions}
                 />
               </div>
 

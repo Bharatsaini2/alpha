@@ -90,6 +90,10 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
               className="form-select cursor-pointer text-start"
               onClick={(e) => {
                 e.stopPropagation()
+                if (!triggerOpen) {
+                  setAmountOpen(false)
+                  setMcapOpen(false)
+                }
                 setTriggerOpen(!triggerOpen)
               }}
             >
@@ -98,27 +102,40 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
 
             {triggerOpen && (
               <div
-                className="subscription-dropdown-menu show w-100 p-3"
+                className="subscription-dropdown-menu show w-100"
                 onClick={(e) => e.stopPropagation()}
+                style={{ padding: "8px 12px" }}
               >
-                <div className=" text-center mt-2">
-                  <div>
-                    <span className="range-value">{hotness}</span>
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    className="range-value-mcap"
+                    style={{
+                      fontSize: "14px",
+                      fontWeight: 600,
+                      marginBottom: "4px",
+                    }}
+                  >
+                    {hotness}
                   </div>
-
-                  <div className="range-title">
-                    <h6 className="mb-0 text-sm">Sensitivity TheresHold</h6>
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      color: "#8f8f8f",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    Sensitivity Threshold
                   </div>
-
                   <input
                     type="range"
                     min="0"
                     max="10"
                     value={hotness}
                     onChange={(e) => setHotness(Number(e.target.value))}
-                    className="hotness-range"
+                    className="hotness-range hotness-range-mcap"
                     style={
                       {
+                        width: "100%",
                         "--range-progress": `${(hotness / 10) * 100}%`,
                       } as React.CSSProperties
                     }
@@ -134,6 +151,10 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
               className="form-select cursor-pointer text-start"
               onClick={(e) => {
                 e.stopPropagation()
+                if (!amountOpen) {
+                  setTriggerOpen(false)
+                  setMcapOpen(false)
+                }
                 setAmountOpen(!amountOpen)
               }}
             >
@@ -193,6 +214,10 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
               className="form-select cursor-pointer text-start"
               onClick={(e) => {
                 e.stopPropagation()
+                if (!mcapOpen) {
+                  setTriggerOpen(false)
+                  setAmountOpen(false)
+                }
                 setMcapOpen(!mcapOpen)
               }}
             >
@@ -231,7 +256,7 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
             {!wallet?.connected
               ? "Connect"
               : user?.telegramChatId
-                ? "Active"
+                ? "Activate"
                 : "Connect"}
             <span className="corner top-right"></span>
             <span className="corner bottom-left"></span>

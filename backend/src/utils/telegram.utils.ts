@@ -60,7 +60,7 @@ export function formatLargeNumber(num: number): string {
  * @returns Solscan URL
  */
 export function generateTransactionLink(txHash: string): string {
-  return `https://app.alpha-block.ai/transaction/${txHash}`
+  return `https://solscan.io/tx/${txHash}`
 }
 
 /**
@@ -143,7 +143,7 @@ export function formatWhaleAlert(tx: IWhaleAllTransactionsV2, resolvedTokenSymbo
   const timeStr = `${hours}:${minutes} UTC`
 
   const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=whale&transaction=buy`
-  const tokenLink = `https://dexscreener.com/solana/${tokenAddress}`
+  const tokenLink = generateTokenLink(tokenAddress)
 
   return `*Whale Buy Alert* 🐋
 
@@ -182,7 +182,7 @@ export function formatClusterAlert(
   const tokenSymbolEscaped = escapeMarkdownV2(tokenSymbol)
   const tokenShort = shortenAddress(token, 4, 4)
   const tokenShortEscaped = escapeMarkdownV2(tokenShort)
-  const formattedVolume = formatLargeNumber(totalVolumeUSD)
+  const formattedVolume = `$${formatLargeNumber(totalVolumeUSD)}`
   const tokenLink = generateTokenLink(token)
 
   return `🚨 *CLUSTER ALERT*
@@ -240,15 +240,12 @@ export function formatKOLAlert(
   const formattedUSD = formatLargeNumber(usdAmountNum)
   const formattedMCap = formatLargeNumber(marketCap)
 
-  // Get hotness score (remove .0 decimal if it's a whole number)
-  const hotnessScoreNum = tx.hotnessScore || 0
-  const hotnessScore = hotnessScoreNum % 1 === 0 ? hotnessScoreNum.toFixed(0) : hotnessScoreNum.toFixed(1)
-
-  // Format timestamp to HH:MM UTC
-  const timestamp = tx.timestamp ? new Date(tx.timestamp) : new Date()
-  const hours = timestamp.getUTCHours().toString().padStart(2, '0')
-  const minutes = timestamp.getUTCMinutes().toString().padStart(2, '0')
-  const timeStr = `${hours}:${minutes} UTC`
+  const txType = tx.type.toUpperCase()
+  const amount =
+    tx.type === 'sell'
+      ? tx.transaction.tokenIn.amount || '0'
+      : tx.transaction.tokenOut.amount || '0'
+  const usdValue = usdAmount || '0'
 
   // Generate X/Twitter profile link if username is provided
   const xLink = kolUsername ? `https://x.com/${kolUsername}` : null
@@ -256,26 +253,19 @@ export function formatKOLAlert(
     ? `[${escapeMarkdownV2(kol)}](${xLink})`
     : escapeMarkdownV2(kol)
 
-  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=buy`
-  const tokenLink = `https://dexscreener.com/solana/${tokenAddress}`
+  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=${tx.type}`
+  const tokenLink = generateTokenLink(tokenAddress)
 
-  return `*KOL Buy Alert* 👤
+  return `⭐ *KOL Activity Alert*
 
-*KOL:* ${kolDisplay}
-
+*Influencer:* ${kolDisplay}
 *Token:* ${escapeMarkdownV2(tokenName)} \\(${escapeMarkdownV2(tokenSymbol)}\\)
-*Chain:* Solana
-*CA:* \`${tokenAddress}\`
-*MCAP:* ${escapeMarkdownV2(formattedMCap)}
-
-💰 *Buy Amount:* ${escapeMarkdownV2(formattedUSD)}
-🔥 *Hotness Score:* ${escapeMarkdownV2(hotnessScore)}/10
-
-🕛 *Time:* ${escapeMarkdownV2(timeStr)}
+*Type:* ${txType}
+*Amount:* ${escapeMarkdownV2(amount)}
+*USD Value:* ${escapeMarkdownV2(usdValue)}
 
 🔗 [View Transaction](${appTxLink}) \\| [View Token](${tokenLink})
-
-_Powered by @AlphaBlockAI_ `
+`
 }
 
 /**
@@ -337,7 +327,7 @@ export function formatKOLProfileAlert(
     : escapeMarkdownV2(kolName)
 
   const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=${isBuy ? 'buy' : 'sell'}`
-  const tokenLink = `https://dexscreener.com/solana/${tokenAddress}`
+    const tokenLink = generateTokenLink(tokenAddress)
 
   return `🎯 *KOL Profile ${isBuy ? 'Buy' : 'Sell'} Alert*
 
@@ -390,88 +380,65 @@ export function generateQuickBuyLink(tokenAddress: string): string {
  */
 export function formatWhaleAlertMessage(tx: WhaleTransactionData): string {
   try {
-    // Escape all text fields for MarkdownV2
-    const tokenNameEscaped = escapeMarkdownV2(tx.tokenName)
-    const tokenSymbolEscaped = escapeMarkdownV2(tx.tokenSymbol)
-    const contractAddressEscaped = escapeMarkdownV2(tx.tokenAddress)
-
-    // Format buy amount with proper currency formatting
-    const formattedBuyAmount = formatLargeNumber(tx.buyAmountUSD)
-    const buyAmountEscaped = escapeMarkdownV2(`${formattedBuyAmount}`)
-
-    // Format hotness score (0-10 scale, remove .0 for whole numbers)
-    const hotnessScoreFormatted = tx.hotnessScore % 1 === 0
-      ? tx.hotnessScore.toFixed(0)
-      : tx.hotnessScore.toFixed(1)
-    const hotnessScoreEscaped = escapeMarkdownV2(hotnessScoreFormatted)
-
-    // Format wallet labels (join with comma if multiple)
-    const walletLabelsText = tx.walletLabels.length > 0
-      ? tx.walletLabels.join(', ')
-      : 'Unknown'
-    const walletLabelsEscaped = escapeMarkdownV2(walletLabelsText)
-
-    // Format timestamp to HH:MM UTC
-    const date = new Date(tx.timestamp)
-    const hours = date.getUTCHours().toString().padStart(2, '0')
-    const minutes = date.getUTCMinutes().toString().padStart(2, '0')
-    const timeFormatted = `${hours}:${minutes} UTC`
-    const timeEscaped = escapeMarkdownV2(timeFormatted)
-
-    // Generate links
-    const txLink = generateTransactionLink(tx.txHash)
-    const quickBuyLink = generateQuickBuyLink(tx.tokenAddress)
-
-    // Build the message with MarkdownV2 formatting
-    return `*Whale Buy Alert*
-
-*Token:* ${tokenNameEscaped} \\(${tokenSymbolEscaped}\\)
-*Chain:* Solana
-*CA:* \`${contractAddressEscaped}\`
-
-💰 *Buy Amount:* ${buyAmountEscaped}
-🔥 *Hotness Score:* ${hotnessScoreEscaped}/10
-🏷️ *Wallet Label:* ${walletLabelsEscaped}
-
-⏰ *Time:* ${timeEscaped}
-
-🔗 [View Transaction](${txLink})
-⚡ [Quick Buy](${quickBuyLink})
-
-🐋`
-  } catch (error) {
-    // If MarkdownV2 formatting fails, fall back to plain text
-    const formattedBuyAmount = formatLargeNumber(tx.buyAmountUSD)
-    const hotnessScoreFormatted = tx.hotnessScore % 1 === 0
-      ? tx.hotnessScore.toFixed(0)
-      : tx.hotnessScore.toFixed(1)
-    const walletLabelsText = tx.walletLabels.length > 0
-      ? tx.walletLabels.join(', ')
-      : 'Unknown'
+    // Plain text formatting (no MarkdownV2 escaping)
+    const formattedBuyAmount = `$${formatLargeNumber(tx.buyAmountUSD)}`
+    const hotnessScoreFormatted =
+      tx.hotnessScore % 1 === 0
+        ? tx.hotnessScore.toFixed(0)
+        : tx.hotnessScore.toFixed(1)
+    const walletLabelsText =
+      tx.walletLabels.length > 0 ? tx.walletLabels.join(' / ') : 'Unknown'
 
     const date = new Date(tx.timestamp)
     const hours = date.getUTCHours().toString().padStart(2, '0')
     const minutes = date.getUTCMinutes().toString().padStart(2, '0')
     const timeFormatted = `${hours}:${minutes} UTC`
 
-    const txLink = generateTransactionLink(tx.txHash)
-    const quickBuyLink = generateQuickBuyLink(tx.tokenAddress)
+    const txLink = `https://app.alpha-block.ai/transaction/${tx.txHash}`
+    const tokenLink = generateTokenLink(tx.tokenAddress)
 
-    return `Whale Buy Alert
+    return `🐋 Whale Buy Alert
 
 Token: ${tx.tokenName} (${tx.tokenSymbol})
 Chain: Solana
 CA: ${tx.tokenAddress}
 
-💰 Buy Amount: ${formattedBuyAmount}
-🔥 Hotness Score: ${hotnessScoreFormatted}/10
-🏷️ Wallet Label: ${walletLabelsText}
+Buy Amount: ${formattedBuyAmount}
+Hotness Score: ${hotnessScoreFormatted}/10
+Wallet Label: ${walletLabelsText}
+Transaction Time: ${timeFormatted}
 
-⏰ Time: ${timeFormatted}
+Transaction Detail: ${txLink}
+View Token: ${tokenLink}`
+  } catch (error) {
+    const formattedBuyAmount = `$${formatLargeNumber(tx.buyAmountUSD)}`
+    const hotnessScoreFormatted =
+      tx.hotnessScore % 1 === 0
+        ? tx.hotnessScore.toFixed(0)
+        : tx.hotnessScore.toFixed(1)
+    const walletLabelsText =
+      tx.walletLabels.length > 0 ? tx.walletLabels.join(' / ') : 'Unknown'
 
-🔗 View Transaction: ${txLink}
-⚡ Quick Buy: ${quickBuyLink}
+    const date = new Date(tx.timestamp)
+    const hours = date.getUTCHours().toString().padStart(2, '0')
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0')
+    const timeFormatted = `${hours}:${minutes} UTC`
 
-🐋`
+    const txLink = `https://app.alpha-block.ai/transaction/${tx.txHash}`
+    const tokenLink = generateTokenLink(tx.tokenAddress)
+
+    return `🐋 Whale Buy Alert
+
+Token: ${tx.tokenName} (${tx.tokenSymbol})
+Chain: Solana
+CA: ${tx.tokenAddress}
+
+Buy Amount: ${formattedBuyAmount}
+Hotness Score: ${hotnessScoreFormatted}/10
+Wallet Label: ${walletLabelsText}
+Transaction Time: ${timeFormatted}
+
+Transaction Detail: ${txLink}
+View Token: ${tokenLink}`
   }
 }

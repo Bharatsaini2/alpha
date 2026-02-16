@@ -1,0 +1,20 @@
+export const CORE_TOKENS: ReadonlySet<string> = new Set<string>([
+  'So11111111111111111111111111111111111111112',
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+])
+
+export const SOL_MINT = 'So11111111111111111111111111111111111111112'
+
+export const SOL_EQUIVALENTS: ReadonlySet<string> = new Set<string>([
+  SOL_MINT,
+  'So11111111111111111111111111111111111111111',
+  'J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn',
+  '7dHbWXmci3dT8UFYWYZweBLXgycu7Y3iL6trKn1Y7ARj',
+])
+
+export const SYSTEM_ACCOUNTS: ReadonlySet<string> = new Set<string>([
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  '11111111111111111111111111111111',
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+])

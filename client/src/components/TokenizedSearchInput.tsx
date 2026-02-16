@@ -3,13 +3,19 @@ import React, {
   useCallback,
   useRef,
   useEffect,
+  useMemo,
   useImperativeHandle,
 } from "react"
 import { Copy, Search, X, Clock, Trash2 } from "lucide-react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faSearch } from "@fortawesome/free-solid-svg-icons"
 import axios from "axios"
 import fallbackImage from "../assets/default_token.svg"
 import { useToast } from "../contexts/ToastContext"
-import { useSearchHistory } from "../hooks/useSearchHistory"
+import { useRecentSearches } from "../hooks/useRecentSearches"
+
+const SUGGESTIONS_BASE_URL =
+  import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"
 
 interface SearchToken {
   id: string
@@ -47,7 +53,10 @@ interface TokenizedSearchInputProps {
   placeholder?: string
   className?: string
   coinOnly?: boolean
-  page?: string // Page identifier for search history
+  page?: string // Page identifier for recent searches (e.g. "home" => alpha)
+  transactions?: any[] // Already loaded transactions for frontend-only suggestions
+  /** When true, use original design: single input + search btn + dropdown (no token chips) */
+  simpleDesign?: boolean
   ref?: React.Ref<TokenizedSearchInputHandle>
 }
 
@@ -78,6 +87,8 @@ const TokenizedSearchInput = React.forwardRef<
       className = "",
       coinOnly = false,
       page = "home",
+      transactions = [],
+      simpleDesign = false,
     },
     ref
   ) => {
@@ -87,26 +98,75 @@ const TokenizedSearchInput = React.forwardRef<
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [selectedIndex, setSelectedIndex] = useState(-1)
     const [isComposing, setIsComposing] = useState(false)
-    const [isLoading, setIsLoading] = useState(false)
-    const [showHistory, setShowHistory] = useState(false)
+    const [showRecent, setShowRecent] = useState(false)
     const { showToast } = useToast()
     const inputRef = useRef<HTMLInputElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    // Search history hook
-    const { history, saveSearch, deleteHistoryItem, clearHistory } =
-      useSearchHistory({
-        page,
-        enabled: true,
-      })
+    const { recent, addRecent, clearRecent, removeRecent } = useRecentSearches(
+      page === "kol-feed" ? "kol" : "alpha"
+    )
+
+    // Unique tokens from transactions (frontend-only search source)
+    const uniqueTokensFromTx = useMemo(() => {
+      const map = new Map<string, Suggestion>()
+      for (const tx of transactions) {
+        const add = (
+          address: string | undefined,
+          symbol: string | undefined,
+          name: string | undefined,
+          imageUrl: string | undefined
+        ) => {
+          if (!address) return
+          const key = address.toLowerCase()
+          if (map.has(key)) return
+          map.set(key, {
+            type: "coin",
+            label: symbol || name || address,
+            sublabel: name && symbol ? name : undefined,
+            address,
+            symbol,
+            name,
+            imageUrl,
+          })
+        }
+        const tokenIn = tx.transaction?.tokenIn
+        const tokenOut = tx.transaction?.tokenOut
+        if (tokenIn && tx.tokenInAddress) {
+          add(
+            tx.tokenInAddress,
+            tokenIn.symbol ?? tx.tokenInSymbol,
+            tokenIn.name,
+            tx.inTokenURL
+          )
+        }
+        if (tokenOut && tx.tokenOutAddress) {
+          add(
+            tx.tokenOutAddress,
+            tokenOut.symbol ?? tx.tokenOutSymbol,
+            tokenOut.name,
+            tx.outTokenURL
+          )
+        }
+      }
+      return Array.from(map.values())
+    }, [transactions])
 
     // Expose clear method to parent component
     useImperativeHandle(ref, () => ({
       clearAllTokens: () => {
         setSearchTokens([])
         setInputValue("")
-        executeSearch([])
-        // Focus back to input
+        if (simpleDesign) {
+          onSearch({
+            searchQuery: "",
+            searchType: null,
+            tokens: [],
+            displayQuery: "",
+          })
+        } else {
+          executeSearch([])
+        }
         setTimeout(() => inputRef.current?.focus(), 0)
       },
     }))
@@ -263,20 +323,18 @@ const TokenizedSearchInput = React.forwardRef<
         else if (hasWhales && !hasCoins) searchType = "whale"
       }
 
-      // Save to search history if we have a valid search
+      // Save to localStorage recent searches (max 10)
       if (searchQuery.trim() && searchType) {
-        // Prepare token data for history
-        const tokenData = tokens.map((token) => ({
-          value: token.value,
-          type: token.type,
-          label: token.label,
-          imageUrl: token.imageUrl,
-          symbol: token.symbol,
-          name: token.name,
-          address: token.address,
-        }))
-
-        saveSearch(searchQuery, searchType, tokenData)
+        tokens.slice(0, 10).forEach((token) => {
+          addRecent({
+            type: "token",
+            label: token.label,
+            symbol: token.symbol,
+            name: token.name,
+            address: token.address,
+            imageUrl: token.imageUrl,
+          })
+        })
       }
 
       onSearch({
@@ -287,126 +345,69 @@ const TokenizedSearchInput = React.forwardRef<
       })
     }
 
-    // Fetch suggestions (debounced)
-    const debouncedFetchSuggestions = useCallback(
+    // Suggestions: backend (all coins in DB) + frontend (loaded tx) merged, debounced 300ms
+    const debouncedSetSuggestions = useCallback(
       debounce(async (query: string) => {
-        if (query.length < 2) {
+        const q = query.trim()
+        if (q.length < 1) {
           setSuggestions([])
-          setIsLoading(false)
           return
         }
+        const qLower = q.toLowerCase()
+        const isLikelyAddress =
+          q.length >= 20 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(q)
 
-        setIsLoading(true)
-
-        try {
-          const BASE_URL =
-            import.meta.env.VITE_SERVER_URL || "http://localhost:9090"
-
-          let response
-          if (coinOnly) {
-            // Use dedicated coin suggestions endpoint
-            response = await axios.get(
-              `${BASE_URL}/whale/coin-suggestions?q=${encodeURIComponent(query)}&limit=20`
-            )
-
-            if (response.status !== 200) return
-            const apiSuggestions = response.data?.suggestions || []
-
-            setSuggestions(apiSuggestions)
-            return
-          } else {
-            // Use original whale transactions endpoint
-            response = await axios.get(
-              `${BASE_URL}/whale/whale-transactions?search=${encodeURIComponent(query)}&limit=8&searchType=all`
-            )
-
-            if (response.status !== 200) return
-            const txs = response.data?.transactions || []
-
-            // Whale suggestions
-            const whaleSugs: Suggestion[] = txs
-              .map((tx: any) => {
-                const w = tx.whale || {}
-                const address = w.address || tx.whaleAddress
-                const name = w.name
-                const label = name || address
-                if (!address || !label) return null
-                return {
-                  type: "whale",
-                  label,
-                  sublabel: name
-                    ? address
-                    : w.labels?.[0] || tx.whaleLabel?.[0],
-                  address,
-                  name,
-                  imageUrl: tx.whaleImageUrl || w.imageUrl,
-                }
-              })
-              .filter(Boolean)
-
-            // Coin suggestions (from both sides)
-            const coinSugs: Suggestion[] = txs.flatMap((tx: any) => {
-              const items = []
-              const sellSide = tx.type === "sell"
-              const sideA = sellSide
-                ? tx.transaction?.tokenIn
-                : tx.transaction?.tokenOut
-              const sideB = !sellSide
-                ? tx.transaction?.tokenIn
-                : tx.transaction?.tokenOut
-
-              for (const side of [sideA, sideB]) {
-                if (!side) continue
-                const symbol = side.symbol
-                const name = side.name
-                const address = side.address
-                if (!(symbol || name || address)) continue
-                items.push({
-                  type: "coin",
-                  label: symbol || name || address,
-                  sublabel: name && symbol ? `${name}` : address,
-                  address,
-                  symbol,
-                  name,
-                  imageUrl: side.imageUrl,
-                } as Suggestion)
-              }
-              return items
-            })
-
-            // Deduplicate separately per type
-            const uniq = (
-              arr: Suggestion[],
-              key: (s: Suggestion) => string
-            ) => {
-              const seen = new Set<string>()
-              return arr.filter((s) => {
-                const k = key(s)
-                if (!k || seen.has(k)) return false
-                seen.add(k)
-                return true
-              })
-            }
-
-            const uniqueWhales = uniq(
-              whaleSugs as Suggestion[],
-              (s) => s.address || s.label
-            )
-            const uniqueCoins = uniq(
-              coinSugs as Suggestion[],
-              (s) => s.symbol || s.address || s.label
-            )
-
-            setSuggestions([...uniqueWhales, ...uniqueCoins])
+        // 1) Instant: frontend filter from loaded transactions
+        const fromFrontend = uniqueTokensFromTx.filter((s) => {
+          const name = (s.name || "").toLowerCase()
+          const symbol = (s.symbol || "").toLowerCase()
+          const label = (s.label || "").toLowerCase()
+          const address = (s.address || "").toLowerCase()
+          if (isLikelyAddress) return address.includes(qLower) || address === qLower
+          return (
+            name.includes(qLower) ||
+            symbol.includes(qLower) ||
+            label.includes(qLower) ||
+            address.includes(qLower)
+          )
+        })
+        const seen = new Set<string>()
+        const merged: Suggestion[] = []
+        fromFrontend.slice(0, 20).forEach((s) => {
+          const key = (s.address || "").toLowerCase()
+          if (key && !seen.has(key)) {
+            seen.add(key)
+            merged.push(s)
           }
-        } catch (error) {
-          console.error("Error fetching suggestions:", error)
-          setSuggestions([])
-        } finally {
-          setIsLoading(false)
+        })
+
+        // 2) Backend: fetch all matching coins from API (searches full token set)
+        try {
+          const res = await axios.get(
+            `${SUGGESTIONS_BASE_URL}/whale/coin-suggestions?q=${encodeURIComponent(q)}&limit=30`
+          )
+          const apiList = res.data?.suggestions || []
+          apiList.forEach((s: any) => {
+            const key = (s.address || "").toLowerCase()
+            if (!key || seen.has(key)) return
+            seen.add(key)
+            merged.push({
+              type: "coin",
+              label: s.symbol || s.name || s.address,
+              sublabel: s.name && s.symbol ? s.name : s.address,
+              address: s.address,
+              symbol: s.symbol,
+              name: s.name,
+              imageUrl: s.imageUrl,
+            })
+          })
+        } catch (err) {
+          console.error("Coin suggestions fetch failed:", err)
         }
+
+        setSuggestions(merged.slice(0, 30))
       }, 300),
-      []
+      [uniqueTokensFromTx]
     )
 
     // Handle input change
@@ -415,15 +416,15 @@ const TokenizedSearchInput = React.forwardRef<
       setInputValue(value)
 
       if (value.trim() && !isComposing) {
-        debouncedFetchSuggestions(value.trim())
+        debouncedSetSuggestions(value.trim())
         setShowSuggestions(true)
-        setShowHistory(false)
+        setShowRecent(false)
       } else if (!value.trim()) {
         setShowSuggestions(false)
-        setShowHistory(true) // Show history when input is empty
+        setShowRecent(true)
       } else {
         setShowSuggestions(false)
-        setShowHistory(false)
+        setShowRecent(false)
       }
 
       setSelectedIndex(-1)
@@ -542,21 +543,41 @@ const TokenizedSearchInput = React.forwardRef<
 
     // Handle suggestion selection
     const handleSuggestionClick = (suggestion: Suggestion) => {
+      if (simpleDesign) {
+        addRecent({
+          type: "token",
+          label: suggestion.label,
+          symbol: suggestion.symbol,
+          name: suggestion.name,
+          address: suggestion.address,
+          imageUrl: suggestion.imageUrl,
+        })
+        const searchValue = suggestion.address || suggestion.label
+        onSearch({
+          searchQuery: searchValue,
+          searchType: "coin",
+          tokens: [{ value: searchValue, type: "coin" }],
+          displayQuery: suggestion.label,
+        })
+        setInputValue("")
+        setShowSuggestions(false)
+        setShowRecent(false)
+        return
+      }
       addToken(suggestion.label, suggestion)
     }
 
     // Handle input focus
     const handleInputFocus = () => {
-      if (!inputValue.trim() && history.length > 0) {
-        setShowHistory(true)
+      if (!inputValue.trim() && recent.length > 0) {
+        setShowRecent(true)
       }
     }
 
     // Handle input blur
     const handleInputBlur = () => {
-      // Delay hiding to allow for suggestion clicks
       setTimeout(() => {
-        setShowHistory(false)
+        setShowRecent(false)
       }, 200)
     }
 
@@ -568,7 +589,7 @@ const TokenizedSearchInput = React.forwardRef<
           !containerRef.current.contains(event.target as Node)
         ) {
           setShowSuggestions(false)
-          setShowHistory(false)
+          setShowRecent(false)
           setSelectedIndex(-1)
         }
       }
@@ -587,6 +608,142 @@ const TokenizedSearchInput = React.forwardRef<
         default:
           return "border border-white/70 bg-black"
       }
+    }
+
+    // Original design: single input + search button + dropdown
+    if (simpleDesign) {
+      const showDropdown = showRecent || (showSuggestions && suggestions.length > 0)
+      return (
+        <div ref={containerRef} className={`relative ${className}`}>
+          <form
+            className="custom-frm-bx mb-0"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (inputValue.trim()) {
+                onSearch({
+                  searchQuery: inputValue.trim(),
+                  searchType: "coin",
+                  tokens: [{ value: inputValue.trim(), type: "coin" }],
+                  displayQuery: inputValue.trim(),
+                })
+                setInputValue("")
+                setShowSuggestions(false)
+                setShowRecent(false)
+              }
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              className="form-control pe-5"
+              placeholder={placeholder}
+              value={inputValue}
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
+            />
+            <div className="searching-bx">
+              <button className="search-btn" type="submit">
+                <FontAwesomeIcon icon={faSearch} />
+              </button>
+              {inputValue && (
+                <button
+                  type="button"
+                  className="clear-input-btn"
+                  onClick={() => {
+                    setInputValue("")
+                    setShowSuggestions(false)
+                    setShowRecent(false)
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </form>
+
+          {showDropdown && (
+            <div className="dropdown-options">
+              {showRecent && recent.length > 0 && (
+                <>
+                  <div className="dropdown-header all-data-clear d-flex justify-content-between align-items-center w-100 flex-nowrap" style={{ gap: "12px" }}>
+                    <span className="text-muted small flex-shrink-0 text-nowrap">Recent searches</span>
+                    <button
+                      type="button"
+                      className="quick-nw-btn flex-shrink-0"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        clearRecent()
+                      }}
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <ul className="dropdown-scroll">
+                    {recent.slice(0, 10).map((item) => (
+                      <li
+                        key={item.id}
+                        className="dropdown-item d-flex align-items-start"
+                        onClick={() => {
+                          if (item.type === "token" && (item.address || item.label)) {
+                            onSearch({
+                              searchQuery: item.address || item.label,
+                              searchType: "coin",
+                              tokens: [{ value: item.address || item.label, type: "coin" }],
+                              displayQuery: item.label,
+                            })
+                          }
+                          setInputValue("")
+                          setShowRecent(false)
+                        }}
+                      >
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt="" className="dropdown-img" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage }} />
+                        ) : (
+                          <div className="dropdown-img d-flex align-items-center justify-content-center" style={{ width: "32px", height: "32px", background: "#1a1a1a", borderRadius: "50%", color: "#888" }}>
+                            🪙
+                          </div>
+                        )}
+                        <div className="dropdown-content flex-grow-1">
+                          <h6 className="dropdown-title">{item.label}</h6>
+                          <p className="dropdown-desc">
+                            {item.symbol || (item.address ? `${item.address.slice(0, 6)}...${item.address.slice(-4)}` : "")}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {showSuggestions && suggestions.length > 0 && !showRecent && (
+                <ul className="dropdown-scroll">
+                  {suggestions.map((s, i) => (
+                    <li
+                      key={`${s.address}-${i}`}
+                      className="dropdown-item d-flex align-items-start"
+                      onClick={() => handleSuggestionClick(s)}
+                    >
+                      <img src={s.imageUrl || fallbackImage} alt="" className="dropdown-img" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage }} />
+                      <div className="dropdown-content flex-grow-1">
+                        <h6 className="dropdown-title">{s.label}</h6>
+                        <p className="dropdown-desc">{s.sublabel || (s.address ? `${s.address.slice(0, 6)}...${s.address.slice(-4)}` : "")}</p>
+                        {s.address && (
+                          <span className="dropdown-id">
+                            <span className="cpy-title">CA:</span> {s.address.length > 20 ? `${s.address.slice(0, 8)}...${s.address.slice(-6)}` : s.address}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      )
     }
 
     return (
@@ -642,12 +799,6 @@ const TokenizedSearchInput = React.forwardRef<
                 className="flex-1 bg-transparent text-white placeholder-white/60 outline-none min-w-[120px]"
               />
 
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="absolute right-12 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                </div>
-              )}
             </div>
 
             {/* Clear all button */}
@@ -662,63 +813,57 @@ const TokenizedSearchInput = React.forwardRef<
             )}
           </div>
 
-          {/* Search History dropdown */}
-          {showHistory && history.length > 0 && (
+          {/* Recent searches (localStorage, max 10) */}
+          {showRecent && recent.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
-              <div className="px-4 py-2 border-b border-[#2B2B2D]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-400 text-sm">
-                    <Clock size={16} />
-                    <span>Recent searches</span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      clearHistory()
-                    }}
-                    className="text-gray-400 hover:text-red-400 text-xs transition-all px-2 py-1 rounded hover:bg-red-400/10 cursor-pointer"
-                    title="Clear all history"
-                  >
-                    Clear All
-                  </button>
+              <div className="px-4 py-2 border-b border-[#2B2B2D] d-flex justify-content-between align-items-center flex-nowrap" style={{ gap: "12px", minWidth: 0 }}>
+                <div className="d-flex align-items-center gap-2 text-gray-400 text-sm flex-shrink-0 min-w-0">
+                  <Clock size={16} className="flex-shrink-0" />
+                  <span className="text-nowrap">Recent searches</span>
                 </div>
-              </div>
-              {history.slice(0, 10).map((item) => (
                 <button
-                  key={item._id}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    clearRecent()
+                  }}
+                  className="text-gray-400 hover:text-red-400 text-xs transition-all px-2 py-1 rounded hover:bg-red-400/10 cursor-pointer flex-shrink-0"
+                  title="Clear all"
+                >
+                  Clear All
+                </button>
+              </div>
+              {recent.slice(0, 10).map((item) => (
+                <button
+                  key={item.id}
                   onClick={() => {
-                    // If item has tokens, restore all tokens; otherwise use query
-                    if (item.tokens && item.tokens.length > 0) {
-                      // Restore all tokens from history
-                      const historyTokens = item.tokens.map((token) => ({
-                        id: `${token.value}-${Date.now()}-${Math.random()}`,
-                        value: token.value,
-                        type: token.type as "coin" | "whale" | "mixed",
-                        label: token.label,
+                    if (item.type === "token" && (item.address || item.label)) {
+                      const token: SearchToken = {
+                        id: generateTokenId(),
+                        value: item.address || item.label,
+                        type: "coin",
+                        label: item.label,
                         isValid: true,
-                        imageUrl: token.imageUrl,
-                        symbol: token.symbol,
-                        name: token.name,
-                        address: token.address,
-                      }))
-                      setSearchTokens(historyTokens)
-                      executeSearch(historyTokens)
+                        imageUrl: item.imageUrl,
+                        symbol: item.symbol,
+                        name: item.name,
+                        address: item.address,
+                      }
+                      setSearchTokens([token])
+                      executeSearch([token])
                     } else {
-                      // Fallback to old behavior
-                      addToken(item.query)
+                      addToken(item.label)
                     }
-                    setShowHistory(false)
+                    setShowRecent(false)
                   }}
                   className="w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] last:border-b-0 hover:bg-[#1A1A1A] text-white cursor-pointer group"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
-                        {item.tokens && item.tokens.length > 0 ? (
-                          // Show first token's image if available
+                        {item.imageUrl ? (
                           <img
-                            src={item.tokens[0].imageUrl || fallbackImage}
-                            alt={item.tokens[0].label}
+                            src={item.imageUrl}
+                            alt={item.label}
                             className="w-8 h-8 md:w-10 md:h-10 rounded-[5px] border border-[#2B2B2D]"
                             style={{ objectFit: "cover" }}
                             onError={(e) => {
@@ -728,40 +873,29 @@ const TokenizedSearchInput = React.forwardRef<
                           />
                         ) : (
                           <div className="w-8 h-8 rounded-full border border-[#2B2B2D] bg-[#1A1A1A] flex items-center justify-center">
-                            <span className="text-xs">
-                              {item.searchType === "coin"
-                                ? "🪙"
-                                : item.searchType === "whale"
-                                  ? "🐋"
-                                  : "🔍"}
-                            </span>
+                            <span className="text-xs">🪙</span>
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-sm text-white truncate">
-                          {item.tokens && item.tokens.length > 0
-                            ? item.tokens.map((token) => token.label).join(", ")
-                            : item.query}
+                          {item.label}
                         </div>
-                        {item.tokens && item.tokens.length > 0 && (
-                          <div className="text-gray-400 text-xs">
-                            {item.tokens[0].symbol ||
-                              item.tokens[0].address?.slice(0, 8) + "..."}
-                          </div>
-                        )}
                         <div className="text-gray-400 text-xs">
-                          {new Date(item.lastUsed).toLocaleDateString()}
+                          {item.symbol ||
+                            (item.address
+                              ? `${item.address.slice(0, 6)}...${item.address.slice(-4)}`
+                              : item.username || "")}
                         </div>
                       </div>
                     </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        deleteHistoryItem(item._id)
+                        removeRecent(item.id)
                       }}
                       className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all p-1"
-                      title="Remove from history"
+                      title="Remove"
                     >
                       <Trash2 size={14} />
                     </button>

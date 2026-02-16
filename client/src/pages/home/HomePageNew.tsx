@@ -10,17 +10,16 @@ import {
   faClose,
   faFilter,
   faPaperPlane,
-  faSearch,
   faCheck,
-  faClock,
-  faTrash,
 } from "@fortawesome/free-solid-svg-icons"
 import { PiMagicWand } from "react-icons/pi"
 import { formatNumber } from "../../utils/FormatNumber"
 import { formatAge } from "../../utils/formatAge"
 import { useToast } from "../../contexts/ToastContext"
 import DefaultTokenImage from "../../assets/default_token.svg"
-import { useSearchHistory } from "../../hooks/useSearchHistory"
+import TokenizedSearchInput, {
+  TokenizedSearchInputHandle,
+} from "../../components/TokenizedSearchInput"
 import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
@@ -254,7 +253,6 @@ const HomePageNew = () => {
     () => loadQuickBuyAmount() || "0"
   )
   const [quickBuyAmountError, setQuickBuyAmountError] = useState<string>("")
-  const [searchQuery, setSearchQuery] = useState("")
   const [isSwapModalOpen, setIsSwapModalOpen] = useState(false)
   const [swapTokenInfo, setSwapTokenInfo] = useState<any>(null)
   const { showToast } = useToast()
@@ -287,6 +285,7 @@ const HomePageNew = () => {
         return {
           searchQuery: "",
           searchType: null as "coin" | "whale" | "all" | null,
+          displayQuery: "" as string,
           hotness: null as string | null,
           transactionType: null as string | null,
           tags: [] as string[],
@@ -301,6 +300,7 @@ const HomePageNew = () => {
     return {
       searchQuery: "",
       searchType: null as "coin" | "whale" | "all" | null,
+      displayQuery: "" as string,
       hotness: null as string | null,
       transactionType: null as string | null,
       tags: [] as string[],
@@ -745,181 +745,25 @@ const HomePageNew = () => {
   //     document.addEventListener("click", handleClickOutside)
   //     return () => document.removeEventListener("click", handleClickOutside)
   // }, [])
-  const searchRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(event.target as Node)
-      ) {
-        setShowDropdown(false)
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
-
   const quickBuyInputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<TokenizedSearchInputHandle>(null)
 
-  // Extract unique tokens from transactions for autocomplete
-  const uniqueTokenOptions = React.useMemo(() => {
-    const uniqueTokens = new Map()
-
-    transactions.forEach((tx) => {
-      // Check both tokenIn (sell) and tokenOut (buy)
-      if (tx.transaction?.tokenIn) {
-        const address = tx.tokenInAddress
-        if (address && !uniqueTokens.has(address)) {
-          uniqueTokens.set(address, {
-            id: address,
-            titles: tx.transaction.tokenIn.symbol,
-            descriptions: tx.transaction.tokenIn.name || "Unknown Token",
-            images: tx.inTokenURL || DefaultTokenImage,
-          })
-        }
-      }
-
-      if (tx.transaction?.tokenOut) {
-        const address = tx.tokenOutAddress
-        if (address && !uniqueTokens.has(address)) {
-          uniqueTokens.set(address, {
-            id: address,
-            titles: tx.transaction.tokenOut.symbol,
-            descriptions: tx.transaction.tokenOut.name || "Unknown Token",
-            images: tx.outTokenURL || DefaultTokenImage,
-          })
-        }
-      }
-    })
-
-    return Array.from(uniqueTokens.values())
-  }, [transactions])
-
-  const [filteredOptions, setFilteredOptions] = useState<any[]>([])
-  const [showDropdown, setShowDropdown] = useState(false)
-
-  // Search History Hook
-  const { history, saveSearch, clearHistory, deleteHistoryItem } =
-    useSearchHistory({ page: "home" })
-
-  // Map history to options format
-  const historyOptions = React.useMemo(() => {
-    return history.map((item) => {
-      if (item.tokens && item.tokens.length > 0) {
-        const token = item.tokens[0]
-        return {
-          id: token.address || item._id,
-          titles: token.symbol || item.query,
-          descriptions: token.name || "Token",
-          images: token.imageUrl || DefaultTokenImage,
-          isHistory: true,
-          historyId: item._id,
-          query: item.query,
-        }
-      }
-      return {
-        id: item._id,
-        titles: item.query,
-        descriptions: "Recent Search",
-        images: null, // Will handle in render
-        isHistory: true,
-        historyId: item._id,
-        query: item.query,
-      }
-    })
-  }, [history])
-
-  // Update filtered options when history changes and input is empty
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredOptions(historyOptions)
-      if (showDropdown && historyOptions.length === 0) {
-        setShowDropdown(false)
-      }
-    }
-  }, [historyOptions, searchQuery, showDropdown])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-
-    // If there's a search query, apply it as a filter
-    if (searchQuery.trim()) {
-      // Save to history
-      saveSearch(searchQuery.trim(), "all")
-
-      // Update active filters with the search query
-      setActiveFilters({
-        ...activeFilters,
-        searchQuery: searchQuery.trim(),
-        searchType: "all",
-      })
-
-      // Clear the input field after searching
-      setSearchQuery("")
-
-      // Close dropdown
-      setShowDropdown(false)
-    }
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value
-    setSearchQuery(value)
-
-    if (value.trim() === "") {
-      setFilteredOptions(historyOptions)
-      setShowDropdown(historyOptions.length > 0)
-      return
-    }
-
-    const filtered = uniqueTokenOptions
-      .filter(
-        (option) =>
-          option.titles?.toLowerCase()?.includes(value?.toLowerCase()) ||
-          option.id?.toLowerCase()?.includes(value?.toLowerCase()) ||
-          option.descriptions?.toLowerCase()?.includes(value?.toLowerCase())
-      )
-      .slice(0, 10) // Limit to 10 results
-
-    setFilteredOptions(filtered)
-    setShowDropdown(filtered.length > 0)
-  }
-
-  const handleSelect = (option: any) => {
-    // Save to history if it's not already a history item
-    if (!option.isHistory) {
-      saveSearch(option.titles, "coin", [
-        {
-          value: option.id,
-          type: "coin",
-          label: option.titles,
-          symbol: option.titles,
-          name: option.descriptions,
-          address: option.id,
-          imageUrl: option.images,
-        },
-      ])
-    }
-
-    // Apply the selected option as a search filter
+  const handleUnifiedSearch = (searchData: {
+    searchQuery: string
+    searchType: "coin" | "whale" | "all" | null
+    tokens: Array<{ value: string; type: string }>
+    displayQuery?: string
+  }) => {
     setActiveFilters({
       ...activeFilters,
-      searchQuery: option.titles,
-      searchType: "all",
+      searchQuery: searchData.searchQuery || "",
+      searchType: searchData.searchQuery ? searchData.searchType : null,
+      displayQuery:
+        searchData.displayQuery || searchData.searchQuery || "",
     })
-
-    // Clear input and close dropdown
-    setSearchQuery("")
-    setShowDropdown(false)
-  }
-
-  const handleClearInput = () => {
-    setSearchQuery("")
-    setShowDropdown(false)
+    setCurrentPage(1)
+    setTransactions([])
+    setHasMore(true)
   }
 
   const [triggerOpen, setTriggerOpen] = useState(false)
@@ -962,6 +806,14 @@ const HomePageNew = () => {
   }
 
   const [isSaved, setIsSaved] = useState(false)
+  const [showConfigSavedModal, setShowConfigSavedModal] = useState(false)
+  const [savedConfig, setSavedConfig] = useState<{
+    hotness: number
+    amount: string
+    walletTypes: string[]
+    minMarketCap: number
+    maxMarketCap: number
+  } | null>(null)
 
   const [hotness, setHotness] = useState(10)
 
@@ -1067,12 +919,19 @@ const HomePageNew = () => {
           )
 
           if (response.data.success) {
-            setIsSaved(true)
+            setOpenDropdown(null)
+            setSavedConfig({
+              hotness,
+              amount,
+              walletTypes,
+              minMarketCap,
+              maxMarketCap,
+            })
+            setShowConfigSavedModal(true)
             showToast(
               "Whale alert subscription created successfully!",
               "success"
             )
-            setTimeout(() => setIsSaved(false), 3000)
           }
         } catch (error: any) {
           console.error("Whale alert subscription error:", error)
@@ -1129,160 +988,17 @@ const HomePageNew = () => {
               className="d-flex align-items-center mobile-searching-bx"
               style={{ marginBottom: "16px", gap: "12px" }}
             >
-              {/* <form className="custom-frm-bx flex-grow-1" onSubmit={handleSearch}>
-                                <input
-                                    type="text"
-                                    className="form-control pe-5"
-                                    placeholder="Search by token name or address..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                <div className="searching-bx">
-                                    <button className="search-btn" type="submit">
-                                        <FontAwesomeIcon icon={faSearch} />
-                                    </button>
-                                </div>
-                            </form> */}
-
-              <div className="search-container flex-grow-1" ref={searchRef}>
-                <form className="custom-frm-bx mb-0" onSubmit={handleSearch}>
-                  <input
-                    type="text"
-                    className="form-control pe-5"
-                    placeholder="Search by token name or address..."
-                    value={searchQuery}
-                    onChange={handleChange}
-                    onFocus={() => {
-                      if (searchQuery.trim() === "") {
-                        setFilteredOptions(historyOptions)
-                        setShowDropdown(historyOptions.length > 0)
-                      } else {
-                        setShowDropdown(filteredOptions.length > 0)
-                      }
-                    }}
-                  />
-
-                  <div className="searching-bx">
-                    <button className="search-btn" type="submit">
-                      <FontAwesomeIcon icon={faSearch} />
-                    </button>
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        className="clear-input-btn"
-                        onClick={handleClearInput}
-                      >
-                        ×
-                      </button>
-                    )}
-                  </div>
-                </form>
-
-                {showDropdown && (
-                  <div className="dropdown-options">
-                    {/* Only show Clear All if viewing history (empty query) */}
-                    {searchQuery.trim() === "" &&
-                    filteredOptions.length > 0 &&
-                    filteredOptions[0].isHistory ? (
-                      <div className="dropdown-header text-end all-data-clear">
-                        <button
-                          className="quick-nw-btn"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            clearHistory()
-                          }}
-                        >
-                          Clear All
-                        </button>
-                      </div>
-                    ) : (
-                      filteredOptions.some((item) => !item.isHistory) && (
-                        <div className="dropdown-header text-end all-data-clear">
-                          <button className="quick-nw-btn">Clear All</button>
-                        </div>
-                      )
-                    )}
-
-                    <ul className="dropdown-scroll">
-                      {filteredOptions.map((item, index) => (
-                        <li
-                          key={index}
-                          className="dropdown-item d-flex align-items-start"
-                          onClick={() => handleSelect(item)}
-                        >
-                          {item.images ? (
-                            <img
-                              src={item.images}
-                              alt=""
-                              className="dropdown-img"
-                            />
-                          ) : (
-                            <div
-                              className="dropdown-img d-flex align-items-center justify-content-center"
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                background: "#1a1a1a",
-                                borderRadius: "50%",
-                                color: "#888",
-                              }}
-                            >
-                              <FontAwesomeIcon icon={faClock} />
-                            </div>
-                          )}
-
-                          <div className="dropdown-content flex-grow-1">
-                            <h6 className="dropdown-title">{item?.titles}</h6>
-                            <p className="dropdown-desc">
-                              {item?.descriptions}
-                            </p>
-                            {item?.id && !item.isHistory && (
-                              <span className="dropdown-id">
-                                <span className="cpy-title">CA:</span>
-                                {item?.id}
-                                <a
-                                  href="javascript:void(0)"
-                                  className="drop-cpy-btn ms-1"
-                                >
-                                  <FontAwesomeIcon icon={faCopy} />
-                                </a>
-                              </span>
-                            )}
-                          </div>
-
-                          {item.isHistory ? (
-                            <button
-                              className="dropdown-close"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (item.historyId) {
-                                  deleteHistoryItem(item.historyId)
-                                }
-                              }}
-                              title="Remove from history"
-                            >
-                              <FontAwesomeIcon
-                                icon={faTrash}
-                                style={{ fontSize: "12px" }}
-                              />
-                            </button>
-                          ) : (
-                            <button
-                              className="dropdown-close"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setShowDropdown(false)
-                              }}
-                            >
-                              ×
-                            </button>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+              <div className="search-container flex-grow-1">
+                <TokenizedSearchInput
+                  ref={searchInputRef}
+                  onSearch={handleUnifiedSearch}
+                  placeholder="Search by token name or address..."
+                  className="w-full"
+                  coinOnly={true}
+                  page="home"
+                  transactions={transactions}
+                  simpleDesign={true}
+                />
               </div>
 
               <div className="custom-frm-bx nw-quick-bx mb-0">
@@ -1615,6 +1331,7 @@ const HomePageNew = () => {
                                     if (!triggerOpen) {
                                       setWalletTypeOpen(false)
                                       setAmountOpen(false)
+                                      setMcapOpen(false)
                                     }
                                     setTriggerOpen(!triggerOpen)
                                   }}
@@ -1629,7 +1346,7 @@ const HomePageNew = () => {
                                     style={{ padding: '8px 12px' }}
                                   >
                                     <div style={{ textAlign: 'center' }}>
-                                      <div style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
+                                      <div className="range-value-mcap" style={{ fontSize: '14px', fontWeight: '600', marginBottom: '4px' }}>
                                         {hotness}
                                       </div>
                                       <div style={{ fontSize: '10px', color: '#8f8f8f', marginBottom: '8px' }}>
@@ -1643,7 +1360,7 @@ const HomePageNew = () => {
                                         onChange={(e) =>
                                           setHotness(Number(e.target.value))
                                         }
-                                        className="hotness-range"
+                                        className="hotness-range hotness-range-mcap"
                                         style={{
                                           width: '100%',
                                           "--range-progress": `${(hotness / 10) * 100}%`,
@@ -1666,6 +1383,7 @@ const HomePageNew = () => {
                                     if (!walletTypeOpen) {
                                       setTriggerOpen(false)
                                       setAmountOpen(false)
+                                      setMcapOpen(false)
                                     }
                                     setWalletTypeOpen(!walletTypeOpen)
                                   }}
@@ -1720,6 +1438,7 @@ const HomePageNew = () => {
                                     if (!amountOpen) {
                                       setTriggerOpen(false)
                                       setWalletTypeOpen(false)
+                                      setMcapOpen(false)
                                     }
                                     setAmountOpen(!amountOpen)
                                   }}
@@ -1810,63 +1529,6 @@ const HomePageNew = () => {
                                 )}
                               </div>
 
-                              {isSaved && (
-                                <div className="config-overlay">
-                                  <div className="config-modal">
-                                    <h3 className="config-title">
-                                      CONFIGURATION SAVED
-                                    </h3>
-
-                                    <div className="config-box">
-                                      <div className="config-row">
-                                        <span>Feed Type</span>
-                                        <span>Whale Alerts</span>
-                                      </div>
-
-                                      <div className="config-row">
-                                        <span>Min Score</span>
-                                        <span className="green">{hotness}</span>
-                                      </div>
-
-                                      <div className="config-row">
-                                        <span>Labels</span>
-                                        <span>
-                                          {walletTypes.join(", ") ||
-                                            "Any Label"}
-                                        </span>
-                                      </div>
-
-                                      <div className="config-row">
-                                        <span>Min Volume</span>
-                                        <span>{amount}</span>
-                                      </div>
-
-                                      <div className="config-row">
-                                        <span>Market Cap</span>
-                                        <span>{formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}</span>
-                                      </div>
-
-                                      <div className="config-row">
-                                        <span>Status</span>
-                                        <span className="green-dot">
-                                          Active <i></i>
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    <button
-                                      className="close-btn"
-                                      onClick={() => {
-                                        setIsSaved(false)
-                                        setOpenDropdown(null)
-                                      }}
-                                    >
-                                      CLOSE
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-
                               <button
                                 className="connect-wallet-btn"
                                 onClick={(e) => {
@@ -1885,7 +1547,7 @@ const HomePageNew = () => {
                                 {!wallet?.connected
                                   ? "Connect"
                                   : user?.telegramChatId
-                                    ? "Create"
+                                    ? "Activate"
                                     : "Connect"}
                                 <span className="corner top-right"></span>
                                 <span className="corner bottom-left"></span>
@@ -2045,15 +1707,25 @@ const HomePageNew = () => {
                         <div className="category-filtering-add">
                           <div className="category-filter-items">
                             <h6>
-                              Search: <span>{activeFilters.searchQuery}</span>
+                              Search:{" "}
+                              <span>
+                                {(activeFilters as any).displayQuery ||
+                                  activeFilters.searchQuery}
+                              </span>
                             </h6>
                             <span>
                               <a
                                 href="javascript:void(0)"
                                 className="filter-remv-btn"
-                                onClick={() =>
-                                  handleFilterUpdate("searchQuery", "")
-                                }
+                                onClick={() => {
+                                  setActiveFilters({
+                                    ...activeFilters,
+                                    searchQuery: "",
+                                    searchType: null,
+                                    displayQuery: "",
+                                  })
+                                  searchInputRef.current?.clearAllTokens()
+                                }}
                               >
                                 <FontAwesomeIcon icon={faClose} />
                               </a>
@@ -2541,6 +2213,67 @@ const HomePageNew = () => {
         initialOutputToken={swapTokenInfo}
         initialAmount={quickBuyAmount}
       />
+
+      {showConfigSavedModal && savedConfig && (
+        <div
+          className="config-overlay config-overlay-theme"
+          onClick={() => setShowConfigSavedModal(false)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="config-modal config-modal-theme"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="config-title config-title-theme">
+              CONFIGURATION SAVED
+            </h3>
+            <div className="config-box config-box-theme">
+              <div className="config-row">
+                <span>Feed Type</span>
+                <span>Whale Alerts</span>
+              </div>
+              <div className="config-row">
+                <span>Min Score</span>
+                <span className="green">{savedConfig.hotness}</span>
+              </div>
+              <div className="config-row">
+                <span>Labels</span>
+                <span>
+                  {savedConfig.walletTypes.join(", ") || "Any Label"}
+                </span>
+              </div>
+              <div className="config-row">
+                <span>Min Volume</span>
+                <span>{savedConfig.amount}</span>
+              </div>
+              <div className="config-row">
+                <span>Market Cap</span>
+                <span>
+                  {formatMarketCap(savedConfig.minMarketCap)} -{" "}
+                  {formatMarketCap(savedConfig.maxMarketCap)}
+                </span>
+              </div>
+              <div className="config-row">
+                <span>Status</span>
+                <span className="green-dot">
+                  Active <i></i>
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="close-btn close-btn-theme"
+              onClick={() => {
+                setShowConfigSavedModal(false)
+                setSavedConfig(null)
+              }}
+            >
+              CLOSE
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

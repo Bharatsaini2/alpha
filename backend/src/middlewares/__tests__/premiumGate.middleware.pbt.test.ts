@@ -4,15 +4,16 @@ import {
   PREMIUM_BALANCE_THRESHOLD,
   PremiumAccessResult,
 } from '../premiumGate.middleware'
-import { solConnection } from '../../config/solana-config'
+import { executeWithFallback } from '../../config/solana-config'
 import { redisClient } from '../../config/redis'
-import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { PublicKey } from '@solana/web3.js'
 
 // Mock dependencies
 jest.mock('../../config/solana-config', () => ({
   solConnection: {
     getBalance: jest.fn(),
   },
+  executeWithFallback: jest.fn(),
 }))
 
 jest.mock('../../config/redis', () => ({
@@ -37,9 +38,9 @@ describe('Premium Gate Middleware Property-Based Tests', () => {
   /**
    * **Feature: telegram-whale-alerts, Property 1: Premium access validation consistency**
    *
-   * For any wallet address and SOL balance query, if the balance is >= 0.0006 SOL,
+   * For any wallet address and ALPHA balance query, if the balance is >= threshold,
    * then premium access validation must return `hasAccess: true`, and if balance is
-   * < 0.0006 SOL, then validation must return `hasAccess: false`.
+   * < threshold, then validation must return `hasAccess: false`.
    *
    * **Validates: Requirements 1.2, 1.3**
    */
@@ -50,15 +51,19 @@ describe('Premium Gate Middleware Property-Based Tests', () => {
 
       await fc.assert(
         fc.asyncProperty(
-          // Generate random SOL balances (0 to 10 SOL)
-          fc.double({ min: 0, max: 10, noNaN: true }),
-          async (balanceInSOL) => {
+          // Generate random ALPHA balances (raw units, 6 decimals)
+          fc.integer({ min: 0, max: 1_000_000_000_000 }),
+          async (rawAmount) => {
             // Mock Redis cache miss (force blockchain query)
             jest.mocked(redisClient.get).mockResolvedValue(null)
 
-            // Mock Solana RPC balance query
-            const balanceInLamports = Math.floor(balanceInSOL * LAMPORTS_PER_SOL)
-            jest.mocked(solConnection.getBalance).mockResolvedValue(balanceInLamports)
+            // Mock ALPHA token balance query
+            jest.mocked(executeWithFallback).mockResolvedValue({
+              value: {
+                amount: rawAmount.toString(),
+                decimals: 6,
+              },
+            })
 
             // Mock Redis setex
             jest.mocked(redisClient.setex).mockResolvedValue('OK')
@@ -67,10 +72,11 @@ describe('Premium Gate Middleware Property-Based Tests', () => {
             const result = await validateSOLBalance(testWallet)
 
             // Verify consistency: hasAccess matches threshold comparison
-            const expectedAccess = balanceInSOL >= PREMIUM_BALANCE_THRESHOLD
+            const balanceInAlpha = rawAmount / 1_000_000
+            const expectedAccess = balanceInAlpha >= PREMIUM_BALANCE_THRESHOLD
 
             expect(result.hasAccess).toBe(expectedAccess)
-            expect(result.currentBalance).toBeCloseTo(balanceInSOL, 6)
+            expect(result.currentBalance).toBeCloseTo(balanceInAlpha, 6)
             expect(result.requiredBalance).toBe(PREMIUM_BALANCE_THRESHOLD)
 
             // If access denied, difference should be positive
@@ -78,7 +84,7 @@ describe('Premium Gate Middleware Property-Based Tests', () => {
               expect(result.difference).toBeDefined()
               expect(result.difference).toBeGreaterThan(0)
               expect(result.difference).toBeCloseTo(
-                PREMIUM_BALANCE_THRESHOLD - balanceInSOL,
+                PREMIUM_BALANCE_THRESHOLD - balanceInAlpha,
                 6,
               )
             } else {
@@ -99,16 +105,26 @@ describe('Premium Gate Middleware Property-Based Tests', () => {
       jest.mocked(redisClient.setex).mockResolvedValue('OK')
 
       // Test exactly at threshold
-      const exactThresholdLamports = Math.floor(PREMIUM_BALANCE_THRESHOLD * LAMPORTS_PER_SOL)
-      jest.mocked(solConnection.getBalance).mockResolvedValue(exactThresholdLamports)
+      const exactThresholdRaw = PREMIUM_BALANCE_THRESHOLD * 1_000_000
+      jest.mocked(executeWithFallback).mockResolvedValue({
+        value: {
+          amount: exactThresholdRaw.toString(),
+          decimals: 6,
+        },
+      })
 
       const resultAtThreshold = await validateSOLBalance(walletAddress)
       expect(resultAtThreshold.hasAccess).toBe(true)
       expect(resultAtThreshold.difference).toBeUndefined()
 
       // Test just below threshold
-      const belowThresholdLamports = exactThresholdLamports - 1
-      jest.mocked(solConnection.getBalance).mockResolvedValue(belowThresholdLamports)
+      const belowThresholdRaw = exactThresholdRaw - 1
+      jest.mocked(executeWithFallback).mockResolvedValue({
+        value: {
+          amount: belowThresholdRaw.toString(),
+          decimals: 6,
+        },
+      })
       jest.mocked(redisClient.get).mockResolvedValue(null) // Force fresh query
 
       const resultBelowThreshold = await validateSOLBalance(walletAddress)
@@ -117,8 +133,13 @@ describe('Premium Gate Middleware Property-Based Tests', () => {
       expect(resultBelowThreshold.difference).toBeGreaterThan(0)
 
       // Test just above threshold
-      const aboveThresholdLamports = exactThresholdLamports + 1
-      jest.mocked(solConnection.getBalance).mockResolvedValue(aboveThresholdLamports)
+      const aboveThresholdRaw = exactThresholdRaw + 1
+      jest.mocked(executeWithFallback).mockResolvedValue({
+        value: {
+          amount: aboveThresholdRaw.toString(),
+          decimals: 6,
+        },
+      })
       jest.mocked(redisClient.get).mockResolvedValue(null) // Force fresh query
 
       const resultAboveThreshold = await validateSOLBalance(walletAddress)

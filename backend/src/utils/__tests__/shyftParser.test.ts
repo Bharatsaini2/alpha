@@ -626,7 +626,7 @@ describe('SHYFT Parser - Unit Tests', () => {
       const tx: ShyftTransaction = {
         signature: 'test-sig-no-swapper',
         status: 'Success',
-        fee_payer: undefined,
+        fee_payer: '',
         signers: [],
         type: 'UNKNOWN',
         timestamp: '2026-01-23T20:36:46.000Z',

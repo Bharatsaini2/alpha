@@ -217,18 +217,58 @@ function arbitraryAmounts(): fc.Arbitrary<{
     totalFeeQuote: number
   }
 }> {
-  return fc.record({
-    swapInputAmount: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    totalWalletCost: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    swapOutputAmount: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    netWalletReceived: fc.option(fc.double({ min: 0.001, max: 1000000, noNaN: true })),
-    baseAmount: fc.double({ min: 0.001, max: 1000000, noNaN: true }),
-    feeBreakdown: fc.record({
-      transactionFeeSOL: fc.double({ min: 0, max: 0.01, noNaN: true }),
-      transactionFeeQuote: fc.double({ min: 0, max: 10, noNaN: true }),
-      platformFee: fc.double({ min: 0, max: 5, noNaN: true }),
-      priorityFee: fc.double({ min: 0, max: 0.01, noNaN: true }),
-      totalFeeQuote: fc.double({ min: 0, max: 15, noNaN: true }),
-    }),
-  })
+  const optionalNumber = fc.option(
+    fc.double({ min: 0.001, max: 1000000, noNaN: true }),
+    { nil: undefined },
+  )
+
+  return fc
+    .record({
+      swapInputAmount: optionalNumber,
+      totalWalletCost: optionalNumber,
+      swapOutputAmount: optionalNumber,
+      netWalletReceived: optionalNumber,
+      baseAmount: fc.double({ min: 0.001, max: 1000000, noNaN: true }),
+      feeBreakdown: fc.record({
+        transactionFeeSOL: fc.double({ min: 0, max: 0.01, noNaN: true }),
+        transactionFeeQuote: fc.double({ min: 0, max: 10, noNaN: true }),
+        platformFee: fc.double({ min: 0, max: 5, noNaN: true }),
+        priorityFee: fc.double({ min: 0, max: 0.01, noNaN: true }),
+        totalFeeQuote: fc.double({ min: 0, max: 15, noNaN: true }),
+      }),
+    })
+    .map((record) => {
+      const result: {
+        swapInputAmount?: number
+        totalWalletCost?: number
+        swapOutputAmount?: number
+        netWalletReceived?: number
+        baseAmount: number
+        feeBreakdown: {
+          transactionFeeSOL: number
+          transactionFeeQuote: number
+          platformFee: number
+          priorityFee: number
+          totalFeeQuote: number
+        }
+      } = {
+        baseAmount: record.baseAmount,
+        feeBreakdown: record.feeBreakdown,
+      }
+
+      if (record.swapInputAmount !== undefined) {
+        result.swapInputAmount = record.swapInputAmount
+      }
+      if (record.totalWalletCost !== undefined) {
+        result.totalWalletCost = record.totalWalletCost
+      }
+      if (record.swapOutputAmount !== undefined) {
+        result.swapOutputAmount = record.swapOutputAmount
+      }
+      if (record.netWalletReceived !== undefined) {
+        result.netWalletReceived = record.netWalletReceived
+      }
+
+      return result
+    })
 }

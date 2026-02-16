@@ -328,12 +328,24 @@ describe('Jupiter Client - Property-Based Tests', () => {
         const originalBaseUrl = process.env.JUPITER_BASE_URL;
         const originalApiKey = process.env.JUPITER_API_KEY;
         const originalReferralKey = process.env.JUPITER_REFERRAL_KEY;
+        const originalUltraUrl = process.env.JUPITER_ULTRA_URL;
+        const originalDefaultPriority = process.env.JUPITER_DEFAULT_PRIORITY;
+        const originalDynamicSlippage = process.env.JUPITER_ENABLE_DYNAMIC_SLIPPAGE;
+        const originalMailgunKey = process.env.MAILGUN_API_KEY;
+        const originalMailgunDomain = process.env.MAILGUN_DOMAIN;
+        const originalTelegramToken = process.env.TELEGRAM_BOT_TOKEN;
         
         try {
           // Set all required variables
           process.env.JUPITER_BASE_URL = 'https://test-api.jup.ag/v6';
           process.env.JUPITER_API_KEY = 'test-api-key';
           process.env.JUPITER_REFERRAL_KEY = 'test-referral-key';
+          process.env.JUPITER_ULTRA_URL = 'https://test-api.jup.ag/ultra/v1';
+          process.env.JUPITER_DEFAULT_PRIORITY = 'High';
+          process.env.JUPITER_ENABLE_DYNAMIC_SLIPPAGE = 'true';
+          process.env.MAILGUN_API_KEY = 'test-mailgun-key';
+          process.env.MAILGUN_DOMAIN = 'test.mailgun.example';
+          process.env.TELEGRAM_BOT_TOKEN = 'test-telegram-token';
           
           const result = validateJupiterEnv();
           
@@ -359,6 +371,36 @@ describe('Jupiter Client - Property-Based Tests', () => {
             process.env.JUPITER_REFERRAL_KEY = originalReferralKey;
           } else {
             delete process.env.JUPITER_REFERRAL_KEY;
+          }
+          if (originalUltraUrl !== undefined) {
+            process.env.JUPITER_ULTRA_URL = originalUltraUrl;
+          } else {
+            delete process.env.JUPITER_ULTRA_URL;
+          }
+          if (originalDefaultPriority !== undefined) {
+            process.env.JUPITER_DEFAULT_PRIORITY = originalDefaultPriority;
+          } else {
+            delete process.env.JUPITER_DEFAULT_PRIORITY;
+          }
+          if (originalDynamicSlippage !== undefined) {
+            process.env.JUPITER_ENABLE_DYNAMIC_SLIPPAGE = originalDynamicSlippage;
+          } else {
+            delete process.env.JUPITER_ENABLE_DYNAMIC_SLIPPAGE;
+          }
+          if (originalMailgunKey !== undefined) {
+            process.env.MAILGUN_API_KEY = originalMailgunKey;
+          } else {
+            delete process.env.MAILGUN_API_KEY;
+          }
+          if (originalMailgunDomain !== undefined) {
+            process.env.MAILGUN_DOMAIN = originalMailgunDomain;
+          } else {
+            delete process.env.MAILGUN_DOMAIN;
+          }
+          if (originalTelegramToken !== undefined) {
+            process.env.TELEGRAM_BOT_TOKEN = originalTelegramToken;
+          } else {
+            delete process.env.TELEGRAM_BOT_TOKEN;
           }
         }
       }

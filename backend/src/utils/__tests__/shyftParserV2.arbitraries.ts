@@ -335,11 +335,31 @@ export const multiHopAssetDeltaMapArbitrary: fc.Arbitrary<AssetDeltaMap> = fc
 /**
  * Generate fee data
  */
-export const feeDataArbitrary: fc.Arbitrary<FeeData> = fc.record({
-  transactionFee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
-  platformFee: fc.option(fc.double({ min: 0, max: 100, noNaN: true })),
-  priorityFee: fc.option(fc.double({ min: 0, max: 0.001, noNaN: true })),
-})
+export const feeDataArbitrary: fc.Arbitrary<FeeData> = fc
+  .record(
+    {
+      transactionFee: fc.double({ min: 0.000001, max: 0.01, noNaN: true }),
+      platformFee: fc.option(fc.double({ min: 0, max: 100, noNaN: true }), {
+        nil: undefined,
+      }),
+      priorityFee: fc.option(fc.double({ min: 0, max: 0.001, noNaN: true }), {
+        nil: undefined,
+      }),
+    }
+  )
+  .map(({ transactionFee, platformFee, priorityFee }) => {
+    const feeData: FeeData = { transactionFee }
+
+    if (platformFee !== undefined) {
+      feeData.platformFee = platformFee
+    }
+
+    if (priorityFee !== undefined) {
+      feeData.priorityFee = priorityFee
+    }
+
+    return feeData
+  })
 
 /**
  * Generate fee data with zero fees

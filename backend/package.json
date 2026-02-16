@@ -8,6 +8,7 @@
     "build": "tsc",
     "prod": "node --max-old-space-size=8192 --expose-gc dist/src/app.js",
     "test": "jest --runInBand",
+    "stress-test:telegram-balance": "ts-node scripts/telegramBalanceRpcStressTest.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",

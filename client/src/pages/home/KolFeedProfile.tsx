@@ -348,20 +348,19 @@ function KolFeedProfile() {
                                         </div>
 
                                         <div>
-                                          {user?.telegramChatId ? (
-                                            <div className="dis-connect-btn" style={{ cursor: 'default' }}>
-                                              Connected <span className="text-white fz-14"><FontAwesomeIcon icon={faPaperPlane} /></span>
-                                            </div>
-                                          ) : (
-                                            <button 
-                                              className="paper-plan-connect-btn"
-                                              onClick={() => {
+                                          <button
+                                            className="paper-plan-connect-btn"
+                                            disabled={!!user?.telegramChatId}
+                                            onClick={(e) => {
+                                              if (!user?.telegramChatId) {
+                                                e.stopPropagation()
                                                 showToast("Please connect Telegram from the Telegram Subscription page", "error")
-                                              }}
-                                            >
-                                              <FontAwesomeIcon icon={faPaperPlane} /> Connect
-                                            </button>
-                                          )}
+                                              }
+                                            }}
+                                          >
+                                            <FontAwesomeIcon icon={faPaperPlane} />{" "}
+                                            {user?.telegramChatId ? "Connected" : "Connect"}
+                                          </button>
                                         </div>
                                       </div>
 
@@ -372,6 +371,10 @@ function KolFeedProfile() {
                                           className="form-select cursor-pointer text-start"
                                           onClick={(e) => {
                                             e.stopPropagation()
+                                            if (!triggerOpen) {
+                                              setAmountOpen(false)
+                                              setMcapOpen(false)
+                                            }
                                             setTriggerOpen(!triggerOpen)
                                           }}
                                         >
@@ -380,24 +383,45 @@ function KolFeedProfile() {
 
                                         {triggerOpen && (
                                           <div
-                                            className="subscription-dropdown-menu show w-100 p-3"
+                                            className="subscription-dropdown-menu show w-100"
                                             onClick={(e) => e.stopPropagation()}
+                                            style={{ padding: "8px 12px" }}
                                           >
-                                            <div className="text-center mt-2">
-                                              <span className="range-value">{hotness}</span>
-
-                                              <h6 className="mb-0 text-sm">Sensitivity TheresHold</h6>
-
+                                            <div style={{ textAlign: "center" }}>
+                                              <div
+                                                className="range-value-mcap"
+                                                style={{
+                                                  fontSize: "14px",
+                                                  fontWeight: 600,
+                                                  marginBottom: "4px",
+                                                }}
+                                              >
+                                                {hotness}
+                                              </div>
+                                              <div
+                                                style={{
+                                                  fontSize: "10px",
+                                                  color: "#8f8f8f",
+                                                  marginBottom: "8px",
+                                                }}
+                                              >
+                                                Sensitivity Threshold
+                                              </div>
                                               <input
                                                 type="range"
                                                 min="0"
                                                 max="10"
                                                 value={hotness}
-                                                onChange={(e) => setHotness(parseInt(e.target.value))}
-                                                className="hotness-range"
-                                                style={{
-                                                  "--range-progress": `${(hotness / 10) * 100}%`,
-                                                } as React.CSSProperties}
+                                                onChange={(e) =>
+                                                  setHotness(parseInt(e.target.value, 10))
+                                                }
+                                                className="hotness-range hotness-range-mcap"
+                                                style={
+                                                  {
+                                                    width: "100%",
+                                                    "--range-progress": `${(hotness / 10) * 100}%`,
+                                                  } as React.CSSProperties
+                                                }
                                               />
                                             </div>
                                           </div>
@@ -414,6 +438,10 @@ function KolFeedProfile() {
                                           className="form-select cursor-pointer text-start"
                                           onClick={(e) => {
                                             e.stopPropagation()
+                                            if (!amountOpen) {
+                                              setTriggerOpen(false)
+                                              setMcapOpen(false)
+                                            }
                                             setAmountOpen(!amountOpen)
                                           }}
                                         >
@@ -425,26 +453,18 @@ function KolFeedProfile() {
                                             className="subscription-dropdown-menu show w-100 p-2"
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            <div
-                                              className="subs-items"
-                                              onClick={() => {
-                                                setAmount("$1K")
-                                                setAmountOpen(false)
-                                              }}
-                                            >
-                                              $1K
-                                            </div>
-
-                                            <div
-                                              className="subs-items"
-                                              onClick={() => {
-                                                setAmount("$5K")
-                                                setAmountOpen(false)
-                                              }}
-                                            >
-                                              $5K
-                                            </div>
-
+                                            {["$1K", "$2K", "$3K", "$4K", "$5K"].map((val) => (
+                                              <div
+                                                key={val}
+                                                className="subs-items"
+                                                onClick={() => {
+                                                  setAmount(val)
+                                                  setAmountOpen(false)
+                                                }}
+                                              >
+                                                {val}
+                                              </div>
+                                            ))}
                                             <input
                                               type="text"
                                               className="form-control mt-2"
@@ -466,6 +486,10 @@ function KolFeedProfile() {
                                           className="form-select cursor-pointer text-start"
                                           onClick={(e) => {
                                             e.stopPropagation()
+                                            if (!mcapOpen) {
+                                              setTriggerOpen(false)
+                                              setAmountOpen(false)
+                                            }
                                             setMcapOpen(!mcapOpen)
                                           }}
                                         >
@@ -490,14 +514,15 @@ function KolFeedProfile() {
                                         )}
                                       </div>
 
-                                      {/* SUBSCRIBE BUTTON */}
+                                      {/* ACTIVATE BUTTON */}
                                       <button
                                         className="connect-wallet-btn"
                                         onClick={handleCreateKolProfileAlert}
+                                        style={{ marginTop: "16px", backgroundColor: "#162ECD" }}
                                       >
                                         <span className="corner top-right"></span>
                                         <span className="corner bottom-left"></span>
-                                        Subscribe
+                                        Activate
                                       </button>
                                     </div>
                                   }

@@ -73,7 +73,7 @@ describe('Alert Controller Unit Tests', () => {
      */
     it('should return 401 when user is not authenticated - checkPremiumAccessStatus', async () => {
       // No userId in request
-      mockRequest.userId = undefined
+      delete (mockRequest as { userId?: string }).userId
 
       await checkPremiumAccessStatus(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
@@ -90,7 +90,7 @@ describe('Alert Controller Unit Tests', () => {
      */
     it('should return 401 when user is not authenticated - createWhaleAlert', async () => {
       // No userId in request
-      mockRequest.userId = undefined
+      delete (mockRequest as { userId?: string }).userId
 
       await createWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
@@ -107,7 +107,7 @@ describe('Alert Controller Unit Tests', () => {
      */
     it('should return 401 when user is not authenticated - getWhaleAlerts', async () => {
       // No userId in request
-      mockRequest.userId = undefined
+      delete (mockRequest as { userId?: string }).userId
 
       await getWhaleAlerts(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)
 
@@ -124,7 +124,7 @@ describe('Alert Controller Unit Tests', () => {
      */
     it('should return 401 when user is not authenticated - deleteWhaleAlert', async () => {
       // No userId in request
-      mockRequest.userId = undefined
+      delete (mockRequest as { userId?: string }).userId
       mockRequest.params = { alertId: 'test-alert-id' }
 
       await deleteWhaleAlert(mockRequest as AuthenticatedRequest, mockResponse as Response, mockNext)

@@ -82,12 +82,9 @@ export class AmountNormalizerImpl implements AmountNormalizer {
     const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
     
     // swapInputAmount = what went to pool (ONLY from pool data)
-    // We don't have pool transfer data, so we use undefined
+    // We don't have pool transfer data, so omit the field entirely
     // Consumers can decide to display totalWalletCost if needed
-    const swapInputAmount = undefined
-
     return {
-      swapInputAmount,
       totalWalletCost,
       baseAmount,
       feeBreakdown,
@@ -111,12 +108,9 @@ export class AmountNormalizerImpl implements AmountNormalizer {
     const feeBreakdown = this.calculateFeeBreakdown(fees, quote.mint)
     
     // swapOutputAmount = what came from pool (ONLY from pool data)
-    // We don't have pool transfer data, so we use undefined
+    // We don't have pool transfer data, so omit the field entirely
     // Consumers can decide to display netWalletReceived if needed
-    const swapOutputAmount = undefined
-
     return {
-      swapOutputAmount,
       netWalletReceived,
       baseAmount,
       feeBreakdown,
@@ -193,14 +187,12 @@ export class AmountNormalizerImpl implements AmountNormalizer {
 
     if (direction === 'BUY') {
       return {
-        swapInputAmount: undefined, // Pool data not available
         totalWalletCost: quoteAmount,
         baseAmount,
         feeBreakdown,
       }
     } else {
       return {
-        swapOutputAmount: undefined, // Pool data not available
         netWalletReceived: quoteAmount,
         baseAmount,
         feeBreakdown,

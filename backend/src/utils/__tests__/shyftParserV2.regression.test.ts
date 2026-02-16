@@ -25,7 +25,7 @@ describe('ShyftParserV2 - Regression Tests with V1 Fixtures', () => {
    * V2 requires additional fields that v1 doesn't have
    */
   const convertV1ToV2 = (txV1: ShyftTransaction): ShyftTransactionV2 => {
-    return {
+    const base: ShyftTransactionV2 = {
       signature: txV1.signature || 'test-signature',
       timestamp: typeof txV1.timestamp === 'string' 
         ? new Date(txV1.timestamp).getTime() / 1000 
@@ -34,11 +34,18 @@ describe('ShyftParserV2 - Regression Tests with V1 Fixtures', () => {
       fee: 0.000005, // Default fee
       fee_payer: txV1.fee_payer || '',
       signers: txV1.signers || [],
-      protocol: txV1.actions?.[0]?.type 
-        ? { name: txV1.actions[0].type, address: 'unknown' }
-        : undefined,
       token_balance_changes: txV1.token_balance_changes || [],
     }
+
+    const protocol = txV1.actions?.[0]?.type
+      ? { name: txV1.actions[0].type, address: 'unknown' }
+      : undefined
+
+    if (protocol) {
+      return { ...base, protocol }
+    }
+
+    return base
   }
 
   describe('Requirement 1.1: BUY detection from balance deltas', () => {
@@ -445,7 +452,7 @@ describe('ShyftParserV2 - Regression Tests with V1 Fixtures', () => {
       const txV1: ShyftTransaction = {
         signature: 'test-sig-no-swapper',
         status: 'Success',
-        fee_payer: undefined,
+        fee_payer: '',
         signers: [],
         type: 'UNKNOWN',
         timestamp: '2026-01-23T20:36:46.000Z',

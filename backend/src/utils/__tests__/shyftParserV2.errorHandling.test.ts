@@ -532,7 +532,7 @@ describe('ShyftParserV2 - Error Handling', () => {
 
     it('should handle transaction with missing protocol info', () => {
       const tx = createValidTransaction()
-      tx.protocol = undefined
+      delete (tx as { protocol?: unknown }).protocol
 
       const result = parser.parseTransaction(tx)
 

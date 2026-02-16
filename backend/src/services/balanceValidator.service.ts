@@ -143,6 +143,7 @@ export class BalanceValidatorService {
    */
   private async validateUserBalance(user: any): Promise<void> {
     const walletForCheck = user.walletAddressOriginal || user.walletAddress
+    const usedWalletSource = user.walletAddressOriginal ? 'walletAddressOriginal' : 'walletAddress'
 
     if (!walletForCheck) {
       logger.debug({
@@ -155,21 +156,52 @@ export class BalanceValidatorService {
     }
 
     try {
-      // Check ALPHA balance
-      const balanceResult = await validateSOLBalance(walletForCheck, false) // Use cache
+      // Check ALPHA balance (use cache for initial check)
+      const balanceResult = await validateSOLBalance(walletForCheck, false)
 
       logger.debug({
         component: 'BalanceValidatorService',
         operation: 'validateUserBalance',
         userId: user._id,
         walletAddress: walletForCheck,
+        walletSource: usedWalletSource,
         balance: balanceResult.currentBalance,
         hasAccess: balanceResult.hasAccess,
       })
 
-      // If balance is below threshold, disconnect
+      // If balance is below threshold, RE-VERIFY with fresh RPC before disconnecting
+      // This prevents false disconnects from stale cache or RPC flakiness
       if (!balanceResult.hasAccess) {
-        await this.disconnectUserForLowBalance(user, balanceResult.currentBalance)
+        let reverifyResult
+        try {
+          reverifyResult = await validateSOLBalance(walletForCheck, true) // bypass cache
+        } catch (reverifyError) {
+          // RPC failed on re-check - do NOT disconnect; we cannot confirm low balance
+          logger.warn({
+            component: 'BalanceValidatorService',
+            operation: 'validateUserBalance',
+            userId: user._id,
+            walletAddress: walletForCheck,
+            message: 'Re-verification failed (RPC error) - skipping disconnect to avoid false positive',
+          })
+          return
+        }
+
+        if (reverifyResult.hasAccess) {
+          // Fresh check shows they have access - cache was stale, do NOT disconnect
+          logger.warn({
+            component: 'BalanceValidatorService',
+            operation: 'validateUserBalance',
+            userId: user._id,
+            walletAddress: walletForCheck,
+            cachedBalance: balanceResult.currentBalance,
+            liveBalance: reverifyResult.currentBalance,
+            message: 'Stale cache would have caused false disconnect - user kept connected',
+          })
+          return
+        }
+
+        await this.disconnectUserForLowBalance(user, reverifyResult.currentBalance, usedWalletSource)
       }
     } catch (error) {
       // RPC error - DO NOT disconnect user
@@ -191,15 +223,22 @@ export class BalanceValidatorService {
   /**
    * Disconnect a user due to low ALPHA balance
    */
-  private async disconnectUserForLowBalance(user: any, currentBalance: number): Promise<void> {
+  private async disconnectUserForLowBalance(
+    user: any,
+    currentBalance: number,
+    walletSource?: string,
+  ): Promise<void> {
     try {
+      const walletForCheck = user.walletAddressOriginal || user.walletAddress
       logger.info({
         component: 'BalanceValidatorService',
         operation: 'disconnectUserForLowBalance',
         userId: user._id,
+        walletAddress: walletForCheck,
+        walletSource: walletSource ?? 'unknown',
         currentBalance,
         requiredBalance: PREMIUM_BALANCE_THRESHOLD,
-        message: 'Disconnecting user due to low ALPHA balance',
+        message: 'Disconnecting user due to low ALPHA balance (confirmed via fresh RPC)',
       })
 
       // Send notification message via TelegramService

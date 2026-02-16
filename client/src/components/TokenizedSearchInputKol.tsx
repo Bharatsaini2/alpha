@@ -3,13 +3,20 @@ import React, {
   useCallback,
   useRef,
   useEffect,
+  useMemo,
   useImperativeHandle,
 } from "react"
 import { Copy, Search, X, Clock, Trash2 } from "lucide-react"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faSearch } from "@fortawesome/free-solid-svg-icons"
+import { useNavigate } from "react-router-dom"
 import axios from "axios"
 import fallbackImage from "../assets/default_token.svg"
+
+const SUGGESTIONS_BASE_URL =
+  import.meta.env.VITE_SERVER_URL || "http://localhost:9090/api/v1"
 import { useToast } from "../contexts/ToastContext"
-import { useSearchHistory } from "../hooks/useSearchHistory"
+import { useRecentSearches } from "../hooks/useRecentSearches"
 
 interface SearchToken {
   id: string
@@ -48,7 +55,10 @@ interface TokenizedSearchInputProps {
   }) => void
   placeholder?: string
   className?: string
-  page?: string // Page identifier for search history
+  page?: string // Page identifier for recent searches (e.g. "kol-feed")
+  transactions?: any[] // Already loaded transactions for frontend-only suggestions
+  /** When true, use original KOL page design: single input + search btn + dropdown (no token chips) */
+  simpleDesign?: boolean
   ref?: React.Ref<TokenizedSearchInputHandle>
 }
 
@@ -75,39 +85,100 @@ const TokenizedSearchInputKol = React.forwardRef<
   (
     {
       onSearch,
-      placeholder = "Search coins, whales, addresses... Use commas for multiple tokens",
+      placeholder = "Search tokens, contract address, or KOL username...",
       className = "",
       page = "kol-feed",
+      transactions = [],
+      simpleDesign = false,
     },
     ref
   ) => {
     const [inputValue, setInputValue] = useState("")
     const [searchTokens, setSearchTokens] = useState<SearchToken[]>([])
-    const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+    const [tokenSuggestions, setTokenSuggestions] = useState<Suggestion[]>([])
+    const [kolSuggestions, setKolSuggestions] = useState<Suggestion[]>([])
     const [showSuggestions, setShowSuggestions] = useState(false)
     const [selectedIndex, setSelectedIndex] = useState(-1)
     const [isComposing, setIsComposing] = useState(false)
-    const [isLoading, setIsLoading] = useState(false)
-    const [showHistory, setShowHistory] = useState(false)
+    const [showRecent, setShowRecent] = useState(false)
     const { showToast } = useToast()
+    const navigate = useNavigate()
 
     const inputRef = useRef<HTMLInputElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    // Search history hook
-    const { history, saveSearch, deleteHistoryItem, clearHistory } =
-      useSearchHistory({
-        page,
-        enabled: true,
-      })
+    const { recent, addRecent, clearRecent, removeRecent } =
+      useRecentSearches("kol")
+
+    // Unique tokens and KOLs from transactions (frontend-only)
+    const { uniqueTokens, uniqueKols } = useMemo(() => {
+      const tokenMap = new Map<string, Suggestion>()
+      const kolMap = new Map<string, Suggestion>()
+      for (const tx of transactions) {
+        const tokenIn = tx.transaction?.tokenIn
+        const tokenOut = tx.transaction?.tokenOut
+        if (tokenIn && tx.tokenInAddress) {
+          const key = (tx.tokenInAddress || "").toLowerCase()
+          if (!tokenMap.has(key)) {
+            tokenMap.set(key, {
+              type: "coin",
+              label: tokenIn.symbol ?? tx.tokenInSymbol ?? tokenIn.name ?? tx.tokenInAddress,
+              sublabel: tokenIn.name,
+              address: tx.tokenInAddress,
+              symbol: tokenIn.symbol ?? tx.tokenInSymbol,
+              name: tokenIn.name,
+              imageUrl: tx.inTokenURL,
+            })
+          }
+        }
+        if (tokenOut && tx.tokenOutAddress) {
+          const key = (tx.tokenOutAddress || "").toLowerCase()
+          if (!tokenMap.has(key)) {
+            tokenMap.set(key, {
+              type: "coin",
+              label: tokenOut.symbol ?? tx.tokenOutSymbol ?? tokenOut.name ?? tx.tokenOutAddress,
+              sublabel: tokenOut.name,
+              address: tx.tokenOutAddress,
+              symbol: tokenOut.symbol ?? tx.tokenOutSymbol,
+              name: tokenOut.name,
+              imageUrl: tx.outTokenURL,
+            })
+          }
+        }
+        const un = (tx.influencerUsername || tx.kolUsername || "").replace(/^@/, "")
+        const addr = tx.whaleAddress || tx.kolAddress || tx.influencerAddress
+        if (un && !kolMap.has(un.toLowerCase())) {
+          kolMap.set(un.toLowerCase(), {
+            type: "kol",
+            label: tx.influencerName || tx.influencerUsername || un,
+            sublabel: addr ? `${addr.slice(0, 4)}...${addr.slice(-4)}` : undefined,
+            username: un,
+            address: addr,
+            imageUrl: tx.influencerProfileImageUrl || tx.influencerImageUrl,
+          })
+        }
+      }
+      return {
+        uniqueTokens: Array.from(tokenMap.values()),
+        uniqueKols: Array.from(kolMap.values()),
+      }
+    }, [transactions])
 
     // Expose clear method to parent component
     useImperativeHandle(ref, () => ({
       clearAllTokens: () => {
         setSearchTokens([])
         setInputValue("")
-        executeSearch([])
-        // Focus back to input
+        if (simpleDesign) {
+          onSearch({
+            searchQuery: "",
+            searchType: "all",
+            tokens: [],
+            displayQuery: "",
+          })
+        } else {
+          executeSearch([])
+        }
         setTimeout(() => inputRef.current?.focus(), 0)
       },
     }))
@@ -255,24 +326,30 @@ const TokenizedSearchInputKol = React.forwardRef<
       if (hasCoins && !hasKols) searchType = "coin"
       else if (hasKols && !hasCoins) searchType = "kol"
 
-      // Save to search history if we have a valid search
+      // Save to localStorage recent (max 10)
       if (searchQuery.trim() && searchType) {
-        // Prepare token data for history
-        const tokenData = tokens.map((token) => ({
-          value: token.value,
-          type: token.type,
-          label: token.label,
-          imageUrl: token.imageUrl,
-          symbol: token.symbol,
-          name: token.name,
-          address: token.address,
-          username: token.username, // For KOL tokens
-        }))
-
-        saveSearch(searchQuery, searchType, tokenData)
+        tokens.slice(0, 10).forEach((token) => {
+          if (token.type === "kol" && token.username) {
+            addRecent({
+              type: "kol",
+              label: token.label,
+              username: token.username,
+              imageUrl: token.imageUrl,
+              walletAddress: token.address,
+            })
+          } else {
+            addRecent({
+              type: "token",
+              label: token.label,
+              symbol: token.symbol,
+              name: token.name,
+              address: token.address,
+              imageUrl: token.imageUrl,
+            })
+          }
+        })
       }
 
-      // Calculate display query for user-friendly display
       const displayQuery = tokens.map((token) => token.label).join(", ")
 
       onSearch({
@@ -283,131 +360,135 @@ const TokenizedSearchInputKol = React.forwardRef<
       })
     }
 
-    // Fetch suggestions (debounced)
-    const debouncedFetchSuggestions = useCallback(
+    // Suggestions: frontend (loaded tx) + backend (all tokens/KOLs in DB), debounced 300ms
+    const debouncedSetSuggestions = useCallback(
       debounce(async (query: string) => {
-        if (query.length < 1) {
-          setSuggestions([])
-          setIsLoading(false)
+        const q = query.trim().replace(/^@/, "")
+        if (q.length < 1) {
+          setTokenSuggestions([])
+          setKolSuggestions([])
           return
         }
+        const qLower = q.toLowerCase()
+        const isLikelyAddress =
+          q.length >= 20 && /^[1-9A-HJ-NP-Za-km-z]+$/.test(q)
 
-        setIsLoading(true)
-
-        try {
-          const BASE_URL =
-            import.meta.env.VITE_SERVER_URL || "http://localhost:9090"
-
-          const response = await axios.get(
-            `${BASE_URL}/influencer/influencer-whale-transactions?search=${encodeURIComponent(query)}&limit=8&searchType=all`
+        // 1) Frontend: from loaded transactions
+        const tokensFront = uniqueTokens.filter((s) => {
+          const name = (s.name || "").toLowerCase()
+          const symbol = (s.symbol || "").toLowerCase()
+          const label = (s.label || "").toLowerCase()
+          const address = (s.address || "").toLowerCase()
+          if (isLikelyAddress) return address.includes(qLower) || address === qLower
+          return (
+            name.includes(qLower) ||
+            symbol.includes(qLower) ||
+            label.includes(qLower) ||
+            address.includes(qLower)
           )
+        })
+        const kolsFront = uniqueKols.filter((s) => {
+          const username = (s.username || "").toLowerCase()
+          const label = (s.label || "").toLowerCase()
+          const sublabel = (s.sublabel || "").toLowerCase()
+          return (
+            username.includes(qLower) ||
+            label.includes(qLower) ||
+            sublabel.includes(qLower)
+          )
+        })
 
-          if (response.status !== 200) return
-          const txs = response.data?.transactions || []
+        const tokenSeen = new Set<string>()
+        const kolSeen = new Set<string>()
+        const tokensMerged: Suggestion[] = []
+        const kolsMerged: Suggestion[] = []
 
-          // KOL suggestions
-          const kolSugs: Suggestion[] = txs
-            .map((tx: any) => {
-              const influencerName = tx.influencerName
-              const influencerUsername = tx.influencerUsername
-              const influencerProfileImageUrl = tx.influencerProfileImageUrl
-
-              if (!influencerName || !influencerUsername) return null
-              return {
-                type: "kol",
-                label: influencerName,
-                sublabel: `${influencerUsername}`,
-                name: influencerName,
-                username: influencerUsername,
-                imageUrl: influencerProfileImageUrl,
-              }
-            })
-            .filter(Boolean)
-
-          // Coin suggestions (from both sides)
-          const coinSugs: Suggestion[] = txs.flatMap((tx: any) => {
-            const items = []
-
-            // Extract token info based on transaction type
-            const tokenInSymbol =
-              tx.tokenInSymbol || tx.transaction?.tokenIn?.symbol
-            const tokenOutSymbol =
-              tx.tokenOutSymbol || tx.transaction?.tokenOut?.symbol
-            const tokenInName = tx.transaction?.tokenIn?.name
-            const tokenOutName = tx.transaction?.tokenOut?.name
-            const tokenInAddress =
-              tx.tokenInAddress || tx.transaction?.tokenIn?.address
-            const tokenOutAddress =
-              tx.tokenOutAddress || tx.transaction?.tokenOut?.address
-            const tokenInImageUrl =
-              tx.inTokenURL || tx.transaction?.tokenIn?.imageUrl
-            const tokenOutImageUrl =
-              tx.outTokenURL || tx.transaction?.tokenOut?.imageUrl
-
-            // Add tokenIn suggestion
-            if (tokenInSymbol || tokenInName || tokenInAddress) {
-              items.push({
-                type: "coin",
-                label: tokenInSymbol || tokenInName || tokenInAddress,
-                sublabel:
-                  tokenInName && tokenInSymbol
-                    ? `${tokenInName}`
-                    : tokenInAddress,
-                address: tokenInAddress,
-                symbol: tokenInSymbol,
-                name: tokenInName,
-                imageUrl: tokenInImageUrl,
-              } as Suggestion)
-            }
-
-            // Add tokenOut suggestion
-            if (tokenOutSymbol || tokenOutName || tokenOutAddress) {
-              items.push({
-                type: "coin",
-                label: tokenOutSymbol || tokenOutName || tokenOutAddress,
-                sublabel:
-                  tokenOutName && tokenOutSymbol
-                    ? `${tokenOutName}`
-                    : tokenOutAddress,
-                address: tokenOutAddress,
-                symbol: tokenOutSymbol,
-                name: tokenOutName,
-                imageUrl: tokenOutImageUrl,
-              } as Suggestion)
-            }
-
-            return items
-          })
-
-          // Deduplicate separately per type
-          const uniq = (arr: Suggestion[], key: (s: Suggestion) => string) => {
-            const seen = new Set<string>()
-            return arr.filter((s) => {
-              const k = key(s)
-              if (!k || seen.has(k)) return false
-              seen.add(k)
-              return true
-            })
+        tokensFront.slice(0, 20).forEach((s) => {
+          const key = (s.address || "").toLowerCase()
+          if (key && !tokenSeen.has(key)) {
+            tokenSeen.add(key)
+            tokensMerged.push(s)
           }
+        })
+        kolsFront.slice(0, 15).forEach((s) => {
+          const key = (s.username || s.label || "").toLowerCase()
+          if (key && !kolSeen.has(key)) {
+            kolSeen.add(key)
+            kolsMerged.push(s)
+          }
+        })
 
-          const uniqueKols = uniq(
-            kolSugs as Suggestion[],
-            (s) => s.username || s.label
+        // 2) Backend: fetch more tokens + KOLs from influencer API
+        try {
+          const res = await axios.get(
+            `${SUGGESTIONS_BASE_URL}/influencer/influencer-whale-transactions?search=${encodeURIComponent(q)}&limit=15&searchType=all`
           )
-          const uniqueCoins = uniq(
-            coinSugs as Suggestion[],
-            (s) => s.symbol || s.address || s.label
-          )
-
-          setSuggestions([...uniqueKols, ...uniqueCoins])
-        } catch (error) {
-          console.error("Error fetching suggestions:", error)
-          setSuggestions([])
-        } finally {
-          setIsLoading(false)
+          const txs = res.data?.transactions || []
+          txs.forEach((tx: any) => {
+            const tokenIn = tx.transaction?.tokenIn
+            const tokenOut = tx.transaction?.tokenOut
+            const addToken = (addr: string, symbol: string, name: string, imageUrl: string) => {
+              const key = (addr || "").toLowerCase()
+              if (!key || tokenSeen.has(key)) return
+              tokenSeen.add(key)
+              tokensMerged.push({
+                type: "coin",
+                label: symbol || name || addr,
+                sublabel: name,
+                address: addr,
+                symbol,
+                name,
+                imageUrl,
+              })
+            }
+            if (tokenIn && tx.tokenInAddress) {
+              addToken(
+                tx.tokenInAddress,
+                tokenIn.symbol ?? tx.tokenInSymbol,
+                tokenIn.name,
+                tx.inTokenURL || ""
+              )
+            }
+            if (tokenOut && tx.tokenOutAddress) {
+              addToken(
+                tx.tokenOutAddress,
+                tokenOut.symbol ?? tx.tokenOutSymbol,
+                tokenOut.name,
+                tx.outTokenURL || ""
+              )
+            }
+            const un = (tx.influencerUsername || tx.kolUsername || "").replace(/^@/, "")
+            if (un && !kolSeen.has(un.toLowerCase())) {
+              kolSeen.add(un.toLowerCase())
+              kolsMerged.push({
+                type: "kol",
+                label: tx.influencerName || tx.influencerUsername || un,
+                sublabel: tx.whaleAddress ? `${(tx.whaleAddress || "").slice(0, 4)}...${(tx.whaleAddress || "").slice(-4)}` : undefined,
+                username: un,
+                address: tx.whaleAddress || tx.kolAddress,
+                imageUrl: tx.influencerProfileImageUrl || tx.influencerImageUrl,
+              })
+            }
+          })
+        } catch (err) {
+          console.error("KOL suggestions fetch failed:", err)
         }
+
+        // Sort KOLs: exact username match first, then exact label match, then the rest
+        const qTrimmed = q.toLowerCase().trim()
+        const score = (s: Suggestion) => {
+          const u = (s.username || "").toLowerCase().trim()
+          const l = (s.label || "").toLowerCase().trim()
+          if (u === qTrimmed) return 0
+          if (l === qTrimmed) return 1
+          return 2
+        }
+        const kolsSorted = [...kolsMerged].sort((a, b) => score(a) - score(b))
+
+        setTokenSuggestions(tokensMerged.slice(0, 25))
+        setKolSuggestions(kolsSorted.slice(0, 15))
       }, 300),
-      []
+      [uniqueTokens, uniqueKols]
     )
 
     // Handle input change
@@ -416,18 +497,82 @@ const TokenizedSearchInputKol = React.forwardRef<
       setInputValue(value)
 
       if (value.trim() && !isComposing) {
-        debouncedFetchSuggestions(value.trim())
+        debouncedSetSuggestions(value.trim())
         setShowSuggestions(true)
-        setShowHistory(false)
+        setShowRecent(false)
       } else if (!value.trim()) {
         setShowSuggestions(false)
-        setShowHistory(true) // Show history when input is empty
+        setShowRecent(true)
       } else {
         setShowSuggestions(false)
-        setShowHistory(false)
+        setShowRecent(false)
       }
 
       setSelectedIndex(-1)
+    }
+
+    const combinedSuggestions = useMemo(
+      () => [...tokenSuggestions, ...kolSuggestions],
+      [tokenSuggestions, kolSuggestions]
+    )
+
+    // KOL row click: filter feed to show their txns (same as token). Profile button goes to profile.
+    const applyKolFilter = (suggestion: Suggestion) => {
+      if (!suggestion.username) return
+      addRecent({
+        type: "kol",
+        label: suggestion.label,
+        username: suggestion.username,
+        imageUrl: suggestion.imageUrl,
+        walletAddress: suggestion.address,
+      })
+      onSearch({
+        searchQuery: suggestion.username.replace(/^@/, ""),
+        searchType: "kol",
+        tokens: [{ value: suggestion.username.replace(/^@/, ""), type: "kol" }],
+        displayQuery: suggestion.label,
+      })
+      setInputValue("")
+      setShowSuggestions(false)
+      setShowRecent(false)
+      setSelectedIndex(-1)
+    }
+
+    const goToKolProfile = (username: string, e?: React.MouseEvent) => {
+      if (e) e.stopPropagation()
+      setShowSuggestions(false)
+      setShowRecent(false)
+      navigate(`/kol-feed-profile/${username.replace(/^@/, "")}`)
+    }
+
+    // Handle suggestion selection (token → add filter; KOL → add filter to show their txns)
+    const handleSuggestionClick = (suggestion: Suggestion) => {
+      if (suggestion.type === "kol" && suggestion.username) {
+        applyKolFilter(suggestion)
+        return
+      }
+      if (simpleDesign) {
+        addRecent({
+          type: "token",
+          label: suggestion.label,
+          symbol: suggestion.symbol,
+          name: suggestion.name,
+          address: suggestion.address,
+          imageUrl: suggestion.imageUrl,
+        })
+        const searchValue = suggestion.address || suggestion.label
+        onSearch({
+          searchQuery: searchValue,
+          searchType: "coin",
+          tokens: [{ value: searchValue, type: "coin" }],
+          displayQuery: suggestion.label,
+        })
+        setInputValue("")
+        setShowSuggestions(false)
+        setSelectedIndex(-1)
+        return
+      }
+      addToken(suggestion.label, suggestion)
     }
 
     // Handle key events
@@ -437,35 +582,18 @@ const TokenizedSearchInputKol = React.forwardRef<
       switch (e.key) {
         case "Enter": {
           e.preventDefault()
-          const searchTerm = inputValue.toLowerCase().replace(/^@/, "") // Remove @ prefix for matching
-          const filteredSuggestions = suggestions.filter((suggestion) => {
-            const symbol = suggestion.symbol?.toLowerCase() || ""
-            const name = suggestion.name?.toLowerCase() || ""
-            const label = suggestion.label?.toLowerCase() || ""
-            const address = suggestion.address?.toLowerCase() || ""
-            const username = suggestion.username?.toLowerCase() || ""
-            const sublabel = suggestion.sublabel?.toLowerCase() || ""
-
-            return (
-              symbol.includes(searchTerm) ||
-              name.includes(searchTerm) ||
-              label.includes(searchTerm) ||
-              address.includes(searchTerm) ||
-              username.includes(searchTerm) ||
-              sublabel.includes(searchTerm)
-            )
-          })
           if (
             showSuggestions &&
             selectedIndex >= 0 &&
-            filteredSuggestions[selectedIndex]
+            combinedSuggestions[selectedIndex]
           ) {
-            addToken(
-              filteredSuggestions[selectedIndex].label,
-              filteredSuggestions[selectedIndex]
-            )
+            const sel = combinedSuggestions[selectedIndex]
+            if (sel.type === "kol" && sel.username) {
+              applyKolFilter(sel)
+            } else {
+              addToken(sel.label, sel)
+            }
           } else if (inputValue.trim()) {
-            // Handle multi-token input (comma separated)
             const tokens = parseTokens(inputValue)
             tokens.forEach((token) => addToken(token))
           }
@@ -478,65 +606,23 @@ const TokenizedSearchInputKol = React.forwardRef<
           }
           break
 
-        case "ArrowDown": {
-          if (showSuggestions && suggestions.length > 0) {
+        case "ArrowDown":
+          if (showSuggestions && combinedSuggestions.length > 0) {
             e.preventDefault()
-            const searchTerm = inputValue.toLowerCase().replace(/^@/, "") // Remove @ prefix for matching
-            const filteredSuggestions = suggestions.filter((suggestion) => {
-              const symbol = suggestion.symbol?.toLowerCase() || ""
-              const name = suggestion.name?.toLowerCase() || ""
-              const label = suggestion.label?.toLowerCase() || ""
-              const address = suggestion.address?.toLowerCase() || ""
-              const username = suggestion.username?.toLowerCase() || ""
-              const sublabel = suggestion.sublabel?.toLowerCase() || ""
-
-              return (
-                symbol.includes(searchTerm) ||
-                name.includes(searchTerm) ||
-                label.includes(searchTerm) ||
-                address.includes(searchTerm) ||
-                username.includes(searchTerm) ||
-                sublabel.includes(searchTerm)
-              )
-            })
-
-            setSelectedIndex((prev) => {
-              const max = filteredSuggestions.length - 1
-
-              return prev < max ? prev + 1 : 0
-            })
+            setSelectedIndex((prev) =>
+              prev < combinedSuggestions.length - 1 ? prev + 1 : 0
+            )
           }
           break
-        }
 
-        case "ArrowUp": {
-          if (showSuggestions && suggestions.length > 0) {
+        case "ArrowUp":
+          if (showSuggestions && combinedSuggestions.length > 0) {
             e.preventDefault()
-            const searchTerm = inputValue.toLowerCase().replace(/^@/, "") // Remove @ prefix for matching
-            const filteredSuggestions = suggestions.filter((suggestion) => {
-              const symbol = suggestion.symbol?.toLowerCase() || ""
-              const name = suggestion.name?.toLowerCase() || ""
-              const label = suggestion.label?.toLowerCase() || ""
-              const address = suggestion.address?.toLowerCase() || ""
-              const username = suggestion.username?.toLowerCase() || ""
-              const sublabel = suggestion.sublabel?.toLowerCase() || ""
-
-              return (
-                symbol.includes(searchTerm) ||
-                name.includes(searchTerm) ||
-                label.includes(searchTerm) ||
-                address.includes(searchTerm) ||
-                username.includes(searchTerm) ||
-                sublabel.includes(searchTerm)
-              )
-            })
-            setSelectedIndex((prev) => {
-              const max = filteredSuggestions.length - 1
-              return prev > 0 ? prev - 1 : max
-            })
+            setSelectedIndex((prev) =>
+              prev > 0 ? prev - 1 : combinedSuggestions.length - 1
+            )
           }
           break
-        }
 
         case "Escape":
           setShowSuggestions(false)
@@ -552,23 +638,17 @@ const TokenizedSearchInputKol = React.forwardRef<
       }
     }
 
-    // Handle suggestion selection
-    const handleSuggestionClick = (suggestion: Suggestion) => {
-      addToken(suggestion.label, suggestion)
-    }
-
     // Handle input focus
     const handleInputFocus = () => {
-      if (!inputValue.trim() && history.length > 0) {
-        setShowHistory(true)
+      if (!inputValue.trim() && recent.length > 0) {
+        setShowRecent(true)
       }
     }
 
     // Handle input blur
     const handleInputBlur = () => {
-      // Delay hiding to allow for suggestion clicks
       setTimeout(() => {
-        setShowHistory(false)
+        setShowRecent(false)
       }, 200)
     }
 
@@ -580,7 +660,7 @@ const TokenizedSearchInputKol = React.forwardRef<
           !containerRef.current.contains(event.target as Node)
         ) {
           setShowSuggestions(false)
-          setShowHistory(false)
+          setShowRecent(false)
           setSelectedIndex(-1)
         }
       }
@@ -599,6 +679,198 @@ const TokenizedSearchInputKol = React.forwardRef<
         default:
           return "border border-white/70 bg-black"
       }
+    }
+
+    // Original KOL page design: single input + search button + dropdown
+    if (simpleDesign) {
+      const showDropdown = showRecent || (showSuggestions && (tokenSuggestions.length > 0 || kolSuggestions.length > 0))
+      return (
+        <div ref={containerRef} className={`relative ${className}`}>
+          <form
+            className="custom-frm-bx mb-0"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (inputValue.trim()) {
+                onSearch({
+                  searchQuery: inputValue.trim(),
+                  searchType: "all",
+                  tokens: [{ value: inputValue.trim(), type: "coin" }],
+                  displayQuery: inputValue.trim(),
+                })
+                setInputValue("")
+                setShowSuggestions(false)
+                setShowRecent(false)
+              }
+            }}
+          >
+            <input
+              ref={inputRef}
+              type="text"
+              className="form-control pe-5"
+              placeholder={placeholder}
+              value={inputValue}
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              onKeyDown={handleKeyDown}
+              onCompositionStart={() => setIsComposing(true)}
+              onCompositionEnd={() => setIsComposing(false)}
+            />
+            <div className="searching-bx">
+              <button className="search-btn" type="submit">
+                <FontAwesomeIcon icon={faSearch} />
+              </button>
+              {inputValue && (
+                <button
+                  type="button"
+                  className="clear-input-btn"
+                  onClick={() => {
+                    setInputValue("")
+                    setShowSuggestions(false)
+                    setShowRecent(false)
+                  }}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </form>
+
+          {showDropdown && (
+            <div className="dropdown-options">
+              {showRecent && recent.length > 0 && (
+                <>
+                  <div className="dropdown-header all-data-clear d-flex justify-content-between align-items-center w-100 flex-nowrap" style={{ gap: "12px" }}>
+                    <span className="text-muted small flex-shrink-0 text-nowrap">Recent searches</span>
+                    <button
+                      type="button"
+                      className="quick-nw-btn flex-shrink-0"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        clearRecent()
+                      }}
+                    >
+                      Clear All
+                    </button>
+                  </div>
+                  <ul className="dropdown-scroll">
+                    {recent.slice(0, 10).map((item) => (
+                      <li
+                        key={item.id}
+                        className="dropdown-item d-flex align-items-start"
+                        onClick={() => {
+                          if (item.type === "kol" && item.username) {
+                            applyKolFilter({
+                              type: "kol",
+                              label: item.label,
+                              username: item.username,
+                              imageUrl: item.imageUrl,
+                              address: item.walletAddress,
+                            })
+                            return
+                          }
+                          if (item.type === "token" && (item.address || item.label)) {
+                            onSearch({
+                              searchQuery: item.address || item.label,
+                              searchType: "coin",
+                              tokens: [{ value: item.address || item.label, type: "coin" }],
+                              displayQuery: item.label,
+                            })
+                          }
+                          setInputValue("")
+                          setShowRecent(false)
+                        }}
+                      >
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt="" className="dropdown-img" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage }} />
+                        ) : (
+                          <div className="dropdown-img d-flex align-items-center justify-content-center" style={{ width: "32px", height: "32px", background: "#1a1a1a", borderRadius: "50%", color: "#888" }}>
+                            {item.type === "kol" ? "👤" : "🪙"}
+                          </div>
+                        )}
+                        <div className="dropdown-content flex-grow-1">
+                          <h6 className="dropdown-title">{item.label}</h6>
+                          <p className="dropdown-desc">
+                            {item.type === "kol" ? item.username : item.symbol || (item.address ? `${item.address.slice(0, 6)}...${item.address.slice(-4)}` : "")}
+                          </p>
+                        </div>
+                        {item.type === "kol" && item.username && (
+                          <button
+                            type="button"
+                            className="btn btn-sm ms-2 flex-shrink-0"
+                            style={{ fontSize: "11px", padding: "4px 8px", background: "#2B2B2D", color: "#fff", border: "1px solid #3D3D3D", borderRadius: 0 }}
+                            onClick={(e) => goToKolProfile(item.username!, e)}
+                          >
+                            Profile
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {showSuggestions && (tokenSuggestions.length > 0 || kolSuggestions.length > 0) && !showRecent && (
+                <>
+                  {tokenSuggestions.length > 0 && (
+                    <>
+                      <div className="dropdown-header text-muted small px-3 py-1">Tokens</div>
+                      <ul className="dropdown-scroll">
+                        {tokenSuggestions.map((s, i) => (
+                          <li
+                            key={`t-${s.address}-${i}`}
+                            className="dropdown-item d-flex align-items-start"
+                            onClick={() => handleSuggestionClick(s)}
+                          >
+                            <img src={s.imageUrl || fallbackImage} alt="" className="dropdown-img" onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage }} />
+                            <div className="dropdown-content flex-grow-1">
+                              <h6 className="dropdown-title">{s.label}</h6>
+                              <p className="dropdown-desc">{s.sublabel || (s.address ? `${s.address.slice(0, 6)}...${s.address.slice(-4)}` : "")}</p>
+                              {s.address && (
+                                <span className="dropdown-id">
+                                  <span className="cpy-title">CA:</span> {s.address.length > 20 ? `${s.address.slice(0, 8)}...${s.address.slice(-6)}` : s.address}
+                                </span>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {kolSuggestions.length > 0 && (
+                    <>
+                      <div className="dropdown-header text-muted small px-3 py-1">KOL Users</div>
+                      <ul className="dropdown-scroll">
+                        {kolSuggestions.map((s, j) => (
+                          <li
+                            key={`k-${s.username}-${j}`}
+                            className="dropdown-item d-flex align-items-center"
+                            onClick={() => handleSuggestionClick(s)}
+                          >
+                            <img src={s.imageUrl || fallbackImage} alt="" className="dropdown-img" style={{ borderRadius: "50%" }} onError={(e) => { (e.target as HTMLImageElement).src = fallbackImage }} />
+                            <div className="dropdown-content flex-grow-1 min-w-0">
+                              <h6 className="dropdown-title">{s.label}</h6>
+                              <p className="dropdown-desc">@{s.username}</p>
+                              {s.sublabel && <span className="dropdown-id">{s.sublabel}</span>}
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-sm flex-shrink-0 ms-2"
+                              style={{ fontSize: "11px", padding: "4px 8px", background: "#2B2B2D", color: "#fff", border: "1px solid #3D3D3D", borderRadius: 0 }}
+                              onClick={(e) => goToKolProfile(s.username!, e)}
+                            >
+                              Profile
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )
     }
 
     return (
@@ -654,12 +926,6 @@ const TokenizedSearchInputKol = React.forwardRef<
                 className="flex-1 bg-transparent text-white placeholder-white/60 outline-none min-w-[120px]"
               />
 
-              {/* Loading indicator */}
-              {isLoading && (
-                <div className="absolute right-12 top-1/2 transform -translate-y-1/2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                </div>
-              )}
             </div>
 
             {/* Clear all button */}
@@ -674,226 +940,287 @@ const TokenizedSearchInputKol = React.forwardRef<
             )}
           </div>
 
-          {/* Search History dropdown */}
-          {showHistory && history.length > 0 && (
+          {/* Recent searches (localStorage, max 10) */}
+          {showRecent && recent.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-2 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
-              <div className="px-4 py-2 border-b border-[#2B2B2D]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-400 text-sm">
-                    <Clock size={16} />
-                    <span>Recent searches</span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      clearHistory()
-                    }}
-                    className="text-gray-400 hover:text-red-400 text-xs transition-all px-2 py-1 rounded hover:bg-red-400/10 cursor-pointer"
-                    title="Clear all history"
-                  >
-                    Clear All
-                  </button>
+              <div className="px-4 py-2 border-b border-[#2B2B2D] d-flex justify-content-between align-items-center flex-nowrap" style={{ gap: "12px", minWidth: 0 }}>
+                <div className="d-flex align-items-center gap-2 text-gray-400 text-sm flex-shrink-0 min-w-0">
+                  <Clock size={16} className="flex-shrink-0" />
+                  <span className="text-nowrap">Recent searches</span>
                 </div>
-              </div>
-              {history.slice(0, 10).map((item) => (
                 <button
-                  key={item._id}
-                  onClick={() => {
-                    // If item has tokens, restore all tokens; otherwise use query
-                    if (item.tokens && item.tokens.length > 0) {
-                      // Restore all tokens from history
-                      const historyTokens = item.tokens.map((token) => ({
-                        id: `${token.value}-${Date.now()}-${Math.random()}`,
-                        value: token.value,
-                        type: token.type as "coin" | "kol" | "mixed",
-                        label: token.label,
-                        isValid: true,
-                        imageUrl: token.imageUrl,
-                        symbol: token.symbol,
-                        name: token.name,
-                        address: token.address,
-                        username: token.username, // For KOL tokens
-                      }))
-                      setSearchTokens(historyTokens)
-                      executeSearch(historyTokens)
-                    } else {
-                      // Fallback to old behavior
-                      addToken(item.query)
-                    }
-                    setShowHistory(false)
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    clearRecent()
                   }}
-                  className="w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] last:border-b-0 hover:bg-[#1A1A1A] text-white cursor-pointer group"
+                  className="text-gray-400 hover:text-red-400 text-xs transition-all px-2 py-1 rounded hover:bg-red-400/10 cursor-pointer flex-shrink-0"
+                  title="Clear all"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        {item.tokens && item.tokens.length > 0 ? (
-                          // Show first token's image if available
-                          <img
-                            src={item.tokens[0].imageUrl || fallbackImage}
-                            alt={item.tokens[0].label}
-                            className="w-8 h-8 md:w-10 md:h-10 rounded-[5px] border border-[#2B2B2D]"
-                            style={{ objectFit: "cover" }}
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.src = fallbackImage
-                            }}
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full border border-[#2B2B2D] bg-[#1A1A1A] flex items-center justify-center">
-                            <span className="text-xs">
-                              {item.searchType === "coin"
-                                ? "🪙"
-                                : item.searchType === "kol"
-                                  ? "👤"
-                                  : "🔍"}
-                            </span>
-                          </div>
-                        )}
+                  Clear All
+                </button>
+              </div>
+              {recent.slice(0, 10).map((item) => (
+                <div
+                  key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (item.type === "kol" && item.username) {
+                      applyKolFilter({
+                        type: "kol",
+                        label: item.label,
+                        username: item.username,
+                        imageUrl: item.imageUrl,
+                        address: item.walletAddress,
+                      })
+                      return
+                    }
+                    if (item.type === "token" && (item.address || item.label)) {
+                      const token: SearchToken = {
+                        id: generateTokenId(),
+                        value: item.address || item.label,
+                        type: "coin",
+                        label: item.label,
+                        isValid: true,
+                        imageUrl: item.imageUrl,
+                        symbol: item.symbol,
+                        name: item.name,
+                        address: item.address,
+                      }
+                      setSearchTokens([token])
+                      executeSearch([token])
+                    } else {
+                      addToken(item.label)
+                    }
+                    setShowRecent(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      if (item.type === "kol" && item.username) {
+                        applyKolFilter({
+                          type: "kol",
+                          label: item.label,
+                          username: item.username,
+                          imageUrl: item.imageUrl,
+                          address: item.walletAddress,
+                        })
+                      }
+                    }
+                  }}
+                  className="w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] last:border-b-0 hover:bg-[#1A1A1A] text-white cursor-pointer group flex items-center justify-between"
+                >
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    <div className="flex-shrink-0">
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.label}
+                          className="w-8 h-8 md:w-10 md:h-10 rounded-[5px] border border-[#2B2B2D]"
+                          style={{ objectFit: "cover" }}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = fallbackImage
+                          }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full border border-[#2B2B2D] bg-[#1A1A1A] flex items-center justify-center">
+                          <span className="text-xs">
+                            {item.type === "kol" ? "👤" : "🪙"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-white truncate">
+                        {item.label}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-white truncate">
-                          {item.tokens && item.tokens.length > 0
-                            ? item.tokens.map((token) => token.label).join(", ")
-                            : item.query}
-                        </div>
-                        {item.tokens && item.tokens.length > 0 && (
-                          <div className="text-gray-400 text-xs">
-                            {item.tokens[0].symbol ||
-                              item.tokens[0].username ||
-                              item.tokens[0].address?.slice(0, 8) + "..."}
-                          </div>
-                        )}
-                        <div className="text-gray-400 text-xs">
-                          {new Date(item.lastUsed).toLocaleDateString()}
-                        </div>
+                      <div className="text-gray-400 text-xs">
+                        {item.type === "kol"
+                          ? item.username
+                          : item.symbol ||
+                            (item.address
+                              ? `${item.address.slice(0, 6)}...${item.address.slice(-4)}`
+                              : "")}
                       </div>
                     </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {item.type === "kol" && item.username && (
+                      <button
+                        type="button"
+                        className="text-xs px-2 py-1 rounded-none border border-[#3D3D3D] bg-[#2B2B2D] text-white hover:bg-[#3D3D3D] transition-all"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          goToKolProfile(item.username!, e)
+                        }}
+                      >
+                        Profile
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        deleteHistoryItem(item._id)
+                        removeRecent(item.id)
                       }}
                       className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all p-1"
-                      title="Remove from history"
+                      title="Remove"
                     >
                       <Trash2 size={14} />
                     </button>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
 
-          {/* Suggestions dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto">
-              {(() => {
-                const searchTerm = inputValue.toLowerCase().replace(/^@/, "") // Remove @ prefix for matching
-                const filteredSuggestions = suggestions.filter((coin) => {
-                  const symbol = coin.symbol?.toLowerCase() || ""
-                  const name = coin.name?.toLowerCase() || ""
-                  const label = coin.label?.toLowerCase() || ""
-                  const address = coin.address?.toLowerCase() || ""
-                  const username = coin.username?.toLowerCase() || ""
-                  const sublabel = coin.sublabel?.toLowerCase() || ""
-
-                  return (
-                    symbol.includes(searchTerm) ||
-                    name.includes(searchTerm) ||
-                    label.includes(searchTerm) ||
-                    address.includes(searchTerm) ||
-                    username.includes(searchTerm) ||
-                    sublabel.includes(searchTerm)
-                  )
-                })
-                return filteredSuggestions.map((suggestion, index) => (
-                  <button
-                    key={`${suggestion.type}-${suggestion.label}-${index}`}
-                    onClick={() => handleSuggestionClick(suggestion)}
-                    className={`w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] last:border-b-0 ${index === selectedIndex
-                      ? "bg-[#1A1A1A] text-white"
-                      : "hover:bg-[#1A1A1A] text-white"
-                      } cursor-pointer`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {/* Image */}
-                      <div className="flex-shrink-0">
-                        {suggestion.imageUrl ? (
-                          <img
-                            src={
-                              suggestion.label === "SOL"
-                                ? "https://assets.coingecko.com/coins/images/4128/large/solana.png?1696501504"
-                                : suggestion.imageUrl || fallbackImage
-                            }
-                            alt={suggestion.label}
-                            className="w-8 h-8 md:w-10 md:h-10 rounded-[5px] border border-[#2B2B2D]"
-                            style={{ objectFit: "cover" }}
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.src = fallbackImage
-                            }}
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full border border-[#2B2B2D] bg-[#1A1A1A] flex items-center justify-center">
-                            <span className="text-xs">
-                              {suggestion.type === "kol" ? "👤" : "🪙"}
-                            </span>
+          {/* Suggestions dropdown: Tokens + KOL Users */}
+          {showSuggestions &&
+            (tokenSuggestions.length > 0 || kolSuggestions.length > 0) && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#000000] border border-[#2B2B2D] rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
+                <div className="px-4 py-2 border-b border-[#2B2B2D] text-gray-400 text-xs font-medium uppercase tracking-wider">
+                  Search Results
+                </div>
+                {tokenSuggestions.length > 0 && (
+                  <>
+                    <div className="px-4 pt-2 pb-1 text-gray-500 text-xs font-medium uppercase">
+                      Tokens
+                    </div>
+                    {tokenSuggestions.map((suggestion, i) => {
+                      const globalIndex = i
+                      return (
+                        <button
+                          key={`token-${suggestion.address}-${i}`}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          className={`w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] ${globalIndex === selectedIndex ? "bg-[#1A1A1A]" : ""} hover:bg-[#1A1A1A] text-white cursor-pointer`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {suggestion.imageUrl ? (
+                                <img
+                                  src={suggestion.imageUrl}
+                                  alt={suggestion.label}
+                                  className="w-8 h-8 rounded-[5px] border border-[#2B2B2D]"
+                                  style={{ objectFit: "cover" }}
+                                  onError={(e) => {
+                                    const t = e.target as HTMLImageElement
+                                    t.src = fallbackImage
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full border border-[#2B2B2D] bg-[#1A1A1A] flex items-center justify-center text-xs">
+                                  🪙
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-white truncate">
+                                {suggestion.label}
+                              </div>
+                              {suggestion.sublabel && (
+                                <div className="text-gray-400 text-xs truncate">
+                                  {suggestion.sublabel}
+                                </div>
+                              )}
+                              {suggestion.address && (
+                                <div className="text-gray-500 text-xs font-mono truncate flex items-center gap-1">
+                                  {suggestion.address.length > 20
+                                    ? `${suggestion.address.slice(0, 6)}...${suggestion.address.slice(-4)}`
+                                    : suggestion.address}
+                                  <Copy
+                                    className="w-3 h-3"
+                                    onClick={(ev) => {
+                                      ev.stopPropagation()
+                                      handleCopyTokenAddress(
+                                        suggestion.address || "",
+                                        ""
+                                      )
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </div>
-
-                      {/* Details */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-sm text-white truncate">
-                            {suggestion.label}
-                          </span>
-                          {suggestion.type === "history" ? (
-                            <span className="text-xs text-gray-400 bg-gray-700 px-2 py-0.5 rounded">
-                              History
-                            </span>
-                          ) : (
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded font-medium flex-shrink-0 border border-white`}
+                        </button>
+                      )
+                    })}
+                  </>
+                )}
+                {kolSuggestions.length > 0 && (
+                  <>
+                    <div className="px-4 pt-2 pb-1 text-gray-500 text-xs font-medium uppercase">
+                      KOL Users
+                    </div>
+                    {kolSuggestions.map((suggestion, j) => {
+                      const globalIndex = tokenSuggestions.length + j
+                      return (
+                        <div
+                          key={`kol-${suggestion.username}-${j}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault()
+                              handleSuggestionClick(suggestion)
+                            }
+                          }}
+                          className={`w-full px-4 py-3 text-left transition-all border-b border-[#2B2B2D] last:border-b-0 ${globalIndex === selectedIndex ? "bg-[#1A1A1A]" : ""} hover:bg-[#1A1A1A] text-white cursor-pointer flex items-center justify-between`}
+                        >
+                          <div className="flex items-center space-x-3 min-w-0 flex-1">
+                            <div className="flex-shrink-0">
+                              {suggestion.imageUrl ? (
+                                <img
+                                  src={suggestion.imageUrl}
+                                  alt={suggestion.label}
+                                  className="w-8 h-8 rounded-full border border-[#2B2B2D]"
+                                  style={{ objectFit: "cover" }}
+                                  onError={(e) => {
+                                    const t = e.target as HTMLImageElement
+                                    t.src = fallbackImage
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-full border border-[#2B2B2D] bg-[#1A1A1A] flex items-center justify-center text-xs">
+                                  👤
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-white truncate">
+                                {suggestion.label}
+                              </div>
+                              {suggestion.username && (
+                                <div className="text-gray-400 text-xs truncate">
+                                  @{suggestion.username}
+                                </div>
+                              )}
+                              {suggestion.sublabel && (
+                                <div className="text-gray-500 text-xs truncate">
+                                  {suggestion.sublabel}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {suggestion.username && (
+                            <button
+                              type="button"
+                              className="text-xs px-2 py-1 rounded-none border border-[#3D3D3D] bg-[#2B2B2D] text-white hover:bg-[#3D3D3D] transition-all flex-shrink-0 ml-2"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                goToKolProfile(suggestion.username!, e)
+                              }}
                             >
-                              {suggestion.type === "kol" ? "KOL" : "Coin"}
-                            </span>
+                              Profile
+                            </button>
                           )}
                         </div>
-                        {suggestion.sublabel && (
-                          <div className="text-gray-400 text-xs truncate">
-                            {suggestion.sublabel}
-                          </div>
-                        )}
-                        {suggestion.type === "kol" && suggestion.username ? (
-                          <div className="text-gray-500 text-xs font-medium truncate">
-                            {suggestion.username}
-                          </div>
-                        ) : suggestion.address ? (
-                          <div className="text-gray-500 text-xs font-mono truncate flex items-center gap-1 cursor-pointer">
-                            {suggestion.address &&
-                              suggestion.address.length > 20
-                              ? `${suggestion.address.slice(0, 6)}...${suggestion.address.slice(-4)}`
-                              : suggestion.address || "Unknown"}
-                            <Copy
-                              className="w-3 h-3 text-white"
-                              onClick={() =>
-                                handleCopyTokenAddress(
-                                  suggestion.address || "",
-                                  ""
-                                )
-                              }
-                            />
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </button>
-                ))
-              })()}
-            </div>
-          )}
+                      )
+                    })}
+                  </>
+                )}
+              </div>
+            )}
         </div>
       </div>
     )

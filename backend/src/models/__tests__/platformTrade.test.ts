@@ -1,11 +1,25 @@
 import * as fc from 'fast-check'
-import mongoose from 'mongoose'
-import dotenv from 'dotenv'
 import PlatformTradeModel, {
   IPlatformTrade,
 } from '../platformTrade.model'
 
-dotenv.config()
+const tradeStore = new Map<string, IPlatformTrade>()
+
+function extractSignatureQuery(query: any): string[] {
+  if (!query || !query.signature) {
+    return []
+  }
+
+  if (typeof query.signature === 'string') {
+    return [query.signature]
+  }
+
+  if (query.signature.$in && Array.isArray(query.signature.$in)) {
+    return query.signature.$in
+  }
+
+  return []
+}
 
 /**
  * Feature: jupiter-swap-engine, Property 3: Signature uniqueness enforcement
@@ -16,22 +30,74 @@ dotenv.config()
  */
 
 describe('PlatformTrade Model - Property-Based Tests', () => {
-  beforeAll(async () => {
-    // Connect to MongoDB
-    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/whale-tracker-test'
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(mongoURI)
-    }
+  beforeAll(() => {
+    jest
+      .spyOn(PlatformTradeModel.prototype, 'save')
+      .mockImplementation(async function (this: any) {
+        const data = this.toObject ? this.toObject() : { ...this }
+        const signature = data.signature
+        if (tradeStore.has(signature)) {
+          throw new Error('Duplicate signature')
+        }
+        tradeStore.set(signature, data)
+        return this
+      })
+
+    jest
+      .spyOn(PlatformTradeModel, 'countDocuments')
+      .mockImplementation(async (query: any) => {
+        const signatures = extractSignatureQuery(query)
+        if (signatures.length === 0) {
+          return tradeStore.size
+        }
+
+        let count = 0
+        for (const signature of signatures) {
+          if (tradeStore.has(signature)) {
+            count += 1
+          }
+        }
+
+        return count
+      })
+
+    jest
+      .spyOn(PlatformTradeModel, 'findOne')
+      .mockImplementation(async (query: any) => {
+        const signatures = extractSignatureQuery(query)
+        for (const signature of signatures) {
+          const trade = tradeStore.get(signature)
+          if (trade) {
+            return trade
+          }
+        }
+        return null
+      })
+
+    jest
+      .spyOn(PlatformTradeModel, 'deleteMany')
+      .mockImplementation(async (query: any) => {
+        const signatures = extractSignatureQuery(query)
+        if (signatures.length === 0) {
+          tradeStore.clear()
+          return { acknowledged: true }
+        }
+
+        for (const signature of signatures) {
+          tradeStore.delete(signature)
+        }
+        return { acknowledged: true }
+      })
   })
 
-  afterAll(async () => {
-    // Disconnect from MongoDB
-    await mongoose.disconnect()
+  afterAll(() => {
+    jest.restoreAllMocks()
+    tradeStore.clear()
   })
 
   beforeEach(async () => {
     // Clear the collection before each test
-    await PlatformTradeModel.deleteMany({})
+    tradeStore.clear()
   })
 
   describe('Property 3: Signature uniqueness enforcement', () => {

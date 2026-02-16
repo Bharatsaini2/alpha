@@ -19,7 +19,7 @@ describe('ShyftParserV2 - Controller Integration Tests', () => {
    * Helper to convert v1 transaction to v2 format
    */
   const convertV1ToV2 = (txV1: ShyftTransaction): ShyftTransactionV2 => {
-    return {
+    const base: ShyftTransactionV2 = {
       signature: txV1.signature || 'test-signature',
       timestamp: typeof txV1.timestamp === 'string' 
         ? new Date(txV1.timestamp).getTime() / 1000 
@@ -28,11 +28,18 @@ describe('ShyftParserV2 - Controller Integration Tests', () => {
       fee: 0.000005,
       fee_payer: txV1.fee_payer || '',
       signers: txV1.signers || [],
-      protocol: txV1.actions?.[0]?.type 
-        ? { name: txV1.actions[0].type, address: 'unknown' }
-        : undefined,
       token_balance_changes: txV1.token_balance_changes || [],
     }
+
+    const protocol = txV1.actions?.[0]?.type
+      ? { name: txV1.actions[0].type, address: 'unknown' }
+      : undefined
+
+    if (protocol) {
+      return { ...base, protocol }
+    }
+
+    return base
   }
 
   /**
