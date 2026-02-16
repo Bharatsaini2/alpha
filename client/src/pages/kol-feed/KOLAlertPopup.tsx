@@ -42,8 +42,6 @@ const KOLAlertPopup: React.FC<KOLAlertPopupProps> = ({
   maxMarketCap,
   setMaxMarketCap,
   formatMarketCap,
-  sliderToMarketCap,
-  marketCapToSlider,
 }) => {
   const { wallet, connect } = useWalletConnection()
   const [triggerOpen, setTriggerOpen] = useState(false)

@@ -1151,62 +1151,164 @@ const WhaleNetworkGraph: React.FC<{
       onClick={onClose}
     >
       <motion.div
-        className="relative w-full max-w-7xl mx-auto bg-[#000000] shadow-xl p-3 md:p-6 lg:p-8 rounded-none max-h-[90vh] md:max-h-[95vh] overflow-y-auto md:overflow-visible"
+        className="relative w-full max-w-7xl mx-auto bg-[#000000] shadow-xl rounded-none h-[50vh] min-h-[400px] md:h-[700px] overflow-hidden"
         initial={{ opacity: 0, scale: 0.9, y: 100 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 100 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header - Row 1: Controls (Save, Last Updated, Refresh, Close) */}
-        <div className="w-full flex flex-row items-center justify-between mb-4 gap-2">
-          <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-            <button className="flex items-center space-x-1 text-[10px] text-gray-500 hover:text-white transition-colors uppercase tracking-wider font-bold whitespace-nowrap">
-              <Save className="w-3 h-3 text-gray-500" />
-              <span>SAVE</span>
-            </button>
-
-            {lastUpdatedTime && (
-              <div className="flex items-center space-x-2 text-[10px] text-gray-500 uppercase tracking-wider font-bold whitespace-nowrap">
-                <span>LAST REFRESHED:</span>
-                <LastUpdatedTicker
-                  lastUpdated={lastUpdatedTime}
-                  format={formatTimeSinceUpdate}
-                />
+        {/* 1. Graph Container (Background Layer) */}
+        <div className="absolute inset-0 z-0 w-full h-full bg-black">
+          {isRefreshing && (
+            <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] z-[20] flex items-center justify-center">
+              <div className="flex items-center space-x-2 text-sm text-white/80">
+                <div className="animate-spin rounded-none h-5 w-5 border-2 border-white/40 border-t-transparent"></div>
+                <span>Updating...</span>
               </div>
-            )}
-            <button
-              onClick={() => fetchData(true)}
-              disabled={isRefreshing}
-              className="flex items-center space-x-2 text-[10px] text-gray-500 hover:text-white transition-colors disabled:opacity-50 cursor-pointer uppercase tracking-wider font-bold whitespace-nowrap"
+            </div>
+          )}
+
+          {/* Vignette Overlay */}
+          <div
+            className="absolute inset-0 pointer-events-none z-10"
+            style={{
+              background:
+                "radial-gradient(circle at center, transparent 30%, black 100%)",
+              opacity: 0.8,
+            }}
+          />
+
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="animate-spin rounded-none h-12 w-12 border-2 border-[#06DF73] border-t-transparent"></div>
+            </div>
+          ) : nodesState.length === 0 ? (
+            <div className="flex items-center justify-center h-full text-white text-xl">
+              Not enough whale transactions for the selected filters.
+            </div>
+          ) : (
+            <ReactFlow
+              nodes={nodesState}
+              edges={edgesState}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onNodeClick={onNodeClick}
+              onPaneClick={onPaneClick}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              fitView
+              onInit={setRfInstance}
+              className="bg-black"
+              style={{ width: "100%", height: "100%" }}
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+              onConnect={onConnect}
+              minZoom={0.5}
+              maxZoom={2}
             >
-              <RefreshCw
-                className={`w-3 h-3 text-gray-500 ${isRefreshing ? "animate-spin" : ""}`}
+              <Background
+                color="#333"
+                gap={8}
+                size={1}
+                variant={BackgroundVariant.Dots}
               />
-              <span>REFRESH</span>
+              <MiniMap
+                style={{
+                  background: "#111",
+                  border: "1px solid #333",
+                  width: window.innerWidth < 768 ? 100 : 200,
+                  height: window.innerWidth < 768 ? 75 : 150,
+                  bottom: window.innerWidth < 768 ? 35 : 15,
+                }}
+                nodeColor={() => "#333"}
+                maskColor="rgba(0,0,0,0.5)"
+                className="!overflow-hidden"
+              />
+              <DownloadButton />
+              {tooltipAnchor && (
+                <Panel
+                  position={toolbarSide as any}
+                  className="bg-black/90 p-3 border border-[#2b2a2a] backdrop-blur-md shadow-2xl max-w-xs min-w-[200px] pointer-events-auto"
+                >
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#2b2a2a]">
+                    <h3 className="text-white font-bold text-[10px] uppercase tracking-wider">
+                      Whale Address
+                    </h3>
+                    <div className="flex gap-2">
+                      {/* Icons moved here if needed or kept in tooltip */}
+                    </div>
+                    <button
+                      onClick={() => setTooltipAnchor(null)}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                  {(() => {
+                    const node = nodesState.find(
+                      (n) => n.id === tooltipAnchor.nodeId
+                    )
+                    return (
+                      <Tooltip tooltip={node?.data} showToast={showToast} />
+                    )
+                  })()}
+                </Panel>
+              )}
+            </ReactFlow>
+          )}
+        </div>
+
+        {/* 2. UI Controls Overlay (Foreground Layer) */}
+        <div className="relative z-10 pointer-events-none w-full h-full flex flex-col justify-start p-3 md:p-6 lg:p-8 gap-4">
+          {/* Header - Row 1: Controls (Save, Last Updated, Refresh, Close) */}
+          <div className="w-full flex justify-end items-center gap-4 pointer-events-auto">
+            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
+              <button className="flex items-center space-x-1 text-[10px] text-gray-500 hover:text-white transition-colors uppercase tracking-wider font-bold whitespace-nowrap">
+                <Save className="w-3 h-3 text-gray-500" />
+                <span>SAVE</span>
+              </button>
+
+              {lastUpdatedTime && (
+                <div className="flex items-center space-x-2 text-[10px] text-gray-500 uppercase tracking-wider font-bold whitespace-nowrap">
+                  <span>LAST REFRESHED:</span>
+                  <LastUpdatedTicker
+                    lastUpdated={lastUpdatedTime}
+                    format={formatTimeSinceUpdate}
+                  />
+                </div>
+              )}
+              <button
+                onClick={() => fetchData(true)}
+                disabled={isRefreshing}
+                className="flex items-center space-x-2 text-[10px] text-gray-500 hover:text-white transition-colors disabled:opacity-50 cursor-pointer uppercase tracking-wider font-bold whitespace-nowrap"
+              >
+                <RefreshCw
+                  className={`w-3 h-3 text-gray-500 ${isRefreshing ? "animate-spin" : ""}`}
+                />
+                <span>REFRESH</span>
+              </button>
+            </div>
+
+            <button
+              className="text-white p-1.5 cursor-pointer hover:bg-white/10 transition-colors bg-[#1A1A1E] rounded-none"
+              style={{ border: "1px solid #333" }}
+              onClick={onClose}
+            >
+              <X className="w-3 h-3 text-white" />
             </button>
           </div>
 
-          <button
-            className="text-white p-1.5 cursor-pointer hover:bg-white/10 transition-colors bg-[#1A1A1E] rounded-none"
-            style={{ border: "1px solid #333" }}
-            onClick={onClose}
-          >
-            <X className="w-3 h-3 text-white" />
-          </button>
-        </div>
-
-        {/* Header - Row 2: Filters */}
-        <div className="w-full mb-4">
-          <ul className="plan-btn-list w-full flex flex-wrap justify-end gap-2">
-            {/* 1. Subscribe */}
+          {/* Header - Row 2: Filters */}
+          <div className="w-full pointer-events-auto">
+            <ul className="plan-btn-list w-full flex flex-wrap justify-end gap-2">
+              {/* 1. Subscribe */}
             <li
               className="relative w-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <a
                 href="javascript:void(0)"
-                className={`plan-btn inline-flex items-center gap-2 px-3 py-2 text-[13px] ${dropdown === "telegram" ? "active" : ""}`}
+                className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "telegram" ? "active" : ""}`}
                 onClick={() =>
                   setDropdown(dropdown === "telegram" ? null : "telegram")
                 }
@@ -1269,7 +1371,7 @@ const WhaleNetworkGraph: React.FC<{
             >
               <a
                 href="javascript:void(0)"
-                className={`plan-btn inline-flex items-center gap-2 px-3 py-2 text-[13px] ${dropdown === "timeframe" ? "active" : ""}`}
+                className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "timeframe" ? "active" : ""}`}
                 onClick={() =>
                   setDropdown(dropdown === "timeframe" ? null : "timeframe")
                 }
@@ -1305,7 +1407,7 @@ const WhaleNetworkGraph: React.FC<{
             >
               <a
                 href="javascript:void(0)"
-                className={`plan-btn inline-flex items-center gap-2 px-3 py-2 text-[13px] ${dropdown === "whales" ? "active" : ""}`}
+                className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "whales" ? "active" : ""}`}
                 onClick={() =>
                   setDropdown(dropdown === "whales" ? null : "whales")
                 }
@@ -1361,12 +1463,12 @@ const WhaleNetworkGraph: React.FC<{
 
             {/* 4. Volume */}
             <li
-              className="relative w-full md:w-auto"
+              className="relative w-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <a
                 href="javascript:void(0)"
-                className={`plan-btn w-full justify-between px-3 py-2 text-[13px] ${dropdown === "volume" ? "active" : ""}`}
+                className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "volume" ? "active" : ""}`}
                 onClick={() =>
                   setDropdown(dropdown === "volume" ? null : "volume")
                 }
@@ -1419,104 +1521,9 @@ const WhaleNetworkGraph: React.FC<{
                 </div>
               )}
             </li>
-          </ul>
+            </ul>
+          </div>
         </div>
-
-        {/* Graph Container */}
-        <div className="w-full h-[50vh] min-h-[400px] md:h-[700px] overflow-hidden bg-black relative rounded-none">
-          {isRefreshing && (
-            <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px] z-10 flex items-center justify-center">
-              <div className="flex items-center space-x-2 text-sm text-white/80">
-                <div className="animate-spin rounded-none h-5 w-5 border-2 border-white/40 border-t-transparent"></div>
-                <span>Updating...</span>
-              </div>
-            </div>
-          )}
-
-          {/* Vignette Overlay to create the "gradient type thing" */}
-          <div
-            className="absolute inset-0 pointer-events-none z-10"
-            style={{
-              background:
-                "radial-gradient(circle at center, transparent 30%, black 100%)",
-              opacity: 0.8,
-            }}
-          />
-
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-spin rounded-none h-12 w-12 border-2 border-[#06DF73] border-t-transparent"></div>
-            </div>
-          ) : nodesState.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-white text-xl">
-              Not enough whale transactions for the selected filters.
-            </div>
-          ) : (
-            <ReactFlow
-              nodes={nodesState}
-              edges={edgesState}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeClick={onNodeClick}
-              onPaneClick={onPaneClick}
-              nodeTypes={nodeTypes}
-              edgeTypes={edgeTypes}
-              fitView
-              onInit={setRfInstance}
-              className="bg-black"
-              style={{ width: "100%", height: "100%", clipPath: "inset(0)" }}
-              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
-              onConnect={onConnect}
-              minZoom={0.5}
-              maxZoom={2}
-            >
-              <Background
-                color="#333"
-                gap={12}
-                size={1}
-                variant={BackgroundVariant.Dots}
-              />
-              <MiniMap
-                style={{ background: "#111", border: "1px solid #333" }}
-                nodeColor={() => "#333"}
-                maskColor="rgba(0,0,0,0.5)"
-              />
-              <DownloadButton />
-              {tooltipAnchor && (
-                <Panel
-                  position={toolbarSide as any}
-                  className="bg-black/90 p-3 border border-[#2b2a2a] backdrop-blur-md shadow-2xl max-w-xs min-w-[200px] pointer-events-auto"
-                >
-                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#2b2a2a]">
-                    <h3 className="text-white font-bold text-[10px] uppercase tracking-wider">
-                      Whale Address
-                    </h3>
-                    <div className="flex gap-2">
-                      {/* Icons moved here if needed or kept in tooltip */}
-                    </div>
-                    <button
-                      onClick={() => setTooltipAnchor(null)}
-                      className="text-gray-400 hover:text-white"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                  {(() => {
-                    const node = nodesState.find(
-                      (n) => n.id === tooltipAnchor.nodeId
-                    )
-                    return (
-                      <Tooltip tooltip={node?.data} showToast={showToast} />
-                    )
-                  })()}
-                </Panel>
-              )}
-            </ReactFlow>
-          )}
-        </div>
-
-        {/* Removed Bottom Subscription as it moved to Top */}
-        <div className="mb-2"></div>
       </motion.div>
     </motion.div>,
     document.body

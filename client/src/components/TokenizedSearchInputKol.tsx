@@ -87,7 +87,7 @@ const TokenizedSearchInputKol = React.forwardRef<
       onSearch,
       placeholder = "Search tokens, contract address, or KOL username...",
       className = "",
-      page = "kol-feed",
+      page: _page = "kol-feed",
       transactions = [],
       simpleDesign = false,
     },

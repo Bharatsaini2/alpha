@@ -24,7 +24,7 @@ import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
 import RightSidebarNew from "./RightSidebarNew"
-import { faCopy } from "@fortawesome/free-regular-svg-icons"
+
 import { RiFileCopyLine } from "react-icons/ri"
 import TransactionListSkeleton from "../../components/skeletons/TransactionListSkeleton"
 
@@ -805,7 +805,7 @@ const HomePageNew = () => {
     )
   }
 
-  const [isSaved, setIsSaved] = useState(false)
+
   const [showConfigSavedModal, setShowConfigSavedModal] = useState(false)
   const [savedConfig, setSavedConfig] = useState<{
     hotness: number
@@ -836,28 +836,6 @@ const HomePageNew = () => {
     return `${value}`
   }
 
-  // Helper function to parse market cap from slider (logarithmic scale: 1K to 50M)
-  const sliderToMarketCap = (sliderValue: number): number => {
-    if (sliderValue === 100) return 50000000 // 50M+
-    if (sliderValue === 0) return 1000 // 1K minimum
-    
-    // Logarithmic mapping: 0-100 slider -> 1K to 50M
-    const minLog = Math.log10(1000) // log10(1K) = 3
-    const maxLog = Math.log10(50000000) // log10(50M) = 7.7
-    const logValue = minLog + (sliderValue / 100) * (maxLog - minLog)
-    return Math.pow(10, logValue)
-  }
-
-  // Helper function to convert market cap to slider value
-  const marketCapToSlider = (mcap: number): number => {
-    if (mcap >= 50000000) return 100
-    if (mcap <= 1000) return 0
-    
-    const minLog = Math.log10(1000)
-    const maxLog = Math.log10(50000000)
-    const logValue = Math.log10(mcap)
-    return ((logValue - minLog) / (maxLog - minLog)) * 100
-  }
 
   // Handle whale alert subscription
   const handleWhaleAlertConnect = async () => {
@@ -2076,8 +2054,8 @@ const HomePageNew = () => {
                               ) : (
                                 <div
                                   className={`sold-out-title ${tx.type === "buy" ? "buy-transaction" : ""}`}
-                                  style={{ 
-                                    margin: "8px 0 0 0", 
+                                  style={{
+                                    margin: "8px 0 0 0",
                                     lineHeight: "1.2",
                                     display: "flex",
                                     alignItems: "center"

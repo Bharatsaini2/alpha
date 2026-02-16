@@ -21,7 +21,7 @@ import axios from "axios"
 import WhaleFilterModal from "../../components/WhaleFilterModel"
 import { ReactFlowProvider } from "@xyflow/react"
 import RightSidebarNew from "../home/RightSidebarNew"
-import { faCopy } from "@fortawesome/free-regular-svg-icons"
+
 import { RiFileCopyLine, RiVerifiedBadgeFill } from "react-icons/ri"
 
 import SwapModal from "../../components/swap/SwapModal"
