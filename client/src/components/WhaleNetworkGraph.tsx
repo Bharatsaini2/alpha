@@ -21,6 +21,7 @@ import {
   Background,
   MiniMap,
   BackgroundVariant,
+  NodeToolbar,
 } from "@xyflow/react"
 import "@xyflow/react/dist/style.css"
 import { motion } from "framer-motion"
@@ -77,297 +78,8 @@ const makeEdgeId = (
 ) => `edge_${coinId}_${whaleNodeId}_${type}_${ts}_${Math.round(amt * 1000)}`
 
 // -----------------------------
-// Custom Coin Node
-// -----------------------------
-const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
-  const [isHovered, setIsHovered] = useState(false)
-  const bubbleAnimation = useRandomBubbleAnimation()
-  const updateNodeInternals = useUpdateNodeInternals()
-  useEffect(() => {
-    // Throttle updates to avoid performance issues
-    const timeoutId = setTimeout(() => {
-      updateNodeInternals(id)
-    }, 100)
-
-    return () => clearTimeout(timeoutId)
-  }, [
-    Math.round(bubbleAnimation.x / 5) * 5,
-    Math.round(bubbleAnimation.y / 5) * 5,
-    Math.round(bubbleAnimation.scale * 20) / 20,
-    updateNodeInternals,
-    id,
-  ])
-
-  return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      className={`rf-circle-wrap relative ${selected ? "ring-2 ring-[#06DF73]" : ""}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      animate={{
-        scale: isHovered ? 1.05 : 1 + bubbleAnimation.scale - 1,
-        opacity: 1,
-        borderRadius: "0%",
-        x: bubbleAnimation.x,
-        y: bubbleAnimation.y,
-        boxShadow: isHovered
-          ? "0 10px 25px rgba(6, 223, 115, 0.3)"
-          : "0 4px 12px rgba(0, 0, 0, 0.2)",
-      }}
-      exit={{ scale: 0, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      style={{ borderRadius: "0px", willChange: "transform" }}
-    >
-      <Handle
-        type="source"
-        position={Position.Left}
-        style={{
-          top: "50%",
-          left: "50%",
-          background: "transparent",
-          border: "none",
-          width: "0px",
-          height: "0px",
-          minWidth: "0px",
-          minHeight: "0px",
-          transform: "translate(-50%, -50%)",
-        }}
-      />
-      <div className="relative">
-        <motion.div
-          className="rf-circle-wrap w-16 h-16 rounded-none overflow-hidden border-2 border-white/20 bg-gradient-to-br from-[#1A1A1E] to-[#2A2A2D] flex items-center justify-center"
-          animate={{
-            borderColor: isHovered
-              ? "rgba(6, 223, 115, 0.6)"
-              : "rgba(255, 255, 255, 0.2)",
-          }}
-          transition={{ duration: 0.2 }}
-        >
-          <img
-            src={
-              (data.symbol as string) === "SOL" ||
-              (data.symbol as string) === "WSOL"
-                ? solanalogo
-                : (data.imageUrl as string) || DefaultTokenImage
-            }
-            alt={(data.symbol as string) || "Token"}
-            className="w-12 h-12 rounded-none object-cover"
-            style={{ borderRadius: "0px !important" }}
-          />
-        </motion.div>
-        <motion.div
-          className="absolute inset-0 rounded-none bg-gradient-to-r from-[#06DF73]/20 to-[#05C96A]/20 blur-md -z-10"
-          style={{ borderRadius: "0px !important" }}
-          animate={{
-            opacity: isHovered ? 1 : 0,
-            scale: isHovered ? 1.2 : 1,
-          }}
-          transition={{ duration: 0.3 }}
-        />
-        <motion.div
-          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#1A1A1E] border border-[#2A2A2D] px-2 py-1 text-xs font-medium text-white whitespace-nowrap font-sans"
-          animate={{
-            opacity: isHovered ? 1 : 0,
-            y: isHovered ? 0 : 10,
-          }}
-          transition={{ duration: 0.2 }}
-        >
-          {(data.symbol as string) || "Token"}
-        </motion.div>
-      </div>
-    </motion.div>
-  )
-}
-
-// -----------------------------
-// Custom Whale Node
-// -----------------------------
-const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
-  const [isHovered, setIsHovered] = useState(false)
-  const bubbleAnimation = useRandomBubbleAnimation()
-  const updateNodeInternals = useUpdateNodeInternals()
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      updateNodeInternals(id)
-    }, 100)
-
-    return () => clearTimeout(timeoutId)
-  }, [
-    Math.round(bubbleAnimation.x / 5) * 5,
-    Math.round(bubbleAnimation.y / 5) * 5,
-    Math.round(bubbleAnimation.scale * 20) / 20,
-    updateNodeInternals,
-    id,
-  ])
-
-  const getWhaleColor = () => {
-    const totalBuyAmount = data.totalBuyAmount || 0
-    const totalSellAmount = data.totalSellAmount || 0
-    if (totalBuyAmount > totalSellAmount) return "#06DF73"
-    if (totalSellAmount > totalBuyAmount) return "#FF6467"
-    return "#999999"
-  }
-  return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      className={`rf-circle-wrap relative ${selected ? "ring-2 ring-[#06DF73]" : ""}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      animate={{
-        scale: isHovered ? 1.1 : 1 + bubbleAnimation.scale - 1,
-        opacity: 1,
-        borderRadius: "50%",
-        x: bubbleAnimation.x,
-        y: bubbleAnimation.y,
-        boxShadow: isHovered
-          ? `0 10px 25px ${getWhaleColor()}40`
-          : "0 4px 12px rgba(0, 0, 0, 0.2)",
-      }}
-      exit={{ scale: 0, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      style={{ willChange: "transform" }}
-    >
-      <Handle
-        type="target"
-        position={Position.Right}
-        style={{
-          top: "50%",
-          left: "50%",
-          background: "transparent",
-          border: "none",
-          width: "0px",
-          height: "0px",
-          minWidth: "0px",
-          minHeight: "0px",
-          transform: "translate(-50%, -50%)",
-        }}
-      />
-      <div className="relative">
-        <motion.div
-          className="rf-circle-wrap w-12 h-12 rounded-full flex items-center justify-center text-black font-bold text-xs border-2 border-white/20 overflow-hidden"
-          style={{ backgroundColor: "#999999" }}
-          animate={{
-            borderColor: isHovered
-              ? `${getWhaleColor()}80`
-              : "rgba(255, 255, 255, 0.2)",
-          }}
-          transition={{ duration: 0.2 }}
-        >
-          <img
-            src={whaleImage}
-            alt="Whale"
-            className="w-full h-full object-cover"
-          />
-        </motion.div>
-        <motion.div
-          className="absolute inset-0 rounded-full blur-md -z-10"
-          style={{ backgroundColor: getWhaleColor() }}
-          animate={{
-            opacity: isHovered ? 0.4 : 0,
-            scale: isHovered ? 1.3 : 1,
-          }}
-          transition={{ duration: 0.3 }}
-        />
-        <motion.div
-          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#1A1A1E] border border-[#2A2A2D] px-2 py-1 text-xs font-medium text-white whitespace-nowrap font-sans"
-          animate={{
-            opacity: isHovered ? 1 : 0,
-            y: isHovered ? 0 : 10,
-          }}
-          transition={{ duration: 0.2 }}
-        >
-          {((data.address as string) || "0x0000").slice(0, 6)}...
-          {((data.address as string) || "0000").slice(-4)}
-        </motion.div>
-      </div>
-    </motion.div>
-  )
-}
-
-// -----------------------------
-// Custom Edge for Multiple Trades
-// -----------------------------
-const CustomEdge: React.FC<EdgeProps> = ({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  data,
-}) => {
-  const [isHovered, setIsHovered] = useState(false)
-
-  // 1. Get the offset (e.g. -5, 0, 5) from the data
-  const edgeOffset = (data?.edgeOffset as number) ?? 0
-
-  // 2. Calculate Geometry
-  const dx = targetX - sourceX
-  const dy = targetY - sourceY
-  const len = Math.sqrt(dx * dx + dy * dy) || 1
-
-  // 3. Normal Vector (Perpendicular direction)
-  const nx = -dy / len
-  const ny = dx / len
-
-  // 4. Spread Multiplier
-  // Reduced from 4 to 1 to create a much tighter, cable-like bundle
-  const spread = edgeOffset * 1
-
-  // 5. CRISS-CROSS LOGIC
-  // Start Point: Shift Positive
-  const startX = sourceX + nx * spread
-  const startY = sourceY + ny * spread
-
-  // End Point: Shift NEGATIVE (Inverted)
-  // This causes the line to aim for the "opposite" side, forcing a cross in the center.
-  const endX = targetX - nx * spread
-  const endY = targetY - ny * spread
-
-  // 6. Draw BEZIER CURVE (Q)
-  // Instead of straight lines, we use a quadratic bezier or cubic bezier to "pinch" them.
-  // We want them to start at source, curve towards the center pinch point, then curve to target.
-
-  // Control Point 1: Near Source but shifted
-  const cp1X = sourceX + dx * 0.4 + nx * spread * 0.5
-  const cp1Y = sourceY + dy * 0.4 + ny * spread * 0.5
-
-  // Control Point 2: Near Target but shifted (inverted)
-  const cp2X = targetX - dx * 0.4 - nx * spread * 0.5
-  const cp2Y = targetY - dy * 0.4 - ny * spread * 0.5
-
-  // A smooth "S" shape or "Hourglass" with curves
-  const edgePath = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`
-
-  return (
-    <motion.g
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <motion.path
-        id={id}
-        d={edgePath}
-        stroke={data?.type === "buy" ? "#06DF73" : "#FF6467"}
-        strokeWidth={isHovered ? 2 : 0.75} // Thinner, crisper lines
-        strokeOpacity={1} // Keep fully visible as requested
-        fill="none"
-        style={{
-          strokeDasharray: "none",
-          strokeLinecap: "round",
-          strokeLinejoin: "round",
-        }}
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{
-          pathLength: 1,
-          opacity: 1, // Fully opaque
-        }}
-        transition={{ duration: 0.5 }}
-      />
-    </motion.g>
-  )
-}
-
 // Tooltip Component
+// -----------------------------
 const Tooltip: React.FC<{
   tooltip: any
   showToast: (message: string, type: "success" | "error") => void
@@ -471,6 +183,334 @@ const Tooltip: React.FC<{
     </>
   )
 }
+
+// -----------------------------
+// Custom Coin Node
+// -----------------------------
+const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
+  const [isHovered, setIsHovered] = useState(false)
+  const bubbleAnimation = useRandomBubbleAnimation()
+  const updateNodeInternals = useUpdateNodeInternals()
+  useEffect(() => {
+    // Throttle updates to avoid performance issues
+    const timeoutId = setTimeout(() => {
+      updateNodeInternals(id)
+    }, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [
+    Math.round(bubbleAnimation.x / 5) * 5,
+    Math.round(bubbleAnimation.y / 5) * 5,
+    Math.round(bubbleAnimation.scale * 20) / 20,
+    updateNodeInternals,
+    id,
+  ])
+
+  return (
+    <motion.div
+      initial={{ scale: 0, opacity: 0 }}
+      className={`relative ${selected ? "ring-2 ring-[#06DF73]" : ""}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      animate={{
+        scale: isHovered ? 1.05 : 1 + bubbleAnimation.scale - 1,
+        opacity: 1,
+        borderRadius: "50%",
+        x: bubbleAnimation.x,
+        y: bubbleAnimation.y,
+        boxShadow: isHovered
+          ? "0 0 15px rgba(6, 223, 115, 0.6), 0 0 30px rgba(6, 223, 115, 0.4)"
+          : "0 4px 12px rgba(0, 0, 0, 0.2)",
+      }}
+      exit={{ scale: 0, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 200, damping: 15 }}
+      style={{ borderRadius: "50%" }}
+    >
+      <Handle
+        type="source"
+        position={Position.Left}
+        style={{
+          top: "50%",
+          left: "50%",
+          background: "transparent",
+          border: "none",
+          width: "0px",
+          height: "0px",
+          minWidth: "0px",
+          minHeight: "0px",
+          transform: "translate(-50%, -50%)",
+        }}
+      />
+      <div className="relative">
+        <motion.div
+          className="rf-circle-wrap w-16 h-16 rounded-none overflow-hidden border-2 border-white/20 bg-gradient-to-br from-[#1A1A1E] to-[#2A2A2D] flex items-center justify-center"
+          animate={{
+            borderColor: isHovered
+              ? "rgba(6, 223, 115, 0.6)"
+              : "rgba(255, 255, 255, 0.2)",
+          }}
+          transition={{ duration: 0.2 }}
+        >
+          <img
+            src={
+              (data.symbol as string) === "SOL" ||
+              (data.symbol as string) === "WSOL"
+                ? solanalogo
+                : (data.imageUrl as string) || DefaultTokenImage
+            }
+            alt={(data.symbol as string) || "Token"}
+            className="w-12 h-12 rounded-none object-cover"
+            style={{ borderRadius: "0px !important" }}
+          />
+        </motion.div>
+        <motion.div
+          className="absolute inset-0 rounded-none bg-gradient-to-r from-[#06DF73]/20 to-[#05C96A]/20 blur-md -z-10"
+          style={{ borderRadius: "0px !important" }}
+          animate={{
+            opacity: isHovered ? 1 : 0,
+            scale: isHovered ? 1.2 : 1,
+          }}
+          transition={{ duration: 0.3 }}
+        />
+        <motion.div
+          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#1A1A1E] border border-[#2A2A2D] px-2 py-1 text-xs font-medium text-white whitespace-nowrap font-sans"
+          animate={{
+            opacity: isHovered ? 1 : 0,
+            y: isHovered ? 0 : 10,
+          }}
+          transition={{ duration: 0.2 }}
+        >
+          {(data.symbol as string) || "Token"}
+        </motion.div>
+      </div>
+    </motion.div>
+  )
+}
+
+// -----------------------------
+// Custom Whale Node
+// -----------------------------
+const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
+  const [isHovered, setIsHovered] = useState(false)
+  const bubbleAnimation = useRandomBubbleAnimation()
+  const updateNodeInternals = useUpdateNodeInternals()
+  const { showToast } = useToast()
+  const { setNodes } = useReactFlow()
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      updateNodeInternals(id)
+    }, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [
+    Math.round(bubbleAnimation.x / 5) * 5,
+    Math.round(bubbleAnimation.y / 5) * 5,
+    Math.round(bubbleAnimation.scale * 20) / 20,
+    updateNodeInternals,
+    id,
+  ])
+
+  const getWhaleColor = () => {
+    const totalBuyAmount = data.totalBuyAmount || 0
+    const totalSellAmount = data.totalSellAmount || 0
+    if (totalBuyAmount > totalSellAmount) return "#06DF73"
+    if (totalSellAmount > totalBuyAmount) return "#FF6467"
+    return "#999999"
+  }
+
+  const handleClose = () => {
+    setNodes((nodes) =>
+      nodes.map((n) => (n.id === id ? { ...n, selected: false } : n))
+    )
+  }
+
+  return (
+    <>
+      <NodeToolbar
+        isVisible={!!selected}
+        position={Position.Right}
+        align="center"
+        offset={20}
+        className="bg-black/90 p-3 border border-[#2b2a2a] backdrop-blur-md shadow-2xl max-w-xs min-w-[200px] pointer-events-auto rounded-none z-50 text-left"
+      >
+        <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#2b2a2a]">
+          <h3 className="text-white font-bold text-[10px] uppercase tracking-wider">
+            Whale Address
+          </h3>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              handleClose()
+            }}
+            className="text-gray-400 hover:text-white"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+        <Tooltip tooltip={data} showToast={showToast} />
+      </NodeToolbar>
+
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        className={`relative ${selected ? "ring-2 ring-[#06DF73]" : ""}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        animate={{
+          scale: isHovered ? 1.1 : 1 + bubbleAnimation.scale - 1,
+          opacity: 1,
+          borderRadius: "50%",
+          x: bubbleAnimation.x,
+          y: bubbleAnimation.y,
+          boxShadow: isHovered
+            ? `0 0 15px ${getWhaleColor()}80, 0 0 30px ${getWhaleColor()}40`
+            : "0 4px 12px rgba(0, 0, 0, 0.2)",
+        }}
+        exit={{ scale: 0, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        style={{ willChange: "auto" }}
+      >
+        <Handle
+          type="target"
+          position={Position.Right}
+          style={{
+            top: "50%",
+            left: "50%",
+            background: "transparent",
+            border: "none",
+            width: "0px",
+            height: "0px",
+            minWidth: "0px",
+            minHeight: "0px",
+            transform: "translate(-50%, -50%)",
+          }}
+        />
+        <div className="relative">
+          <motion.div
+            className="rf-circle-wrap w-12 h-12 rounded-full flex items-center justify-center text-black font-bold text-xs border-2 border-white/20 overflow-hidden"
+            style={{ backgroundColor: "#999999" }}
+            animate={{
+              borderColor: isHovered
+                ? `${getWhaleColor()}80`
+                : "rgba(255, 255, 255, 0.2)",
+            }}
+            transition={{ duration: 0.2 }}
+          >
+            <img
+              src={whaleImage}
+              alt="Whale"
+              className="w-full h-full object-cover"
+            />
+          </motion.div>
+          <motion.div
+            className="absolute inset-0 rounded-full blur-md -z-10"
+            style={{ backgroundColor: getWhaleColor() }}
+            animate={{
+              opacity: isHovered ? 0.6 : 0,
+              scale: isHovered ? 1.4 : 1,
+            }}
+            transition={{ duration: 0.3 }}
+          />
+          <motion.div
+            className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#1A1A1E] border border-[#2A2A2D] px-2 py-1 text-xs font-medium text-white whitespace-nowrap font-sans"
+            animate={{
+              opacity: isHovered ? 1 : 0,
+              y: isHovered ? 0 : 10,
+            }}
+            transition={{ duration: 0.2 }}
+          >
+            {((data.address as string) || "0x0000").slice(0, 6)}...
+            {((data.address as string) || "0000").slice(-4)}
+          </motion.div>
+        </div>
+      </motion.div>
+    </>
+  )
+}
+
+// -----------------------------
+// Custom Edge for Multiple Trades
+// -----------------------------
+const CustomEdge: React.FC<EdgeProps> = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  data,
+}) => {
+  const [isHovered, setIsHovered] = useState(false)
+
+  // 1. Get the offset (e.g. -5, 0, 5) from the data
+  const edgeOffset = (data?.edgeOffset as number) ?? 0
+
+  // 2. Calculate Geometry
+  const dx = targetX - sourceX
+  const dy = targetY - sourceY
+  const len = Math.sqrt(dx * dx + dy * dy) || 1
+
+  // 3. Normal Vector (Perpendicular direction)
+  const nx = -dy / len
+  const ny = dx / len
+
+  // 4. Spread Multiplier
+  // Reduced from 4 to 1 to create a much tighter, cable-like bundle
+  const spread = edgeOffset * 1
+
+  // 5. CRISS-CROSS LOGIC
+  // Start Point: Shift Positive
+  const startX = sourceX + nx * spread
+  const startY = sourceY + ny * spread
+
+  // End Point: Shift NEGATIVE (Inverted)
+  // This causes the line to aim for the "opposite" side, forcing a cross in the center.
+  const endX = targetX - nx * spread
+  const endY = targetY - ny * spread
+
+  // 6. Draw BEZIER CURVE (Q)
+  // Instead of straight lines, we use a quadratic bezier or cubic bezier to "pinch" them.
+  // We want them to start at source, curve towards the center pinch point, then curve to target.
+
+  // Control Point 1: Near Source but shifted
+  const cp1X = sourceX + dx * 0.4 + nx * spread * 0.5
+  const cp1Y = sourceY + dy * 0.4 + ny * spread * 0.5
+
+  // Control Point 2: Near Target but shifted (inverted)
+  const cp2X = targetX - dx * 0.4 - nx * spread * 0.5
+  const cp2Y = targetY - dy * 0.4 - ny * spread * 0.5
+
+  // A smooth "S" shape or "Hourglass" with curves
+  const edgePath = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`
+
+  return (
+    <motion.g
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <motion.path
+        id={id}
+        d={edgePath}
+        stroke={data?.type === "buy" ? "#06DF73" : "#FF6467"}
+        strokeWidth={isHovered ? 2 : 0.75} // Thinner, crisper lines
+        strokeOpacity={1} // Keep fully visible as requested
+        fill="none"
+        style={{
+          strokeDasharray: "none",
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+        }}
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{
+          pathLength: 1,
+          opacity: 1, // Fully opaque
+        }}
+        transition={{ duration: 0.5 }}
+      />
+    </motion.g>
+  )
+}
+
+// Tooltip Component Logic Moved to top
 
 // Download Button Logic
 const isIOS = () => {
@@ -705,7 +745,10 @@ const DownloadButton: React.FC = () => {
   )
 }
 
-type TooltipAnchor = { type: "whale"; nodeId: string }
+// -----------------------------
+// WhaleNetworkGraph Component
+// -----------------------------
+// Removed tooltip state and logic as it is now handled by NodeToolbar in WhaleNode
 
 const WhaleNetworkGraph: React.FC<{
   isOpen: boolean
@@ -713,8 +756,6 @@ const WhaleNetworkGraph: React.FC<{
 }> = ({ isOpen, onClose }) => {
   const [apiData, setApiData] = useState<CoinWithWhales[]>([])
   const [loading, setLoading] = useState(false)
-  const [tooltipAnchor, setTooltipAnchor] = useState<TooltipAnchor | null>(null)
-  const [toolbarSide, setToolbarSide] = useState<Position>(Position.Right)
   const { showToast } = useToast()
   // const { x: vpX, y: vpY, zoom } = useViewport()
 
@@ -1029,9 +1070,7 @@ const WhaleNetworkGraph: React.FC<{
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent<Element, MouseEvent>, node: Node) => {
-      if (node.type === "whale") {
-        setTooltipAnchor({ type: "whale", nodeId: node.id })
-      } else if (node.type === "coin") {
+      if (node.type === "coin") {
         const tokenAddress = (node.data?.id || node.id) as string
         if (tokenAddress && typeof tokenAddress === "string") {
           navigator.clipboard
@@ -1045,7 +1084,7 @@ const WhaleNetworkGraph: React.FC<{
   )
 
   const onPaneClick = useCallback(() => {
-    setTooltipAnchor(null)
+    // Deselect all nodes is handled by React Flow default behavior
   }, [])
 
   useEffect(() => {
@@ -1069,58 +1108,6 @@ const WhaleNetworkGraph: React.FC<{
     const remainingSeconds = seconds % 60
     return `${minutes}m ${remainingSeconds}s`
   }
-
-  // Tooltip positioning logic
-  useEffect(() => {
-    if (!tooltipAnchor) return
-    const pane = document.querySelector(".react-flow") as HTMLElement | null
-    if (!pane) return
-    const rect = pane.getBoundingClientRect()
-    const node = nodesState.find((n) => n.id === tooltipAnchor.nodeId)
-    if (!node) return
-
-    const width = node.width ?? 48
-    const height = node.height ?? 48
-    const nodeCenterX = 0 + node.position.x * 1 + (width * 1) / 2
-    const nodeCenterY = 0 + node.position.y * 1 + (height * 1) / 2
-    const estTooltipWidth = 260
-    const estTooltipHeight = 140
-    const gap = 12
-
-    const availableRight = rect.width - (nodeCenterX + (width * 1) / 2) - gap
-    const availableLeft = nodeCenterX - (width * 1) / 2 - gap
-    const availableBottom = rect.height - (nodeCenterY + (height * 1) / 2) - gap
-    const availableTop = nodeCenterY - (height * 1) / 2 - gap
-
-    const scores = [
-      {
-        side: Position.Right,
-        score: availableRight - estTooltipWidth,
-        fits: availableRight >= estTooltipWidth,
-      },
-      {
-        side: Position.Left,
-        score: availableLeft - estTooltipWidth,
-        fits: availableLeft >= estTooltipWidth,
-      },
-      {
-        side: Position.Bottom,
-        score: availableBottom - estTooltipHeight,
-        fits: availableBottom >= estTooltipHeight,
-      },
-      {
-        side: Position.Top,
-        score: availableTop - estTooltipHeight,
-        fits: availableTop >= estTooltipHeight,
-      },
-    ]
-
-    const fitting = scores.filter((s) => s.fits)
-    const chosen = (fitting.length > 0 ? fitting : scores).reduce(
-      (best, cur) => (cur.score > best.score ? cur : best)
-    )
-    setToolbarSide(chosen.side)
-  }, [tooltipAnchor, nodesState])
 
   const closeAll = () => {
     setDropdown(null)
@@ -1225,35 +1212,6 @@ const WhaleNetworkGraph: React.FC<{
                 className="!overflow-hidden"
               />
               <DownloadButton />
-              {tooltipAnchor && (
-                <Panel
-                  position={toolbarSide as any}
-                  className="bg-black/90 p-3 border border-[#2b2a2a] backdrop-blur-md shadow-2xl max-w-xs min-w-[200px] pointer-events-auto"
-                >
-                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#2b2a2a]">
-                    <h3 className="text-white font-bold text-[10px] uppercase tracking-wider">
-                      Whale Address
-                    </h3>
-                    <div className="flex gap-2">
-                      {/* Icons moved here if needed or kept in tooltip */}
-                    </div>
-                    <button
-                      onClick={() => setTooltipAnchor(null)}
-                      className="text-gray-400 hover:text-white"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                  {(() => {
-                    const node = nodesState.find(
-                      (n) => n.id === tooltipAnchor.nodeId
-                    )
-                    return (
-                      <Tooltip tooltip={node?.data} showToast={showToast} />
-                    )
-                  })()}
-                </Panel>
-              )}
             </ReactFlow>
           )}
         </div>
