@@ -80,18 +80,23 @@ const TransactionDetail = () => {
       unit: "USD",
       label: "Market Cap",
     })
+    const inUsd = parseFloat(data.transaction.tokenIn.usdAmount || "0")
+    const outUsd = parseFloat(data.transaction.tokenOut.usdAmount || "0")
     setTokenInAmountDisplay({
-      value: parseFloat(data.transaction.tokenIn.usdAmount).toLocaleString(),
+      value: !isNaN(inUsd) ? inUsd.toLocaleString() : "—",
       currency: "USD",
       symbol: "$",
     })
     setTokenOutAmountDisplay({
-      value: parseFloat(data.transaction.tokenOut.usdAmount).toLocaleString(),
+      value: !isNaN(outUsd) ? outUsd.toLocaleString() : "—",
       currency: "USD",
       symbol: "$",
     })
+    // Center amount: buy = value of tokenOut (bought), sell = value of tokenIn (sold)
+    const txType = data.type === "buy" ? "buy" : "sell"
+    const centerUsd = txType === "buy" ? outUsd : inUsd
     setDetailsAmountDisplay({
-      value: parseFloat(data.transaction.tokenOut.usdAmount).toLocaleString(),
+      value: !isNaN(centerUsd) && centerUsd >= 0 ? centerUsd.toLocaleString() : "—",
       currency: "USD",
       symbol: "$",
     })
@@ -116,13 +121,16 @@ const TransactionDetail = () => {
           initializeDisplayStates(data.data)
         }
       } catch (err) {
-        console.error("Transaction not found in backend, trying RPC fallback...", err)
-
+        console.error("Transaction not found in backend.", err)
+        const rpcUrl = import.meta.env.VITE_SOLANA_RPC_URL
+        if (!rpcUrl) {
+          setTransactionData(null)
+          setIsLoading(false)
+          return
+        }
         try {
-          // RPC Fallback
-          const connection = new Connection(
-            import.meta.env.VITE_SOLANA_RPC_URL || "https://api.mainnet-beta.solana.com"
-          )
+          // RPC fallback using env RPC only (no public RPC)
+          const connection = new Connection(rpcUrl)
 
           const tx = await connection.getParsedTransaction(id, {
             maxSupportedTransactionVersion: 0,
@@ -392,19 +400,20 @@ const TransactionDetail = () => {
         solValue = parseFloat(transactionData.transaction.tokenOut.amount || "0").toFixed(4)
       }
       
-      // Fallback 3: Calculate from USD amount and SOL price (not token price!)
+      // Fallback 3: Only derive SOL from USD when we have real SOL price from API (no hardcoded guess)
       if (solValue === "0" && transactionData.transaction?.tokenIn?.usdAmount) {
         const usdAmount = parseFloat(transactionData.transaction.tokenIn.usdAmount)
-        // Use SOL price from tokenPrice object, or use a reasonable default
-        const solPrice = transactionData.tokenPrice?.solPrice || 100
-        if (!isNaN(usdAmount) && solPrice > 0) {
-          const solEquivalent = usdAmount / solPrice
-          solValue = solEquivalent.toFixed(4)
+        const solPrice = transactionData.tokenPrice?.solPrice
+        if (!isNaN(usdAmount) && typeof solPrice === "number" && !isNaN(solPrice) && solPrice > 0) {
+          solValue = (usdAmount / solPrice).toFixed(4)
+        } else {
+          solValue = "—"
         }
       }
       
+      const inUsd = transactionData.transaction?.tokenIn?.usdAmount != null ? parseFloat(transactionData.transaction.tokenIn.usdAmount) : NaN
       setTokenInAmountDisplay({
-        value: isUSD ? solValue : parseFloat(transactionData.transaction.tokenIn.usdAmount).toLocaleString(),
+        value: isUSD ? solValue : (!isNaN(inUsd) && inUsd >= 0 ? inUsd.toLocaleString() : "—"),
         currency: isUSD ? "SOL" : "USD",
         symbol: isUSD ? "" : "$",
       })
@@ -431,19 +440,20 @@ const TransactionDetail = () => {
         solValue = parseFloat(transactionData.transaction.tokenIn.amount || "0").toFixed(4)
       }
       
-      // Fallback 3: Calculate from USD amount and SOL price (not token price!)
+      // Fallback 3: Only derive SOL from USD when we have real SOL price from API (no hardcoded guess)
       if (solValue === "0" && transactionData.transaction?.tokenOut?.usdAmount) {
         const usdAmount = parseFloat(transactionData.transaction.tokenOut.usdAmount)
-        // Use SOL price from tokenPrice object, or use a reasonable default
-        const solPrice = transactionData.tokenPrice?.solPrice || 100
-        if (!isNaN(usdAmount) && solPrice > 0) {
-          const solEquivalent = usdAmount / solPrice
-          solValue = solEquivalent.toFixed(4)
+        const solPrice = transactionData.tokenPrice?.solPrice
+        if (!isNaN(usdAmount) && typeof solPrice === "number" && !isNaN(solPrice) && solPrice > 0) {
+          solValue = (usdAmount / solPrice).toFixed(4)
+        } else {
+          solValue = "—"
         }
       }
       
+      const outUsd = transactionData.transaction?.tokenOut?.usdAmount != null ? parseFloat(transactionData.transaction.tokenOut.usdAmount) : NaN
       setTokenOutAmountDisplay({
-        value: isUSD ? solValue : parseFloat(transactionData.transaction.tokenOut.usdAmount).toLocaleString(),
+        value: isUSD ? solValue : (!isNaN(outUsd) && outUsd >= 0 ? outUsd.toLocaleString() : "—"),
         currency: isUSD ? "SOL" : "USD",
         symbol: isUSD ? "" : "$",
       })
@@ -478,14 +488,14 @@ const TransactionDetail = () => {
         solValue = parseFloat(transactionData.transaction.tokenOut.amount || "0").toFixed(4)
       }
       
-      // Fallback 3: Calculate from USD amount and SOL price (not token price!)
+      // Fallback 3: Only derive SOL from USD when we have real SOL price from API (no hardcoded guess)
       if (solValue === "0" && transactionData.transaction?.tokenOut?.usdAmount) {
         const usdAmount = parseFloat(transactionData.transaction.tokenOut.usdAmount)
-        // Use SOL price from tokenPrice object, or use a reasonable default
-        const solPrice = transactionData.tokenPrice?.solPrice || 100
-        if (!isNaN(usdAmount) && solPrice > 0) {
-          const solEquivalent = usdAmount / solPrice
-          solValue = solEquivalent.toFixed(4)
+        const solPrice = transactionData.tokenPrice?.solPrice
+        if (!isNaN(usdAmount) && typeof solPrice === "number" && !isNaN(solPrice) && solPrice > 0) {
+          solValue = (usdAmount / solPrice).toFixed(4)
+        } else {
+          solValue = "—"
         }
       }
     } else {
@@ -508,20 +518,22 @@ const TransactionDetail = () => {
         solValue = parseFloat(transactionData.transaction.tokenIn.amount || "0").toFixed(4)
       }
       
-      // Fallback 3: Calculate from USD amount and SOL price (not token price!)
+      // Fallback 3: Only derive SOL from USD when we have real SOL price from API (no hardcoded guess)
       if (solValue === "0" && transactionData.transaction?.tokenIn?.usdAmount) {
         const usdAmount = parseFloat(transactionData.transaction.tokenIn.usdAmount)
-        // Use SOL price from tokenPrice object, or use a reasonable default
-        const solPrice = transactionData.tokenPrice?.solPrice || 100
-        if (!isNaN(usdAmount) && solPrice > 0) {
-          const solEquivalent = usdAmount / solPrice
-          solValue = solEquivalent.toFixed(4)
+        const solPrice = transactionData.tokenPrice?.solPrice
+        if (!isNaN(usdAmount) && typeof solPrice === "number" && !isNaN(solPrice) && solPrice > 0) {
+          solValue = (usdAmount / solPrice).toFixed(4)
+        } else {
+          solValue = "—"
         }
       }
     }
     
+    const usdVal = isBuy ? transactionData.transaction?.tokenOut?.usdAmount : transactionData.transaction?.tokenIn?.usdAmount
+    const usdNum = usdVal != null ? parseFloat(usdVal) : NaN
     setDetailsAmountDisplay({
-      value: isUSD ? solValue : parseFloat(isBuy ? transactionData.transaction.tokenOut.usdAmount : transactionData.transaction.tokenIn.usdAmount).toLocaleString(),
+      value: isUSD ? solValue : (!isNaN(usdNum) && usdNum >= 0 ? usdNum.toLocaleString() : "—"),
       currency: isUSD ? "SOL" : "USD",
       symbol: isUSD ? "" : "$",
     })

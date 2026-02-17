@@ -9,7 +9,7 @@
 
 import fc from 'fast-check'
 import { ParsedSwap, SplitSwapPair, PRIORITY_ASSETS } from '../../utils/shyftParserV2.types'
-import { mapParserAmountsToStorage } from '../../utils/splitSwapStorageMapper'
+import { mapParserAmountsToStorage, mapSOLAmounts } from '../../utils/splitSwapStorageMapper'
 
 // ============================================================================
 // Test Setup - Mock Database Operations
@@ -152,13 +152,13 @@ async function storeSplitSwapPair(splitSwapPair: SplitSwapPair): Promise<void> {
   const recordsToInsert: any[] = []
   
   try {
-    // Create SELL record
+    // Create SELL record (Task 9: solAmount from mapSOLAmounts; storeTransactionInDB does the same)
     const sellStorageAmounts = mapParserAmountsToStorage(splitSwapPair.sellRecord)
     const sellRecord = {
       signature: splitSwapPair.signature,
       type: 'sell' as const,
       amount: sellStorageAmounts.amount,
-      solAmount: sellStorageAmounts.solAmount,
+      solAmount: mapSOLAmounts(splitSwapPair.sellRecord),
       whaleAddress: splitSwapPair.swapper,
       timestamp: new Date(splitSwapPair.timestamp),
       classificationSource: 'v2_parser_split_sell',
@@ -171,7 +171,7 @@ async function storeSplitSwapPair(splitSwapPair: SplitSwapPair): Promise<void> {
       signature: splitSwapPair.signature,
       type: 'buy' as const,
       amount: buyStorageAmounts.amount,
-      solAmount: buyStorageAmounts.solAmount,
+      solAmount: mapSOLAmounts(splitSwapPair.buyRecord),
       whaleAddress: splitSwapPair.swapper,
       timestamp: new Date(splitSwapPair.timestamp),
       classificationSource: 'v2_parser_split_buy',
@@ -191,12 +191,11 @@ async function storeSplitSwapPair(splitSwapPair: SplitSwapPair): Promise<void> {
  */
 async function storeSingleSwap(parsedSwap: ParsedSwap): Promise<any> {
   const storageAmounts = mapParserAmountsToStorage(parsedSwap)
-  
   const record = {
     signature: parsedSwap.signature,
     type: parsedSwap.direction === 'BUY' ? 'buy' as const : 'sell' as const,
     amount: storageAmounts.amount,
-    solAmount: storageAmounts.solAmount,
+    solAmount: mapSOLAmounts(parsedSwap),
     whaleAddress: parsedSwap.swapper,
     timestamp: new Date(parsedSwap.timestamp),
     classificationSource: 'v2_parser',

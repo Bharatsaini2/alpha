@@ -122,6 +122,15 @@ export function validateJupiterEnv(): ValidationResult {
     );
   }
 
+  // Validate Helius/WebSocket (for whale & KOL monitors)
+  const heliusKey = process.env.HELIUS_API_KEY;
+  const wssUrl = process.env.WSS_URL;
+  if (!heliusKey && !wssUrl) {
+    warnings.push(
+      '[Helius Config] HELIUS_API_KEY and WSS_URL not set. Whale/KOL monitors will use default key — may be rate-limited in production.'
+    );
+  }
+
   const config: EnvConfig = {
     JUPITER_BASE_URL: jupiterBaseUrl,
     JUPITER_ULTRA_URL: jupiterUltraUrl,

@@ -110,9 +110,28 @@ setInterval(() => {
 }, 300000) // Clean every 5 minutes
 
 // ============ CONFIGURATION ============
+const HELIUS_API_KEY = process.env.HELIUS_API_KEY
 const HELIUS_WS_URL =
   process.env.WSS_URL ||
-  'wss://atlas-mainnet.helius-rpc.com/?api-key=ba7496c3-65bf-4a12-a4a2-fb6c20cd4e96'
+  (HELIUS_API_KEY
+    ? `wss://atlas-mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
+    : 'wss://atlas-mainnet.helius-rpc.com/?api-key=ba7496c3-65bf-4a12-a4a2-fb6c20cd4e96')
+
+// Log WebSocket config (mask API key for security)
+const wsUrlDisplay = process.env.WSS_URL
+  ? 'WSS_URL (custom)'
+  : HELIUS_API_KEY
+    ? `HELIUS_API_KEY (***${String(HELIUS_API_KEY).slice(-4)})`
+    : 'default fallback key'
+if (!HELIUS_API_KEY && !process.env.WSS_URL) {
+  logger.warn(
+    'HELIUS_API_KEY and WSS_URL not set — using default key (may be rate-limited in prod)',
+  )
+}
+
+const WS_CONNECT_TIMEOUT_MS = 15000
+const WS_RECONNECT_DELAY_MS = 5000
+const WS_RECONNECT_MAX_DELAY_MS = 60000
 
 const COOLDOWN = 10000 // 10 sec per whale
 const MAX_SIGNATURES = 3 // process up to 3 latest signatures per whale
@@ -185,15 +204,54 @@ const getLatestSignature = async (whaleAddress: string) => {
 }
 
 // ---------------- WebSocket Core ---------------- //
+let wsConnectAttempt = 0
+
 function connectWhaleStream(whaleAddresses: string[]) {
   if (ws) {
     logger.info(pc.yellow('Closing old WebSocket before reconnecting...'))
-    ws.close()
+    try {
+      ws.removeAllListeners()
+      ws.close()
+    } catch (_) {}
+    ws = null
   }
+
+  wsConnectAttempt++
+  logger.info(
+    pc.cyan(
+      `[Helius WS] Connecting (attempt ${wsConnectAttempt}) — ${wsUrlDisplay}`,
+    ),
+  )
 
   ws = new WebSocket(HELIUS_WS_URL)
 
+  const connectTimeout = setTimeout(() => {
+    if (ws && ws.readyState !== WebSocket.OPEN) {
+      logger.error(
+        pc.red(
+          `[Helius WS] Connection timeout after ${WS_CONNECT_TIMEOUT_MS}ms — will retry`,
+        ),
+      )
+      try {
+        ws.removeAllListeners()
+        ws.close()
+      } catch (_) {}
+      ws = null
+      const delay = Math.min(
+        WS_RECONNECT_DELAY_MS * Math.pow(1.5, wsConnectAttempt - 1),
+        WS_RECONNECT_MAX_DELAY_MS,
+      )
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      reconnectTimeout = setTimeout(
+        () => connectWhaleStream(whaleAddresses),
+        delay,
+      )
+    }
+  }, WS_CONNECT_TIMEOUT_MS)
+
   ws.on('open', () => {
+    clearTimeout(connectTimeout)
+    wsConnectAttempt = 0
     ws!.send(JSON.stringify({ jsonrpc: '2.0', id: 0, method: 'ping' }))
     logger.info(pc.green('✅ Connected to Helius WebSocket'))
     subscribeWhales(whaleAddresses)
@@ -223,15 +281,25 @@ function connectWhaleStream(whaleAddresses: string[]) {
   })
 
   ws.on('error', (err) => {
-    logger.error({ err }, pc.red('⚠️ WebSocket error:'))
+    clearTimeout(connectTimeout)
+    logger.error(
+      { err, message: (err as Error).message },
+      pc.red('⚠️ [Helius WS] WebSocket error — check firewall/Helius key'),
+    )
   })
 
-  ws.on('close', () => {
-    logger.info(pc.red('🔌 WebSocket closed — attempting reconnect...'))
+  ws.on('close', (code, reason) => {
+    clearTimeout(connectTimeout)
+    logger.info(
+      pc.red(
+        `🔌 [Helius WS] Closed (code=${code}, reason=${reason || 'none'}) — reconnecting in ${WS_RECONNECT_DELAY_MS}ms...`,
+      ),
+    )
+    ws = null
     if (reconnectTimeout) clearTimeout(reconnectTimeout)
     reconnectTimeout = setTimeout(
       () => connectWhaleStream(whaleAddresses),
-      5000,
+      WS_RECONNECT_DELAY_MS,
     )
   })
 }
@@ -333,31 +401,17 @@ async function handleTransactionEvent(tx: any) {
       return
     }
 
-    const accounts = message.accountKeys.map((a: any) => a.pubkey)
+    // Handle both string and { pubkey } formats (versioned txs use strings)
+    const accounts = message.accountKeys.map((a: any) =>
+      typeof a === 'string' ? a : a?.pubkey,
+    ).filter(Boolean) as string[]
 
     logger.info(`Processing tx: ${signature}`)
 
     if (accounts.length === 0) return
 
-    // Find which whale this transaction belongs to
-    const whaleAddress = accounts.find((acc: string) =>
-      monitoredWhales.includes(acc),
-    )
-    logger.info(`Identified whale address: ${whaleAddress}`)
-
-    if (!whaleAddress) return
-
-    const signatureData = JSON.stringify({ signature, whaleAddress })
-    const exists = await redisClient.sismember(
-      'whale_signatures',
-      signatureData,
-    )
-
-    if (exists) {
-      logger.info(`Signature ${signature} already processed, skipping`)
-      return
-    }
-
+    // --- Parser V2 Fix Task 1: Multi-source whale matching ---
+    // Whale may not appear in accountKeys (relayer/PDA/aggregator); also support multi-whale txs.
     const txMeta = tx?.transaction?.meta
 
     if (!txMeta) {
@@ -365,7 +419,6 @@ async function handleTransactionEvent(tx: any) {
       return
     }
 
-    // Check if transaction succeeded
     if (txMeta.err !== null) {
       logger.info(
         `Transaction ${signature} failed on-chain (err: ${JSON.stringify(txMeta.err)}), skipping`,
@@ -373,24 +426,105 @@ async function handleTransactionEvent(tx: any) {
       return
     }
 
-    await redisClient.sadd('whale_signatures', signatureData)
-
-    await signatureQueue.add(
-      'process-signature',
-      {
-        signature,
-        whaleAddress,
-        transactionData: tx,
-      },
-      {
-        priority: 1,
-        removeOnComplete: true,
-        removeOnFail: false,
-      },
+    // Step 1: Match from top-level accountKeys
+    const matchesFromAccounts = accounts.filter((acc: string) =>
+      monitoredWhales.includes(acc),
     )
 
-    logger.info(pc.magenta(`🐋 New Whale Tx Detected: ${signature}`))
-    await setLatestSignature(whaleAddress, signature)
+    // Step 2: Match from postTokenBalances owners
+    const balanceOwners: string[] = []
+    if (txMeta.postTokenBalances && Array.isArray(txMeta.postTokenBalances)) {
+      for (const b of txMeta.postTokenBalances) {
+        if (b?.owner) balanceOwners.push(b.owner)
+      }
+    }
+    const matchesFromBalances = balanceOwners.filter((owner: string) =>
+      monitoredWhales.includes(owner),
+    )
+
+    // Step 3: Match from innerInstructions accounts (resolve indices to pubkeys)
+    const innerAccounts: string[] = []
+    if (txMeta.innerInstructions && Array.isArray(txMeta.innerInstructions)) {
+      for (const inner of txMeta.innerInstructions) {
+        const instructions = inner?.instructions || []
+        for (const inst of instructions) {
+          const accts = inst?.accounts
+          if (Array.isArray(accts)) {
+            for (const a of accts) {
+              const pubkey =
+                typeof a === 'number' && accounts[a]
+                  ? accounts[a]
+                  : typeof a === 'string'
+                    ? a
+                    : null
+              if (pubkey) innerAccounts.push(pubkey)
+            }
+          }
+        }
+      }
+    }
+    const matchesFromInner = innerAccounts.filter((acc: string) =>
+      monitoredWhales.includes(acc),
+    )
+
+    // Step 4: Unique whales (all sources)
+    const allMatchingWhales = [
+      ...matchesFromAccounts,
+      ...matchesFromBalances,
+      ...matchesFromInner,
+    ]
+    const uniqueWhales = [...new Set(allMatchingWhales)]
+
+    if (uniqueWhales.length === 0) {
+      return
+    }
+
+    const matchSource =
+      matchesFromAccounts.length > 0
+        ? 'accountKeys'
+        : matchesFromBalances.length > 0
+          ? 'postTokenBalances'
+          : 'innerInstructions'
+    logger.info(
+      `Whale match: ${uniqueWhales.length} whale(s), source=${matchSource}`,
+    )
+
+    // Process once per whale (same signature can be enqueued for each tracked whale in the tx)
+    for (const whaleAddress of uniqueWhales) {
+      const signatureData = JSON.stringify({ signature, whaleAddress })
+      const exists = await redisClient.sismember(
+        'whale_signatures',
+        signatureData,
+      )
+
+      if (exists) {
+        logger.info(
+          `Signature ${signature} already processed for whale ${whaleAddress.slice(0, 8)}..., skipping`,
+        )
+        continue
+      }
+
+      await redisClient.sadd('whale_signatures', signatureData)
+
+      await signatureQueue.add(
+        'process-signature',
+        {
+          signature,
+          whaleAddress,
+          transactionData: tx,
+        },
+        {
+          priority: 1,
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      )
+
+      logger.info(
+        pc.magenta(`🐋 New Whale Tx Detected: ${signature} (whale: ${whaleAddress.slice(0, 8)}...)`),
+      )
+      await setLatestSignature(whaleAddress, signature)
+    }
   } catch (err) {
     logger.error({ err }, pc.red('Error handling transaction:'))
   }
@@ -720,17 +854,15 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       return
     }
 
-    // ✅ Check database for existing transaction
-    if (
-      await whaleAllTransactionModelV2
-        .findOne({ signature })
-        .select('signature')
-        .lean()
-    ) {
+    // Parser V2 Fix Task 4: Allow up to 2 records per signature (split swap: SELL + BUY)
+    // Schema has compound unique index { signature, type }; findOne would block the second record.
+    const existingCount = await whaleAllTransactionModelV2.countDocuments({
+      signature,
+    })
+    if (existingCount >= 2) {
       logger.info(
-        `Transaction ${signature} already exists in database. Skipping.`,
+        `Transaction ${signature} fully processed (${existingCount} records). Skipping.`,
       )
-      // Clean up Redis key
       await redisClient.del(duplicateKey)
       return
     }
@@ -879,30 +1011,45 @@ const processSignature = async (signatureJson: any): Promise<void> => {
     const gasFee = parsedTx.result.fee
     const swapper = parsedTx.result.signers[0] || whaleAddress
 
-    // ✅ STEP 3: Call V2 Parser with whale-specific context
-    // CRITICAL FIX: Filter token balance changes to only include whale's changes
-    // This ensures the parser sees the transaction from the whale's perspective
+    // ✅ STEP 3: Call V2 Parser with FULL transaction data (Parser V2 Fix Task 2)
+    // Pass real fee_payer, signers, and all token_balance_changes so parser can run
+    // 3-tier swapper identification and multi-hop logic. Do NOT hardcode whale.
     logger.info(pc.cyan('🔍 Calling V2 parser for classification...'))
-    
-    // Convert to V2 format with whale-specific filtering
+
     const v2Input = {
       signature: signature,
-      timestamp: parsedTx.result.timestamp ? new Date(parsedTx.result.timestamp).getTime() : Date.now(),
+      timestamp: parsedTx.result.timestamp
+        ? new Date(parsedTx.result.timestamp).getTime()
+        : Date.now(),
       status: parsedTx.result.status || 'Success',
       fee: parsedTx.result.fee || 0,
-      fee_payer: whaleAddress, // ✅ Use whale as fee payer to force correct swapper identification
-      signers: [whaleAddress], // ✅ Use whale as signer
+      fee_payer:
+        parsedTx.result.fee_payer ?? parsedTx.result.signers?.[0],
+      signers: parsedTx.result.signers ?? [],
       protocol: parsedTx.result.protocol,
-      token_balance_changes: parsedTx.result.token_balance_changes.filter(
-        (change: any) => change.owner === whaleAddress
-      ), // ✅ Only include whale's token changes to get correct perspective
-      actions: parsedTx.result.actions || []
+      token_balance_changes: parsedTx.result.token_balance_changes ?? [],
+      actions: parsedTx.result.actions ?? [],
     }
 
     const parseResult = parseShyftTransactionV2(v2Input)
 
     if (parseResult.success && parseResult.data) {
       const swapData = parseResult.data
+
+      // Parser V2 Fix Task 3: Only persist when parser's identified swapper is our tracked whale
+      const identifiedSwapper = swapData.swapper
+      if (identifiedSwapper === undefined || identifiedSwapper === null) {
+        logger.info(
+          `Whale [Filter] Skipping ${signature}: Parser did not identify a swapper. Skipping.`,
+        )
+        return
+      }
+      if (identifiedSwapper !== whaleAddress) {
+        logger.info(
+          `Parser identified swapper ${identifiedSwapper} but tracked whale is ${whaleAddress}. Skipping.`,
+        )
+        return
+      }
 
       // ✅ Handle SplitSwapPair by creating TWO separate records (SELL and BUY)
       // Use MongoDB transaction for atomic writes
@@ -1052,7 +1199,7 @@ async function processSingleSwapTransaction(
       ),
     )
 
-    // ✅ Apply confidence filtering if configured (Task 3.3)
+    // Confidence filter: only applies when MIN_ALERT_CONFIDENCE is set. Unset = accept all (match test).
     const minConfidence = process.env.MIN_ALERT_CONFIDENCE
     if (minConfidence) {
       const { meetsMinimumConfidence } = require('../utils/shyftParser')
@@ -1244,8 +1391,9 @@ async function processSingleSwapTransaction(
     const tokenOutSolAmount =
       (tokenOut.amount * (outTokenData?.price || 0)) / safeSolPrice
 
-    const buyTokenPriceSol = inTokenData?.price / safeSolPrice || 0
-    const sellTokenPriceSol = outTokenData?.price / safeSolPrice || 0
+    // Parser V2 Fix Task 6: Use in/out naming (buy/sell were inverted at calculation)
+    const inTokenPriceSol = inTokenData?.price / safeSolPrice || 0
+    const outTokenPriceSol = outTokenData?.price / safeSolPrice || 0
     const buyMarketCapSol = inTokenData?.marketCap / safeSolPrice || 0
     const sellMarketCapSol = outTokenData?.marketCap / safeSolPrice || 0
     const gasFeeUSD = gasFee * solPrice || 0
@@ -1268,8 +1416,8 @@ async function processSingleSwapTransaction(
       tokenOutUsdAmount: tokenOut.amount * (outTokenData?.price || 0),
       tokenInSolAmount: tokenInSolAmount,
       tokenOutSolAmount: tokenOutSolAmount,
-      buyTokenPriceSol: buyTokenPriceSol,
-      sellTokenPriceSol: sellTokenPriceSol,
+      inTokenPriceSol: inTokenPriceSol,
+      outTokenPriceSol: outTokenPriceSol,
       buyMarketCapSol: buyMarketCapSol,
       sellMarketCapSol: sellMarketCapSol,
       inMarketCap: inTokenData?.marketCap,
@@ -1468,29 +1616,9 @@ async function processSingleSwapTransaction(
     }
   } catch (err) {
     logger.error({ err }, `Error processing signature ${signature}:`)
-  } finally {
-    try {
-      // ✅ Clean up Redis processing key
-      const duplicateKey = `processing_signature:${signature}`
-      await redisClient.del(duplicateKey)
-
-      await redisClient.srem(
-        'whale_signatures',
-        JSON.stringify({ signature, whaleAddress }),
-      )
-      logger.info(`Signature removed from Redis: ${signature}`)
-
-      // Force garbage collection if available
-      if (global.gc) {
-        global.gc()
-      }
-    } catch (cleanupError) {
-      logger.error(
-        { cleanupError },
-        `Error cleaning up signature ${signature}:`,
-      )
-    }
   }
+  // Parser V2 Fix Task 5: Redis cleanup only in processSignature finally, not here.
+  // Removing this finally prevents race where another worker grabs the same signature.
 }
 
 // Format large numbers
@@ -1970,8 +2098,9 @@ const storeTransactionInDB = async (
     tokenPrice: {
       buyTokenPrice: details.tokenOutPrice || 0,
       sellTokenPrice: details.tokenInPrice || 0,
-      buyTokenPriceSol: details.sellTokenPriceSol || 0,
-      sellTokenPriceSol: details.buyTokenPriceSol || 0,
+      // buy token = tokenOut (acquired), sell token = tokenIn (spent)
+      buyTokenPriceSol: details.outTokenPriceSol || 0,
+      sellTokenPriceSol: details.inTokenPriceSol || 0,
     },
 
     solAmount: solAmountMapping,
@@ -3448,16 +3577,11 @@ process.on('message', (msg) => {
   }
 })
 
-// Handle uncaught exceptions
-process.on('uncaughtException', async (error) => {
-  console.error('❌ Uncaught Exception:', error)
-  await gracefulShutdown('UNCAUGHT_EXCEPTION')
-})
-
-process.on('unhandledRejection', async (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason)
-  await gracefulShutdown('UNHANDLED_REJECTION')
-})
+// NOTE: Do NOT register uncaughtException/unhandledRejection here.
+// app.ts owns process-level error handling and keeps the server alive ("zombie mode").
+// If controllers called gracefulShutdown on every unhandled rejection, the server would
+// exit on any async error (e.g. Shyft timeout, Redis blip). Only signal-based shutdown
+// (SIGTERM, SIGINT, PM2 message) should trigger gracefulShutdown.
 
 setInterval(() => {
   const usage = process.memoryUsage()

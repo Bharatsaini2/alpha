@@ -9,6 +9,8 @@
     "prod": "node --max-old-space-size=8192 --expose-gc dist/src/app.js",
     "test": "jest --runInBand",
     "stress-test:telegram-balance": "ts-node scripts/telegramBalanceRpcStressTest.ts",
+    "parser-v2-live-test": "ts-node scripts/parser-v2-live-test-5min.ts",
+    "check-token-cache": "ts-node scripts/check-token-metadata-cache.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint .",

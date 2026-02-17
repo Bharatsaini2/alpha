@@ -19,6 +19,9 @@ const influencerWhaleAddressSchemaV2: Schema<IInfluencerWhaleModelV2> =
     lastUpdated: { type: Date, default: Date.now },
   })
 
+// Parser V2 Fix Task 7: Index for findInfluencerName / whale address lookups
+influencerWhaleAddressSchemaV2.index({ whalesAddress: 1 })
+
 const InfluencerWhalesAddressModelV2 = model<IInfluencerWhaleModelV2>(
   'InfluencerWhalesAddressV2',
   influencerWhaleAddressSchemaV2,

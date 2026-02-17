@@ -1,0 +1,22 @@
+=== Parser V2 Live Test vs Production (last 10 min) ===
+
+Test start: 2026-02-17T02:38:34.269Z
+Test duration: 600s
+
+Test (no DB save):
+  Total tx notifications: 384
+  Matched (multi-source): 356
+  Parsed (Shyft): 354
+  Accepted (V2): 48
+  Rejected: 305
+  Split swaps: 2
+  CSV records: 48
+
+Production DB (last 10 min):
+  Alpha records: 8
+  KOL records: 16
+  Total: 24
+
+Comparison:
+  Signatures only in test (new / relayer / PDA fix): 24
+  Signatures in both: 22

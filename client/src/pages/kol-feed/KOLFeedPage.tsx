@@ -370,7 +370,7 @@ const KOLFeedPage = () => {
       if (filters.amount) {
         const amount = parseFloat(filters.amount.replace(/[>$,\s]/g, ""))
         const transactionAmount = getTransactionAmount(transaction)
-        if (transactionAmount < amount) return false
+        if (transactionAmount == null || transactionAmount < amount) return false
       }
 
       return true
@@ -522,19 +522,17 @@ const KOLFeedPage = () => {
   }, [currentPage, itemsPerPage, activeFilters, doesTransactionMatchFilters])
 
   // Helper functions
-  const getTransactionAmount = (tx: any) => {
+  // USD only: use stored usdAmount. Never use amount.buyAmount/sellAmount for display (they are token amounts).
+  const getTransactionAmount = (tx: any): number | null => {
     if (tx.type === "buy" && tx.transaction?.tokenOut?.usdAmount) {
-      return parseFloat(tx.transaction.tokenOut.usdAmount)
-    } else if (tx.type === "sell" && tx.transaction?.tokenIn?.usdAmount) {
-      return parseFloat(tx.transaction.tokenIn.usdAmount)
+      const v = parseFloat(tx.transaction.tokenOut.usdAmount)
+      return !isNaN(v) && v >= 0 ? v : null
     }
-    // Fallback to legacy amount fields if transaction object not available
-    if (tx.type === "buy" && tx.amount?.buyAmount) {
-      return tx.amount.buyAmount
-    } else if (tx.type === "sell" && tx.amount?.sellAmount) {
-      return tx.amount.sellAmount
+    if (tx.type === "sell" && tx.transaction?.tokenIn?.usdAmount) {
+      const v = parseFloat(tx.transaction.tokenIn.usdAmount)
+      return !isNaN(v) && v >= 0 ? v : null
     }
-    return 0
+    return null
   }
 
   const getMarketCap = (tx: any) => {
@@ -1620,13 +1618,10 @@ const KOLFeedPage = () => {
                               className={`sold-out-title ${tx.type === "buy" ? "buy-transaction" : ""}`}
                               style={{ marginTop: "auto" }}
                             >
-                              {tx.type === "sell" ? "SOLD" : "Bought"} $
-                              {Number(
-                                getTransactionAmount(tx) || 0
-                              ).toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              {tx.type === "sell" ? "SOLD" : "Bought"}{" "}
+                              {getTransactionAmount(tx) != null
+                                ? `$${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                : "—"}
                             </div>
                           </div>
                         </div>

@@ -398,24 +398,7 @@ describe('Split Swap Storage Mapper Property-Based Tests', () => {
   })
 
   /**
-   * Integration test: mapParserAmountsToStorage includes SOL amounts
+   * Task 9: mapParserAmountsToStorage no longer returns solAmount.
+   * SOL amounts are computed in storeTransactionInDB via mapSOLAmounts with USD/SOL price.
    */
-  describe('Integration: mapParserAmountsToStorage includes SOL amounts', () => {
-    it('should produce consistent results between mapParserAmountsToStorage and mapSOLAmounts', () => {
-      fc.assert(
-        fc.property(
-          arbitraryParsedSwap(),
-          (parsedSwap) => {
-            const mapped = mapParserAmountsToStorage(parsedSwap)
-            const solAmounts = mapSOLAmounts(parsedSwap)
-            
-            // Verify SOL amounts match
-            expect(mapped.solAmount.buySolAmount).toBe(solAmounts.buySolAmount)
-            expect(mapped.solAmount.sellSolAmount).toBe(solAmounts.sellSolAmount)
-          }
-        ),
-        { numRuns: 100 }
-      )
-    })
-  })
 })

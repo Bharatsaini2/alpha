@@ -373,7 +373,8 @@ const HomePageNew = () => {
       if (filters.amount) {
         const amount = parseFloat(filters.amount.replace(/[>$,\s]/g, ""))
         const transactionAmount = getTransactionAmount(transaction)
-        if (transactionAmount < amount) return false
+        // Only filter by USD; if no USD amount, exclude from amount filter
+        if (transactionAmount == null || transactionAmount < amount) return false
       }
 
       if (filters.ageMin || filters.ageMax) {
@@ -555,20 +556,17 @@ const HomePageNew = () => {
   }, [currentPage, itemsPerPage, activeFilters, doesTransactionMatchFilters])
 
   // Helper functions
-  const getTransactionAmount = (tx: any) => {
-    // Return USD amount, not token amount
+  // USD only: use stored usdAmount. Never use amount.buyAmount/sellAmount for display (they are token amounts).
+  const getTransactionAmount = (tx: any): number | null => {
     if (tx.type === "buy" && tx.transaction?.tokenOut?.usdAmount) {
-      return parseFloat(tx.transaction.tokenOut.usdAmount)
-    } else if (tx.type === "sell" && tx.transaction?.tokenIn?.usdAmount) {
-      return parseFloat(tx.transaction.tokenIn.usdAmount)
+      const v = parseFloat(tx.transaction.tokenOut.usdAmount)
+      return !isNaN(v) && v >= 0 ? v : null
     }
-    // Fallback to legacy amount fields if transaction object not available
-    if (tx.type === "buy" && tx.amount?.buyAmount) {
-      return tx.amount.buyAmount
-    } else if (tx.type === "sell" && tx.amount?.sellAmount) {
-      return tx.amount.sellAmount
+    if (tx.type === "sell" && tx.transaction?.tokenIn?.usdAmount) {
+      const v = parseFloat(tx.transaction.tokenIn.usdAmount)
+      return !isNaN(v) && v >= 0 ? v : null
     }
-    return 0
+    return null
   }
 
   const getMarketCap = (tx: any) => {
@@ -2061,29 +2059,23 @@ const HomePageNew = () => {
                                     alignItems: "center"
                                   }}
                                 >
-                                  {tx.type === "sell" ? "SOLD" : "Bought"} $
-                                  {Number(
-                                    getTransactionAmount(tx)
-                                  ).toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
+                                  {tx.type === "sell" ? "SOLD" : "Bought"}{" "}
+                                  {getTransactionAmount(tx) != null
+                                    ? `$${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : "—"}
                                 </div>
                               )}
 
-                              {/* Bottom: Amount OR Empty */}
+                              {/* Bottom: Amount OR Empty (USD only) */}
                               {(tx.whaleLabel || []).length > 0 && (
                                 <div
                                   className={`sold-out-title ${tx.type === "buy" ? "buy-transaction" : ""}`}
                                   style={{ margin: 0, lineHeight: "1.2" }}
                                 >
-                                  {tx.type === "sell" ? "SOLD" : "Bought"} $
-                                  {Number(
-                                    getTransactionAmount(tx)
-                                  ).toLocaleString(undefined, {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}
+                                  {tx.type === "sell" ? "SOLD" : "Bought"}{" "}
+                                  {getTransactionAmount(tx) != null
+                                    ? `$${Number(getTransactionAmount(tx)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                    : "—"}
                                 </div>
                               )}
                             </div>

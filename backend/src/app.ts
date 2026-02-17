@@ -28,6 +28,7 @@ import { telegramService } from './services/telegram.service'
 import { alertMatcherService } from './services/alertMatcher.service'
 import { balanceValidatorService } from './services/balanceValidator.service'
 import { validateAndLogEnv } from './config/envValidation'
+import { scheduleWhaleMonitorBootstrap } from './config/whaleMonitorBootstrap'
 import './cron/topTokenWhaleMarketcapAlertJob'
 import './cron/smartMoney'
 import './cron/heavy-accumulator-label'
@@ -440,6 +441,9 @@ redisClient.on('ready', async () => {
       // Register the server with process manager
       registerServer('http-server', 'HTTP/WebSocket server', server)
       console.log('✅ Server registered with process manager')
+
+      // Auto-start whale & KOL monitors (fixes prod showing fewer txns after restarts)
+      scheduleWhaleMonitorBootstrap(PORT)
     } catch (error: any) {
       console.error('❌ Error initializing services:', error)
     }

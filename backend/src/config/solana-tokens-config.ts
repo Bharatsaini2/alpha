@@ -805,9 +805,15 @@ async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; n
         return null // This is a legitimate "not found" - don't retry
       }
 
-      // ✅ Find the best pair (highest liquidity)
-      const bestPair = response.data.pairs
-        .filter((pair: any) => pair.baseToken?.address === tokenAddress)
+      // ✅ Find the best pair (highest liquidity) - token can be base OR quote
+      const normalizeAddr = (a: string) => (a || '').toLowerCase()
+      const target = normalizeAddr(tokenAddress)
+      const pairsWithToken = response.data.pairs.filter((pair: any) => {
+        const base = normalizeAddr(pair.baseToken?.address)
+        const quote = normalizeAddr(pair.quoteToken?.address)
+        return base === target || quote === target
+      })
+      const bestPair = pairsWithToken
         .sort((a: any, b: any) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0]
 
       if (!bestPair) {
@@ -815,8 +821,10 @@ async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; n
         return null
       }
 
-      const symbol = bestPair.baseToken?.symbol?.toUpperCase()
-      const name = bestPair.baseToken?.name
+      const isBase = normalizeAddr(bestPair.baseToken?.address) === target
+      const tokenInfo = isBase ? bestPair.baseToken : bestPair.quoteToken
+      const symbol = tokenInfo?.symbol?.toUpperCase()
+      const name = tokenInfo?.name
 
       if (isValidMetadata(symbol)) {
         logger.info(`✅ DexScreener found: ${symbol} (${name || symbol})`)

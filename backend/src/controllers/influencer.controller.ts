@@ -1,4 +1,4 @@
-﻿import { PublicKey } from '@solana/web3.js'
+import { PublicKey } from '@solana/web3.js'
 import mongoose from 'mongoose'
 import pc from 'picocolors'
 import { connectDB, getDataBaseInfo } from '../config/connectDb'
@@ -94,9 +94,16 @@ setInterval(() => {
 }, 300000) // Clean every 5 minutes
 
 // ============ CONFIGURATION ============
+const HELIUS_API_KEY = process.env.HELIUS_API_KEY
 const HELIUS_WS_URL =
   process.env.WSS_URL ||
-  'wss://atlas-mainnet.helius-rpc.com/?api-key=ba7496c3-65bf-4a12-a4a2-fb6c20cd4e96'
+  (HELIUS_API_KEY
+    ? `wss://atlas-mainnet.helius-rpc.com/?api-key=${HELIUS_API_KEY}`
+    : 'wss://atlas-mainnet.helius-rpc.com/?api-key=ba7496c3-65bf-4a12-a4a2-fb6c20cd4e96')
+
+const WS_CONNECT_TIMEOUT_MS = 15000
+const WS_RECONNECT_DELAY_MS = 5000
+const WS_RECONNECT_MAX_DELAY_MS = 60000
 
 const COOLDOWN = 10000 // 10 sec per whale
 const MAX_SIGNATURES = 3 // process up to 3 latest signatures per whale
@@ -186,16 +193,53 @@ async function fetchWithRetry(fetchFn: any, retries = 3, delay = 1000) {
 }
 
 // ---------------- WebSocket Core ---------------- //
+let wsConnectAttempt = 0
+
 function connectWhaleStream(whaleAddresses: string[]) {
   if (ws) {
-    logger.info(pc.yellow('Closing old WebSocket before reconnecting...'))
-    ws.close()
+    logger.info(pc.yellow('[KOL WS] Closing old WebSocket before reconnecting...'))
+    try {
+      ws.removeAllListeners()
+      ws.close()
+    } catch (_) {}
+    ws = null
   }
+
+  wsConnectAttempt++
+  logger.info(
+    pc.cyan(`[KOL Helius WS] Connecting (attempt ${wsConnectAttempt})...`),
+  )
 
   ws = new WebSocket(HELIUS_WS_URL)
 
+  const connectTimeout = setTimeout(() => {
+    if (ws && ws.readyState !== WebSocket.OPEN) {
+      logger.error(
+        pc.red(
+          `[KOL WS] Connection timeout after ${WS_CONNECT_TIMEOUT_MS}ms — will retry`,
+        ),
+      )
+      try {
+        ws.removeAllListeners()
+        ws.close()
+      } catch (_) {}
+      ws = null
+      const delay = Math.min(
+        WS_RECONNECT_DELAY_MS * Math.pow(1.5, wsConnectAttempt - 1),
+        WS_RECONNECT_MAX_DELAY_MS,
+      )
+      if (reconnectTimeout) clearTimeout(reconnectTimeout)
+      reconnectTimeout = setTimeout(
+        () => connectWhaleStream(whaleAddresses),
+        delay,
+      )
+    }
+  }, WS_CONNECT_TIMEOUT_MS)
+
   ws.on('open', () => {
-    logger.info(pc.green('âœ… Connected to Helius WebSocket'))
+    clearTimeout(connectTimeout)
+    wsConnectAttempt = 0
+    logger.info(pc.green('✅ [KOL] Connected to Helius WebSocket'))
     subscribeKols(whaleAddresses)
     startPing(ws!)
   })
@@ -225,12 +269,14 @@ function connectWhaleStream(whaleAddresses: string[]) {
     logger.error({ err }, pc.red('âš ï¸ WebSocket error:'))
   })
 
-  ws.on('close', () => {
+  ws.on('close', (code) => {
+    clearTimeout(connectTimeout)
+    ws = null
     logger.info(pc.red('ðŸ”Œ WebSocket closed â€” attempting reconnect...'))
     if (reconnectTimeout) clearTimeout(reconnectTimeout)
     reconnectTimeout = setTimeout(
       () => connectWhaleStream(whaleAddresses),
-      5000,
+      WS_RECONNECT_DELAY_MS,
     )
   })
 }
@@ -332,31 +378,17 @@ async function handleTransactionEvent(tx: any) {
       return
     }
 
-    const accounts = message.accountKeys.map((a: any) => a.pubkey)
+    // Handle both string and { pubkey } formats (versioned txs use strings)
+    const accounts = message.accountKeys.map((a: any) =>
+      typeof a === 'string' ? a : a?.pubkey,
+    ).filter(Boolean) as string[]
 
     logger.info(`Processing tx: ${signature}`)
 
     if (accounts.length === 0) return
 
-    // Find which whale this transaction belongs to
-    const kolAddress = accounts.find((acc: string) =>
-      monitoredKols.includes(acc),
-    )
-    logger.info(`Identified kol address: ${kolAddress}`)
-
-    if (!kolAddress) return
-
-    const signatureData = JSON.stringify({ signature, kolAddress })
-    const exists = await redisClient.sismember(
-      'influencer_whale_signatures',
-      signatureData,
-    )
-
-    if (exists) {
-      logger.info(`Signature ${signature} already processed, skipping kol`)
-      return
-    }
-
+    // --- Parser V2 Fix Task 1: Multi-source KOL matching (same as whale) ---
+    // KOL may not appear in accountKeys (relayer/PDA/aggregator); also support multi-KOL txs.
     const txMeta = tx?.transaction?.meta
 
     if (!txMeta) {
@@ -364,7 +396,6 @@ async function handleTransactionEvent(tx: any) {
       return
     }
 
-    // Check if transaction succeeded
     if (txMeta.err !== null) {
       logger.info(
         `Transaction ${signature} failed on-chain (err: ${JSON.stringify(txMeta.err)}), skipping`,
@@ -372,26 +403,104 @@ async function handleTransactionEvent(tx: any) {
       return
     }
 
-    await redisClient.sadd('influencer_whale_signatures', signatureData)
-
-    // Skip if already processed
-    // const isNew = await storeSignature(signature, kolAddress)
-    // if (!isNew) return
-    await signatureKolQueue.add(
-      'process-signature-kol',
-      {
-        signature,
-        kolAddress,
-        transactionData: tx,
-      },
-      {
-        priority: 1,
-        removeOnComplete: true,
-        removeOnFail: false,
-      },
+    // Step 1: Match from top-level accountKeys
+    const matchesFromAccounts = accounts.filter((acc: string) =>
+      monitoredKols.includes(acc),
     )
-    logger.info(pc.magenta(`ðŸ‘¤ New kol Tx Detected: ${signature}`))
-    await setLatestSignature(kolAddress, signature)
+
+    // Step 2: Match from postTokenBalances owners
+    const balanceOwners: string[] = []
+    if (txMeta.postTokenBalances && Array.isArray(txMeta.postTokenBalances)) {
+      for (const b of txMeta.postTokenBalances) {
+        if (b?.owner) balanceOwners.push(b.owner)
+      }
+    }
+    const matchesFromBalances = balanceOwners.filter((owner: string) =>
+      monitoredKols.includes(owner),
+    )
+
+    // Step 3: Match from innerInstructions accounts (resolve indices to pubkeys)
+    const innerAccounts: string[] = []
+    if (txMeta.innerInstructions && Array.isArray(txMeta.innerInstructions)) {
+      for (const inner of txMeta.innerInstructions) {
+        const instructions = inner?.instructions || []
+        for (const inst of instructions) {
+          const accts = inst?.accounts
+          if (Array.isArray(accts)) {
+            for (const a of accts) {
+              const pubkey =
+                typeof a === 'number' && accounts[a]
+                  ? accounts[a]
+                  : typeof a === 'string'
+                    ? a
+                    : null
+              if (pubkey) innerAccounts.push(pubkey)
+            }
+          }
+        }
+      }
+    }
+    const matchesFromInner = innerAccounts.filter((acc: string) =>
+      monitoredKols.includes(acc),
+    )
+
+    // Step 4: Unique KOLs (all sources)
+    const allMatchingKols = [
+      ...matchesFromAccounts,
+      ...matchesFromBalances,
+      ...matchesFromInner,
+    ]
+    const uniqueKols = [...new Set(allMatchingKols)]
+
+    if (uniqueKols.length === 0) {
+      return
+    }
+
+    const matchSource =
+      matchesFromAccounts.length > 0
+        ? 'accountKeys'
+        : matchesFromBalances.length > 0
+          ? 'postTokenBalances'
+          : 'innerInstructions'
+    logger.info(
+      `KOL match: ${uniqueKols.length} kol(s), source=${matchSource}`,
+    )
+
+    // Process once per KOL
+    for (const kolAddress of uniqueKols) {
+      const signatureData = JSON.stringify({ signature, kolAddress })
+      const exists = await redisClient.sismember(
+        'influencer_whale_signatures',
+        signatureData,
+      )
+
+      if (exists) {
+        logger.info(
+          `Signature ${signature} already processed for KOL ${kolAddress.slice(0, 8)}..., skipping`,
+        )
+        continue
+      }
+
+      await redisClient.sadd('influencer_whale_signatures', signatureData)
+
+      await signatureKolQueue.add(
+        'process-signature-kol',
+        {
+          signature,
+          kolAddress,
+          transactionData: tx,
+        },
+        {
+          priority: 1,
+          removeOnComplete: true,
+          removeOnFail: false,
+        },
+      )
+      logger.info(
+        pc.magenta(`🐋 New KOL Tx Detected: ${signature} (KOL: ${kolAddress.slice(0, 8)}...)`),
+      )
+      await setLatestSignature(kolAddress, signature)
+    }
   } catch (err) {
     logger.error({ err }, pc.red('Error handling transaction:'))
   }
@@ -872,8 +981,9 @@ const storeInfluencerTransactionInDB = async (
     tokenPrice: {
       buyTokenPrice: details.tokenOutPrice || 0,
       sellTokenPrice: details.tokenInPrice || 0,
-      buyTokenPriceSol: details.sellTokenPriceSol || 0,
-      sellTokenPriceSol: details.buyTokenPriceSol || 0,
+      // buy token = tokenOut (acquired), sell token = tokenIn (spent)
+      buyTokenPriceSol: details.outTokenPriceSol || 0,
+      sellTokenPriceSol: details.inTokenPriceSol || 0,
     },
 
     solAmount: {
@@ -1097,14 +1207,13 @@ const processInfluencerSignature = async (
       return
     }
 
-    if (
-      await influencerWhaleTransactionsModelV2
-        .findOne({ signature })
-        .select('signature')
-        .lean()
-    ) {
+    // Parser V2 Fix Task 4: Allow up to 2 records per signature (split swap: SELL + BUY)
+    // Schema has compound unique index { signature, type }; findOne would block the second record.
+    const existingCount =
+      await influencerWhaleTransactionsModelV2.countDocuments({ signature })
+    if (existingCount >= 2) {
       logger.info(
-        `Transaction ${signature} already exists in influencer. Skipping.`,
+        `Transaction ${signature} fully processed in influencer (${existingCount} records). Skipping.`,
       )
       await redisClient.del(duplicateKey)
       return
@@ -1392,22 +1501,22 @@ const processInfluencerSignature = async (
       tokenOut.name = outSymbolData.name
     }
 
-    // ✅ Use V2 parser directly with KOL-specific context
-    // CRITICAL FIX: Filter token balance changes to only include KOL's changes
-    // This ensures the parser sees the transaction from the KOL's perspective
-    // Convert to V2 format
+    // Parser V2 Fix Task 2: Pass FULL transaction data to parser (same as whale)
+    // Pass real fee_payer, signers, and all token_balance_changes so parser can run
+    // 3-tier swapper identification and multi-hop logic. Do NOT hardcode KOL.
     const v2Input = {
       signature: signature,
-      timestamp: parsedTx.result.timestamp ? new Date(parsedTx.result.timestamp).getTime() : Date.now(),
+      timestamp: parsedTx.result.timestamp
+        ? new Date(parsedTx.result.timestamp).getTime()
+        : Date.now(),
       status: parsedTx.result.status || 'Success',
       fee: parsedTx.result.fee || 0,
-      fee_payer: kolAddress, // ✅ Use KOL as fee payer to force correct swapper identification
-      signers: [kolAddress], // ✅ Use KOL as signer
+      fee_payer:
+        parsedTx.result.fee_payer ?? parsedTx.result.signers?.[0],
+      signers: parsedTx.result.signers ?? [],
       protocol: parsedTx.result.protocol,
-      token_balance_changes: parsedTx.result.token_balance_changes.filter(
-        (change: any) => change.owner === kolAddress
-      ), // ✅ Only include KOL's token changes to get correct perspective
-      actions: parsedTx.result.actions || []
+      token_balance_changes: parsedTx.result.token_balance_changes ?? [],
+      actions: parsedTx.result.actions ?? [],
     }
 
     const parseResult = parseShyftTransactionV2(v2Input)
@@ -1415,7 +1524,22 @@ const processInfluencerSignature = async (
     if (parseResult.success && parseResult.data) {
       const swapData = parseResult.data
 
-      // âœ… CRITICAL FIX: Handle SplitSwapPair by creating TWO separate transactions
+      // Parser V2 Fix Task 3: Only persist when parser's identified swapper is our tracked KOL
+      const identifiedSwapper = swapData.swapper
+      if (identifiedSwapper === undefined || identifiedSwapper === null) {
+        logger.info(
+          `KOL [Filter] Skipping ${signature}: Parser did not identify a swapper. Skipping.`,
+        )
+        return
+      }
+      if (identifiedSwapper !== kolAddress) {
+        logger.info(
+          `Parser identified swapper ${identifiedSwapper} but tracked KOL is ${kolAddress}. Skipping.`,
+        )
+        return
+      }
+
+      // Handle SplitSwapPair by creating TWO separate transactions
       if ('sellRecord' in swapData) {
         logger.info(
           pc.magenta(`ðŸ”„ Split Swap Pair detected - creating SELL and BUY transactions`)
@@ -1475,12 +1599,12 @@ const processInfluencerSignature = async (
     logger.error({ err }, `Error processing signature ${signature}:`)
   } finally {
     try {
-      // âœ… Clean up Redis processing key
-      const duplicateKey = `processing_signature:${signature}`
+      // Clean up Redis processing key (must match key used in try block)
+      const duplicateKey = `processing_signature_kol:${signature}`
       await redisClient.del(duplicateKey)
 
       await redisClient.srem(
-        'kol_signatures',
+        'influencer_whale_signatures',
         JSON.stringify({ signature, kolAddress }),
       )
       logger.info(`Signature removed from Redis: ${signature}`)
@@ -1663,8 +1787,9 @@ async function processSingleInfluencerSwap(
     const tokenOutSolAmount =
       (tokenOut.amount * (outTokenData?.price || 0)) / solPrice
 
-    const buyTokenPriceSol = inTokenData?.price / solPrice || 0
-    const sellTokenPriceSol = outTokenData?.price / solPrice || 0
+    // Parser V2 Fix Task 6: Use in/out naming (buy/sell were inverted at calculation)
+    const inTokenPriceSol = inTokenData?.price / solPrice || 0
+    const outTokenPriceSol = outTokenData?.price / solPrice || 0
     const buyMarketCapSol = inTokenData?.marketCap / solPrice || 0
     const sellMarketCapSol = outTokenData?.marketCap / solPrice || 0
     const gasFeeUSD = gasFee * solPrice || 0
@@ -1707,8 +1832,8 @@ async function processSingleInfluencerSwap(
       tokenOutUsdAmount: tokenOutUsdAmount,
       tokenInSolAmount: tokenInSolAmount,
       tokenOutSolAmount: tokenOutSolAmount,
-      buyTokenPriceSol: buyTokenPriceSol,
-      sellTokenPriceSol: sellTokenPriceSol,
+      inTokenPriceSol: inTokenPriceSol,
+      outTokenPriceSol: outTokenPriceSol,
       buyMarketCapSol: buyMarketCapSol,
       sellMarketCapSol: sellMarketCapSol,
       inMarketCap: inTokenData?.marketCap,
@@ -2915,10 +3040,10 @@ process.on('message', (msg) => {
 // Handle uncaught exceptions
 process.on('uncaughtException', async (error) => {
   console.error('âŒ Uncaught Exception:', error)
-  await gracefulShutdown('UNCAUGHT_EXCEPTION')
+  // app.ts keeps server alive on uncaught errors; do not exit here
 })
 
 process.on('unhandledRejection', async (reason, promise) => {
   console.error('âŒ Unhandled Rejection at:', promise, 'reason:', reason)
-  await gracefulShutdown('UNHANDLED_REJECTION')
+  // app.ts keeps server alive on unhandled rejections; do not exit here
 })

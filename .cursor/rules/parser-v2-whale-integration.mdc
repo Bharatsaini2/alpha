@@ -1,0 +1,30 @@
+---
+description: Parser V2 and whale/KOL controller integration — do not bypass parser; validate swapper
+globs: backend/src/controllers/whale.controller.ts, backend/src/controllers/influencer.controller.ts, backend/src/utils/splitSwapStorageMapper.ts, backend/src/utils/shyftParserV2*
+alwaysApply: false
+---
+
+# Parser V2 & Whale/KOL Integration Rules
+
+When editing whale or KOL (influencer) transaction handling or parser integration:
+
+## Whale/KOL matching (handleTransactionEvent)
+
+- Do **not** rely only on top-level `accountKeys`. Whales/KOLs can appear via relayers, PDAs, or only in `postTokenBalances` / `innerInstructions`.
+- Use multi-source lookup: accountKeys → postTokenBalances owners → innerInstructions accounts. Collect **all** matching addresses and process once per whale/KOL.
+- Applies to both `whale.controller.ts` (monitoredWhales) and `influencer.controller.ts` (monitoredKols).
+
+## Parser input (processSignature)
+
+- **Do not** set `fee_payer` or `signers` to the tracked whale/KOL. Use real transaction data: `parsedTx.result.fee_payer`, `parsedTx.result.signers`.
+- **Do not** filter `token_balance_changes` to the whale/KOL. Pass `parsedTx.result.token_balance_changes` in full so Parser V2 can run 3-tier swapper identification and multi-hop logic.
+- After parsing, **validate**: only proceed if `parseResult.data.swapper === whaleAddress` (or `kolAddress` for influencer); otherwise log and skip.
+
+## Duplicate and Redis
+
+- Duplicate check must allow **two** records per signature (split swap: SELL + BUY). Use `countDocuments({ signature })` and skip only when count >= 2.
+- Redis cleanup for a signature must happen in **one** place only (e.g. `processSignature` finally). Whale uses `whale_signatures`; influencer uses `influencer_whale_signatures`. Do not duplicate cleanup in inner swap functions.
+
+## Task reference
+
+Full task list and step-by-step procedures: **docs/PARSER_V2_FIX_TASKS_AND_PROCEDURES.md**. Work in priority order (P0 → P1 → P2).

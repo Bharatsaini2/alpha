@@ -16,6 +16,9 @@ const whaleAddressSchema: Schema<IWhaleModel> = new Schema<IWhaleModel>({
   imageUrl: { type: String, default: null },
 })
 
+// Parser V2 Fix Task 7: Index for findWhaleTokens / whale address lookups
+whaleAddressSchema.index({ whalesAddress: 1 })
+
 const WhalesAddressModel = model<IWhaleModel>(
   'WhalesAddress',
   whaleAddressSchema,

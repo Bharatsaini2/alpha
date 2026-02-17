@@ -14,7 +14,7 @@
 
 import fc from 'fast-check'
 import { ParsedSwap, PRIORITY_ASSETS } from '../shyftParserV2.types'
-import { mapParserAmountsToStorage } from '../splitSwapStorageMapper'
+import { mapParserAmountsToStorage, mapSOLAmounts } from '../splitSwapStorageMapper'
 
 describe('Property 5: Valuation Data Architectural Separation', () => {
   // Feature: split-swap-storage-architecture-fix, Property 5
@@ -62,47 +62,39 @@ describe('Property 5: Valuation Data Architectural Separation', () => {
       fc.property(
         arbitraryParsedSwap(),
         (parsedSwap) => {
-          // Map Parser V2 to storage
-          const storageAmounts = mapParserAmountsToStorage(parsedSwap)
-          
+          // Task 9: SOL amounts come from mapSOLAmounts (called in storeTransactionInDB with USD/SOL price)
+          const solAmounts = mapSOLAmounts(parsedSwap)
+
           const { direction, amounts, quoteAsset, baseAsset } = parsedSwap
-          
+
           const isQuoteSOL = quoteAsset.mint === PRIORITY_ASSETS.SOL || quoteAsset.mint === PRIORITY_ASSETS.WSOL
           const isBaseSOL = baseAsset.mint === PRIORITY_ASSETS.SOL || baseAsset.mint === PRIORITY_ASSETS.WSOL
-          
+
           if (!isQuoteSOL && !isBaseSOL) {
-            // No SOL involved - fields should be null
-            expect(storageAmounts.solAmount.buySolAmount).toBeNull()
-            expect(storageAmounts.solAmount.sellSolAmount).toBeNull()
+            expect(solAmounts.buySolAmount).toBeNull()
+            expect(solAmounts.sellSolAmount).toBeNull()
           } else {
-            // SOL is involved - verify values match Parser V2 amounts, not price conversions
             if (direction === 'BUY') {
               if (isBaseSOL) {
-                // Bought SOL - should match baseAmount
-                expect(storageAmounts.solAmount.buySolAmount).toBe(amounts.baseAmount)
+                expect(solAmounts.buySolAmount).toBe(amounts.baseAmount)
               } else {
-                expect(storageAmounts.solAmount.buySolAmount).toBeNull()
+                expect(solAmounts.buySolAmount).toBeNull()
               }
-              
               if (isQuoteSOL) {
-                // Spent SOL - should match totalWalletCost
-                expect(storageAmounts.solAmount.sellSolAmount).toBe(amounts.totalWalletCost ?? null)
+                expect(solAmounts.sellSolAmount).toBe(amounts.totalWalletCost ?? null)
               } else {
-                expect(storageAmounts.solAmount.sellSolAmount).toBeNull()
+                expect(solAmounts.sellSolAmount).toBeNull()
               }
             } else {
               if (isQuoteSOL) {
-                // Received SOL - should match netWalletReceived
-                expect(storageAmounts.solAmount.buySolAmount).toBe(amounts.netWalletReceived ?? null)
+                expect(solAmounts.buySolAmount).toBe(amounts.netWalletReceived ?? null)
               } else {
-                expect(storageAmounts.solAmount.buySolAmount).toBeNull()
+                expect(solAmounts.buySolAmount).toBeNull()
               }
-              
               if (isBaseSOL) {
-                // Sold SOL - should match baseAmount
-                expect(storageAmounts.solAmount.sellSolAmount).toBe(amounts.baseAmount)
+                expect(solAmounts.sellSolAmount).toBe(amounts.baseAmount)
               } else {
-                expect(storageAmounts.solAmount.sellSolAmount).toBeNull()
+                expect(solAmounts.sellSolAmount).toBeNull()
               }
             }
           }

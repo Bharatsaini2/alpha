@@ -13,16 +13,14 @@
 import { ParsedSwap, PRIORITY_ASSETS } from './shyftParserV2.types'
 
 /**
- * Storage amount fields structure
+ * Storage amount fields structure.
+ * SOL amounts are computed in storeTransactionInDB via mapSOLAmounts() with USD/SOL price.
+ * Parser V2 Fix Task 9: solAmount removed from here; single source of truth is storeTransactionInDB.
  */
 export interface StorageAmounts {
   amount: {
     buyAmount: number
     sellAmount: number
-  }
-  solAmount: {
-    buySolAmount: number | null
-    sellSolAmount: number | null
   }
 }
 
@@ -90,27 +88,20 @@ function safeSOLAmount(value?: number | null): number | null {
  */
 export function mapParserAmountsToStorage(parsedSwap: ParsedSwap): StorageAmounts {
   const { direction, amounts } = parsedSwap
-  
-  // ✅ Single source of truth: delegate SOL mapping to mapSOLAmounts()
-  const solAmount = mapSOLAmounts(parsedSwap)
-  
+
   if (direction === 'BUY') {
-    // BUY: User bought baseAsset, spent quoteAsset
     return {
       amount: {
-        buyAmount: safeNumeric(amounts.baseAmount),  // ✅ Sanitized actual tokens bought
-        sellAmount: safeNumeric(amounts.totalWalletCost),  // ✅ Sanitized actual amount spent
+        buyAmount: safeNumeric(amounts.baseAmount),
+        sellAmount: safeNumeric(amounts.totalWalletCost),
       },
-      solAmount,
     }
   } else {
-    // SELL: User sold baseAsset, received quoteAsset
     return {
       amount: {
-        buyAmount: safeNumeric(amounts.netWalletReceived),  // ✅ Sanitized actual amount received
-        sellAmount: safeNumeric(amounts.baseAmount),  // ✅ Sanitized actual tokens sold
+        buyAmount: safeNumeric(amounts.netWalletReceived),
+        sellAmount: safeNumeric(amounts.baseAmount),
       },
-      solAmount,
     }
   }
 }
