@@ -168,19 +168,14 @@ describe('Telegram Utilities', () => {
   })
 
   describe('generateTokenLink', () => {
-    it('should generate valid Solscan token URLs', () => {
+    it('should generate valid DexScreener token URLs', () => {
       fc.assert(
         fc.property(
           fc.string({ minLength: 1, maxLength: 44 }),
           (tokenAddress) => {
             const link = generateTokenLink(tokenAddress)
-            
-            // Must be a valid URL format
-            expect(link).toMatch(/^https:\/\/solscan\.io\/token\//)
-            
-            // Must contain the token address
-            expect(link).toBe(`https://solscan.io/token/${tokenAddress}`)
-            
+            expect(link).toMatch(/^https:\/\/dexscreener\.com\/solana\//)
+            expect(link).toBe(`https://dexscreener.com/solana/${tokenAddress}`)
             return true
           }
         ),
@@ -255,7 +250,7 @@ describe('Telegram Utilities', () => {
             expect(message).toContain('https://app.alpha-block.ai/transaction/')
             
             // Must contain token link
-            expect(message).toContain('https://solscan.io/token/')
+            expect(message).toContain('https://dexscreener.com/solana/')
             
             return true
           }
@@ -333,8 +328,8 @@ describe('Telegram Utilities', () => {
             // Must contain token address (shortened)
             expect(message).toMatch(/Token:/)
             
-            // Must contain Solscan link
-            expect(message).toContain('https://solscan.io/token/')
+            // Must contain DexScreener token link
+            expect(message).toContain('https://dexscreener.com/solana/')
             
             return true
           }
@@ -409,7 +404,7 @@ describe('Telegram Utilities', () => {
             expect(message).toContain('https://app.alpha-block.ai/transaction/')
             
             // Must contain token link
-            expect(message).toContain('https://solscan.io/token/')
+            expect(message).toContain('https://dexscreener.com/solana/')
             
             return true
           }
@@ -545,7 +540,7 @@ describe('Telegram Utilities', () => {
             
             // Required field 10: Token link
             expect(message).toContain('View Token:')
-            expect(message).toContain('https://solscan.io/token/')
+            expect(message).toContain('https://dexscreener.com/solana/')
             expect(message).toContain(tx.tokenAddress)
             
             return true
@@ -661,7 +656,7 @@ describe('Telegram Utilities', () => {
             
             // Must contain token link
             expect(message).toContain('View Token')
-            expect(message).toContain('https://solscan.io/token/')
+            expect(message).toContain('https://dexscreener.com/solana/')
             expect(message).toContain(tx.tokenAddress)
             
             return true
@@ -696,7 +691,7 @@ describe('Telegram Utilities', () => {
       expect(message).toContain('Smart Money / Heavy Accumulator')
       expect(message).toContain('00:00 UTC')
       expect(message).toContain('https://app.alpha-block.ai/transaction/5wHu1qwD7q5ifaN5nwdcDqNFo53GJqa7nLp2BeeRpcSt')
-      expect(message).toContain('https://solscan.io/token/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
+      expect(message).toContain('https://dexscreener.com/solana/EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
     })
 
     it('should handle empty wallet labels', () => {

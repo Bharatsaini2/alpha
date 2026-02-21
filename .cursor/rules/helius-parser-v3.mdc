@@ -1,0 +1,65 @@
+---
+description: Helius Parser V3 conventions, golden rules, and file map
+globs: backend/src/utils/heliusParserV3*.ts, backend/src/controllers/whale.controller.ts, backend/src/controllers/influencer.controller.ts
+alwaysApply: false
+---
+
+# Helius Parser V3 — Rules
+
+## Golden Rules (NEVER violate)
+
+1. **NEVER gate on type labels** from any provider (SHYFT or Helius). r57 proves Helius misclassifies (type=TRANSFER for a real swap). Swap detection uses balance deltas only.
+2. **NEVER divide `tokenTransfers.tokenAmount`** — it is already human-readable. Dividing 4.5M by 10^6 produces 4.5 tokens — a silent catastrophic bug.
+3. **NEVER use `nativeBalanceChange` as primary SOL source** — it includes all fees. Use WSOL `tokenTransfers` sum. nbc is fallback only (bonding curve ~5% of volume).
+4. **NEVER use `accountData.tokenBalanceChanges` as primary token source** — it is often EMPTY for the swapper in Pump.fun AMM transactions. `tokenTransfers` is primary.
+5. **DO divide `accountData.rawTokenAmount.tokenAmount`** — it IS a raw integer string. The opposite of rule 2.
+6. **Token-to-token swaps MUST emit 2 records** (SELL + BUY array via SplitSwapPair). Downstream `processSingleSwapTransaction` runs once per record.
+
+## Data Source Priority
+
+| Data        | Primary                                    | Fallback                                  |
+|-------------|--------------------------------------------|--------------------------------------------|
+| SOL amount  | Sum WSOL `tokenTransfers` for swapper      | `accountData.nativeBalanceChange` / 1e9    |
+| Token delta | Net `tokenTransfers` per mint for swapper  | `accountData.tokenBalanceChanges` (raw÷dec)|
+
+## File Map
+
+| File                                 | Purpose                                            |
+|--------------------------------------|----------------------------------------------------|
+| `heliusParserV3.types.ts`            | Helius input interfaces + re-exported output types |
+| `heliusParserV3.deltaCollector.ts`   | SOL + token delta collection (collectDeltas, getSolAmount) |
+| `heliusParserV3.ts`                  | Main parser: 6-stage pipeline, pattern A-F classification |
+| `heliusParserV3.shadowCompare.ts`    | Shadow comparison utility (HELIUS_SHADOW_MODE=true) |
+| `heliusParserAdapter.ts`             | `fetchHeliusParsed()` — Helius API client (shared) |
+
+## Feature Flags
+
+| Env var               | Effect                                                   |
+|-----------------------|----------------------------------------------------------|
+| `USE_HELIUS_PARSER`   | `true` → controllers use V3; `false` → SHYFT V2 (default) |
+| `HELIUS_SHADOW_MODE`  | `true` → run BOTH parsers and log comparison results     |
+
+## Output Types
+
+V3 produces the same `ParsedSwap`, `SplitSwapPair`, `EraseResult`, and `ParserResult` as V2.
+Downstream storage, alerting, and WebSocket broadcast require zero changes.
+
+## Direction Rules (ALWAYS follow)
+
+| From         | To           | Result                           |
+|--------------|--------------|----------------------------------|
+| Core token   | Non-core     | **BUY** (standard ParsedSwap)    |
+| Non-core     | Core token   | **SELL** (standard ParsedSwap)   |
+| Non-core     | Non-core     | **SWAP** (SplitSwapPair: SELL+BUY) |
+| Core token   | Core token   | **ERASE** (core_to_core_suppressed) |
+
+Core tokens = SOL + all tokens in `DEFAULT_CORE_TOKENS` (USDC, USDT, LSTs, stablecoins, LP tokens).
+
+## Pattern Classification
+
+- **A**: 1 non-SOL token + significant SOL → BUY or SELL (SOL is core)
+- **B/C token-to-token with core**: 2+ tokens, one core → BUY or SELL (core as quote)
+- **B/C non-core only**: 2+ tokens, no core → SWAP split (SELL + BUY)
+- **D**: 0 tokens + SOL only → ERASE
+- **E**: 1 token + no SOL but has WSOL → tiny swap
+- **F**: Nothing → ERASE

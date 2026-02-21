@@ -4,14 +4,12 @@
  * Automatically starts whale and KOL WebSocket monitors on server boot.
  * Fixes the issue where prod shows fewer txns because monitors never start after deploy/restart.
  *
- * Toggle via: AUTO_START_WHALE_MONITORS=true (default: true in production)
+ * Default: ENABLED (runs on every start).
+ * To disable: AUTO_START_WHALE_MONITORS=false
  * Delay: AUTO_START_WHALE_MONITORS_DELAY_MS (default: 8000ms to allow DB/Redis to settle)
  */
 
-const AUTO_START_ENABLED =
-  process.env.AUTO_START_WHALE_MONITORS !== 'false' &&
-  (process.env.AUTO_START_WHALE_MONITORS === 'true' ||
-    process.env.NODE_ENV === 'production')
+const AUTO_START_ENABLED = process.env.AUTO_START_WHALE_MONITORS !== 'false'
 
 const BOOTSTRAP_DELAY_MS = Math.max(
   3000,
@@ -21,7 +19,7 @@ const BOOTSTRAP_DELAY_MS = Math.max(
 export function scheduleWhaleMonitorBootstrap(port: number): void {
   if (!AUTO_START_ENABLED) {
     console.log(
-      '⏭️  Whale monitor auto-start disabled (AUTO_START_WHALE_MONITORS=false or NODE_ENV != production)',
+      '⏭️  Whale monitor auto-start disabled (AUTO_START_WHALE_MONITORS=false)',
     )
     return
   }

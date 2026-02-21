@@ -15,6 +15,10 @@ import {
   saveTokenToCache,
   isTokenResolutionFailed,
   isValidMetadata,
+  getHistoricalSolPrice,
+  getSwapRatioPriceUSDAtTimestamp,
+  getTokenMetadataAndImage,
+  getTokenImageUrl,
 } from '../config/solana-tokens-config'
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import { postKOLAlertToTwitter } from '../services/insight-posts'
@@ -37,6 +41,18 @@ import WebSocket from 'ws'
 import { createBullBoard } from '@bull-board/api'
 import { parseShyftTransaction, ShyftTransaction } from '../utils/shyftParser'
 import { parseShyftTransactionV2 } from '../utils/shyftParserV2'
+import { parseHeliusTransactionV3 } from '../utils/heliusParserV3'
+import { fetchHeliusParsed } from '../utils/heliusParserAdapter'
+import type { HeliusTransaction } from '../utils/heliusParserV3.types'
+import { runShadowComparison } from '../utils/heliusParserV3.shadowCompare'
+import { mapSOLAmounts, isSOLMint } from '../utils/splitSwapStorageMapper'
+
+const LAMPORTS_PER_SOL = 1e9
+
+function feeLamportsToUsd(lamports: number, solPriceUsd: number): number {
+  const solAmount = Number(lamports) / LAMPORTS_PER_SOL
+  return solAmount * (solPriceUsd || 0)
+}
 
 function startOfUTCDay(date: Date): Date {
   return new Date(
@@ -850,6 +866,8 @@ const storeInfluencerTransactionInDB = async (
   txStatus: any,
   classificationSource?: string,
   confidence?: string,
+  parsedSwap?: any,
+  solPrice?: number,
 ): Promise<void> => {
   let clampedHotnessScore = 0
 
@@ -870,9 +888,9 @@ const storeInfluencerTransactionInDB = async (
   
   // ✅ FIX: Use classification source to determine type
   // Split swaps now create separate 'sell' and 'buy' records
-  if (classificationSource === 'v2_parser_split_sell') {
+  if (classificationSource === 'v2_parser_split_sell' || classificationSource === 'helius_v3_split_sell') {
     typeValue = 'sell'
-  } else if (classificationSource === 'v2_parser_split_buy') {
+  } else if (classificationSource === 'v2_parser_split_buy' || classificationSource === 'helius_v3_split_buy') {
     typeValue = 'buy'
   } else if (isBuy && isSell) {
     typeValue = 'both'
@@ -960,17 +978,40 @@ const storeInfluencerTransactionInDB = async (
     details.sellMarketCapSol = tokenSolMarketCap / details.tokenOutPrice
   }
 
-  // ✅ CRITICAL FIX: Both buyAmount and sellAmount should show the SAME transaction value
-  // For BUY: User spends SOL/USDC to buy token → show SOL/USDC value
-  // For SELL: User sells token for SOL/USDC → show SOL/USDC value
-  // The transaction value is ALWAYS the priority asset (SOL/USDC/USDT) value
-  const transactionValue = Math.max(details.tokenOutUsdAmount || 0, details.tokenInUsdAmount || 0);
+  // ✅ Amount and SOL must be USD / actual SOL, never raw token amounts.
+  let buyAmountUsd = details.tokenOutUsdAmount ?? 0
+  let sellAmountUsd = details.tokenInUsdAmount ?? 0
+  const minSensibleUsd = 0.5
+  if (buyAmountUsd < minSensibleUsd && (details.tokenInUsdAmount ?? 0) >= minSensibleUsd) {
+    buyAmountUsd = details.tokenInUsdAmount!
+  }
+  if (sellAmountUsd < minSensibleUsd && (details.tokenOutUsdAmount ?? 0) >= minSensibleUsd) {
+    sellAmountUsd = details.tokenOutUsdAmount!
+  }
+
+  // ✅ When we have parsedSwap + solPrice, use mapSOLAmounts so SOL side shows actual SOL (e.g. 5 SOL), not wrong equivalent from token price.
+  // Always fall back to token SOL-equivalent (details.tokenOutSolAmount / tokenInSolAmount) when mapSOLAmounts returns null so card never shows 0 when we have USD value.
+  let buySolAmount: number
+  let sellSolAmount: number
+  if (parsedSwap && solPrice != null && solPrice > 0) {
+    const solMap = mapSOLAmounts(
+      parsedSwap,
+      details.tokenInUsdAmount,
+      details.tokenOutUsdAmount,
+      solPrice,
+    )
+    buySolAmount = solMap.buySolAmount ?? details.tokenOutSolAmount ?? 0
+    sellSolAmount = solMap.sellSolAmount ?? details.tokenInSolAmount ?? 0
+  } else {
+    buySolAmount = details.tokenOutSolAmount ?? 0
+    sellSolAmount = details.tokenInSolAmount ?? 0
+  }
 
   const transactionData = {
     signature,
     amount: {
-      buyAmount: transactionValue,
-      sellAmount: transactionValue,
+      buyAmount: buyAmountUsd,
+      sellAmount: sellAmountUsd,
     },
 
     tokenAmount: {
@@ -987,8 +1028,8 @@ const storeInfluencerTransactionInDB = async (
     },
 
     solAmount: {
-      buySolAmount: details.tokenOutSolAmount || 0,
-      sellSolAmount: details.tokenInSolAmount || 0,
+      buySolAmount,
+      sellSolAmount,
     },
 
     // Enhanced transaction object with new fields
@@ -1207,10 +1248,22 @@ const processInfluencerSignature = async (
       return
     }
 
+    // Ensure MongoDB is connected before DB operations (avoids "buffering timed out")
     // Parser V2 Fix Task 4: Allow up to 2 records per signature (split swap: SELL + BUY)
     // Schema has compound unique index { signature, type }; findOne would block the second record.
-    const existingCount =
-      await influencerWhaleTransactionsModelV2.countDocuments({ signature })
+    let existingCount: number
+    try {
+      existingCount =
+        await influencerWhaleTransactionsModelV2.countDocuments({ signature })
+    } catch (countErr: any) {
+      if (countErr?.message?.includes('buffering timed out')) {
+        await new Promise((r) => setTimeout(r, 2000))
+        existingCount =
+          await influencerWhaleTransactionsModelV2.countDocuments({ signature })
+      } else {
+        throw countErr
+      }
+    }
     if (existingCount >= 2) {
       logger.info(
         `Transaction ${signature} fully processed in influencer (${existingCount} records). Skipping.`,
@@ -1295,6 +1348,53 @@ const processInfluencerSignature = async (
 
     logger.info(pc.cyan(`\nâš¡ Processing signature: ${signature}`))
 
+    const useHeliusParser = process.env.USE_HELIUS_PARSER === 'true'
+
+    let parseResult: ReturnType<typeof parseShyftTransactionV2>
+    let parsedTx: any = null
+    let protocolName = 'Unknown'
+    let gasFee = 0
+
+    if (useHeliusParser) {
+      // ======== Helius V3 path ========
+      logger.info(pc.cyan('KOL: Using Helius V3 parser'))
+
+      const heliusTx = await Promise.race([
+        fetchHeliusParsed(signature),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Helius fetch timeout KOL')), 20000),
+        ),
+      ]).catch(async (fetchErr) => {
+        logger.error({ fetchErr }, 'Helius fetch error KOL, retrying...')
+        const maxR = 2
+        for (let i = 1; i <= maxR; i++) {
+          try {
+            await new Promise((r) => setTimeout(r, i * 2000))
+            return await Promise.race([
+              fetchHeliusParsed(signature),
+              new Promise<null>((_, rej) =>
+                setTimeout(() => rej(new Error('Helius fetch timeout KOL')), 20000),
+              ),
+            ])
+          } catch {
+            if (i === maxR) return null
+          }
+        }
+        return null
+      })
+
+      if (!heliusTx) return
+
+      protocolName = heliusTx.source || 'Unknown'
+      gasFee = heliusTx.fee ?? 0
+      parsedTx = heliusTx
+
+      parseResult = parseHeliusTransactionV3(
+        heliusTx as unknown as HeliusTransaction,
+      )
+    } else {
+      // ======== SHYFT V2 path (unchanged) ========
+
     const parsedData = await Promise.race([
       getParsedTransactions(signature),
       new Promise((_, reject) =>
@@ -1340,7 +1440,7 @@ const processInfluencerSignature = async (
 
     if (!parsedData) return
 
-    const parsedTx = JSON.parse(parsedData)
+    parsedTx = JSON.parse(parsedData)
 
     logger.info(`TX Type KOL: ${parsedTx.result?.type}`)
 
@@ -1372,8 +1472,8 @@ const processInfluencerSignature = async (
       return
     }
 
-    const protocolName = parsedTx.result.protocol?.name || 'Unknown'
-    const gasFee = parsedTx.result.fee
+    protocolName = parsedTx.result.protocol?.name || 'Unknown'
+    gasFee = parsedTx.result.fee
     const swapper = parsedTx.result.signers[0] || kolAddress
 
     let tokenIn: any = null
@@ -1519,22 +1619,37 @@ const processInfluencerSignature = async (
       actions: parsedTx.result.actions ?? [],
     }
 
-    const parseResult = parseShyftTransactionV2(v2Input)
+    parseResult = parseShyftTransactionV2(v2Input)
+    } // end SHYFT V2 path
+
+    // Shadow comparison only when SHYFT is main parser (avoids running both when Helius is main)
+    if (!useHeliusParser) runShadowComparison(signature, kolAddress).catch(() => {})
 
     if (parseResult.success && parseResult.data) {
       const swapData = parseResult.data
 
-      // Parser V2 Fix Task 3: Only persist when parser's identified swapper is our tracked KOL
+      // KOL: Strict match — only persist when parser's swapper matches tracked KOL
       const identifiedSwapper = swapData.swapper
       if (identifiedSwapper === undefined || identifiedSwapper === null) {
         logger.info(
-          `KOL [Filter] Skipping ${signature}: Parser did not identify a swapper. Skipping.`,
+          {
+            signature,
+            kolAddress: kolAddress.slice(0, 8) + '…',
+            skipReason: 'no_swapper_from_parser',
+          },
+          `KOL [Filter] Skipping ${signature}: Parser did not identify a swapper`,
         )
         return
       }
       if (identifiedSwapper !== kolAddress) {
         logger.info(
-          `Parser identified swapper ${identifiedSwapper} but tracked KOL is ${kolAddress}. Skipping.`,
+          {
+            signature,
+            identifiedSwapper: identifiedSwapper.slice(0, 8) + '…',
+            kolAddress: kolAddress.slice(0, 8) + '…',
+            skipReason: 'swapper_mismatch_kol_strict',
+          },
+          `KOL [Filter] Skipping ${signature}: Parser swapper does not match tracked KOL`,
         )
         return
       }
@@ -1545,6 +1660,7 @@ const processInfluencerSignature = async (
           pc.magenta(`ðŸ”„ Split Swap Pair detected - creating SELL and BUY transactions`)
         )
         
+        const splitSource = useHeliusParser ? 'helius_v3_split' : 'v2_parser_split'
         // Process SELL transaction
         await processSingleInfluencerSwap(
           swapData.sellRecord,
@@ -1554,7 +1670,7 @@ const processInfluencerSignature = async (
           kolAddress,
           protocolName,
           gasFee,
-          'v2_parser_split_sell'
+          `${splitSource}_sell`
         )
         
         // Process BUY transaction
@@ -1566,7 +1682,7 @@ const processInfluencerSignature = async (
           kolAddress,
           protocolName,
           gasFee,
-          'v2_parser_split_buy'
+          `${splitSource}_buy`
         )
         
         logger.info(
@@ -1575,6 +1691,7 @@ const processInfluencerSignature = async (
         return // Exit early, both transactions processed
       } else {
         // Handle regular ParsedSwap - single transaction
+        const singleSource = useHeliusParser ? 'helius_v3' : 'v2_parser'
         await processSingleInfluencerSwap(
           swapData,
           signature,
@@ -1583,20 +1700,36 @@ const processInfluencerSignature = async (
           kolAddress,
           protocolName,
           gasFee,
-          'v2_parser'
+          singleSource
         )
         return // Exit early, transaction processed
       }
     }
     
+    const eraseReason = parseResult.erase?.reason ?? 'unknown'
+    const eraseDebug = (parseResult.erase?.debugInfo ?? {}) as Record<string, unknown>
     logger.info(
-      pc.yellow(
-        `KOL [Filter] Skipping ${signature}: Parser could not classify transaction (no swap detected)`,
-      ),
+      {
+        signature,
+        kolAddress: kolAddress.slice(0, 8) + '…',
+        parseDropped: true,
+        eraseReason,
+        feePayer: eraseDebug.feePayer,
+        signerCount: Array.isArray(eraseDebug.signers) ? eraseDebug.signers.length : 0,
+        assetDeltaCount: typeof eraseDebug.assetDeltas === 'object' && eraseDebug.assetDeltas != null
+          ? Object.keys(eraseDebug.assetDeltas).length
+          : 0,
+        eraseDebugKeys: Object.keys(eraseDebug),
+        processingTimeMs: parseResult.processingTimeMs,
+      },
+      `KOL [Filter] Skipping ${signature}: Parser rejected | reason=${eraseReason}`,
     )
     return
-  } catch (err) {
-    logger.error({ err }, `Error processing signature ${signature}:`)
+  } catch (err: any) {
+    logger.error(
+      { message: err?.message ?? String(err), signature },
+      `Error processing signature ${signature}:`
+    )
   } finally {
     try {
       // Clean up Redis processing key (must match key used in try block)
@@ -1639,20 +1772,6 @@ async function processSingleInfluencerSwap(
         `âœ… Parser classified: ${parsedSwap.direction} | confidence: ${parsedSwap.confidence} | source: ${classificationSource}`,
       ),
     )
-
-    // âœ… Apply confidence filtering if configured (Task 3.3)
-    const minConfidence = process.env.MIN_ALERT_CONFIDENCE
-    if (minConfidence) {
-      const { meetsMinimumConfidence } = require('../utils/shyftParser')
-      if (!meetsMinimumConfidence(parsedSwap, minConfidence)) {
-        logger.info(
-          pc.yellow(
-            `KOL [Filter] Skipping ${signature}: Confidence ${parsedSwap.confidence} below minimum ${minConfidence}`,
-          ),
-        )
-        return
-      }
-    }
 
     // Extract token information from parsed swap
     const tokenIn = {
@@ -1748,7 +1867,47 @@ async function processSingleInfluencerSwap(
       return
     }
 
-    // âœ… Fallback: If output token price is 0 but we have input token price,
+    // Production pricing: when SOL is one side, use swap ratio + historical SOL (no per-tx DEX).
+    let usedSwapRatioPricing = false
+    let historicalSOLAtSwap: number | null = null
+    const isQuoteSOL = isSOLMint(parsedSwap.quoteAsset.mint)
+    const isBaseSOL = isSOLMint(parsedSwap.baseAsset.mint)
+    const timestampSec = parsedSwap.timestamp >= 1e12 ? Math.floor(parsedSwap.timestamp / 1000) : parsedSwap.timestamp
+    if (isQuoteSOL || isBaseSOL) {
+      const solAmount = isQuoteSOL
+        ? (parsedSwap.direction === 'BUY' ? (parsedSwap.amounts.totalWalletCost ?? 0) : (parsedSwap.amounts.netWalletReceived ?? 0))
+        : (parsedSwap.amounts.baseAmount ?? 0)
+      const tokenAmount = isQuoteSOL
+        ? (parsedSwap.amounts.baseAmount ?? 0)
+        : (parsedSwap.direction === 'BUY' ? (parsedSwap.amounts.totalWalletCost ?? 0) : (parsedSwap.amounts.netWalletReceived ?? 0))
+      historicalSOLAtSwap = await getHistoricalSolPrice(timestampSec)
+      if (tokenAmount > 0 && Number.isFinite(solAmount)) {
+        const priceUSD = await getSwapRatioPriceUSDAtTimestamp(solAmount, tokenAmount, timestampSec)
+        if (priceUSD > 0 && historicalSOLAtSwap > 0) {
+          if (isQuoteSOL) {
+            if (parsedSwap.direction === 'BUY') {
+              outTokenData.price = priceUSD
+              inTokenData.price = historicalSOLAtSwap
+            } else {
+              inTokenData.price = priceUSD
+              outTokenData.price = historicalSOLAtSwap
+            }
+          } else {
+            if (parsedSwap.direction === 'BUY') {
+              inTokenData.price = priceUSD
+              outTokenData.price = historicalSOLAtSwap
+            } else {
+              outTokenData.price = priceUSD
+              inTokenData.price = historicalSOLAtSwap
+            }
+          }
+          usedSwapRatioPricing = true
+          logger.info({ signature: signature.slice(0, 12), priceUSD }, 'KOL: price from swap ratio + historical SOL')
+        }
+      }
+    }
+
+    // Fallback: If output token price is 0 but we have input token price,
     // estimate output price from swap ratio (for buy transactions)
     if (
       (outTokenData?.price === 0 || !outTokenData?.price) &&
@@ -1782,17 +1941,21 @@ async function processSingleInfluencerSwap(
       }
     }
 
-    const tokenInSolAmount =
-      (tokenIn.amount * (inTokenData?.price || 0)) / solPrice
-    const tokenOutSolAmount =
-      (tokenOut.amount * (outTokenData?.price || 0)) / solPrice
+    const currentSolPrice = solPrice && solPrice > 0 ? solPrice : 94
+    const safeSolPrice = usedSwapRatioPricing && historicalSOLAtSwap != null && historicalSOLAtSwap > 0
+      ? historicalSOLAtSwap
+      : currentSolPrice
 
-    // Parser V2 Fix Task 6: Use in/out naming (buy/sell were inverted at calculation)
-    const inTokenPriceSol = inTokenData?.price / solPrice || 0
-    const outTokenPriceSol = outTokenData?.price / solPrice || 0
-    const buyMarketCapSol = inTokenData?.marketCap / solPrice || 0
-    const sellMarketCapSol = outTokenData?.marketCap / solPrice || 0
-    const gasFeeUSD = gasFee * solPrice || 0
+    const tokenInSolAmount =
+      (tokenIn.amount * (inTokenData?.price || 0)) / safeSolPrice
+    const tokenOutSolAmount =
+      (tokenOut.amount * (outTokenData?.price || 0)) / safeSolPrice
+
+    const inTokenPriceSol = inTokenData?.price / safeSolPrice || 0
+    const outTokenPriceSol = outTokenData?.price / safeSolPrice || 0
+    const buyMarketCapSol = inTokenData?.marketCap / safeSolPrice || 0
+    const sellMarketCapSol = outTokenData?.marketCap / safeSolPrice || 0
+    const gasFeeUSD = feeLamportsToUsd(gasFee, currentSolPrice)
     const tokenInUsdAmount = tokenIn.amount * (inTokenData?.price || 0)
     const tokenOutUsdAmount = tokenOut.amount * (outTokenData?.price || 0)
 
@@ -1810,6 +1973,7 @@ async function processSingleInfluencerSwap(
       influencerData?.influencerProfileImageUrl || null
 
     // Extract Values
+    // Never persist shortened addresses as symbol/name – use Unknown so we don't cache bad data
     const tokenDetails = {
       signature,
       kolAddress,
@@ -1818,10 +1982,10 @@ async function processSingleInfluencerSwap(
         influencerData?.influencerUsername || influencerHandle,
       influencerFollowerCount: influencerFollowerCount,
       influencerProfileImageUrl: influencerProfileImageUrl,
-      tokenInSymbol: inSymbolData.symbol,
-      tokenInName: inSymbolData.name,
-      tokenOutSymbol: outSymbolData.symbol,
-      tokenOutName: outSymbolData.name,
+      tokenInSymbol: inSymbolData._isShortened ? 'Unknown' : inSymbolData.symbol,
+      tokenInName: inSymbolData._isShortened ? 'Unknown' : inSymbolData.name,
+      tokenOutSymbol: outSymbolData._isShortened ? 'Unknown' : outSymbolData.symbol,
+      tokenOutName: outSymbolData._isShortened ? 'Unknown' : outSymbolData.name,
       tokenInAddress: tokenIn.token_address,
       tokenOutAddress: tokenOut.token_address,
       tokenInAmount: tokenIn.amount,
@@ -1873,16 +2037,10 @@ async function processSingleInfluencerSwap(
       )
     }
 
-    // Check minimum transaction value
-    if (txValue < 10) {
-      logger.info(pc.yellow(`KOL [Filter] Skipping ${signature}: Transaction value ${txValue.toFixed(2)} below $10 minimum`))
-      return
-    }
-
-    // Store buy/sell transaction greater than $10 in MongoDB
+    // Store buy/sell transaction in MongoDB (no minimum value threshold)
     try {
       if (isBuy) {
-        if (txValue > 10 && txValue < 140) {
+        if (txValue > 0 && txValue < 140) {
           await storeRepeatedTransactions(
             tokenDetails.tokenOutAddress,
             tokenDetails.kolAddress,
@@ -1892,7 +2050,7 @@ async function processSingleInfluencerSwap(
         }
       }
 
-      if (txValue > 10) {
+      if (txValue >= 0) {
         if (isBuy) {
           const hotnessScore = await getKolHotnessScore(
             signature,
@@ -1913,6 +2071,8 @@ async function processSingleInfluencerSwap(
           txStatus,
           classificationSource,
           parsedSwap.confidence,
+          parsedSwap,
+          solPrice,
         )
       }
 
@@ -2066,6 +2226,115 @@ const processSignaturesKolInChunks = async (limit: any) => {
   }
 
   logger.info(`ðŸŽ‰ All chunks completed. Total processed: ${processedCount}`)
+}
+
+/** JIT-enrich token metadata (symbol, name, image) from Birdeye when missing or Unknown */
+const metadataEnrichmentCache = new Map<string, { symbol: string; name: string; imageUrl: string | null }>()
+const METADATA_CACHE_TTL_MS = 5 * 60 * 1000 // 5 min
+const METADATA_CACHE_TIMESTAMPS = new Map<string, number>()
+
+async function enrichInfluencerTransactionTokens(
+  tx: any,
+  cache?: Map<string, { symbol: string; name: string; imageUrl: string | null }>,
+): Promise<void> {
+  const now = Date.now()
+  const getOrFetch = async (address: string): Promise<{ symbol: string; name: string; imageUrl: string | null } | null> => {
+    if (!address) return null
+    const fromPassed = cache?.get(address)
+    if (fromPassed) return fromPassed
+    const cachedTs = METADATA_CACHE_TIMESTAMPS.get(address)
+    if (cachedTs != null && now - cachedTs < METADATA_CACHE_TTL_MS) {
+      const fromMem = metadataEnrichmentCache.get(address)
+      if (fromMem) return fromMem
+    }
+    let meta = await getTokenMetadataAndImage(address)
+    // Same as Alpha Stream: if image still missing, use getTokenImageUrl (TokenDataModel → Redis → Dex → Birdeye)
+    if (meta && (!meta.imageUrl || meta.imageUrl === '')) {
+      const imageUrl = await getTokenImageUrl(address)
+      if (imageUrl) meta = { ...meta, imageUrl }
+    }
+    if (meta) {
+      cache?.set(address, meta)
+      metadataEnrichmentCache.set(address, meta)
+      METADATA_CACHE_TIMESTAMPS.set(address, now)
+    }
+    return meta ?? null
+  }
+
+  const needsEnrich = (sym: string | undefined, name: string | undefined, img: string | null | undefined) =>
+    !sym || sym === 'Unknown' || !name || name === 'Unknown' || !img || img === ''
+
+  // tokenOut (bought token)
+  const outAddr = tx.transaction?.tokenOut?.address || tx.tokenOutAddress
+  if (outAddr && tx.transaction?.tokenOut) {
+    const sym = tx.transaction.tokenOut.symbol ?? tx.tokenOutSymbol
+    const name = tx.transaction.tokenOut.name ?? tx.tokenOutName
+    const img = tx.transaction.tokenOut.imageUrl ?? tx.outTokenURL
+    if (needsEnrich(sym, name, img)) {
+      const meta = await getOrFetch(outAddr)
+      if (meta) {
+        tx.transaction.tokenOut.symbol = meta.symbol
+        tx.transaction.tokenOut.name = meta.name
+        tx.transaction.tokenOut.imageUrl = meta.imageUrl
+        tx.tokenOutSymbol = meta.symbol
+        if (tx.tokenOutName !== undefined) tx.tokenOutName = meta.name
+        tx.outTokenURL = meta.imageUrl
+      }
+    }
+    // Image-only fallback: name/symbol present but image missing (same pipeline as Alpha Stream)
+    else if (!img || img === '') {
+      const imageUrl = await getTokenImageUrl(outAddr)
+      if (imageUrl) {
+        tx.transaction.tokenOut.imageUrl = imageUrl
+        tx.outTokenURL = imageUrl
+      }
+    }
+  }
+
+  // tokenIn (sold/spent token)
+  const inAddr = tx.transaction?.tokenIn?.address || tx.tokenInAddress
+  if (inAddr && tx.transaction?.tokenIn) {
+    const sym = tx.transaction.tokenIn.symbol ?? tx.tokenInSymbol
+    const name = tx.transaction.tokenIn.name ?? tx.tokenInName
+    const img = tx.transaction.tokenIn.imageUrl ?? tx.inTokenURL
+    if (needsEnrich(sym, name, img)) {
+      const meta = await getOrFetch(inAddr)
+      if (meta) {
+        tx.transaction.tokenIn.symbol = meta.symbol
+        tx.transaction.tokenIn.name = meta.name
+        tx.transaction.tokenIn.imageUrl = meta.imageUrl
+        tx.tokenInSymbol = meta.symbol
+        if (tx.tokenInName !== undefined) tx.tokenInName = meta.name
+        tx.inTokenURL = meta.imageUrl
+      }
+    }
+    else if (!img || img === '') {
+      const imageUrl = await getTokenImageUrl(inAddr)
+      if (imageUrl) {
+        tx.transaction.tokenIn.imageUrl = imageUrl
+        tx.inTokenURL = imageUrl
+      }
+    }
+  }
+}
+
+/** When solAmount is 0 but we have USD amount, derive SOL = USD / solPrice so the card does not show 0 SOL */
+function fixInfluencerSolAmountFromUsd(tx: any, solPrice: number): void {
+  if (!tx || !solPrice || solPrice <= 0) return
+  const buyUsd = Number(tx.amount?.buyAmount) || 0
+  const sellUsd = Number(tx.amount?.sellAmount) || 0
+  const buySol = Number(tx.solAmount?.buySolAmount) || 0
+  const sellSol = Number(tx.solAmount?.sellSolAmount) || 0
+  if (buySol === 0 && buyUsd > 0) {
+    const derived = buyUsd / solPrice
+    if (!tx.solAmount) tx.solAmount = {}
+    tx.solAmount.buySolAmount = derived
+  }
+  if (sellSol === 0 && sellUsd > 0) {
+    const derived = sellUsd / solPrice
+    if (!tx.solAmount) tx.solAmount = {}
+    tx.solAmount.sellSolAmount = derived
+  }
 }
 
 export const getAllInfluencerWhaleTransactions = async (
@@ -2518,6 +2787,22 @@ export const getAllInfluencerWhaleTransactions = async (
         .lean(),
       influencerWhaleTransactionsModelV2.countDocuments(filterQuery),
     ])
+
+    // JIT-enrich token metadata (symbol, name, image) from Birdeye when missing/Unknown
+    const enrichCache = new Map<string, { symbol: string; name: string; imageUrl: string | null }>()
+    await Promise.all(
+      (transactions as any[]).map((tx) => enrichInfluencerTransactionTokens(tx, enrichCache)),
+    )
+    // Fix SOL amount when stored as 0 but USD amount exists (so influencer card does not show 0 SOL)
+    let solPriceForFix: number | null = null
+    try {
+      solPriceForFix = await getTokenPrice('So11111111111111111111111111111111111111112')
+    } catch (_) {
+      /* ignore */
+    }
+    if (solPriceForFix && solPriceForFix > 0) {
+      (transactions as any[]).forEach((tx) => fixInfluencerSolAmountFromUsd(tx, solPriceForFix!))
+    }
 
     const endTime = Date.now()
     const queryTime = endTime - startTime

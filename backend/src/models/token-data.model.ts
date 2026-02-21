@@ -15,7 +15,6 @@ const tokenDataSchema = new Schema<ITokenData>(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     imageUrl: {
       type: String,
@@ -37,8 +36,7 @@ const tokenDataSchema = new Schema<ITokenData>(
   { timestamps: true },
 )
 
-// Index for faster lookups
-tokenDataSchema.index({ tokenAddress: 1 })
+// tokenAddress already indexed via unique: true above
 tokenDataSchema.index({ lastUpdated: -1 })
 
 const TokenDataModel = model<ITokenData>('TokenData', tokenDataSchema)

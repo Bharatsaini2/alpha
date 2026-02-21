@@ -460,9 +460,10 @@ export class AlertMatcherService {
           continue
         }
 
-        // Get or calculate cluster data
+        // Get or calculate cluster data (use subscription timeframe or default)
         const tokenAddress = tx.transaction.tokenOut.address || tx.tokenOutAddress
-        const clusterData = await this.getClusterData(tokenAddress)
+        const timeWindowMinutes = sub.config.timeWindowMinutes ?? this.CLUSTER_TIME_WINDOW_MINUTES
+        const clusterData = await this.getClusterData(tokenAddress, timeWindowMinutes)
 
         // Check if cluster size meets minimum
         if (sub.config.minClusterSize && clusterData.count < sub.config.minClusterSize) {
@@ -477,6 +478,24 @@ export class AlertMatcherService {
             clusterSize: clusterData.count,
             minRequired: sub.config.minClusterSize,
             message: 'Cluster size below minimum',
+          })
+          continue
+        }
+
+        // Check minimum total buy volume for cluster
+        const minInflow = sub.config.minInflowUSD ?? 0
+        if (clusterData.totalVolumeUSD < minInflow) {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchWhaleCluster',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.WHALE_CLUSTER,
+            txHash: tx.signature,
+            matchResult: false,
+            totalVolumeUSD: clusterData.totalVolumeUSD,
+            minInflowUSD: minInflow,
+            message: 'Cluster total volume below minimum',
           })
           continue
         }
@@ -921,6 +940,19 @@ export class AlertMatcherService {
       }
     }
 
+    // Check market cap range (bought token = tokenOut)
+    if (config.minMarketCapUSD !== undefined || config.maxMarketCapUSD !== undefined) {
+      const tokenOutMarketCap = parseFloat(tx.transaction.tokenOut.marketCap || '0')
+      if (config.minMarketCapUSD !== undefined && tokenOutMarketCap < config.minMarketCapUSD) {
+        return false
+      }
+      if (config.maxMarketCapUSD !== undefined && config.maxMarketCapUSD < 50000000) {
+        if (tokenOutMarketCap > config.maxMarketCapUSD) {
+          return false
+        }
+      }
+    }
+
     return true
   }
 
@@ -983,10 +1015,18 @@ export class AlertMatcherService {
 
   /**
    * Get or calculate cluster data for a token
+   * @param tokenAddress - Token (bought) address
+   * @param timeWindowMinutes - Window in minutes (default CLUSTER_TIME_WINDOW_MINUTES)
    */
-  private async getClusterData(tokenAddress: string): Promise<ClusterResult> {
+  private async getClusterData(
+    tokenAddress: string,
+    timeWindowMinutes?: number,
+  ): Promise<ClusterResult> {
+    const windowMins = timeWindowMinutes ?? this.CLUSTER_TIME_WINDOW_MINUTES
+    const cacheKey = `${tokenAddress}_${windowMins}`
+
     // Check cache first
-    const cached = this.clusterCache.get(tokenAddress)
+    const cached = this.clusterCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < this.CLUSTER_CACHE_TTL_MS) {
       this.clusterCacheHits++
       logger.debug({
@@ -1002,7 +1042,7 @@ export class AlertMatcherService {
     this.clusterCacheMisses++
 
     // Calculate cluster data
-    const timeWindowStart = new Date(Date.now() - this.CLUSTER_TIME_WINDOW_MINUTES * 60 * 1000)
+    const timeWindowStart = new Date(Date.now() - windowMins * 60 * 1000)
 
     // Query transactions for this token in the time window
     const transactions = await whaleAllTransactionModelV2
@@ -1028,12 +1068,12 @@ export class AlertMatcherService {
     const result: ClusterResult = {
       count: uniqueWhales.size,
       totalVolumeUSD,
-      timeWindowMinutes: this.CLUSTER_TIME_WINDOW_MINUTES,
+      timeWindowMinutes: windowMins,
       timestamp: Date.now(),
     }
 
     // Cache the result
-    this.clusterCache.set(tokenAddress, result)
+    this.clusterCache.set(cacheKey, result)
 
     logger.debug({
       component: 'AlertMatcherService',
@@ -1042,6 +1082,7 @@ export class AlertMatcherService {
       cacheHit: false,
       whaleCount: result.count,
       totalVolumeUSD: result.totalVolumeUSD,
+      timeWindowMinutes: windowMins,
       message: 'Calculated and cached cluster data',
     })
 

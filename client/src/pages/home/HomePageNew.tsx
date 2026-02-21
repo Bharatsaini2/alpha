@@ -556,7 +556,7 @@ const HomePageNew = () => {
   }, [currentPage, itemsPerPage, activeFilters, doesTransactionMatchFilters])
 
   // Helper functions
-  // USD only: use stored usdAmount. Never use amount.buyAmount/sellAmount for display (they are token amounts).
+  // USD: prefer per-token usdAmount; amount.buyAmount/sellAmount are also USD.
   const getTransactionAmount = (tx: any): number | null => {
     if (tx.type === "buy" && tx.transaction?.tokenOut?.usdAmount) {
       const v = parseFloat(tx.transaction.tokenOut.usdAmount)
@@ -564,6 +564,14 @@ const HomePageNew = () => {
     }
     if (tx.type === "sell" && tx.transaction?.tokenIn?.usdAmount) {
       const v = parseFloat(tx.transaction.tokenIn.usdAmount)
+      return !isNaN(v) && v >= 0 ? v : null
+    }
+    if (tx.type === "buy" && tx.amount?.buyAmount != null) {
+      const v = parseFloat(String(tx.amount.buyAmount))
+      return !isNaN(v) && v >= 0 ? v : null
+    }
+    if (tx.type === "sell" && tx.amount?.sellAmount != null) {
+      const v = parseFloat(String(tx.amount.sellAmount))
       return !isNaN(v) && v >= 0 ? v : null
     }
     return null

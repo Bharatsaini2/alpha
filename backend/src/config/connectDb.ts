@@ -16,11 +16,12 @@ export const getDataBaseInfo = async (connection: typeof mongoose) => {
 export const connectDB = async () => {
   try {
     // const connection = await mongoose.connect(mongoURI)
+    // bufferTimeoutMS is supported by the driver but not in mongoose.ConnectOptions typings
     const connection = await mongoose.connect(mongoURI, {
-      maxPoolSize: 30, // Set your desired pool size
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    } as any)
+      maxPoolSize: 30,
+      bufferCommands: true,
+      bufferTimeoutMS: 60000, // 60s — avoid "buffering timed out" when Mongo is slow
+    } as mongoose.ConnectOptions)
     console.log(`Database connected with ${connection.connection.host}`)
   } catch (err: any) {
     console.log('In catch block')

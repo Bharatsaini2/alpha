@@ -26,9 +26,9 @@ const birdEyeClient = axios.create({
 const tokenMetadataCache = new Map<string, { symbol?: string; name?: string; timestamp: number }>()
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
 
-// ✅ NEW: Track failed resolutions to prevent repeated API calls
+// ✅ NEW: Track failed resolutions to prevent repeated API calls (short TTL so we retry soon)
 const failedResolutions = new Map<string, number>()
-const FAILED_RESOLUTION_TTL = 60 * 60 * 1000 // 1 hour
+const FAILED_RESOLUTION_TTL = 5 * 60 * 1000 // 5 minutes – retry Birdeye/RPC often
 
 // ✅ NEW: Safe TokenDataModel update - NEVER stores symbol/name metadata
 async function safeUpdateTokenDataModel(
@@ -165,30 +165,73 @@ export async function getTokenDataWithFallback(tokenAddress: string): Promise<{
       cachedImageUrl = dbTokenData.imageUrl || null
     }
 
-    // ✅ If price cache is fresh (< 5 minutes old), use it
+    // ✅ If price cache is fresh (< 5 minutes old), use it (but if mcap still 0, try Birdeye once)
     if (cachedPrice && (now - cachedPrice.timestamp) < PRICE_CACHE_TTL) {
+      let marketCap = cachedPrice.marketCap
+      if (marketCap === 0) {
+        const birdEyeMarket = await getTokenMarketCapAndPriceUsingBirdEye(tokenAddress)
+        if (birdEyeMarket != null) {
+          const beCap = Number((birdEyeMarket as any).market_cap)
+          if (beCap > 0) {
+            marketCap = beCap
+            priceDataCache.set(tokenAddress, { ...cachedPrice, marketCap, timestamp: now })
+            logger.info(`✅ Filled mcap from Birdeye (was 0 in cache): ${tokenAddress} → ${marketCap}`)
+          }
+        }
+      }
       logger.info(
         `✅ Using cached price data for ${tokenAddress} (age: ${Math.round((now - cachedPrice.timestamp) / 1000)}s)`,
       )
       return {
         price: cachedPrice.price,
-        marketCap: cachedPrice.marketCap,
+        marketCap,
         imageUrl: cachedImageUrl,
         volume24h: cachedPrice.volume24h,
       }
     }
 
-    // ✅ Cache miss or expired - fetch fresh data
+    // ✅ Cache miss or expired - fetch fresh data (DexScreener first, Birdeye fallback for price/mcap)
     logger.info(
-      `📊 Fetching fresh price/marketCap from DexScreener for ${tokenAddress}`,
+      `📊 Fetching fresh price/marketCap for ${tokenAddress}`,
     )
+    let price = 0
+    let marketCap = 0
+    let volume24h = 0
+    let imageUrlFromDex: string | null = null
+
     const dexscrennerData = await getTokenDataFromDexScreener(tokenAddress)
-    
+    price = dexscrennerData.price
+    marketCap = dexscrennerData.marketCap
+    volume24h = dexscrennerData.volume24h
+    imageUrlFromDex = dexscrennerData.imageUrl
+
+    // ✅ Fallback: If DexScreener missing price and/or mcap, use Birdeye
+    if (price === 0 || marketCap === 0) {
+      logger.info(
+        `📊 DexScreener missing price/mcap for ${tokenAddress}, using Birdeye market data`,
+      )
+      const birdEyeMarket = await getTokenMarketCapAndPriceUsingBirdEye(tokenAddress)
+      if (birdEyeMarket != null) {
+        if (price === 0) price = Number(birdEyeMarket.price) || 0
+        if (marketCap === 0) {
+          const beCap = Number((birdEyeMarket as any).market_cap) ?? 0
+          marketCap = beCap
+          if (beCap > 0) logger.info(`✅ Birdeye mcap for ${tokenAddress}: ${marketCap}`)
+        }
+      } else {
+        logger.warn(`Birdeye market data returned null for ${tokenAddress} (mcap may stay 0)`)
+      }
+    }
+    if (price === 0) {
+      const fallbackPrice = await getTokenPrice(tokenAddress)
+      price = fallbackPrice
+    }
+
     // ✅ Store price data in cache
     priceDataCache.set(tokenAddress, {
-      price: dexscrennerData.price,
-      marketCap: dexscrennerData.marketCap,
-      volume24h: dexscrennerData.volume24h,
+      price,
+      marketCap,
+      volume24h,
       timestamp: now
     })
 
@@ -198,7 +241,7 @@ export async function getTokenDataWithFallback(tokenAddress: string): Promise<{
       logger.info(
         `🔍 Image not in DB for ${tokenAddress}, fetching from DexScreener`,
       )
-      imageUrl = dexscrennerData.imageUrl || null
+      imageUrl = imageUrlFromDex || null
 
       if (!imageUrl) {
         logger.info(
@@ -216,25 +259,75 @@ export async function getTokenDataWithFallback(tokenAddress: string): Promise<{
     
     await safeUpdateTokenDataModel(tokenAddress, { imageUrl })
 
-    logger.info(`💾 Stored token imageUrl in DB for ${tokenAddress}`)
+    const ist = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+    logger.info(`💾 Stored token imageUrl in DB for ${tokenAddress} at IST ${ist}`)
 
     return {
-      price: dexscrennerData.price,
-      marketCap: dexscrennerData.marketCap,
+      price,
+      marketCap,
       imageUrl: imageUrl || null,
-      volume24h: dexscrennerData.volume24h,
+      volume24h,
     }
   } catch (error: any) {
     logger.error(
       { error },
       `❌ Error in getTokenDataWithFallback for ${tokenAddress}`,
     )
-    // Return defaults on error
+    // Last-resort: try Birdeye for price/mcap before giving up
+    try {
+      const birdEyeMarket = await getTokenMarketCapAndPriceUsingBirdEye(tokenAddress)
+      if (birdEyeMarket) {
+        const price = Number(birdEyeMarket.price) || 0
+        const marketCap = Number((birdEyeMarket as any).market_cap) ?? 0
+        if (price > 0 || marketCap > 0) {
+          logger.info(`✅ Recovered price/mcap from Birdeye after DexScreener error`)
+          return {
+            price,
+            marketCap,
+            imageUrl: null,
+            volume24h: 0,
+          }
+        }
+      }
+    } catch (_) {
+      // ignore
+    }
     return { price: 0, marketCap: 0, imageUrl: null, volume24h: 0 }
   }
 }
 
-// Fetch token data from DexScreener API
+// Fetch token metadata (symbol, name, imageUrl) from DexScreener only. Used as first source before Birdeye.
+async function getTokenMetadataFromDexScreener(tokenAddress: string): Promise<{
+  symbol: string
+  name: string
+  imageUrl: string | null
+} | null> {
+  const url = `https://api.dexscreener.com/latest/dex/search?q=${tokenAddress}`
+  try {
+    const response = await axios.get(url, { timeout: 10000 })
+    if (!response.data?.pairs?.length) return null
+    const pair = response.data.pairs[0]
+    const base = pair.baseToken || {}
+    const quote = pair.quoteToken || {}
+    const addr = (tokenAddress || '').toLowerCase()
+    const token = (base.address || '').toLowerCase() === addr ? base : (quote.address || '').toLowerCase() === addr ? quote : base
+    const symbol = (token.symbol || '').trim() || (base.symbol || '').trim() || (quote.symbol || '').trim()
+    const name = (token.name || '').trim() || (base.name || '').trim() || (quote.name || '').trim() || symbol
+    const imageUrl = pair.info?.imageUrl || token.imageUrl || null
+    if (!symbol && !name) return null
+    logger.info(`✅ DexScreener metadata: ${tokenAddress.slice(0, 8)}… → ${symbol || 'n/a'} (${name || 'n/a'})`)
+    return {
+      symbol: symbol || 'Unknown',
+      name: name || symbol || 'Unknown',
+      imageUrl,
+    }
+  } catch (error: any) {
+    logger.warn({ tokenAddress, msg: error?.message }, 'DexScreener metadata failed')
+    return null
+  }
+}
+
+// Fetch token data from DexScreener API (price, mcap, volume, imageUrl). Image: Dex only here; Birdeye fallback is in getTokenDataWithFallback.
 async function getTokenDataFromDexScreener(
   tokenAddress: string,
   retries = 3,
@@ -243,6 +336,8 @@ async function getTokenDataFromDexScreener(
   marketCap: number
   imageUrl: string | null
   volume24h: number
+  symbol?: string | null
+  name?: string | null
 }> {
   const url = `https://api.dexscreener.com/latest/dex/search?q=${tokenAddress}`
 
@@ -260,11 +355,15 @@ async function getTokenDataFromDexScreener(
     }
 
     const tokenData = response.data.pairs[0]
+    const base = tokenData.baseToken || {}
+    const quote = tokenData.quoteToken || {}
+    const addr = (tokenAddress || '').toLowerCase()
+    const token = (base.address || '').toLowerCase() === addr ? base : (quote.address || '').toLowerCase() === addr ? quote : base
 
     let price = parseFloat(tokenData.priceUsd) || 0
     const volume24h = tokenData.volume?.['h24'] || 0
     const marketCap = tokenData.marketCap ? parseFloat(tokenData.marketCap) : 0
-    let imageUrl = tokenData.info?.imageUrl || null
+    let imageUrl = tokenData.info?.imageUrl || token.imageUrl || null
 
     // ✅ Fallback: If DexScreener price = 0, use Jupiter price
     if (price === 0) {
@@ -272,17 +371,17 @@ async function getTokenDataFromDexScreener(
       price = fallbackPrice
     }
 
-    // ✅ Fallback: If DexScreener imageUrl is null, use BirdEye image URL
-    if (!imageUrl) {
-      const fallbackImageUrl = await getTokenImageUrl(tokenAddress)
-      imageUrl = fallbackImageUrl
-    }
+    // ✅ Do NOT call Birdeye here; caller (getTokenDataWithFallback) does Dex then Birdeye for image
+    const symbol = (token.symbol || '').trim() || null
+    const name = (token.name || '').trim() || (symbol || null)
 
     return {
       price,
       marketCap,
       imageUrl,
       volume24h,
+      symbol: symbol || undefined,
+      name: name || undefined,
     }
   } catch (error: any) {
     logger.error(
@@ -336,7 +435,7 @@ export async function getTokenCreationInfo(tokenAddress: string) {
       },
     })
 
-    const creationTime = response.data.data.blockHumanTime
+    const creationTime = response?.data?.data?.blockHumanTime ?? null
 
     // Cache for 7 days (token creation time never changes)
     // Cache even if null to prevent repeated API calls for tokens without creation time
@@ -348,8 +447,10 @@ export async function getTokenCreationInfo(tokenAddress: string) {
     }
 
     return creationTime
-  } catch (error) {
-    console.error(`Error fetching creation info for ${tokenAddress}:`, error)
+  } catch (error: any) {
+    const msg = error?.message ?? String(error)
+    const status = error?.response?.status
+    logger.warn({ tokenAddress, status }, `Birdeye creation info failed: ${msg}`)
     return null
   }
 }
@@ -394,17 +495,93 @@ export async function getTokenMarketCapAndPriceUsingBirdEye(
     }
 
     return data
-  } catch (error) {
-    console.error(
-      `Error fetching market cap and price for ${tokenAddress}:`,
-      error,
-    )
+  } catch (error: any) {
+    const msg = error?.message ?? String(error)
+    const status = error?.response?.status
+    logger.warn({ tokenAddress, status }, `Birdeye market data failed: ${msg}`)
     return null
   }
 }
 
+// ---------------------------------------------------------------------------
+// Historical SOL price + swap-ratio pricing (production-grade, no per-tx DEX)
+// Use swap ratio for exact price in SOL; historical SOL→USD for USD at swap time.
+// ---------------------------------------------------------------------------
+
+const SOL_MINT = 'So11111111111111111111111111111111111111112'
+const HISTORICAL_SOL_CACHE_TTL = 10 * 60 * 1000 // 10 min
+const historicalSolPriceCache = new Map<number, { price: number; ts: number }>()
+
+/**
+ * Get SOL price in USD at a given unix timestamp (seconds).
+ * Uses Birdeye history_price so PnL and "price at swap" are correct (not current price).
+ * Cached by 5-min bucket to avoid rate limits.
+ */
+export async function getHistoricalSolPrice(timestampUnixSeconds: number): Promise<number> {
+  const bucket = Math.floor(timestampUnixSeconds / 300) * 300
+  const now = Date.now()
+  const cached = historicalSolPriceCache.get(bucket)
+  if (cached && now - cached.ts < HISTORICAL_SOL_CACHE_TTL) {
+    return cached.price
+  }
+
+  try {
+    const timeFrom = Math.max(0, timestampUnixSeconds - 120)
+    const timeTo = timestampUnixSeconds + 120
+    const url = `https://public-api.birdeye.so/defi/history_price?address=${SOL_MINT}&type=1m&time_from=${timeFrom}&time_to=${timeTo}&address_type=token`
+    const response = await birdEyeClient.get(url, {
+      timeout: 10000,
+      headers: { 'x-chain': 'solana' },
+    })
+    const items = response.data?.data?.items as Array<{ unixTime: number; value: number }> | undefined
+    if (!items?.length) {
+      const fallback = await getTokenPrice(SOL_MINT)
+      historicalSolPriceCache.set(bucket, { price: fallback, ts: now })
+      return fallback
+    }
+    let best = items[0]
+    for (const item of items) {
+      if (Math.abs(item.unixTime - timestampUnixSeconds) < Math.abs(best.unixTime - timestampUnixSeconds)) {
+        best = item
+      }
+    }
+    const price = Number(best.value) || 0
+    if (price > 0) historicalSolPriceCache.set(bucket, { price, ts: now })
+    return price
+  } catch (err: any) {
+    logger.warn({ err: err?.message, timestamp: timestampUnixSeconds }, 'getHistoricalSolPrice failed, using current SOL price')
+    const fallback = await getTokenPrice(SOL_MINT)
+    return fallback
+  }
+}
+
+/**
+ * Price in SOL from the swap itself (on-chain, exact). No API.
+ * priceSOL = solAmount / tokenAmount (e.g. 10 SOL / 2_000_000 tokens = 0.000005 SOL per token).
+ */
+export function getSwapRatioPriceSOL(solAmount: number, tokenAmount: number): number | null {
+  if (tokenAmount <= 0 || !Number.isFinite(solAmount)) return null
+  const price = solAmount / tokenAmount
+  return Number.isFinite(price) ? price : null
+}
+
+/**
+ * USD price at swap time using swap ratio + historical SOL price.
+ * Use this for "price at swap" and PnL so we don't rely on current DEX price.
+ */
+export async function getSwapRatioPriceUSDAtTimestamp(
+  solAmount: number,
+  tokenAmount: number,
+  timestampUnixSeconds: number,
+): Promise<number> {
+  const priceSOL = getSwapRatioPriceSOL(solAmount, tokenAmount)
+  if (priceSOL == null) return 0
+  const solUsd = await getHistoricalSolPrice(timestampUnixSeconds)
+  return priceSOL * solUsd
+}
+
+/** Image: DB/Redis cache first, then DexScreener, then Birdeye. Persist to DB so next buy/sell gets it from cache. */
 export async function getTokenImageUrl(tokenAddress: string) {
-  // Check Redis cache first
   const cacheKey = `token:image:${tokenAddress}`
 
   try {
@@ -417,8 +594,32 @@ export async function getTokenImageUrl(tokenAddress: string) {
     logger.warn(`Redis cache read failed for ${cacheKey}:${String(error)}`)
   }
 
-  console.log('🔴 Birdeye API call (image):', tokenAddress)
+  // Check TokenDataModel so same token on next buy/sell gets image from cache
+  try {
+    const dbRow = await TokenDataModel.findOne({ tokenAddress }).select('imageUrl').lean()
+    if (dbRow?.imageUrl) {
+      try {
+        await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, dbRow.imageUrl)
+      } catch (_) {}
+      return dbRow.imageUrl
+    }
+  } catch (error) {
+    logger.warn({ tokenAddress }, `TokenDataModel read for image failed: ${String(error)}`)
+  }
 
+  // 1) DexScreener first
+  const dex = await getTokenMetadataFromDexScreener(tokenAddress)
+  if (dex?.imageUrl) {
+    try {
+      await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, dex.imageUrl)
+      await safeUpdateTokenDataModel(tokenAddress, { imageUrl: dex.imageUrl })
+    } catch (e) {
+      logger.warn(`Redis/DB cache write failed for ${cacheKey}:${String(e)}`)
+    }
+    return dex.imageUrl
+  }
+
+  // 2) Birdeye fallback
   const url = `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${tokenAddress}`
   try {
     const response = await axios.get(url, {
@@ -429,21 +630,81 @@ export async function getTokenImageUrl(tokenAddress: string) {
       },
     })
 
-    const imageUrl = response.data.data.logo_uri
+    const data = response?.data?.data
+    const imageUrl = (data?.logo_uri ?? (data as any)?.logoURI) ?? null
 
-    // Cache for 7 days (image URLs rarely change)
     if (imageUrl) {
       try {
         await redisClient.setex(cacheKey, 7 * 24 * 60 * 60, imageUrl)
+        await safeUpdateTokenDataModel(tokenAddress, { imageUrl })
       } catch (error) {
-        logger.warn(`Redis cache write failed for ${cacheKey}:${String(error)}`)
+        logger.warn(`Redis/DB cache write failed for ${cacheKey}:${String(error)}`)
       }
     }
 
     return imageUrl
-  } catch (error) {
-    console.error(`Error fetching image url for ${tokenAddress}:`, error)
+  } catch (error: any) {
+    const msg = error?.message ?? String(error)
+    const status = error?.response?.status
+    logger.warn({ tokenAddress, status }, `Birdeye image url failed: ${msg}`)
     return null
+  }
+}
+
+/** DexScreener first for symbol, name, imageUrl; then Birdeye for any missing. */
+export async function getTokenMetadataAndImage(tokenAddress: string): Promise<{
+  symbol: string
+  name: string
+  imageUrl: string | null
+} | null> {
+  // 1) DexScreener first (symbol, name, imageUrl)
+  const dex = await getTokenMetadataFromDexScreener(tokenAddress)
+  let symbol = dex?.symbol ?? ''
+  let name = dex?.name ?? ''
+  let imageUrl = dex?.imageUrl ?? null
+
+  // 2) Birdeye fallback for any missing
+  if (!symbol || symbol === 'Unknown' || !name || name === 'Unknown' || !imageUrl) {
+    const url = `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${tokenAddress}`
+    try {
+      const response = await axios.get(url, {
+        timeout: 10000,
+        headers: {
+          'X-API-KEY': BIRD_EYE_API_KEY,
+          accept: 'application/json',
+          'x-chain': 'solana',
+        },
+      })
+      const data = response?.data?.data
+      if (data) {
+        if (!symbol || symbol === 'Unknown') {
+          const raw = (data.symbol ?? data.symbol_str ?? (data as any).Symbol ?? '').toString().trim()
+          symbol = raw || 'Unknown'
+        }
+        if (!name || name === 'Unknown') {
+          const rawName = (data.name ?? (data as any).token_name ?? (data as any).display_name ?? data.symbol ?? symbol).toString().trim()
+          name = rawName.length > 0 ? rawName : symbol
+        }
+        if (!imageUrl) {
+          imageUrl = (data.logo_uri ?? (data as any).logoURI ?? (data as any).logo_uri) ?? null
+        }
+      }
+    } catch (error: any) {
+      logger.warn({ tokenAddress, msg: error?.message }, 'Birdeye metadata+image fallback failed')
+    }
+  }
+
+  if (!symbol && !name) return null
+  // Persist image to TokenDataModel so next buy/sell of same token loads image from cache
+  if (imageUrl) {
+    safeUpdateTokenDataModel(tokenAddress, { imageUrl }).catch((e) =>
+      logger.warn({ tokenAddress }, `Failed to persist JIT image to TokenData: ${String(e)}`),
+    )
+  }
+  return {
+    symbol: symbol || 'Unknown',
+    name: name || symbol || 'Unknown',
+    imageUrl,
   }
 }
 
@@ -508,7 +769,8 @@ export async function saveTokenToCache(
       },
       { upsert: true, new: true }
     )
-    logger.info(`💾 Cached: ${tokenAddress.slice(0, 8)}... → ${symbol} [${source}]`)
+    const ist = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+    logger.info(`💾 Cached: ${tokenAddress.slice(0, 8)}... → ${symbol} [${source}] at IST ${ist}`)
   } catch (error) {
     logger.error({ error }, `❌ Failed to save to cache: ${tokenAddress}`)
     throw error
@@ -518,29 +780,12 @@ export async function saveTokenToCache(
 // ✅ NEW: Track failed resolutions
 async function markTokenResolutionFailed(tokenAddress: string): Promise<void> {
   failedResolutions.set(tokenAddress, Date.now())
-  
-  // Also save to Redis to persist across restarts
-  try {
-    await redisClient.setex(`failed_resolution:${tokenAddress}`, 3600, 'true')
-  } catch (error) {
-    logger.warn(`Failed to cache resolution failure: ${error}`)
-  }
+  // Do NOT persist to Redis – so after restart we retry APIs and may get real symbol/name
 }
 
 async function isTokenResolutionFailed(tokenAddress: string): Promise<boolean> {
-  // Check in-memory first
   const failed = failedResolutions.get(tokenAddress)
-  if (failed && (Date.now() - failed) < FAILED_RESOLUTION_TTL) {
-    return true
-  }
-  
-  // Check Redis
-  try {
-    const redisFailed = await redisClient.get(`failed_resolution:${tokenAddress}`)
-    return redisFailed === 'true'
-  } catch {
-    return false
-  }
+  return !!(failed && (Date.now() - failed) < FAILED_RESOLUTION_TTL)
 }
 
 // Helper: Get token from database cache
@@ -572,6 +817,14 @@ async function getTokenFromCache(tokenAddress: string): Promise<{ symbol: string
     console.error('Failed to read from cache:', error)
     return null
   }
+}
+
+// ✅ Normalize symbol for pump.fun tokens: allow "Pump" so we don't show Unknown
+function normalizeSymbolForPumpFun(symbol: string | undefined, tokenAddress: string): string {
+  if (!symbol || typeof symbol !== 'string') return (symbol ?? '').trim()
+  const trimmed = symbol.trim()
+  if (tokenAddress.toLowerCase().endsWith('pump') && trimmed.toLowerCase() === 'pump') return 'Pump'
+  return trimmed
 }
 
 // Helper: Check if token metadata is valid
@@ -637,14 +890,13 @@ async function tryRPCMetadata(tokenAddress: string): Promise<{ symbol: string; n
     const mint = new PublicKey(tokenAddress)
 
     const metadata = await metaplex.nfts().findByMint({ mintAddress: mint })
+    const symbol = normalizeSymbolForPumpFun(metadata.symbol?.trim(), tokenAddress)
 
-    if (isValidMetadata(metadata.symbol)) {
-      console.log(`✅ RPC found: ${metadata.symbol}`)
-
-      // Save to cache
-      await saveTokenToCache(tokenAddress, metadata.symbol, metadata.name, 'rpc')
-
-      return { symbol: metadata.symbol, name: metadata.name }
+    if (isValidMetadata(symbol)) {
+      console.log(`✅ RPC found: ${symbol}`)
+      const name = (metadata.name ?? symbol).trim() || symbol
+      await saveTokenToCache(tokenAddress, symbol, name, 'rpc')
+      return { symbol, name }
     }
 
     return null
@@ -713,63 +965,6 @@ async function tryHeliusDAS(tokenAddress: string): Promise<{ symbol: string; nam
   }
 
   console.log(`❌ Helius DAS failed after ${maxRetries} attempts`)
-  return null
-}
-
-// Helper: Try CoinGecko API with retries
-async function tryCoinGecko(tokenAddress: string): Promise<{ symbol: string; name: string } | null> {
-  const maxRetries = 3
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`🔄 Trying CoinGecko API (attempt ${attempt}/${maxRetries})`)
-
-      // CoinGecko API endpoint for Solana token info
-      const response = await axios.get(
-        `https://api.coingecko.com/api/v3/coins/solana/contract/${tokenAddress}`,
-        { 
-          timeout: 15000,
-          headers: {
-            'Accept': 'application/json'
-          }
-        }
-      )
-
-      if (response.data) {
-        const symbol = response.data.symbol?.toUpperCase()
-        const name = response.data.name
-
-        if (isValidMetadata(symbol)) {
-          console.log(`✅ CoinGecko found: ${symbol} (${name})`)
-
-          // Save to cache
-          await saveTokenToCache(tokenAddress, symbol, name || symbol, 'coingecko')
-
-          return { symbol, name: name || symbol }
-        }
-      }
-
-      // No valid data, don't retry
-      console.log(`⚠️ CoinGecko returned no valid data`)
-      return null
-    } catch (error: any) {
-      console.error(`⚠️ CoinGecko attempt ${attempt} failed:`, error.message)
-
-      // Retry on timeout or network errors
-      if ((error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') && attempt < maxRetries) {
-        // Exponential backoff: 2s, 4s, 8s
-        const waitTime = Math.min(2000 * Math.pow(2, attempt - 1), 8000)
-        console.log(`⏳ Waiting ${waitTime / 1000}s before retry...`)
-        await new Promise(resolve => setTimeout(resolve, waitTime))
-        continue
-      }
-
-      // Don't retry on other errors (404, 429, 500, etc)
-      return null
-    }
-  }
-
-  console.log(`❌ CoinGecko failed after ${maxRetries} attempts`)
   return null
 }
 
@@ -878,6 +1073,69 @@ async function tryDexScreener(tokenAddress: string): Promise<{ symbol: string; n
   return null
 }
 
+// Return: success with symbol/name, or _invalid when we got data but rejected it, or null on error/no data
+type BirdEyeMetadataResult =
+  | { symbol: string; name: string }
+  | { _invalid: true; rawSymbol: string; rawName: string }
+  | null
+
+// Helper: Try BirdEye API for token symbol/name (paid plan – primary fallback for metadata)
+async function tryBirdEyeMetadata(tokenAddress: string): Promise<BirdEyeMetadataResult> {
+  const maxRetries = 3
+  const url = `https://public-api.birdeye.so/defi/v3/token/meta-data/single?address=${tokenAddress}`
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`🔄 Trying BirdEye API for symbol/name (attempt ${attempt}/${maxRetries}): ${tokenAddress}`)
+
+      const response = await axios.get(url, {
+        timeout: 15000,
+        headers: {
+          'X-API-KEY': BIRD_EYE_API_KEY,
+          accept: 'application/json',
+          'x-chain': 'solana',
+        },
+      })
+
+      const data = response?.data?.data
+      if (!data) {
+        logger.warn(`BirdEye metadata returned no data for ${tokenAddress}`)
+        return null
+      }
+
+      // Birdeye returns symbol, name (and sometimes logo_uri / logoURI)
+      const rawSymbol = (data.symbol ?? data.symbol_str ?? (data as any).Symbol ?? '').toString().trim()
+      const symbol = normalizeSymbolForPumpFun(rawSymbol, tokenAddress)
+      const rawName = (data.name ?? (data as any).token_name ?? (data as any).display_name ?? data.symbol ?? rawSymbol).toString().trim()
+      // Prefer real name when non-empty; otherwise fall back to symbol (?? treats "" as truthy for fallback)
+      const name = rawName.length > 0 ? rawName : (data.symbol ?? rawSymbol).toString().trim()
+      const displayName = name.length > 0 ? name : symbol
+
+      if (isValidMetadata(symbol)) {
+        logger.info(`✅ BirdEye found: ${symbol} (${displayName})`)
+        await saveTokenToCache(tokenAddress, symbol, displayName, 'birdeye')
+        return { symbol, name: displayName }
+      }
+
+      logger.warn(`BirdEye returned invalid/rejected symbol for ${tokenAddress}: rawSymbol="${rawSymbol}" -> symbol="${symbol}" (name="${displayName}")`)
+      return { _invalid: true, rawSymbol: symbol || rawSymbol, rawName: displayName }
+    } catch (error: any) {
+      const msg = error?.message ?? String(error)
+      const status = error?.response?.status
+      logger.warn({ tokenAddress, attempt, status }, `BirdEye metadata attempt failed: ${msg}`)
+
+      if (attempt < maxRetries && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET')) {
+        const waitTime = 2000 * attempt
+        await new Promise((r) => setTimeout(r, waitTime))
+        continue
+      }
+      return null
+    }
+  }
+
+  return null
+}
+
 // ============ MAIN FUNCTION: DB CACHE + FALLBACK CHAIN ============
 
 export async function getTokenMetaDataUsingRPC(
@@ -925,31 +1183,37 @@ export async function getTokenMetaDataUsingRPC(
 
   logger.info(`⚠️ Cache MISS, trying API sources...`)
 
-  // ✅ Fallback 2: DexScreener API (BEST for Solana tokens - 87% success rate!)
-  const dexScreenerResult = await tryDexScreener(tokenAddress)
-  if (dexScreenerResult) {
-    // Save to in-memory cache
+  // ✅ Step 2: DexScreener first (symbol, name, imageUrl) then Birdeye
+  const dexResult = await getTokenMetadataFromDexScreener(tokenAddress)
+  if (dexResult && isValidMetadata(dexResult.symbol)) {
+    logger.info(`✅ DexScreener found: ${dexResult.symbol} (${dexResult.name})`)
+    await saveTokenToCache(tokenAddress, dexResult.symbol, dexResult.name || dexResult.symbol, 'dexscreener')
     tokenMetadataCache.set(tokenAddress, {
-      symbol: dexScreenerResult.symbol,
-      name: dexScreenerResult.name,
-      timestamp: now
+      symbol: dexResult.symbol,
+      name: dexResult.name || dexResult.symbol,
+      timestamp: now,
     })
-    return dexScreenerResult
+    // Persist image to TokenDataModel so next buy/sell of same token gets image from cache
+    if (dexResult.imageUrl) {
+      safeUpdateTokenDataModel(tokenAddress, { imageUrl: dexResult.imageUrl }).catch((e) =>
+        logger.warn({ tokenAddress }, `Failed to persist Dex image to TokenData: ${String(e)}`),
+      )
+    }
+    return { symbol: dexResult.symbol, name: dexResult.name || dexResult.symbol }
   }
 
-  // ✅ Fallback 3: CoinGecko API (good for established tokens)
-  const coinGeckoResult = await tryCoinGecko(tokenAddress)
-  if (coinGeckoResult) {
-    // Save to in-memory cache
+  // ✅ Fallback 3: BirdEye API (symbol, name; image is separate)
+  const birdEyeResult = await tryBirdEyeMetadata(tokenAddress)
+  if (birdEyeResult && !('_invalid' in birdEyeResult)) {
     tokenMetadataCache.set(tokenAddress, {
-      symbol: coinGeckoResult.symbol,
-      name: coinGeckoResult.name,
+      symbol: birdEyeResult.symbol,
+      name: birdEyeResult.name,
       timestamp: now
     })
-    return coinGeckoResult
+    return birdEyeResult
   }
 
-  // ✅ Fallback 4: RPC metadata (on-chain data, often fails for new tokens)
+  // ✅ Fallback 3: RPC metadata (on-chain data, often fails for new tokens)
   const rpcResult = await tryRPCMetadata(tokenAddress)
   if (rpcResult) {
     // Save to in-memory cache
@@ -961,8 +1225,12 @@ export async function getTokenMetaDataUsingRPC(
     return rpcResult
   }
 
-  // ✅ FIXED: Mark resolution as failed and return shortened address
-  await markTokenResolutionFailed(tokenAddress)
+  // ✅ Only mark as failed when Birdeye/RPC actually returned data we rejected (invalid symbol).
+  // If Birdeye returned null (API error / no data), do NOT mark failed so we retry next time (e.g. token gets indexed, or transient error).
+  const birdeyeReturnedInvalid = birdEyeResult != null && '_invalid' in birdEyeResult
+  if (birdeyeReturnedInvalid) {
+    await markTokenResolutionFailed(tokenAddress)
+  }
   
   const shortAddress = `${tokenAddress.slice(0, 4)}...${tokenAddress.slice(-4)}`
   logger.info(`⚠️ All sources failed, using fallback: ${shortAddress}`)

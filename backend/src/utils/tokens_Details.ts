@@ -4333,7 +4333,7 @@ const tokens: any = [
   {
     tokenSymbol: 'USELESS',
     tokenDecimals: 6,
-    tokenAddress: 'Dz9mQ9NzkBcCsuGPFJ3r1bS4wgqKMHBPiVuniW8Mbonk',
+    tokenAddress: '',
     whalesAddress: [
       '61rVn8zeoikzFuT2cuXAd3Qv9RxhMDvG52xL4LHLv7Nu',
       'C7CE82MBYy6yiJ48hBQZYNaz6AndLugNVMgDcLv8o5Qm',

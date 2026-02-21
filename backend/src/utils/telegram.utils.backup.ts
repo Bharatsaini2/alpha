@@ -69,7 +69,7 @@ export function generateTransactionLink(txHash: string): string {
  * @returns Solscan token URL
  */
 export function generateTokenLink(tokenAddress: string): string {
-  return `https://solscan.io/token/${tokenAddress}`
+  return `https://dexscreener.com/solana/${tokenAddress}`
 }
 
 /**

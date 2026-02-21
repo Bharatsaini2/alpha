@@ -4,8 +4,8 @@ import dotenv from 'dotenv'
 import express from 'express'
 import { createServer } from 'http'
 import process from 'process'
-import { createClient } from 'redis'
 import { Server } from 'socket.io'
+import { redisClient } from './config/redis'
 const session = require('express-session')
 import passport from './config/passport'
 import { connectDB } from './config/connectDb'
@@ -385,70 +385,74 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-const redisClient = createClient({
-  socket: { 
-    host: process.env.REDIS_HOST || 'localhost', 
-    port: parseInt(process.env.REDIS_PORT || '6379') 
-  },
-})
-
 let server: any
 
-redisClient
-  .connect()
+// Use same Redis as BullMQ/whale/KOL (with REDIS_PASSWORD). Connect MongoDB before listening
+// so workers don't hit "buffering timed out" when processing jobs before DB is ready.
+redisClient.once('ready', async () => {
+  console.log('✅ Redis is ready (BullMQ/queues), connecting to MongoDB...')
+  try {
+    await connectDB()
+    console.log('✅ MongoDB connected, initializing services...')
+  } catch (err: any) {
+    console.error('❌ MongoDB connection failed:', err?.message || err)
+    return
+  }
 
-  .then(() => console.log('🔵 Redis connected'))
+  // Initialize services before listening so workers don't call them before they're ready
+  try {
+    await telegramService.initialize()
+    console.log('✅ Telegram service initialized')
+  } catch (error) {
+    console.error('⚠️ Telegram service initialization failed:', error)
+  }
+  try {
+    await alertMatcherService.initialize()
+    console.log('✅ Alert Matcher service initialized')
+  } catch (error) {
+    console.error('⚠️ Alert Matcher service initialization failed:', error)
+  }
+  try {
+    await balanceValidatorService.start()
+    console.log('✅ Balance Validator service started (hourly checks enabled)')
+  } catch (error) {
+    console.error('⚠️ Balance Validator service initialization failed:', error)
+  }
 
-  .catch((err: any) => console.error('❌ Redis connection error:', err))
-
-redisClient.on('ready', async () => {
-  console.log('✅ Redis is ready, starting server...')
-
-  // server = app.listen(PORT, async () => {
-  server = wss.listen(PORT, async () => {
+  try {
+    server = wss.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`)
+    console.log('📌 Parser BUY/SELL: fixed (quote<0 base>0=BUY) — grep this in pm2 logs to confirm deploy')
 
     try {
-      await connectDB() // Connect to MongoDB
-
-      // Initialize Telegram service
-      try {
-        await telegramService.initialize()
-        console.log('✅ Telegram service initialized')
-      } catch (error) {
-        console.error('⚠️ Telegram service initialization failed:', error)
-        // Continue server startup even if Telegram fails
-      }
-
-      // Initialize Alert Matcher service
-      try {
-        await alertMatcherService.initialize()
-        console.log('✅ Alert Matcher service initialized')
-      } catch (error) {
-        console.error('⚠️ Alert Matcher service initialization failed:', error)
-        // Continue server startup even if Alert Matcher fails
-      }
-
-      // Initialize Balance Validator service
-      try {
-        await balanceValidatorService.start()
-        console.log('✅ Balance Validator service started (hourly checks enabled)')
-      } catch (error) {
-        console.error('⚠️ Balance Validator service initialization failed:', error)
-        // Continue server startup even if Balance Validator fails
-      }
-
-      // Register the server with process manager
       registerServer('http-server', 'HTTP/WebSocket server', server)
       console.log('✅ Server registered with process manager')
 
       // Auto-start whale & KOL monitors (fixes prod showing fewer txns after restarts)
       scheduleWhaleMonitorBootstrap(PORT)
     } catch (error: any) {
-      console.error('❌ Error initializing services:', error)
+      console.error('❌ Error in listen callback:', error)
     }
   })
+  } catch (err: any) {
+    if (err?.code === 'EADDRINUSE') {
+      console.error(`\n❌ Port ${PORT} is already in use. Stop the other process, then restart.`)
+      console.error(`   Windows: netstat -ano | findstr :${PORT}  then  taskkill /PID <pid> /F`)
+      console.error(`   WSL/Linux: lsof -i :${PORT}  then  kill <pid>\n`)
+      process.exit(1)
+    }
+    console.error('❌ Server listen failed:', err?.message || err)
+    process.exit(1)
+  }
 })
+
+// Only call connect if not already connecting/connected (avoids "already connecting/connected" on restart)
+const redisStatus = redisClient.status
+if (redisStatus !== 'connecting' && redisStatus !== 'ready') {
+  redisClient.connect().catch((err: any) => {
+    console.error('❌ Redis connection error:', err?.message || err)
+  })
+}
 
 // Graceful shutdown and memory cleanup
 process.on('SIGTERM', async () => {

@@ -1,0 +1,1 @@
+signature,wallet,timestamp,expectedType,parserType,parserDirection,swapCount,eraseReason,swapDetected,invalidRejected,amountMatch,splitCountOk,solSwapDetected,tokenTokenDetected,processingMs,errors,deltaMap,accountData

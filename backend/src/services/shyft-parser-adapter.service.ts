@@ -24,10 +24,11 @@ import {
 import { getShyftParserConfigService } from './shyft-parser-config.service'
 import { getCoreTokenSuppressionService } from './core-token-suppression.service'
 import { getPerformanceMonitorService } from './performance-monitor.service'
+import { DEFAULT_CORE_TOKENS } from '../types/shyft-parser-v2.types'
 
 export class ShyftParserAdapterService implements ParserAdapter {
   private configService = getShyftParserConfigService()
-  private suppressionService = getCoreTokenSuppressionService()
+  private suppressionService = getCoreTokenSuppressionService(DEFAULT_CORE_TOKENS, true)
   private performanceMonitor = getPerformanceMonitorService()
   private v2Features: V2FeatureFlags = {
     relayerProofIdentification: false,

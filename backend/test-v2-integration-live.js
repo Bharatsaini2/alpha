@@ -79,7 +79,7 @@ async function testV2Integration() {
     console.log('\n🧪 Test 4: Built Services Check');
     console.log('──────────────────────────────────────────────────');
     
-    const distPath = path.join(__dirname, 'dist/src/services');
+    const distPath = path.join(__dirname, 'dist/services');
     if (fs.existsSync(distPath)) {
       const builtServices = fs.readdirSync(distPath).filter(f => f.endsWith('.js'));
       console.log(`✅ Found ${builtServices.length} built service files`);

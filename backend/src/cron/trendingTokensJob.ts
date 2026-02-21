@@ -424,7 +424,14 @@ const manualTrigger = async () => {
   }
 }
 
+// Optional: disable to save BirdEye credits (trending list will be empty/stale)
+const birdEyeCronsDisabled = process.env.DISABLE_BIRD_EYE_CRONS === 'true' || process.env.DISABLE_BIRD_EYE_CRONS === '1'
+
 const startTrendingTokensCron = () => {
+  if (birdEyeCronsDisabled) {
+    console.log('⏸️  Trending tokens cron disabled (DISABLE_BIRD_EYE_CRONS)')
+    return
+  }
   console.log('Trending tokens cron job started - running every 1 hour')
   const cronJob = cron.schedule('0 * * * *', async () => {
     await fetchAndStoreTrendingTokens()

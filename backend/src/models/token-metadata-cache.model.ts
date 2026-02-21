@@ -15,7 +15,6 @@ const tokenMetadataCacheSchema = new Schema<ITokenMetadataCache>(
       type: String,
       required: true,
       unique: true,
-      index: true,
     },
     symbol: {
       type: String,
@@ -41,8 +40,7 @@ const tokenMetadataCacheSchema = new Schema<ITokenMetadataCache>(
   }
 );
 
-// Index for efficient lookups
-tokenMetadataCacheSchema.index({ tokenAddress: 1 });
+// tokenAddress already indexed via unique: true above
 
 // ✅ NO TTL INDEX - Cache tokens forever!
 // Token symbols/names don't change, so we keep them permanently

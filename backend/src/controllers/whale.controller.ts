@@ -17,6 +17,9 @@ import {
   saveTokenToCache,
   isTokenResolutionFailed,
   isValidMetadata,
+  getHistoricalSolPrice,
+  getSwapRatioPriceUSDAtTimestamp,
+  getTokenMetadataAndImage,
 } from '../config/solana-tokens-config'
 import { catchAsyncErrors } from '../middlewares/catchAsyncErrors'
 import {
@@ -49,11 +52,20 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
 import { ExpressAdapter } from '@bull-board/express'
 import { parseShyftTransaction, ShyftTransaction } from '../utils/shyftParser'
 import { parseShyftTransactionV2 } from '../utils/shyftParserV2'
-import { 
-  mapParserAmountsToStorage, 
-  mapSOLAmounts 
-} from '../utils/splitSwapStorageMapper'
+import { parseHeliusTransactionV3 } from '../utils/heliusParserV3'
+import { fetchHeliusParsed } from '../utils/heliusParserAdapter'
+import type { HeliusTransaction } from '../utils/heliusParserV3.types'
+import { runShadowComparison } from '../utils/heliusParserV3.shadowCompare'
+import { mapSOLAmounts, isSOLMint } from '../utils/splitSwapStorageMapper'
 dotenv.config()
+
+const LAMPORTS_PER_SOL = 1e9
+
+/** Fee from APIs is in lamports; convert to USD for storage/display. */
+function feeLamportsToUsd(lamports: number, solPriceUsd: number): number {
+  const solAmount = Number(lamports) / LAMPORTS_PER_SOL
+  return solAmount * (solPriceUsd || 0)
+}
 
 function startOfUTCDay(date: Date): Date {
   return new Date(
@@ -141,7 +153,7 @@ let lastCallTimes: Record<string, number> = {}
 let reconnectTimeout: NodeJS.Timeout | null = null
 let isMonitoringStarted = false
 let monitoredWhales: string[] = []
-const SUBSCRIPTION_BATCH_SIZE = 50
+const SUBSCRIPTION_BATCH_SIZE = Number(process.env.WHALE_SUBSCRIPTION_BATCH_SIZE) || 100
 
 const NUM_WORKERS = Number(process.env.NUM_WORKERS_WHALE) || 1 // Number of parallel workers
 const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY_WHALE) || 8
@@ -254,7 +266,13 @@ function connectWhaleStream(whaleAddresses: string[]) {
     wsConnectAttempt = 0
     ws!.send(JSON.stringify({ jsonrpc: '2.0', id: 0, method: 'ping' }))
     logger.info(pc.green('✅ Connected to Helius WebSocket'))
-    subscribeWhales(whaleAddresses)
+    // Use batched subscriptions when tracking many whales (e.g. 4000+) so Helius
+    // can deliver more txs; single huge accountInclude can underperform.
+    if (whaleAddresses.length > (Number(process.env.WHALE_BATCH_SUBSCRIBE_THRESHOLD) || 500)) {
+      subscribeWhalesInBatches(whaleAddresses)
+    } else {
+      subscribeWhales(whaleAddresses)
+    }
     startPing(ws!)
   })
 
@@ -837,8 +855,8 @@ const processSignature = async (signatureJson: any): Promise<void> => {
   // let signature = '38TGnhZxyKmgFqiGSJuVr8k2qb89mDH5ViAzZYF69nrShwEPkbdSqSyVSzbYcgGE4K6dZyFcg519ym22E7pXGm6T'
   // let whaleAddress = 'CWaTfG6yzJPQRY5P53nQYHdHLjCJGxpC7EWo5wzGqs3n'
   try {
-    // ✅ Add Redis-based duplicate check for race condition prevention
-    const duplicateKey = `processing_signature:${signature}`
+    // ✅ Add Redis-based duplicate check for race condition prevention (per signature + whale so multi-whale tx both get processed)
+    const duplicateKey = `processing_signature:${signature}:${whaleAddress}`
     const isProcessing = await redisClient.set(
       duplicateKey,
       '1',
@@ -856,9 +874,21 @@ const processSignature = async (signatureJson: any): Promise<void> => {
 
     // Parser V2 Fix Task 4: Allow up to 2 records per signature (split swap: SELL + BUY)
     // Schema has compound unique index { signature, type }; findOne would block the second record.
-    const existingCount = await whaleAllTransactionModelV2.countDocuments({
-      signature,
-    })
+    let existingCount: number
+    try {
+      existingCount = await whaleAllTransactionModelV2.countDocuments({
+        signature,
+      })
+    } catch (countErr: any) {
+      if (countErr?.message?.includes('buffering timed out')) {
+        await new Promise((r) => setTimeout(r, 2000))
+        existingCount = await whaleAllTransactionModelV2.countDocuments({
+          signature,
+        })
+      } else {
+        throw countErr
+      }
+    }
     if (existingCount >= 2) {
       logger.info(
         `Transaction ${signature} fully processed (${existingCount} records). Skipping.`,
@@ -867,7 +897,7 @@ const processSignature = async (signatureJson: any): Promise<void> => {
       return
     }
 
-    let txStatus
+    let txStatus: any
     if (transactionData) {
       // Use transaction data from WebSocket notification
       logger.info('Using cached transaction data from WebSocket')
@@ -943,197 +973,200 @@ const processSignature = async (signatureJson: any): Promise<void> => {
 
     logger.info(pc.cyan(`\n⚡ Processing signature: ${signature}`))
 
-    // ✅ Add timeout and retry for getParsedTransactions
-    const parsedData = await Promise.race([
-      getParsedTransactions(signature),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error('getParsedTransactions timeout')),
-          20000,
+    const useHeliusParser = process.env.USE_HELIUS_PARSER === 'true'
+
+    let parseResult: ReturnType<typeof parseShyftTransactionV2>
+    let protocolName = 'Unknown'
+    let gasFee = 0
+    let swapper = whaleAddress
+    let actions: Array<{ type: string; info?: Record<string, unknown> }> = []
+    let parsedTx: any
+
+    if (useHeliusParser) {
+      // ======== Helius V3 path ========
+      logger.info(pc.cyan('🔍 Using Helius V3 parser'))
+
+      const heliusTx = await Promise.race([
+        fetchHeliusParsed(signature),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Helius fetch timeout')), 20000),
         ),
-      ),
-    ]).catch(async (e) => {
-      logger.error({ e }, 'RPCError:')
-
-      // ✅ Retry logic for getParsedTransactions
-      const maxRetries = 2
-      for (let i = 1; i <= maxRetries; i++) {
-        try {
-          logger.info(
-            `Retrying getParsedTransactions (attempt ${i}/${maxRetries})`,
-          )
-          await new Promise((resolve) => setTimeout(resolve, i * 2000)) // Wait before retry
-
-          const retryData = await Promise.race([
-            getParsedTransactions(signature),
-            new Promise((_, reject) =>
-              setTimeout(
-                () => reject(new Error('getParsedTransactions timeout')),
-                20000,
+      ]).catch(async (e) => {
+        logger.error({ e }, 'Helius fetch error, retrying...')
+        const maxRetries = 2
+        for (let i = 1; i <= maxRetries; i++) {
+          try {
+            await new Promise((r) => setTimeout(r, i * 2000))
+            const retry = await Promise.race([
+              fetchHeliusParsed(signature),
+              new Promise<null>((_, rej) =>
+                setTimeout(() => rej(new Error('Helius fetch timeout')), 20000),
               ),
-            ),
-          ])
-
-          logger.info(`✅ getParsedTransactions succeeded on retry ${i}`)
-          return retryData
-        } catch (retryError) {
-          logger.warn(`Retry ${i} failed: ${String(retryError)}`)
-          if (i === maxRetries) {
-            logger.error(`All retries failed for getParsedTransactions`)
-            return null
+            ])
+            return retry
+          } catch {
+            if (i === maxRetries) return null
           }
         }
+        return null
+      })
+
+      if (!heliusTx) return
+
+      protocolName = heliusTx.source || 'Unknown'
+      gasFee = heliusTx.fee ?? 0
+      swapper = heliusTx.feePayer || whaleAddress
+      parsedTx = heliusTx as any // So processSingleSwapTransaction / storeTransactionInDB receive a value (Helius shape)
+
+      parseResult = parseHeliusTransactionV3(
+        heliusTx as unknown as HeliusTransaction,
+        { hintSwapper: whaleAddress },
+      )
+    } else {
+      // ======== SHYFT V2 path (unchanged) ========
+      const parsedData = await Promise.race([
+        getParsedTransactions(signature),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error('getParsedTransactions timeout')),
+            20000,
+          ),
+        ),
+      ]).catch(async (e) => {
+        logger.error({ e }, 'RPCError:')
+
+        const maxRetries = 2
+        for (let i = 1; i <= maxRetries; i++) {
+          try {
+            logger.info(
+              `Retrying getParsedTransactions (attempt ${i}/${maxRetries})`,
+            )
+            await new Promise((resolve) => setTimeout(resolve, i * 2000))
+
+            const retryData = await Promise.race([
+              getParsedTransactions(signature),
+              new Promise((_, reject) =>
+                setTimeout(
+                  () => reject(new Error('getParsedTransactions timeout')),
+                  20000,
+                ),
+              ),
+            ])
+
+            logger.info(`getParsedTransactions succeeded on retry ${i}`)
+            return retryData
+          } catch (retryError) {
+            logger.warn(`Retry ${i} failed: ${String(retryError)}`)
+            if (i === maxRetries) {
+              logger.error(`All retries failed for getParsedTransactions`)
+              return null
+            }
+          }
+        }
+        return null
+      })
+
+      if (!parsedData) return
+
+      parsedTx = JSON.parse(parsedData)
+
+      const txType = parsedTx.result?.type
+      logger.info(`TX Type Whale: ${txType}`)
+
+      if (!parsedTx.success) {
+        logger.info(`Whale [Filter] Skipping ${signature}: Transaction failed`)
+        return
       }
-      return null
-    })
 
-    if (!parsedData) return
+      logger.info(`Transaction type: ${txType} (will be analyzed by V2 parser)`)
 
-    const parsedTx = JSON.parse(parsedData)
+      actions = parsedTx?.result?.actions || []
+      protocolName = parsedTx.result.protocol?.name || 'Unknown'
+      gasFee = parsedTx.result.fee
+      swapper = parsedTx.result.signers[0] || whaleAddress
 
-    const txType = parsedTx.result?.type
+      logger.info(pc.cyan('🔍 Calling V2 parser for classification...'))
 
-    logger.info(`TX Type Whale: ${txType}`)
+      const v2Input = {
+        signature: signature,
+        timestamp: parsedTx.result.timestamp
+          ? new Date(parsedTx.result.timestamp).getTime()
+          : Date.now(),
+        status: parsedTx.result.status || 'Success',
+        fee: parsedTx.result.fee || 0,
+        fee_payer:
+          parsedTx.result.fee_payer ?? parsedTx.result.signers?.[0],
+        signers: parsedTx.result.signers ?? [],
+        protocol: parsedTx.result.protocol,
+        token_balance_changes: parsedTx.result.token_balance_changes ?? [],
+        actions: parsedTx.result.actions ?? [],
+      }
 
-    // ✅ Step 1: Status Gate - ONLY check if transaction succeeded
-    if (!parsedTx.success) {
-      logger.info(`Whale [Filter] Skipping ${signature}: Transaction failed`)
-      return
+      parseResult = parseShyftTransactionV2(v2Input, { hintSwapper: whaleAddress })
     }
 
-    // ✅ Step 2: Let V2 parser handle ALL classification logic
-    // DO NOT pre-filter by type, balance changes, or actions
-    // V2 parser has sophisticated logic to handle all cases
-    logger.info(`📋 Transaction type: ${txType} (will be analyzed by V2 parser)`)
-
-    const actions = parsedTx?.result?.actions || []
-    const protocolName = parsedTx.result.protocol?.name || 'Unknown'
-    const gasFee = parsedTx.result.fee
-    const swapper = parsedTx.result.signers[0] || whaleAddress
-
-    // ✅ STEP 3: Call V2 Parser with FULL transaction data (Parser V2 Fix Task 2)
-    // Pass real fee_payer, signers, and all token_balance_changes so parser can run
-    // 3-tier swapper identification and multi-hop logic. Do NOT hardcode whale.
-    logger.info(pc.cyan('🔍 Calling V2 parser for classification...'))
-
-    const v2Input = {
-      signature: signature,
-      timestamp: parsedTx.result.timestamp
-        ? new Date(parsedTx.result.timestamp).getTime()
-        : Date.now(),
-      status: parsedTx.result.status || 'Success',
-      fee: parsedTx.result.fee || 0,
-      fee_payer:
-        parsedTx.result.fee_payer ?? parsedTx.result.signers?.[0],
-      signers: parsedTx.result.signers ?? [],
-      protocol: parsedTx.result.protocol,
-      token_balance_changes: parsedTx.result.token_balance_changes ?? [],
-      actions: parsedTx.result.actions ?? [],
-    }
-
-    const parseResult = parseShyftTransactionV2(v2Input)
+    // Shadow comparison only when SHYFT is main parser (avoids running both parsers when Helius is main)
+    if (!useHeliusParser) runShadowComparison(signature, whaleAddress).catch(() => {})
 
     if (parseResult.success && parseResult.data) {
       const swapData = parseResult.data
 
-      // Parser V2 Fix Task 3: Only persist when parser's identified swapper is our tracked whale
+      // Whale: Always use tracked whale address for storage (relayer/aggregator-proof)
+      // Parser may identify fee_payer, signer, or owner as swapper; we persist whale(address)
       const identifiedSwapper = swapData.swapper
       if (identifiedSwapper === undefined || identifiedSwapper === null) {
-        logger.info(
-          `Whale [Filter] Skipping ${signature}: Parser did not identify a swapper. Skipping.`,
+        logger.warn(
+          {
+            metric: 'whale_tx_skipped_no_swapper',
+            signature,
+            whaleAddress: whaleAddress.slice(0, 8) + '…',
+            skipReason: 'parser_no_swapper',
+          },
+          `Whale [Filter] Skipping ${signature}: Parser did not identify a swapper`,
         )
         return
       }
       if (identifiedSwapper !== whaleAddress) {
         logger.info(
-          `Parser identified swapper ${identifiedSwapper} but tracked whale is ${whaleAddress}. Skipping.`,
+          {
+            metric: 'whale_tx_swapper_mismatch_proceed',
+            signature,
+            identifiedSwapper: identifiedSwapper.slice(0, 8) + '…',
+            whale: whaleAddress.slice(0, 8) + '…',
+          },
+          `Parser swapper differs — storing as whale(${whaleAddress.slice(0, 8)}…)`,
         )
-        return
+        swapData.swapper = whaleAddress
+        if ('sellRecord' in swapData && swapData.sellRecord) {
+          swapData.sellRecord.swapper = whaleAddress
+        }
+        if ('buyRecord' in swapData && swapData.buyRecord) {
+          swapData.buyRecord.swapper = whaleAddress
+        }
       }
 
-      // ✅ Handle SplitSwapPair by creating TWO separate records (SELL and BUY)
-      // Use MongoDB transaction for atomic writes
+      // ✅ Handle SplitSwapPair: store ONE record with type 'both' and bothType [buy+sell]; frontend shows two cards (same tokenIn/tokenOut, buy/sell tag only).
       if ('sellRecord' in swapData) {
         logger.info(
-          pc.magenta(`🔄 Split Swap Pair detected - creating separate SELL and BUY records`)
+          pc.magenta(`🔄 Split Swap (token-to-token) - creating single record with type 'both'`)
         )
-        
-        // 🔥 CRITICAL: Use MongoDB transaction for atomic writes
-        const session = await mongoose.startSession()
-        
-        try {
-          await session.startTransaction()
-          
-          // Create SELL record
-          await processSingleSwapTransaction(
-            swapData.sellRecord,
-            signature,
-            parsedTx,
-            txStatus,
-            whaleAddress,
-            protocolName,
-            gasFee,
-            'v2_parser_split_sell',
-            session // Pass session for transaction
-          )
-          
-          // Create BUY record
-          await processSingleSwapTransaction(
-            swapData.buyRecord,
-            signature,
-            parsedTx,
-            txStatus,
-            whaleAddress,
-            protocolName,
-            gasFee,
-            'v2_parser_split_buy',
-            session // Pass session for transaction
-          )
-          
-          // Commit only if both succeed
-          await session.commitTransaction()
-          
-          logger.info(
-            pc.green(`✅ Split swap pair processed - created separate SELL and BUY records for ${signature}`)
-          )
-          
-          // Increment success metric (structured logging for observability)
-          logger.info({
-            metric: 'split_swap_records_created',
-            signature,
-            swapper: swapData.swapper,
-            count: 2
-          }, 'Split swap records created successfully')
-          
-        } catch (error) {
-          // Abort transaction on any failure
-          await session.abortTransaction()
-          
-          logger.error(
-            { 
-              signature, 
-              error: error instanceof Error ? error.message : String(error),
-              swapper: swapData.swapper
-            },
-            'Split swap transaction failed, rolled back'
-          )
-          
-          // Increment failure metric (structured logging for observability)
-          logger.error({
-            metric: 'split_swap_transaction_failures',
-            signature,
-            swapper: swapData.swapper,
-            error: error instanceof Error ? error.message : String(error)
-          }, 'Split swap transaction failed')
-          
-          throw error
-        } finally {
-          session.endSession()
-        }
-        
-        return // Exit early, transaction processed
+        const splitSource = useHeliusParser ? 'helius_v3_split' : 'v2_parser_split'
+        await processSplitSwapAsSingleRecord(
+          swapData.sellRecord,
+          swapData.buyRecord,
+          signature,
+          parsedTx,
+          txStatus,
+          whaleAddress,
+          protocolName,
+          gasFee,
+          splitSource
+        )
+        logger.info({ metric: 'split_swap_single_record_created', signature }, 'Split swap stored as single record')
+        return // Exit early
       } else {
         // Handle regular ParsedSwap - single transaction
+        const singleSource = useHeliusParser ? 'helius_v3' : 'v2_parser'
         await processSingleSwapTransaction(
           swapData,
           signature,
@@ -1142,23 +1175,37 @@ const processSignature = async (signatureJson: any): Promise<void> => {
           whaleAddress,
           protocolName,
           gasFee,
-          'v2_parser'
+          singleSource
         )
         return // Exit early, transaction processed
       }
     }
     
-    // V2 parser rejected transaction
+    const eraseReason = parseResult.erase?.reason ?? 'unknown'
+    const eraseDebug = (parseResult.erase?.debugInfo ?? {}) as Record<string, unknown>
     logger.info(
-      `Whale [Filter] Skipping ${signature}: V2 parser rejected (reason: ${parseResult.erase?.reason || 'unknown'})`,
+      {
+        signature,
+        whaleAddress: whaleAddress.slice(0, 8) + '…',
+        parseDropped: true,
+        eraseReason,
+        feePayer: eraseDebug.feePayer,
+        signerCount: Array.isArray(eraseDebug.signers) ? eraseDebug.signers.length : 0,
+        assetDeltaCount: typeof eraseDebug.assetDeltas === 'object' && eraseDebug.assetDeltas != null
+          ? Object.keys(eraseDebug.assetDeltas).length
+          : 0,
+        eraseDebugKeys: Object.keys(eraseDebug),
+        processingTimeMs: parseResult.processingTimeMs,
+      },
+      `Whale [Filter] Skipping ${signature}: Parser rejected | reason=${eraseReason}`,
     )
     return
   } catch (err) {
     logger.error({ err }, `Error processing signature ${signature}:`)
-  } finally {
+    } finally {
     try {
-      // ✅ Clean up Redis processing key
-      const duplicateKey = `processing_signature:${signature}`
+      // ✅ Clean up Redis processing key (must match key used at start: signature + whaleAddress)
+      const duplicateKey = `processing_signature:${signature}:${whaleAddress}`
       await redisClient.del(duplicateKey)
 
       await redisClient.srem(
@@ -1180,6 +1227,139 @@ const processSignature = async (signatureJson: any): Promise<void> => {
   }
 }
 
+// ✅ Token-to-token (split): store ONE record with type 'both' and bothType [buy+sell]; frontend shows two cards.
+// Shyft V2: sellRecord.quoteAsset = outgoing (sold), buyRecord.quoteAsset = incoming (bought).
+// Helius V3: sellRecord.baseAsset = outgoing (sold), buyRecord.baseAsset = incoming (bought). Use splitSource to pick.
+async function processSplitSwapAsSingleRecord(
+  sellRecord: any,
+  buyRecord: any,
+  signature: string,
+  parsedTx: any,
+  txStatus: any,
+  whaleAddress: string,
+  protocolName: string,
+  gasFee: number,
+  splitSource: string,
+) {
+  const isHelius = splitSource.startsWith('helius')
+  // tokenIn = what was SOLD (outgoing); tokenOut = what was BOUGHT (incoming).
+  const soldAsset = isHelius ? sellRecord.baseAsset : sellRecord.quoteAsset
+  const boughtAsset = isHelius ? buyRecord.baseAsset : buyRecord.quoteAsset
+  const tokenIn = {
+    token_address: soldAsset?.mint ?? sellRecord.baseAsset?.mint,
+    amount: sellRecord.amounts?.baseAmount ?? 0,
+    symbol: (soldAsset?.symbol ?? sellRecord.baseAsset?.symbol) || 'Unknown',
+    name: (soldAsset?.symbol ?? sellRecord.baseAsset?.symbol) || 'Unknown',
+  }
+  const tokenOut = {
+    token_address: boughtAsset?.mint ?? buyRecord.baseAsset?.mint,
+    amount: buyRecord.amounts?.baseAmount ?? 0,
+    symbol: (boughtAsset?.symbol ?? buyRecord.baseAsset?.symbol) || 'Unknown',
+    name: (boughtAsset?.symbol ?? buyRecord.baseAsset?.symbol) || 'Unknown',
+  }
+  // Guard: never persist whale wallet address as token address (parser bug or mix-up).
+  if (tokenIn.token_address === whaleAddress) {
+    const fallback = isHelius ? sellRecord.quoteAsset : sellRecord.baseAsset
+    logger.warn({ signature, whaleAddress }, 'Split: tokenIn was whale address, using other asset')
+    tokenIn.token_address = fallback?.mint ?? tokenIn.token_address
+    tokenIn.symbol = fallback?.symbol || tokenIn.symbol
+    tokenIn.name = fallback?.symbol || tokenIn.name
+  }
+  if (tokenOut.token_address === whaleAddress) {
+    const fallback = isHelius ? buyRecord.quoteAsset : buyRecord.baseAsset
+    logger.warn({ signature, whaleAddress }, 'Split: tokenOut was whale address, using other asset')
+    tokenOut.token_address = fallback?.mint ?? tokenOut.token_address
+    tokenOut.symbol = fallback?.symbol || tokenOut.symbol
+    tokenOut.name = fallback?.symbol || tokenOut.name
+  }
+  const [inSymbol, outSymbol] = await Promise.all([
+    resolveSymbol(tokenIn),
+    resolveSymbol(tokenOut),
+  ])
+  const inSymbolData = typeof inSymbol === 'string' ? { symbol: inSymbol, name: inSymbol } : inSymbol
+  const outSymbolData = typeof outSymbol === 'string' ? { symbol: outSymbol, name: outSymbol } : outSymbol
+  if (!tokenIn.symbol || tokenIn.symbol === 'Unknown') tokenIn.symbol = inSymbolData.symbol
+  if (!tokenOut.symbol || tokenOut.symbol === 'Unknown') tokenOut.symbol = outSymbolData.symbol
+
+  let outTokenData: any = {}
+  let inTokenData: any = {}
+  let whaleToken: any = {}
+  const solPrice = await getTokenPrice('So11111111111111111111111111111111111111112')
+  try {
+    const [out, inT, whale] = await Promise.all([
+      getTokenData(tokenOut.token_address),
+      getTokenData(tokenIn.token_address),
+      findWhaleTokens(whaleAddress),
+    ])
+    outTokenData = out
+    inTokenData = inT
+    whaleToken = whale
+  } catch (error) {
+    logger.error({ error }, `Error fetching token data for split ${signature}:`)
+    throw error
+  }
+
+  const safeSolPrice = solPrice && solPrice > 0 ? solPrice : 94
+  const tokenInSolAmount = (tokenIn.amount * (inTokenData?.price || 0)) / safeSolPrice
+  const tokenOutSolAmount = (tokenOut.amount * (outTokenData?.price || 0)) / safeSolPrice
+  const inTokenPriceSol = inTokenData?.price / safeSolPrice || 0
+  const outTokenPriceSol = outTokenData?.price / safeSolPrice || 0
+  const buyMarketCapSol = inTokenData?.marketCap / safeSolPrice || 0
+  const sellMarketCapSol = outTokenData?.marketCap / safeSolPrice || 0
+  const gasFeeUSD = feeLamportsToUsd(gasFee, safeSolPrice)
+
+  // Never persist shortened addresses as symbol/name – use Unknown so we don't cache bad data
+  const tokenDetails = {
+    signature,
+    whaleAddress,
+    tokenInSymbol: inSymbolData._isShortened ? 'Unknown' : inSymbolData.symbol,
+    tokenInName: inSymbolData._isShortened ? 'Unknown' : inSymbolData.name,
+    tokenOutSymbol: outSymbolData._isShortened ? 'Unknown' : outSymbolData.symbol,
+    tokenOutName: outSymbolData._isShortened ? 'Unknown' : outSymbolData.name,
+    tokenInAddress: tokenIn.token_address,
+    tokenOutAddress: tokenOut.token_address,
+    tokenInAmount: tokenIn.amount,
+    tokenOutAmount: tokenOut.amount,
+    tokenInPrice: inTokenData?.price,
+    tokenOutPrice: outTokenData?.price,
+    tokenInUsdAmount: tokenIn.amount * (inTokenData?.price || 0),
+    tokenOutUsdAmount: tokenOut.amount * (outTokenData?.price || 0),
+    tokenInSolAmount,
+    tokenOutSolAmount,
+    inTokenPriceSol,
+    outTokenPriceSol,
+    buyMarketCapSol,
+    sellMarketCapSol,
+    inMarketCap: inTokenData?.marketCap,
+    outMarketCap: outTokenData?.marketCap,
+    whaleTokenSymbol: whaleToken?.tokenSymbol || '',
+    whaleTokenAddress: whaleToken?.tokenAddress || '',
+    whaleTokenURL: whaleToken?.imageUrl || null,
+    outTokenURL: outTokenData?.imageUrl || null,
+    inTokenURL: inTokenData?.imageUrl || null,
+    hotnessScore: 0,
+    platform: protocolName,
+    gasFee: gasFeeUSD,
+  }
+
+  logger.info(
+    pc.green(`✅ Split swap (single record): ${tokenDetails.tokenInSymbol} ↔ ${tokenDetails.tokenOutSymbol} for ${signature.slice(0, 12)}…`)
+  )
+  await storeTransactionInDB(
+    signature,
+    tokenDetails,
+    true,
+    true,
+    parsedTx,
+    txStatus,
+    splitSource,
+    undefined,
+    undefined,
+    undefined,
+    safeSolPrice
+  )
+}
+
 // ✅ EXTRACTED FUNCTION: Process a single swap transaction
 async function processSingleSwapTransaction(
   parsedSwap: any,
@@ -1198,20 +1378,6 @@ async function processSingleSwapTransaction(
         `✅ Parser classified: ${parsedSwap.direction} | confidence: ${parsedSwap.confidence} | source: ${classificationSource}`,
       ),
     )
-
-    // Confidence filter: only applies when MIN_ALERT_CONFIDENCE is set. Unset = accept all (match test).
-    const minConfidence = process.env.MIN_ALERT_CONFIDENCE
-    if (minConfidence) {
-      const { meetsMinimumConfidence } = require('../utils/shyftParser')
-      if (!meetsMinimumConfidence(parsedSwap, minConfidence)) {
-        logger.info(
-          pc.yellow(
-            `Whale [Filter] Skipping ${signature}: Confidence ${parsedSwap.confidence} below minimum ${minConfidence}`,
-          ),
-        )
-        return
-      }
-    }
 
     // ✅ Extract token data from V2 parser result (using balance-based structure)
     const tokenIn = {
@@ -1303,8 +1469,12 @@ async function processSingleSwapTransaction(
     }
 
     // ✅ Use V2 parser's direction for isBuy/isSell classification
-    const isBuy = parsedSwap.direction === 'BUY'
-    const isSell = parsedSwap.direction === 'SELL'
+    let isBuy = parsedSwap.direction === 'BUY'
+    let isSell = parsedSwap.direction === 'SELL'
+    if (process.env.FLIP_WHALE_BUY_SELL === 'true') {
+      ;[isBuy, isSell] = [isSell, isBuy]
+      logger.info(pc.yellow(`FLIP_WHALE_BUY_SELL: swapped isBuy/isSell for ${signature}`))
+    }
 
     if (!isBuy && !isSell) {
       logger.info(
@@ -1338,6 +1508,47 @@ async function processSingleSwapTransaction(
     } catch (error) {
       logger.error({ error }, `Error fetching token data for ${signature}:`)
       return
+    }
+
+    // ✅ Production pricing: when SOL is one side, use on-chain swap ratio + historical SOL price (no per-tx DEX).
+    let usedSwapRatioPricing = false
+    let historicalSOLAtSwap: number | null = null
+    const isQuoteSOL = isSOLMint(parsedSwap.quoteAsset.mint)
+    const isBaseSOL = isSOLMint(parsedSwap.baseAsset.mint)
+    const timestampSec = parsedSwap.timestamp >= 1e12 ? Math.floor(parsedSwap.timestamp / 1000) : parsedSwap.timestamp
+    if (isQuoteSOL || isBaseSOL) {
+      // priceSOL = SOL per token (so priceUSD = priceSOL * historicalSOL). Quote = spent/received, base = other.
+      const solAmount = isQuoteSOL
+        ? (parsedSwap.direction === 'BUY' ? (parsedSwap.amounts.totalWalletCost ?? 0) : (parsedSwap.amounts.netWalletReceived ?? 0))
+        : (parsedSwap.amounts.baseAmount ?? 0)
+      const tokenAmount = isQuoteSOL
+        ? (parsedSwap.amounts.baseAmount ?? 0)
+        : (parsedSwap.direction === 'BUY' ? (parsedSwap.amounts.totalWalletCost ?? 0) : (parsedSwap.amounts.netWalletReceived ?? 0))
+      historicalSOLAtSwap = await getHistoricalSolPrice(timestampSec)
+      if (tokenAmount > 0 && Number.isFinite(solAmount)) {
+        const priceUSD = await getSwapRatioPriceUSDAtTimestamp(solAmount, tokenAmount, timestampSec)
+        if (priceUSD > 0 && historicalSOLAtSwap > 0) {
+          if (isQuoteSOL) {
+            if (parsedSwap.direction === 'BUY') {
+              outTokenData.price = priceUSD
+              inTokenData.price = historicalSOLAtSwap
+            } else {
+              inTokenData.price = priceUSD
+              outTokenData.price = historicalSOLAtSwap
+            }
+          } else {
+            if (parsedSwap.direction === 'BUY') {
+              inTokenData.price = priceUSD
+              outTokenData.price = historicalSOLAtSwap
+            } else {
+              outTokenData.price = priceUSD
+              inTokenData.price = historicalSOLAtSwap
+            }
+          }
+          usedSwapRatioPricing = true
+          logger.info({ signature: signature.slice(0, 12), priceUSD, priceSOL: solAmount / tokenAmount }, 'Whale: price from swap ratio + historical SOL')
+        }
+      }
     }
 
     // ✅ Fallback: If output token price is 0 but we have input token price,
@@ -1375,9 +1586,11 @@ async function processSingleSwapTransaction(
     }
 
     // ✅ Safety check: Prevent division by zero (Infinity bug fix)
-    const safeSolPrice = solPrice && solPrice > 0 ? solPrice : 94 // Default to $94 if invalid
-    
-    // ✅ Log warning if solPrice was invalid
+    const currentSolPrice = solPrice && solPrice > 0 ? solPrice : 94
+    const safeSolPrice = usedSwapRatioPricing && historicalSOLAtSwap != null && historicalSOLAtSwap > 0
+      ? historicalSOLAtSwap
+      : currentSolPrice
+
     if (!solPrice || solPrice <= 0) {
       logger.warn({
         signature,
@@ -1396,16 +1609,16 @@ async function processSingleSwapTransaction(
     const outTokenPriceSol = outTokenData?.price / safeSolPrice || 0
     const buyMarketCapSol = inTokenData?.marketCap / safeSolPrice || 0
     const sellMarketCapSol = outTokenData?.marketCap / safeSolPrice || 0
-    const gasFeeUSD = gasFee * solPrice || 0
+    const gasFeeUSD = feeLamportsToUsd(gasFee, currentSolPrice)
 
-    // Extract Values
+    // Never persist shortened addresses as symbol/name – use Unknown so we don't cache bad data
     const tokenDetails = {
       signature,
       whaleAddress,
-      tokenInSymbol: inSymbolData.symbol,
-      tokenInName: inSymbolData.name,
-      tokenOutSymbol: outSymbolData.symbol,
-      tokenOutName: outSymbolData.name,
+      tokenInSymbol: inSymbolData._isShortened ? 'Unknown' : inSymbolData.symbol,
+      tokenInName: inSymbolData._isShortened ? 'Unknown' : inSymbolData.name,
+      tokenOutSymbol: outSymbolData._isShortened ? 'Unknown' : outSymbolData.symbol,
+      tokenOutName: outSymbolData._isShortened ? 'Unknown' : outSymbolData.name,
       tokenInAddress: tokenIn.token_address,
       tokenOutAddress: tokenOut.token_address,
       tokenInAmount: tokenIn.amount,
@@ -1484,29 +1697,11 @@ async function processSingleSwapTransaction(
       )
     }
 
-    // ✅ FIXED: Don't filter out split transactions with undefined values
-    // For split transactions, values might be undefined initially
-    // Only skip if ALL values are defined AND all are below $2
-    const hasDefinedValue = txValue != null || sellTxValue != null || buyTxValue != null
-    const allValuesBelowThreshold = 
-      (txValue == null || txValue < 2) &&
-      (sellTxValue == null || sellTxValue < 2) &&
-      (buyTxValue == null || buyTxValue < 2)
-    
-    // Only return if we have at least one defined value AND all defined values are below $2
-    if (hasDefinedValue && allValuesBelowThreshold) {
-      const maxValue = Math.max(txValue || 0, sellTxValue || 0, buyTxValue || 0)
-      if (maxValue < 2 && maxValue > 0) {
-        logger.info(`Skipping transaction ${signature}: Max value $${maxValue.toFixed(2)} below $2 threshold`)
-        return
-      }
-    }
-
-    // Store buy/sell transaction grater then $200 in MongoDB (If it doesn't exist)
+    // Store buy/sell transaction in MongoDB (no minimum value threshold)
     try {
       if (isBuy) {
         if (
-          (txValue > 2 || buyTxValue > 2) &&
+          (txValue > 0 || buyTxValue > 0) &&
           (txValue < 400 || buyTxValue < 400)
         ) {
           await storeRepeatedTransactions(
@@ -1518,7 +1713,7 @@ async function processSingleSwapTransaction(
         }
       }
 
-      if (txValue > 2 || sellTxValue > 2 || buyTxValue > 2) {
+      if ((txValue ?? 0) >= 0 || (sellTxValue ?? 0) >= 0 || (buyTxValue ?? 0) >= 0) {
         if (isBuy) {
           const hotnessScore = await getHotnessScore(
             signature,
@@ -1953,10 +2148,10 @@ const storeTransactionInDB = async (
   let typeValue: 'buy' | 'sell' | 'both'
   
   // ✅ FIX: Use classification source to determine type
-  // Split swaps now create separate 'sell' and 'buy' records
-  if (classificationSource === 'v2_parser_split_sell') {
+  // Split swaps now create separate 'sell' and 'buy' records (v2 or helius_v3)
+  if (classificationSource === 'v2_parser_split_sell' || classificationSource === 'helius_v3_split_sell') {
     typeValue = 'sell'
-  } else if (classificationSource === 'v2_parser_split_buy') {
+  } else if (classificationSource === 'v2_parser_split_buy' || classificationSource === 'helius_v3_split_buy') {
     typeValue = 'buy'
   } else if (isBuy && isSell) {
     typeValue = 'both'
@@ -2009,8 +2204,8 @@ const storeTransactionInDB = async (
         }
       }
       return null
-    } catch (error) {
-      logger.error({ error }, 'Error calculating token age:')
+    } catch (error: any) {
+      logger.warn({ msg: error?.message ?? String(error) }, 'Error calculating token age')
       return null
     }
   }
@@ -2050,40 +2245,72 @@ const storeTransactionInDB = async (
     details.sellMarketCapSol = tokenSolMarketCap / details.tokenOutPrice
   }
 
-  // ✅ PHASE B FIX: Use new amount mapping utilities from Phase A
-  // Map Parser V2 amounts to storage fields (actual token amounts, not USD values)
-  let amountMapping
+  // ✅ Amount display is USD (buyAmount = value of tokens bought, sellAmount = value spent/sold).
+  // Token amounts live in tokenAmount.buyTokenAmount / sellTokenAmount; do NOT use parser raw amounts for display.
+  let amountMapping: { buyAmount: number | string; sellAmount: number | string }
   let solAmountMapping
-  
+
   if (parsedSwap) {
-    // Use Phase A utilities for correct amount mapping
-    const storageAmounts = mapParserAmountsToStorage(parsedSwap)
-    amountMapping = storageAmounts.amount
-    
-    // ✅ FIX: Pass USD amounts and SOL price for SOL equivalent calculation
-    solAmountMapping = mapSOLAmounts(
+    // Display must be USD. Never show raw token amount (e.g. 0.2 tokens) as amount.
+    let buyAmountUsd = details.tokenOutUsdAmount ?? 0
+    let sellAmountUsd = details.tokenInUsdAmount ?? 0
+    // If one side is 0/tiny (e.g. token price missing), use the other side so we don't show 0.2 when real deal is ~$800
+    const minSensibleUsd = 0.5
+    if (buyAmountUsd < minSensibleUsd && (details.tokenInUsdAmount ?? 0) >= minSensibleUsd) {
+      buyAmountUsd = details.tokenInUsdAmount!
+      logger.info({ signature: signature.slice(0, 12), buyAmountUsd }, 'Whale amount: using tokenInUsd (spend) as buy amount (tokenOutUsd was tiny)')
+    }
+    if (sellAmountUsd < minSensibleUsd && (details.tokenOutUsdAmount ?? 0) >= minSensibleUsd) {
+      sellAmountUsd = details.tokenOutUsdAmount!
+      logger.info({ signature: signature.slice(0, 12), sellAmountUsd }, 'Whale amount: using tokenOutUsd (receive) as sell amount (tokenInUsd was tiny)')
+    }
+    amountMapping = {
+      buyAmount: buyAmountUsd,
+      sellAmount: sellAmountUsd,
+    }
+    const rawSolMap = mapSOLAmounts(
       parsedSwap,
       details.tokenInUsdAmount,
       details.tokenOutUsdAmount,
-      solPrice  // Use solPrice parameter
+      solPrice
     )
-  } else {
-    // Fallback for legacy code paths (should not happen with V2 parser)
-    const transactionValue = Math.max(details.tokenOutUsdAmount || 0, details.tokenInUsdAmount || 0)
-    amountMapping = {
-      buyAmount: transactionValue,
-      sellAmount: transactionValue,
-    }
+    // Fall back to token SOL-equivalent when mapSOLAmounts returns null so card never shows 0
     solAmountMapping = {
-      buySolAmount: details.tokenOutSolAmount || 0,
-      sellSolAmount: details.tokenInSolAmount || 0,
+      buySolAmount: rawSolMap.buySolAmount ?? details.tokenOutSolAmount ?? 0,
+      sellSolAmount: rawSolMap.sellSolAmount ?? details.tokenInSolAmount ?? 0,
     }
-    
-    logger.warn({
-      signature,
-      classificationSource,
-      message: 'Using fallback amount mapping - parsedSwap not provided'
-    })
+  } else {
+    // Fallback for type 'both': sell amount is source of truth; buy card shows same value (only tag differs)
+    if (typeValue === 'both') {
+      const sellUsd = Number(details.tokenInUsdAmount) || 0
+      const sellSol = Number(details.tokenInSolAmount) || 0
+      const amtStr = String(sellUsd)
+      amountMapping = {
+        buyAmount: amtStr,
+        sellAmount: amtStr,
+      }
+      solAmountMapping = {
+        buySolAmount: sellSol,
+        sellSolAmount: sellSol,
+      }
+    } else {
+      const transactionValue = Math.max(details.tokenOutUsdAmount || 0, details.tokenInUsdAmount || 0)
+      amountMapping = {
+        buyAmount: transactionValue,
+        sellAmount: transactionValue,
+      }
+      solAmountMapping = {
+        buySolAmount: details.tokenOutSolAmount || 0,
+        sellSolAmount: details.tokenInSolAmount || 0,
+      }
+    }
+    if (!parsedSwap) {
+      logger.warn({
+        signature,
+        classificationSource,
+        message: 'Using fallback amount mapping - parsedSwap not provided'
+      })
+    }
   }
   
   const transactionData = {
@@ -2106,31 +2333,38 @@ const storeTransactionInDB = async (
     solAmount: solAmountMapping,
 
     // Enhanced transaction object with new fields
-    transaction: {
-      tokenIn: {
-        symbol: details.tokenInSymbol || 'Unknown',
-        name: details.tokenInName || 'Unknown', // Will be enhanced with metadata
-        address: details.tokenInAddress || '',
-        amount: details.tokenInAmount?.toString() || '0',
-        marketCap: details.inMarketCap?.toString() || '0',
-        imageUrl: details.inTokenURL || null,
-        marketCapSol: details.buyMarketCapSol?.toString() || '0',
-        usdAmount: details.tokenInUsdAmount?.toString() || '0',
-      },
-      tokenOut: {
-        symbol: details.tokenOutSymbol || 'Unknown',
-        name: details.tokenOutName || 'Unknown', // Will be enhanced with metadata
-        address: details.tokenOutAddress || '',
-        amount: details.tokenOutAmount?.toString() || '0',
-        marketCap: details.outMarketCap?.toString() || '0',
-        imageUrl: details.outTokenURL || null,
-        marketCapSol: details.sellMarketCapSol?.toString() || '0',
-        usdAmount: details.tokenOutUsdAmount?.toString() || '0',
-      },
-      gasFee: gasFee,
-      platform: platform,
-      timestamp: new Date(),
-    },
+    // Same USD source as normal buy/sell: tokenIn.usdAmount = sell side, tokenOut.usdAmount = buy side (amount × price).
+    // For type 'both' (split): use sell-side USD for both cards so they show the same value (only tag differs).
+    transaction: (() => {
+      const inUsd = details.tokenInUsdAmount != null ? String(details.tokenInUsdAmount) : '0'
+      const outUsd = details.tokenOutUsdAmount != null ? String(details.tokenOutUsdAmount) : '0'
+      const sellUsdForBoth = typeValue === 'both' ? (inUsd !== '0' ? inUsd : outUsd) : null
+      return {
+        tokenIn: {
+          symbol: details.tokenInSymbol || 'Unknown',
+          name: details.tokenInName || 'Unknown', // Will be enhanced with metadata
+          address: details.tokenInAddress || '',
+          amount: details.tokenInAmount?.toString() || '0',
+          marketCap: details.inMarketCap?.toString() || '0',
+          imageUrl: details.inTokenURL || null,
+          marketCapSol: details.buyMarketCapSol?.toString() || '0',
+          usdAmount: sellUsdForBoth !== null ? sellUsdForBoth : inUsd,
+        },
+        tokenOut: {
+          symbol: details.tokenOutSymbol || 'Unknown',
+          name: details.tokenOutName || 'Unknown', // Will be enhanced with metadata
+          address: details.tokenOutAddress || '',
+          amount: details.tokenOutAmount?.toString() || '0',
+          marketCap: details.outMarketCap?.toString() || '0',
+          imageUrl: details.outTokenURL || null,
+          marketCapSol: details.sellMarketCapSol?.toString() || '0',
+          usdAmount: sellUsdForBoth !== null ? sellUsdForBoth : outUsd,
+        },
+        gasFee: gasFee,
+        platform: platform,
+        timestamp: new Date(),
+      }
+    })(),
 
     whaleLabel: enhancedWhaleLabels,
     whaleTokenSymbol: details.whaleTokenSymbol,
@@ -2158,10 +2392,9 @@ const storeTransactionInDB = async (
     inTokenURL: details.inTokenURL,
     type: typeValue,
     bothType: [
-      {
-        buyType: false,  // ✅ Updated: No longer using 'both' type for split swaps
-        sellType: false,  // ✅ Updated: No longer using 'both' type for split swaps
-      },
+      typeValue === 'both'
+        ? { buyType: true, sellType: true }  // Token-to-token: one record, frontend shows two cards (buy + sell)
+        : { buyType: false, sellType: false },
     ],
     hotnessScore: clampedHotnessScore,
     timestamp: new Date(),
@@ -2171,13 +2404,33 @@ const storeTransactionInDB = async (
   }
 
   // Save transaction with optional session for atomic operations
-  const savedTransaction = session
-    ? await whaleAllTransactionModelV2.create([transactionData], { session })
-    : await whaleAllTransactionModelV2.create(transactionData)
-  
+  let savedTransaction: any
+  try {
+    savedTransaction = session
+      ? await whaleAllTransactionModelV2.create([transactionData], { session })
+      : await whaleAllTransactionModelV2.create(transactionData)
+  } catch (err: any) {
+    // E11000 = duplicate key (same signature+type already stored by another whale/job)
+    if (err?.code === 11000) {
+      logger.info(
+        pc.yellow(
+          `Duplicate (signature=${signature.slice(0, 12)}… type=${typeValue}) — already stored, skipping`,
+        ),
+      )
+      if (session) {
+        const dupErr = new Error('DUPLICATE_KEY') as Error & { code?: number; isDuplicateKey?: boolean }
+        dupErr.code = 11000
+        ;(dupErr as any).isDuplicateKey = true
+        throw dupErr
+      }
+      return
+    }
+    throw err
+  }
+
   // Extract the document (create with session returns an array)
   const transactionDoc = Array.isArray(savedTransaction) ? savedTransaction[0] : savedTransaction
-  
+
   logger.info(
     pc.green('✅ Stored whale transaction in MongoDB with enhanced V2 fields'),
   )
@@ -2520,6 +2773,71 @@ const processSignaturesInChunks = async (limit: any) => {
   }
 
   logger.info(`🎉 All chunks completed. Total processed: ${processedCount}`)
+}
+
+/** JIT-enrich token metadata (symbol, name, image) from Birdeye when missing or Unknown (whale stream) */
+const whaleMetadataCache = new Map<string, { symbol: string; name: string; imageUrl: string | null }>()
+const WHALE_META_TS = new Map<string, number>()
+const WHALE_META_TTL = 5 * 60 * 1000
+
+async function enrichWhaleTransactionTokens(
+  tx: any,
+  cache?: Map<string, { symbol: string; name: string; imageUrl: string | null }>,
+): Promise<void> {
+  const now = Date.now()
+  const getOrFetch = async (address: string): Promise<{ symbol: string; name: string; imageUrl: string | null } | null> => {
+    if (!address) return null
+    if (cache?.get(address)) return cache.get(address)!
+    const ts = WHALE_META_TS.get(address)
+    if (ts != null && now - ts < WHALE_META_TTL) {
+      const c = whaleMetadataCache.get(address)
+      if (c) return c
+    }
+    const meta = await getTokenMetadataAndImage(address)
+    if (meta) {
+      cache?.set(address, meta)
+      whaleMetadataCache.set(address, meta)
+      WHALE_META_TS.set(address, now)
+    }
+    return meta ?? null
+  }
+  const needs = (sym: string | undefined, name: string | undefined, img: string | null | undefined) =>
+    !sym || sym === 'Unknown' || !name || name === 'Unknown' || !img || img === ''
+
+  if (tx?.transaction?.tokenOut) {
+    const addr = tx.transaction.tokenOut.address || tx.tokenOutAddress
+    const sym = tx.transaction.tokenOut.symbol ?? tx.tokenOutSymbol
+    const name = tx.transaction.tokenOut.name ?? tx.tokenOutName
+    const img = tx.transaction.tokenOut.imageUrl ?? tx.outTokenURL
+    if (addr && needs(sym, name, img)) {
+      const meta = await getOrFetch(addr)
+      if (meta) {
+        tx.transaction.tokenOut.symbol = meta.symbol
+        tx.transaction.tokenOut.name = meta.name
+        tx.transaction.tokenOut.imageUrl = meta.imageUrl
+        tx.tokenOutSymbol = meta.symbol
+        if (tx.tokenOutName != null) tx.tokenOutName = meta.name
+        tx.outTokenURL = meta.imageUrl
+      }
+    }
+  }
+  if (tx?.transaction?.tokenIn) {
+    const addr = tx.transaction.tokenIn.address || tx.tokenInAddress
+    const sym = tx.transaction.tokenIn.symbol ?? tx.tokenInSymbol
+    const name = tx.transaction.tokenIn.name ?? tx.tokenInName
+    const img = tx.transaction.tokenIn.imageUrl ?? tx.inTokenURL
+    if (addr && needs(sym, name, img)) {
+      const meta = await getOrFetch(addr)
+      if (meta) {
+        tx.transaction.tokenIn.symbol = meta.symbol
+        tx.transaction.tokenIn.name = meta.name
+        tx.transaction.tokenIn.imageUrl = meta.imageUrl
+        tx.tokenInSymbol = meta.symbol
+        if (tx.tokenInName != null) tx.tokenInName = meta.name
+        tx.inTokenURL = meta.imageUrl
+      }
+    }
+  }
 }
 
 // ******************   GET all whale transactions  *********************
@@ -2988,6 +3306,12 @@ export const getAllWhaleTransactions = async (
         .lean(),
       whaleAllTransactionModelV2.countDocuments(filterQuery),
     ])
+
+    // JIT-enrich token metadata (symbol, name, image) from Birdeye when missing/Unknown
+    const enrichCache = new Map<string, { symbol: string; name: string; imageUrl: string | null }>()
+    await Promise.all(
+      (transactions as any[]).map((tx) => enrichWhaleTransactionTokens(tx, enrichCache)),
+    )
 
     // Enhance transactions with image URLs for better search suggestions
     const enhancedTransactions = transactions.map((tx: any) => ({

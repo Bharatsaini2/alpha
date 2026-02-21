@@ -17,7 +17,10 @@
 // ============================================================================
 
 /**
- * Token balance change record from SHYFT API
+ * Token balance change record from SHYFT API (or Helius adapter).
+ * When the upstream (e.g. SHYFT) provides symbol/name, we use it; otherwise
+ * the parser uses getSymbolForMint (SOL/USDC/USDT or shortened). Helius does
+ * NOT return token symbol/name – we backfill via Birdeye in resolveSymbol().
  */
 export interface TokenBalanceChange {
   address: string
@@ -27,6 +30,9 @@ export interface TokenBalanceChange {
   pre_balance: number
   mint: string
   owner: string
+  /** Optional: set by SHYFT (or other sources); when missing we use Birdeye/fallback in the controller */
+  symbol?: string
+  name?: string
 }
 
 /**

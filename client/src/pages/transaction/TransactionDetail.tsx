@@ -469,26 +469,23 @@ const TransactionDetail = () => {
     let solValue = "0"
     
     if (isBuy) {
-      // For buy transactions, show SOL spent (tokenIn)
-      // Check if buySolAmount exists and is not null
-      if (transactionData.solAmount?.buySolAmount != null && transactionData.solAmount.buySolAmount !== "null") {
-        const parsed = parseFloat(transactionData.solAmount.buySolAmount)
+      // For buy: SOL spent = sellSolAmount (user spent SOL to buy token). buySolAmount is the token side (often 0).
+      if (transactionData.solAmount?.sellSolAmount != null && transactionData.solAmount.sellSolAmount !== "null") {
+        const parsed = parseFloat(transactionData.solAmount.sellSolAmount)
         if (!isNaN(parsed)) {
           solValue = parsed.toFixed(4)
         }
       }
-      
-      // Fallback 1: If tokenIn is SOL/WSOL, use its amount
+      if (solValue === "0" && transactionData.solAmount?.buySolAmount != null && transactionData.solAmount.buySolAmount !== "null") {
+        const parsed = parseFloat(transactionData.solAmount.buySolAmount)
+        if (!isNaN(parsed) && parsed > 0) solValue = parsed.toFixed(4)
+      }
       if (solValue === "0" && (transactionData.transaction?.tokenIn?.symbol === "SOL" || transactionData.transaction?.tokenIn?.symbol === "WSOL")) {
         solValue = parseFloat(transactionData.transaction.tokenIn.amount || "0").toFixed(4)
       }
-      
-      // Fallback 2: If tokenOut is SOL/WSOL (shouldn't happen in buy, but check anyway), use its amount
       if (solValue === "0" && (transactionData.transaction?.tokenOut?.symbol === "SOL" || transactionData.transaction?.tokenOut?.symbol === "WSOL")) {
         solValue = parseFloat(transactionData.transaction.tokenOut.amount || "0").toFixed(4)
       }
-      
-      // Fallback 3: Only derive SOL from USD when we have real SOL price from API (no hardcoded guess)
       if (solValue === "0" && transactionData.transaction?.tokenOut?.usdAmount) {
         const usdAmount = parseFloat(transactionData.transaction.tokenOut.usdAmount)
         const solPrice = transactionData.tokenPrice?.solPrice
@@ -499,26 +496,23 @@ const TransactionDetail = () => {
         }
       }
     } else {
-      // For sell transactions, show SOL received (tokenOut)
-      // Check if sellSolAmount exists and is not null
-      if (transactionData.solAmount?.sellSolAmount != null && transactionData.solAmount.sellSolAmount !== "null") {
-        const parsed = parseFloat(transactionData.solAmount.sellSolAmount)
+      // For sell: SOL received = buySolAmount (user received SOL for token). sellSolAmount is the token side (often 0).
+      if (transactionData.solAmount?.buySolAmount != null && transactionData.solAmount.buySolAmount !== "null") {
+        const parsed = parseFloat(transactionData.solAmount.buySolAmount)
         if (!isNaN(parsed)) {
           solValue = parsed.toFixed(4)
         }
       }
-      
-      // Fallback 1: If tokenOut is SOL/WSOL, use its amount
+      if (solValue === "0" && transactionData.solAmount?.sellSolAmount != null && transactionData.solAmount.sellSolAmount !== "null") {
+        const parsed = parseFloat(transactionData.solAmount.sellSolAmount)
+        if (!isNaN(parsed) && parsed > 0) solValue = parsed.toFixed(4)
+      }
       if (solValue === "0" && (transactionData.transaction?.tokenOut?.symbol === "SOL" || transactionData.transaction?.tokenOut?.symbol === "WSOL")) {
         solValue = parseFloat(transactionData.transaction.tokenOut.amount || "0").toFixed(4)
       }
-      
-      // Fallback 2: If tokenIn is SOL/WSOL (shouldn't happen in sell, but check anyway), use its amount
       if (solValue === "0" && (transactionData.transaction?.tokenIn?.symbol === "SOL" || transactionData.transaction?.tokenIn?.symbol === "WSOL")) {
         solValue = parseFloat(transactionData.transaction.tokenIn.amount || "0").toFixed(4)
       }
-      
-      // Fallback 3: Only derive SOL from USD when we have real SOL price from API (no hardcoded guess)
       if (solValue === "0" && transactionData.transaction?.tokenIn?.usdAmount) {
         const usdAmount = parseFloat(transactionData.transaction.tokenIn.usdAmount)
         const solPrice = transactionData.tokenPrice?.solPrice

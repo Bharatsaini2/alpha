@@ -49,7 +49,6 @@ export interface ShyftTransactionV2 {
   signature: string
   timestamp: number
   status: string
-  type?: string  // Transaction type from Shyft (e.g., SWAP, CHECKANDSETSEQUENCENUMBER, etc.)
   fee: number
   fee_payer: string
   signers: string[]
@@ -211,46 +210,6 @@ export class ShyftParserV2 {
           tx,
           'transaction_failed',
           {},
-          Date.now() - startTime,
-          perfTracker
-        )
-      }
-
-      // Transaction type gate - reject known non-swap transaction types
-      // Instead of whitelisting swap types (which may miss new DEXs),
-      // we blacklist known non-swap types
-      const nonSwapTypes = [
-        'CHECKANDSETSEQUENCENUMBER',
-        'COMPUTE_BUDGET',
-        'SET_COMPUTE_UNIT_LIMIT',
-        'SET_COMPUTE_UNIT_PRICE',
-        'CREATE_ACCOUNT',
-        'INITIALIZE_ACCOUNT',
-        'CLOSE_ACCOUNT',
-        'TOKEN_TRANSFER',
-        'TRANSFER',
-        'NFT_MINT',
-        'NFT_BURN',
-        'NFT_TRANSFER',
-        'STAKE',
-        'UNSTAKE',
-        'VOTE',
-        'WITHDRAW',
-        'DEPOSIT',
-        'CLAIM',
-        'APPROVE',
-        'REVOKE'
-      ]
-      
-      if (tx.type && nonSwapTypes.includes(tx.type)) {
-        logger.info(
-          { signature: tx.signature, type: tx.type },
-          'ShyftParserV2: Transaction type is non-swap, returning ERASE'
-        )
-        return this.createEraseResult(
-          tx,
-          'non_swap_transaction_type',
-          { transactionType: tx.type },
           Date.now() - startTime,
           perfTracker
         )
@@ -765,12 +724,12 @@ export class ShyftParserV2 {
       timestamp: tx.timestamp,
       swapper,
       direction: 'SELL',
-      baseAsset: {
+      quoteAsset: {
         mint: outgoingToken.mint,
         symbol: outgoingToken.symbol,
         decimals: outgoingToken.decimals,
       },
-      quoteAsset: {
+      baseAsset: {
         mint: incomingToken.mint,
         symbol: incomingToken.symbol,
         decimals: incomingToken.decimals,
@@ -797,12 +756,12 @@ export class ShyftParserV2 {
       timestamp: tx.timestamp,
       swapper,
       direction: 'BUY',
-      baseAsset: {
+      quoteAsset: {
         mint: incomingToken.mint,
         symbol: incomingToken.symbol,
         decimals: incomingToken.decimals,
       },
-      quoteAsset: {
+      baseAsset: {
         mint: outgoingToken.mint,
         symbol: outgoingToken.symbol,
         decimals: outgoingToken.decimals,
@@ -862,48 +821,15 @@ export class ShyftParserV2 {
       return { isTransfer: false }
     }
     
-    // Check 2: Only transfer actions (IMPROVED - ignore empty and non-swap protocol actions)
-    // Filter out empty actions and non-swap protocol actions
-    const meaningfulActions = actions.filter(action => {
-      // Keep if it has a type
-      if (!action.type || action.type === '') return false
-      
-      // These are protocol/sequence actions, not swap-related
-      const nonSwapProtocolActions = [
-        'CHECKANDSETSEQUENCENUMBER',
-        'COMPUTE_BUDGET',
-        'SET_COMPUTE_UNIT_LIMIT',
-        'SET_COMPUTE_UNIT_PRICE',
-        'CREATE_ACCOUNT',
-        'INITIALIZE_ACCOUNT',
-        'CLOSE_ACCOUNT'
-      ]
-      
-      if (nonSwapProtocolActions.includes(action.type)) return false
-      
-      return true
-    })
-    
-    const onlyTransferActions = meaningfulActions.length > 0 && meaningfulActions.every(action =>
+    // Check 2: Only transfer actions
+    const onlyTransferActions = actions.length > 0 && actions.every(action =>
       action.type === 'TOKEN_TRANSFER' ||
       action.type === 'SOL_TRANSFER' ||
       action.type === 'TRANSFER'
     )
     
     if (onlyTransferActions) {
-      logger.info(
-        { 
-          swapper,
-          totalActions: actions.length,
-          meaningfulActions: meaningfulActions.length,
-          transferActions: meaningfulActions.filter(a => 
-            a.type === 'TOKEN_TRANSFER' || 
-            a.type === 'SOL_TRANSFER' || 
-            a.type === 'TRANSFER'
-          ).length
-        }, 
-        'Transfer detection: Only transfer actions detected (ignoring protocol actions)'
-      )
+      logger.debug({ swapper }, 'Transfer detection: Only transfer actions detected')
       return { 
         isTransfer: true, 
         reason: 'only_transfer_actions',
@@ -1347,9 +1273,13 @@ export function createShyftParserV2(): ShyftParserV2 {
 }
 
 /**
- * Convenience function to parse a single transaction
+ * Convenience function to parse a single transaction.
+ * Options (e.g. hintSwapper) accepted for API compatibility; this parser version ignores them.
  */
-export function parseShyftTransactionV2(tx: ShyftTransactionV2): ParserResult {
+export function parseShyftTransactionV2(
+  tx: ShyftTransactionV2,
+  _options?: { hintSwapper?: string }
+): ParserResult {
   const parser = createShyftParserV2()
   return parser.parseTransaction(tx)
 }

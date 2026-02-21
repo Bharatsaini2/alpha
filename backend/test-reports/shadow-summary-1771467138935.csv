@@ -1,0 +1,15 @@
+metric,value
+total_transactions,16
+v2_success,5
+v3_success,10
+v2_success_rate,31.3%
+v3_success_rate,62.5%
+v2_erase_rate,68.8%
+v3_erase_rate,37.5%
+both_success,5
+direction_match_rate,100.0%
+v3_only_success (V3 recovered),5
+v2_only_success (V3 missed),0
+both_erase,6
+running_seconds,30
+csv_detail_file,C:\Users\PIYUSH\Documents\whalte-tracker\alpha-tracker-ai\backend\test-reports\shadow-v2-vs-v3-1771467115434.csv

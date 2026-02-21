@@ -14,13 +14,13 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 
 // Import models
-const { UserAlert } = require('./dist/src/models/userAlert.model');
-const { User } = require('./dist/src/models/user.model');
-const whaleAllTransactionModelV2 = require('./dist/src/models/whaleAllTransactionsV2.model').default;
+const { UserAlert } = require('./dist/models/userAlert.model');
+const { User } = require('./dist/models/user.model');
+const whaleAllTransactionModelV2 = require('./dist/models/whaleAllTransactionsV2.model').default;
 
 // Import services
-const { alertMatcherService } = require('./dist/src/services/alertMatcher.service');
-const { telegramService } = require('./dist/src/services/telegram.service');
+const { alertMatcherService } = require('./dist/services/alertMatcher.service');
+const { telegramService } = require('./dist/services/telegram.service');
 
 // Colors for console output
 const colors = {
@@ -56,8 +56,6 @@ async function connectDatabase() {
     
     await mongoose.connect(mongoURI, {
       maxPoolSize: 30,
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
     });
     
     log('✅', colors.green, 'Database connected successfully');

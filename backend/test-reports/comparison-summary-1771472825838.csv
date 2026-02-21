@@ -1,0 +1,19 @@
+category,metric,whale,kol,combined
+counts,total_transactions,97,114,211
+counts,v2_success,5,46,51
+counts,v3_success,16,47,63
+counts,v2_erase,92,68,160
+counts,v3_erase,81,67,148
+rates,v2_success_rate,5.2%,40.4%,24.2%
+rates,v3_success_rate,16.5%,41.2%,29.9%
+rates,v2_erase_rate,94.8%,59.6%,75.8%
+rates,v3_erase_rate,83.5%,58.8%,70.1%
+verdicts,MATCH (both agree),5,45,50
+verdicts,DIFF (disagree on dir/amount),0,0,0
+verdicts,V3_RECOVERED (V3 wins V2 erased),11,2,13
+verdicts,V3_MISSED (V2 ok V3 erased),0,1,1
+verdicts,BOTH_ERASE,81,66,147
+meta,duration_seconds,300,300,300
+meta,total_processed,97,114,211
+meta,queue_remaining,2,2,2
+winner,V3_net_wins (recovered - missed),11,1,12

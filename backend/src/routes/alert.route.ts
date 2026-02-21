@@ -2,6 +2,7 @@ import express from 'express'
 import {
   checkPremiumAccessStatus,
   createWhaleAlert,
+  createWhaleClusterAlert,
   getWhaleAlerts,
   deleteWhaleAlert,
   createKolAlert,
@@ -37,6 +38,9 @@ alertRouter.get('/premium-access', checkPremiumAccessStatus)
 
 // POST /api/v1/alerts/whale-alert - Create or update whale alert subscription
 alertRouter.post('/whale-alert', createWhaleAlert)
+
+// POST /api/v1/alerts/whale-cluster - Create or update Whale Cluster alert (Telegram + premium required)
+alertRouter.post('/whale-cluster', createWhaleClusterAlert)
 
 // GET /api/v1/alerts/whale-alerts - Get user's whale alert subscriptions
 alertRouter.get('/whale-alerts', getWhaleAlerts)

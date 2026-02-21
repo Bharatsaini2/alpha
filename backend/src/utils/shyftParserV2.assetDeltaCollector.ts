@@ -74,10 +74,11 @@ export class AssetDeltaCollectorImpl implements AssetDeltaCollector {
       const { mint, change_amount, decimals } = change
 
       if (!deltaMap[mint]) {
-        // Initialize new asset entry
+        // Use symbol from balance change when present (e.g. SHYFT); else getSymbolForMint (Helius has no symbol)
+        const symbolFromChange = this.getSymbolFromChange(change)
         deltaMap[mint] = {
           mint,
-          symbol: this.getSymbolForMint(mint),
+          symbol: symbolFromChange || this.getSymbolForMint(mint),
           netDelta: 0,
           decimals,
           isIntermediate: false,
@@ -338,11 +339,20 @@ export class AssetDeltaCollectorImpl implements AssetDeltaCollector {
   }
 
   /**
-   * Get symbol for a mint address
-   * 
-   * This is a simplified implementation that returns known symbols.
-   * In production, this would query a token metadata service.
-   * 
+   * Use symbol from balance change when upstream (e.g. SHYFT) provides it.
+   * Helius does not include symbol in token balance changes.
+   */
+  private getSymbolFromChange(change: TokenBalanceChange): string | null {
+    const s = (change as TokenBalanceChange & { symbol?: string }).symbol
+    if (typeof s === 'string' && s.trim().length > 0 && !s.includes('...')) return s.trim()
+    return null
+  }
+
+  /**
+   * Get symbol for a mint address when not provided by upstream.
+   * Only knows SOL/USDC/USDT; others get shortened. Controllers backfill
+   * real symbol/name via Birdeye (getTokenMetaDataUsingRPC in resolveSymbol).
+   *
    * @param mint - Token mint address
    * @returns Token symbol or shortened mint address
    */

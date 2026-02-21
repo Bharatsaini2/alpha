@@ -25,6 +25,10 @@ export interface AlertConfig {
   tokens?: string[]
   wallets?: string[]
   minClusterSize?: number
+  /** Time window in minutes for whale cluster (e.g. 15 for 15m). Default 15. */
+  timeWindowMinutes?: number
+  /** Minimum total buy volume in USD for cluster to trigger. */
+  minInflowUSD?: number
   kolIds?: string[]
   // Whale alert specific config
   hotnessScoreThreshold?: number

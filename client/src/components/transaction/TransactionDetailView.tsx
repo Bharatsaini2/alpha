@@ -419,7 +419,7 @@ const TransactionDetailView: React.FC<TransactionDetailViewProps> = ({
                     <div className="table-row">
                         <span className="row-label">GAS FEE</span>
                         <span className="row-value">
-                            ${parseFloat(data.transaction.gasFee).toFixed(6)}
+                            ${Number(data.transaction.gasFee).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                         </span>
                     </div>
 

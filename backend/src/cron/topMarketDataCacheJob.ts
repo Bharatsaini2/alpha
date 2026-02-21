@@ -7,7 +7,7 @@ import { TOKEN_MARKET_KEY } from '../config/redis'
 import { PublicKey } from '@solana/web3.js'
 import { redisClient } from '../config/redis'
 
-const CRON_SCHEDULE = process.env.TOP_MARKET_CACHE_CRON || '0 */3 * * *'
+const CRON_SCHEDULE = process.env.TOP_MARKET_CACHE_CRON || '0 */6 * * *'
 const TTL_SECONDS = Number(process.env.TOP_MARKET_CACHE_TTL_SECONDS || 10800)
 const CONCURRENCY = Number(process.env.TOP_MARKET_CACHE_CONCURRENCY || 8)
 
@@ -40,7 +40,7 @@ const uniqueNonEmpty = (items: (string | undefined | null)[]): string[] => {
 }
 
 async function collectUniqueTokenAddresses(): Promise<string[]> {
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const since = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) // last 1 day
   console.log(
     '🔍 Collecting unique token addresses since:',
     since.toISOString(),
@@ -154,30 +154,37 @@ async function refreshMarketCache() {
   console.log(`📊 Actual API calls made: ${success + failure}`)
 }
 
-// Schedule - Every 3 hours (as per original architecture)
-const cronJob = cron.schedule(
-  CRON_SCHEDULE,
-  async () => {
-    try {
-      await refreshMarketCache()
-    } catch (e) {
-      console.error('❌ Market data cache cron failed:', e)
-    }
-  },
-  { timezone: 'UTC' },
-)
+// Optional: disable to save BirdEye credits (Top Coins pages will use 0/stale price from Redis)
+const birdEyeCronsDisabled = process.env.DISABLE_BIRD_EYE_CRONS === 'true' || process.env.DISABLE_BIRD_EYE_CRONS === '1'
 
-// Register with process manager when available
-try {
-  const { registerCron } = require('../config/processManager')
-  registerCron(
-    'top-market-data-cache',
-    'Cache price/marketCap for tokens (Top Coins & Top KOL) every 3h',
-    cronJob,
+let cronJob: cron.ScheduledTask | null = null
+if (!birdEyeCronsDisabled) {
+  // Schedule - Every 6 hours (tokens from last 1 day only)
+  cronJob = cron.schedule(
+    CRON_SCHEDULE,
+    async () => {
+      try {
+        await refreshMarketCache()
+      } catch (e) {
+        console.error('❌ Market data cache cron failed:', e)
+      }
+    },
+    { timezone: 'UTC' },
   )
-  console.log('🗓️  Registered top-market-data-cache cron with process manager')
-} catch (err) {
-  console.warn('⚠️ Could not register top-market-data-cache cron:', err)
+  // Register with process manager when available
+  try {
+    const { registerCron } = require('../config/processManager')
+    registerCron(
+      'top-market-data-cache',
+      'Cache price/marketCap for tokens (Top Coins & Top KOL) every 6h',
+      cronJob,
+    )
+    console.log('🗓️  Registered top-market-data-cache cron with process manager')
+  } catch (err) {
+    console.warn('⚠️ Could not register top-market-data-cache cron:', err)
+  }
+} else {
+  console.log('⏸️  top-market-data-cache cron disabled (DISABLE_BIRD_EYE_CRONS)')
 }
 
 // Allow manual trigger for debugging

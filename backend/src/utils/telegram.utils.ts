@@ -64,12 +64,12 @@ export function generateTransactionLink(txHash: string): string {
 }
 
 /**
- * Generates a Solscan token link
+ * Generates a DexScreener token link (used for all alerts: whale, cluster, KOL, KOL profile)
  * @param tokenAddress - The token contract address
- * @returns Solscan token URL
+ * @returns DexScreener token URL
  */
 export function generateTokenLink(tokenAddress: string): string {
-  return `https://solscan.io/token/${tokenAddress}`
+  return `https://dexscreener.com/solana/${tokenAddress}`
 }
 
 /**
@@ -191,7 +191,7 @@ export function formatClusterAlert(
 
 *Token:* \`${tokenShortEscaped}\`
 
-[View on Solscan](${tokenLink})`
+[View on DexScreener](${tokenLink})`
 }
 
 /**
@@ -240,29 +240,34 @@ export function formatKOLAlert(
   const formattedUSD = formatLargeNumber(usdAmountNum)
   const formattedMCap = formatLargeNumber(marketCap)
 
-  const txType = tx.type.toUpperCase()
-  const amount =
-    tx.type === 'sell'
-      ? tx.transaction.tokenIn.amount || '0'
-      : tx.transaction.tokenOut.amount || '0'
-  const usdValue = usdAmount || '0'
-
-  // Generate X/Twitter profile link if username is provided
+  // KOL Activity alerts are only sent for buy transactions (sell is skipped in matcher)
   const xLink = kolUsername ? `https://x.com/${kolUsername}` : null
   const kolDisplay = xLink
     ? `[${escapeMarkdownV2(kol)}](${xLink})`
     : escapeMarkdownV2(kol)
 
-  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=${tx.type}`
+  const hotnessScoreNum = Number((tx as any).hotnessScore) || 0
+  const hotnessScore =
+    hotnessScoreNum % 1 === 0 ? hotnessScoreNum.toFixed(0) : hotnessScoreNum.toFixed(1)
+  const timestamp = tx.timestamp ? new Date(tx.timestamp) : new Date()
+  const timeStr = `${timestamp.getUTCHours().toString().padStart(2, '0')}:${timestamp.getUTCMinutes().toString().padStart(2, '0')} UTC`
+
+  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=buy`
   const tokenLink = generateTokenLink(tokenAddress)
 
-  return `⭐ *KOL Activity Alert*
+  return `*KOL Buy Alert* 👤
 
-*Influencer:* ${kolDisplay}
+*KOL:* ${kolDisplay}
+
 *Token:* ${escapeMarkdownV2(tokenName)} \\(${escapeMarkdownV2(tokenSymbol)}\\)
-*Type:* ${txType}
-*Amount:* ${escapeMarkdownV2(amount)}
-*USD Value:* ${escapeMarkdownV2(usdValue)}
+*Chain:* Solana
+*CA:* \`${escapeMarkdownV2(tokenAddress)}\`
+*MCAP:* $${escapeMarkdownV2(formattedMCap)}
+
+💰 *Buy Amount:* $${escapeMarkdownV2(formattedUSD)}
+🔥 *Hotness Score:* ${escapeMarkdownV2(hotnessScore)}
+
+*Transaction Time:* ${escapeMarkdownV2(timeStr)}
 
 🔗 [View Transaction](${appTxLink}) \\| [View Token](${tokenLink})
 `
@@ -290,21 +295,12 @@ export function formatKOLProfileAlert(
   let tokenAddress: string
   let usdAmount: string
   let marketCap: number
-  const isBuy = tx.type === 'buy'
-
-  if (isBuy) {
-    tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenOut.symbol || 'Unknown'
-    tokenName = tx.transaction.tokenOut.name || tokenSymbol
-    tokenAddress = tx.transaction.tokenOut.address
-    usdAmount = tx.transaction.tokenOut.usdAmount || '0'
-    marketCap = parseFloat(tx.transaction.tokenOut.marketCap || tx.marketCap?.buyMarketCap || '0')
-  } else {
-    tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenIn.symbol || 'Unknown'
-    tokenName = tx.transaction.tokenIn.name || tokenSymbol
-    tokenAddress = tx.transaction.tokenIn.address
-    usdAmount = tx.transaction.tokenIn.usdAmount || '0'
-    marketCap = parseFloat(tx.transaction.tokenIn.marketCap || tx.marketCap?.sellMarketCap || '0')
-  }
+  // KOL Profile alerts are only sent for buy transactions (sell is skipped in matcher)
+  tokenSymbol = resolvedTokenSymbol || tx.transaction.tokenOut.symbol || 'Unknown'
+  tokenName = tx.transaction.tokenOut.name || tokenSymbol
+  tokenAddress = tx.transaction.tokenOut.address
+  usdAmount = tx.transaction.tokenOut.usdAmount || '0'
+  marketCap = parseFloat(tx.transaction.tokenOut.marketCap || tx.marketCap?.buyMarketCap || '0')
 
   const usdAmountNum = parseFloat(usdAmount)
   const formattedUSD = formatLargeNumber(usdAmountNum)
@@ -326,19 +322,19 @@ export function formatKOLProfileAlert(
     ? `[${escapeMarkdownV2(kolName)}](${xLink})`
     : escapeMarkdownV2(kolName)
 
-  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=${isBuy ? 'buy' : 'sell'}`
-    const tokenLink = generateTokenLink(tokenAddress)
+  const appTxLink = `https://app.alpha-block.ai/transaction/${tx.signature}?type=kol&transaction=buy`
+  const tokenLink = generateTokenLink(tokenAddress)
 
-  return `🎯 *KOL Profile ${isBuy ? 'Buy' : 'Sell'} Alert*
+  return `🎯 *KOL Profile Buy Alert*
 
 👤 *KOL:* ${kolDisplay}
 
 🪙 *Token:* ${escapeMarkdownV2(tokenName)} \\(${escapeMarkdownV2(tokenSymbol)}\\)
 ⛓️ *Chain:* Solana
-📝 *CA:* \`${tokenAddress}\`
-💰 *MCAP:* ${escapeMarkdownV2(formattedMCap)}
+📝 *CA:* \`${escapeMarkdownV2(tokenAddress)}\`
+💰 *MCAP:* $${escapeMarkdownV2(formattedMCap)}
 
-💵 *${isBuy ? 'Buy' : 'Sell'} Amount:* ${escapeMarkdownV2(formattedUSD)}
+💵 *Buy Amount:* $${escapeMarkdownV2(formattedUSD)}
 🔥 *Hotness Score:* ${escapeMarkdownV2(hotnessScore)}/10
 
 ⏰ *Transaction Time:* ${escapeMarkdownV2(timeStr)}

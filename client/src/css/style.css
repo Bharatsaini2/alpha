@@ -2426,10 +2426,11 @@ font-size: 16px;
   }
 }
 
-/* Coppied Addres */
+/* Coppied Addres / Toast – matches site bg #0a0a0a, sleeker */
 .coppied-address {
-  border: 1px solid #525252;
-  padding: 8px 16px;
+  border: 1px solid #1f1f1f;
+  padding: 6px 12px;
+  background-color: #0a0a0a;
 }
 
 .coppied-icon {
@@ -2534,10 +2535,8 @@ font-size: 16px;
 
 /* Warning Toast (Bigger) */
 .toast-warning {
-  padding: 12px 20px;
-  /* Increased padding */
+  padding: 8px 14px;
   font-size: 14px;
-  /* Increased font size */
 }
 
 .toast-warning p {
@@ -2547,10 +2546,8 @@ font-size: 16px;
 
 /* Wallet Toast (Smaller) */
 .toast-wallet {
-  padding: 6px 12px;
-  /* Decreased padding */
+  padding: 6px 10px;
   max-width: 350px;
-  /* constrain width */
 }
 
 .toast-wallet p {

@@ -113,9 +113,9 @@ const influencerWhaleAddressSchemaV2 =
 
       transaction: {
         tokenIn: {
-          symbol: { type: String, index: true },
+          symbol: { type: String },
           name: String,
-          address: { type: String, index: true },
+          address: { type: String },
           amount: String,
           usdAmount: String, // USD amount for tokenIn
           marketCap: String,
@@ -123,9 +123,9 @@ const influencerWhaleAddressSchemaV2 =
           imageUrl: String,
         },
         tokenOut: {
-          symbol: { type: String, index: true },
+          symbol: { type: String },
           name: String,
-          address: { type: String, index: true },
+          address: { type: String },
           amount: String,
           usdAmount: String, // USD amount for tokenOut
           marketCap: String,
@@ -133,7 +133,7 @@ const influencerWhaleAddressSchemaV2 =
           imageUrl: String,
         },
         gasFee: String,
-        platform: { type: String, index: true },
+        platform: { type: String },
         timestamp: Date,
       },
 
@@ -161,7 +161,6 @@ const influencerWhaleAddressSchemaV2 =
       timestamp: {
         type: Date,
         default: Date.now,
-        index: true,
       },
 
       age: Date,

@@ -286,14 +286,21 @@ export class CoreTokenSuppressionServiceImpl implements CoreTokenSuppressionServ
 let suppressionServiceInstance: CoreTokenSuppressionServiceImpl | null = null
 
 /**
- * Get or create the global core token suppression service instance
+ * Get or create the global core token suppression service instance.
+ * If the instance already exists and this call passes enabled: true, suppression is turned on
+ * (avoids SOL/USDC etc. showing when another caller created the singleton with no args).
  */
 export function getCoreTokenSuppressionService(
   initialCoreTokens?: string[],
   enabled?: boolean
 ): CoreTokenSuppressionServiceImpl {
   if (!suppressionServiceInstance) {
-    suppressionServiceInstance = new CoreTokenSuppressionServiceImpl(initialCoreTokens, enabled)
+    suppressionServiceInstance = new CoreTokenSuppressionServiceImpl(
+      initialCoreTokens,
+      enabled === true
+    )
+  } else if (enabled === true) {
+    suppressionServiceInstance.setEnabled(true)
   }
   return suppressionServiceInstance
 }

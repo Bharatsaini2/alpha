@@ -2,10 +2,7 @@ const mongoose = require('mongoose');
 require('dotenv').config({ path: './.env' });
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log('✅ Connected to MongoDB'))
 .catch(err => {
   console.error('❌ MongoDB connection error:', err);
@@ -13,7 +10,7 @@ mongoose.connect(process.env.MONGO_URI, {
 });
 
 // Import the AlertMatcherService
-const { alertMatcherService } = require('./dist/src/services/alertMatcher.service');
+const { alertMatcherService } = require('./dist/services/alertMatcher.service');
 
 // Define schemas
 const whaleTransactionSchema = new mongoose.Schema({}, { strict: false });

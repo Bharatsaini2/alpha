@@ -51,7 +51,7 @@ const walletTradeSchema = new Schema<IWalletTrade>(
       enum: ['confirmed', 'pending'],
       default: 'confirmed',
     },
-    timestamp: { type: Date, required: true, index: true },
+    timestamp: { type: Date, required: true },
     createdAt: { type: Date, default: Date.now },
 
     // PNL Calculation Fields
@@ -60,8 +60,8 @@ const walletTradeSchema = new Schema<IWalletTrade>(
     costBasis: { type: Number },
     remainingBalance: { type: Number },
 
-    // Reference to buy transaction
-    buySignature: { type: String, index: true },
+    // Reference to buy transaction (indexed via schema.index below)
+    buySignature: { type: String },
   },
   { timestamps: true },
 )

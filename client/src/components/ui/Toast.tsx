@@ -38,10 +38,12 @@ const Toast: React.FC<ToastProps> = ({
         }
     }, [id, duration, onClose])
 
+    const toastBg = { backgroundColor: "#0a0a0a", borderColor: "#1f1f1f" }
+
     // Custom rendering for "wallet" variant or others if needed
     if (variant === "wallet") {
         return (
-            <div className="coppied-address toast-wallet">
+            <div className="coppied-address toast-wallet" style={toastBg}>
                 <div className="coppied-content">
                     {options?.icon && (
                         <img src={options.icon} alt="icon" className="w-6 h-6 rounded-full" />
@@ -62,7 +64,7 @@ const Toast: React.FC<ToastProps> = ({
 
     // Default implementation (handles "default", "simple", "standard", etc.)
     return (
-        <div className="coppied-address toast-warning">
+        <div className="coppied-address toast-warning" style={toastBg}>
             <div className="coppied-content">
                 <span className="coppied-icon"><FaRegCheckSquare /></span>
                 <p>{message}</p>
@@ -126,11 +128,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             {children}
             {createPortal(
                 <div
-                    className="
-            fixed bottom-5 right-5 z-[10000]
-            flex flex-col items-end space-y-2
-            pointer-events-none
-          "
+                    className="fixed bottom-5 right-5 flex flex-col items-end space-y-2 pointer-events-none"
+                    style={{ zIndex: 1000000 }}
                 >
                     <AnimatePresence>
                         {toasts.map((toast) => {

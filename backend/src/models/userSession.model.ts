@@ -50,10 +50,8 @@ const UserSessionSchema = new Schema<IUserSession>(
   },
 )
 
-// Indexes for efficient queries
+// Indexes for efficient queries (refreshTokenHash and expiresAt already indexed via unique/TTL on field)
 UserSessionSchema.index({ userId: 1 })
-UserSessionSchema.index({ refreshTokenHash: 1 })
-UserSessionSchema.index({ expiresAt: 1 })
 
 export const UserSession = mongoose.model<IUserSession>(
   'UserSession',

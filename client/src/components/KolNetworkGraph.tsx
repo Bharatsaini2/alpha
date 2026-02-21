@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import {
   ReactFlow,
@@ -26,32 +26,37 @@ import {
 import "@xyflow/react/dist/style.css"
 import { motion } from "framer-motion"
 import { toPng, toSvg } from "html-to-image"
-import { CheckIcon, ChevronDown, X, RefreshCw, Save } from "lucide-react"
+import { CheckIcon, ChevronDown, X, RefreshCw, Save, Maximize2 } from "lucide-react"
 import axios from "axios"
 import CopyIcon from "../assets/Copy.svg"
 import ExternalLinkIcon from "../assets/ExternalLink.svg"
 import DefaultTokenImage from "../assets/default_token.svg"
 import solanalogo from "../assets/solana.svg"
-import whaleImage from "../assets/whale.png"
 import { applyForceLayout } from "../utils/ForceLayout"
-import ErrorPopup from "./ui/ErrorPopup"
+import { useNavigate } from "react-router-dom"
 import { useToast } from "../contexts/ToastContext"
+import { useAuth } from "../contexts/AuthContext"
+import { usePremiumAccess } from "../contexts/PremiumAccessContext"
 import { LastUpdatedTicker } from "./TicketComponent"
 import { useRandomBubbleAnimation } from "../hooks/useBubbleAnimation"
 import { SiTelegram } from "react-icons/si"
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
+import { faPaperPlane, faCheck, faClose } from "@fortawesome/free-solid-svg-icons"
+import MarketCapRangeSlider from "./MarketCapRangeSlider"
 
 interface Whale {
   id: string
   address: string
   buyVolume: number
+  // Optional influencer fields if API returns them, otherwise unused
   sellVolume: number
   lastAction: string
   trades: { type: string; amount: number; timestamp: string | number }[]
-  // Optional influencer fields if API returns them, otherwise unused
   influencerName?: string
   influencerUsername?: string
   influencerProfileImageUrl?: string
   influencerFollowerCount?: number
+  whaleLabel?: string[]
 }
 
 interface Coin {
@@ -78,129 +83,13 @@ const makeEdgeId = (
 ) => `edge_${coinId}_${whaleNodeId}_${type}_${ts}_${Math.round(amt * 1000)}`
 
 // -----------------------------
-// Tooltip Component
+// Custom Coin Node – same design as Whale visualize, label on hover
 // -----------------------------
-const Tooltip: React.FC<{
-  tooltip: any
-  showToast: (message: string, type: "success" | "error") => void
-}> = ({ tooltip, showToast }) => {
-  const [copiedField, setCopiedField] = useState<string | null>(null)
-  if (!tooltip) return null
-  const copyToClipboard = (text: string, field: string) => {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text)
-      } else {
-        const textArea = document.createElement("textarea")
-        textArea.value = text
-        textArea.style.position = "fixed"
-        textArea.style.left = "-999999px"
-        textArea.style.top = "-999999px"
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        document.execCommand("copy")
-        document.body.removeChild(textArea)
-      }
-
-      setCopiedField(field)
-      showToast("Address copied to clipboard!", "success")
-      setTimeout(() => setCopiedField(null), 2000)
-    } catch (error) {
-      console.error("Failed to copy to clipboard:", error)
-      showToast("Failed to copy address", "error")
-    }
-  }
-
-  return (
-    <>
-      {tooltip.nodeType === "whale" && (
-        <div className="text-white">
-          <div className="flex items-center flex-row space-x-3 ">
-            <div className="flex items-center space-x-2">
-              <span className="font-mono text-xs">
-                {tooltip.influencerName ? (
-                  <span className="font-bold">{tooltip.influencerName}</span>
-                ) : tooltip.address && tooltip.address.length > 8 ? (
-                  `${tooltip.address.slice(0, 4)}...${tooltip.address.slice(-4)}`
-                ) : (
-                  tooltip.address || "Unknown"
-                )}
-              </span>
-              <div className="flex items-center space-x-1">
-                {copiedField === "whaleAddress" ? (
-                  <CheckIcon className="w-2 h-2 md:w-3 md:h-3 text-green-500" />
-                ) : (
-                  <button
-                    onClick={() =>
-                      copyToClipboard(tooltip.address || "", "whaleAddress")
-                    }
-                    className=" cursor-pointer transition-colors"
-                  >
-                    <img
-                      src={CopyIcon}
-                      alt="Copy"
-                      className="w-2 h-2 md:w-3 md:h-3 "
-                    />
-                  </button>
-                )}
-
-                <a
-                  href={`https://solscan.io/address/${tooltip.address}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className=" hover:bg-[#2A2A2D] transition-colors"
-                >
-                  <img
-                    src={ExternalLinkIcon}
-                    alt="External Link"
-                    className="w-2 h-2 md:w-3 md:h-3 "
-                  />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center text-[10px] font-medium tracking-wide">
-            <span className="text-green-500 uppercase">Buys:</span>
-            <span className="text-white font-bold">
-              {tooltip.trades?.filter((t: any) => t.type === "buy").length || 0}
-              <span className="text-white ml-1 font-normal opacity-80">
-                ($
-                {Math.round(tooltip.totalBuyAmount || 0).toLocaleString()})
-              </span>
-            </span>
-          </div>
-          <div className="flex justify-between items-center text-[10px] font-medium tracking-wide">
-            <span className="text-red-500 uppercase">Sell:</span>
-            <span className="text-white font-bold">
-              {tooltip.trades?.filter((t: any) => t.type === "sell").length ||
-                0}
-              <span className="text-white ml-1 font-normal opacity-80">
-                ($
-                {Math.round(tooltip.totalSellAmount || 0).toLocaleString()})
-              </span>
-            </span>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-
-// -----------------------------
-// Custom Coin Node
-// -----------------------------
-const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
-  const [isHovered, setIsHovered] = useState(false)
+const CoinNode: React.FC<NodeProps> = ({ data, id }) => {
   const bubbleAnimation = useRandomBubbleAnimation()
   const updateNodeInternals = useUpdateNodeInternals()
   useEffect(() => {
-    // Throttle updates to avoid performance issues
-    const timeoutId = setTimeout(() => {
-      updateNodeInternals(id)
-    }, 100)
-
+    const timeoutId = setTimeout(() => updateNodeInternals(id), 100)
     return () => clearTimeout(timeoutId)
   }, [
     Math.round(bubbleAnimation.x / 5) * 5,
@@ -210,26 +99,13 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     id,
   ])
 
+  const symbol = ((data.symbol as string) || "Token").toUpperCase()
+  const buy = (data.totalBuyAmount as number) ?? 0
+  const sell = (data.totalSellAmount as number) ?? 0
+  const borderColor = buy >= sell ? "#06DF73" : "#df2a4e"
+
   return (
-    <motion.div
-      initial={{ scale: 0, opacity: 0 }}
-      className={`relative ${selected ? "ring-2 ring-[#06DF73]" : ""}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      animate={{
-        scale: isHovered ? 1.05 : 1 + bubbleAnimation.scale - 1,
-        opacity: 1,
-        borderRadius: "50%",
-        x: bubbleAnimation.x,
-        y: bubbleAnimation.y,
-        boxShadow: isHovered
-          ? "0 0 15px rgba(6, 223, 115, 0.6), 0 0 30px rgba(6, 223, 115, 0.4)"
-          : "0 4px 12px rgba(0, 0, 0, 0.2)",
-      }}
-      exit={{ scale: 0, opacity: 0 }}
-      transition={{ type: "spring", stiffness: 200, damping: 15 }}
-      style={{ borderRadius: "50%" }}
-    >
+    <div className="relative flex flex-col items-center w-[80px] min-h-[100px]">
       <Handle
         type="source"
         position={Position.Left}
@@ -238,75 +114,62 @@ const CoinNode: React.FC<NodeProps> = ({ data, selected, id }) => {
           left: "50%",
           background: "transparent",
           border: "none",
-          width: "0px",
-          height: "0px",
-          minWidth: "0px",
-          minHeight: "0px",
+          width: 0,
+          height: 0,
+          minWidth: 0,
+          minHeight: 0,
           transform: "translate(-50%, -50%)",
         }}
       />
-      <div className="relative">
-        <motion.div
-          className="rf-circle-wrap w-16 h-16 rounded-none overflow-hidden border-2 border-white/20 bg-gradient-to-br from-[#1A1A1E] to-[#2A2A2D] flex items-center justify-center"
-          style={{ borderRadius: "0px !important" }} /* Force Override */
-          animate={{
-            borderColor: isHovered
-              ? "rgba(6, 223, 115, 0.6)"
-              : "rgba(255, 255, 255, 0.2)",
+      <div className="relative w-[72px] h-[72px] flex items-center justify-center shrink-0">
+        <div
+          className="relative w-16 h-16 rounded-full bg-black flex items-center justify-center p-[3px] shrink-0"
+          style={{
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 0 6px ${borderColor}dd, 0 0 12px ${borderColor}99`,
           }}
-          transition={{ duration: 0.2 }}
         >
-          <img
-            src={
-              (data.symbol as string) === "SOL" ||
-              (data.symbol as string) === "WSOL"
-                ? solanalogo
-                : (data.imageUrl as string) || DefaultTokenImage
-            }
-            alt={(data.symbol as string) || "Token"}
-            className="w-12 h-12 rounded-none object-cover"
-            style={{ borderRadius: "0px !important" }}
-          />
-        </motion.div>
-        <motion.div
-          className="absolute inset-0 rounded-none bg-gradient-to-r from-[#06DF73]/20 to-[#05C96A]/20 blur-md -z-10"
-          style={{ borderRadius: "0px !important" }}
-          animate={{
-            opacity: isHovered ? 1 : 0,
-            scale: isHovered ? 1.2 : 1,
-          }}
-          transition={{ duration: 0.3 }}
-        />
-        <motion.div
-          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#1A1A1E] border border-[#2A2A2D] px-2 py-1 text-xs font-medium text-white whitespace-nowrap font-sans"
-          animate={{
-            opacity: isHovered ? 1 : 0,
-            y: isHovered ? 0 : 10,
-          }}
-          transition={{ duration: 0.2 }}
-        >
-          {(data.symbol as string) || "Token"}
-        </motion.div>
+          <div
+            className="w-full h-full rounded-full flex items-center justify-center p-[3px] shrink-0 bg-[#2d2d2d]"
+            style={{ borderColor: "#2d2d2d", borderWidth: 2, borderStyle: "solid" }}
+          >
+            <div className="w-full h-full rounded-full bg-black flex items-center justify-center p-[2px] shrink-0 overflow-hidden">
+              <img
+                src={
+                  symbol === "SOL" || symbol === "WSOL"
+                    ? solanalogo
+                    : (data.imageUrl as string) || DefaultTokenImage
+                }
+                alt={symbol}
+                className="w-10 h-10 object-cover rounded-full"
+              />
+            </div>
+          </div>
+        </div>
       </div>
-    </motion.div>
+      <div
+        className="mt-0.5 rounded-none border px-0.5 py-px max-w-[60px] overflow-hidden antialiased"
+        style={{ fontFamily: "Inter, \"SF Pro Text\", \"Segoe UI\", system-ui, sans-serif", borderWidth: 1, borderColor: "#1f1f1f", backgroundColor: "#161414", WebkitFontSmoothing: "antialiased" as any }}
+      >
+        <span className="block text-[8px] font-medium tracking-tight uppercase whitespace-nowrap text-ellipsis overflow-hidden text-[#8f8f8f]" title={symbol}>
+          {symbol}
+        </span>
+      </div>
+    </div>
   )
 }
 
 // -----------------------------
-// Custom Whale Node (Adapted for KOLs)
+// Custom Whale Node (KOL) – same design as Whale visualize
 // -----------------------------
 const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
-  const [isHovered, setIsHovered] = useState(false)
+  const [imageError, setImageError] = useState(false)
   const bubbleAnimation = useRandomBubbleAnimation()
   const updateNodeInternals = useUpdateNodeInternals()
   const { showToast } = useToast()
   const { setNodes } = useReactFlow()
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      updateNodeInternals(id)
-    }, 100)
-
+    const timeoutId = setTimeout(() => updateNodeInternals(id), 100)
     return () => clearTimeout(timeoutId)
   }, [
     Math.round(bubbleAnimation.x / 5) * 5,
@@ -316,16 +179,16 @@ const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
     id,
   ])
 
-  const getWhaleColor = () => {
-    const totalBuyAmount = data.totalBuyAmount || 0
-    const totalSellAmount = data.totalSellAmount || 0
-    if (totalBuyAmount > totalSellAmount) return "#06DF73"
-    if (totalSellAmount > totalBuyAmount) return "#FF6467"
-    return "#999999"
-  }
-
-  // Use KOL image if available, else default whale image
-  const displayImage = (data.influencerProfileImageUrl as string) || whaleImage
+  const address = (data.address as string) || ""
+  const whaleLabels = (data.whaleLabel as string[] | undefined) || []
+  const groupName = whaleLabels.length > 0 ? whaleLabels[0] : null
+  const displayName = (data.influencerName as string) || groupName || (address.length > 12 ? `${address.slice(0, 5)}...${address.slice(-6)}` : address || "KOL")
+  const shortLabel = displayName.length > 14 ? `${displayName.slice(0, 10)}...` : displayName
+  const initial = ((data.influencerName as string)?.trim().slice(0, 1) || (address ? address.slice(0, 1) : "")).toUpperCase() || "K"
+  const buy = (data.totalBuyAmount as number) ?? 0
+  const sell = (data.totalSellAmount as number) ?? 0
+  const borderColor = buy >= sell ? "#06DF73" : "#df2a4e"
+  const imageUrl = (data.influencerProfileImageUrl as string) || (data.imageUrl as string)
 
   const handleClose = () => {
     setNodes((nodes) =>
@@ -339,195 +202,140 @@ const WhaleNode: React.FC<NodeProps> = ({ data, selected, id }) => {
         isVisible={!!selected}
         position={Position.Right}
         align="center"
-        offset={20}
-        className="bg-black/90 p-3 border border-[#2b2a2a] backdrop-blur-md shadow-2xl max-w-xs min-w-[200px] pointer-events-auto rounded-none z-50 text-left"
+        offset={16}
+        className="!bg-[#0a0a0a] !border-2 !border-[#1a1a1a] !shadow-xl !rounded-none !min-w-0 !max-w-[200px] !p-0 !z-[9999] pointer-events-auto"
       >
-        <div className="flex justify-between items-center mb-3 pb-2 border-b border-[#2b2a2a]">
-          <h3 className="text-white font-bold text-[10px] uppercase tracking-wider">
-            KOL Address
-          </h3>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              handleClose()
-            }}
-            className="text-gray-400 hover:text-white"
-          >
-            <X className="w-3 h-3" />
-          </button>
+        <div className="p-2 font-sans antialiased text-[11px] rounded-none" style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}>
+          <div className="flex items-center justify-between gap-1 mb-1.5">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#666]">KOL Address</span>
+            <button onClick={(e) => { e.stopPropagation(); handleClose() }} className="text-[#555] hover:text-white p-0.5" aria-label="Close">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="flex items-center gap-1 mb-2">
+            <code className="text-white text-[10px] font-medium tracking-tight flex-1 min-w-0" title={address || undefined}>
+              {address ? (address.length > 12 ? `${address.slice(0, 4)}...${address.slice(-4)}` : address) : "—"}
+            </code>
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button onClick={() => { if (address) { navigator.clipboard.writeText(address); showToast("Copied!", "success") } }} className="p-1 rounded text-[#666] hover:text-[#06DF73]" aria-label="Copy">
+                <img src={CopyIcon} alt="" className="w-3 h-3" />
+              </button>
+              <a href={`https://solscan.io/address/${address}`} target="_blank" rel="noopener noreferrer" className="p-1 rounded text-[#666] hover:text-[#06DF73]" aria-label="Solscan">
+                <img src={ExternalLinkIcon} alt="" className="w-3 h-3" />
+              </a>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-[#222]">
+            <div>
+              <div className="text-[8px] font-semibold uppercase tracking-wider text-[#06DF73]">Buy</div>
+              <div className="text-white text-[10px] font-semibold">
+                {(Array.isArray(data.trades) ? data.trades.filter((t: any) => (t.type as string)?.toLowerCase() === "buy") : []).length}
+                <span className="text-[#666] font-normal ml-0.5">${Math.round(Number(data.totalBuyAmount) || 0).toLocaleString()}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[8px] font-semibold uppercase tracking-wider text-[#df2a4e]">Sell</div>
+              <div className="text-white text-[10px] font-semibold">
+                {(Array.isArray(data.trades) ? data.trades.filter((t: any) => (t.type as string)?.toLowerCase() === "sell") : []).length}
+                <span className="text-[#666] font-normal ml-0.5">${Math.round(Number(data.totalSellAmount) || 0).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
         </div>
-        <Tooltip tooltip={data} showToast={showToast} />
       </NodeToolbar>
 
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        className={`relative ${selected ? "ring-2 ring-[#06DF73]" : ""}`}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        animate={{
-          scale: isHovered ? 1.1 : 1 + bubbleAnimation.scale - 1,
-          opacity: 1,
-          borderRadius: "50%",
-          x: bubbleAnimation.x,
-          y: bubbleAnimation.y,
-          boxShadow: isHovered
-            ? `0 0 15px ${getWhaleColor()}80, 0 0 30px ${getWhaleColor()}40`
-            : "0 4px 12px rgba(0, 0, 0, 0.2)",
-        }}
-        exit={{ scale: 0, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        style={{ willChange: "auto" }}
-      >
-        <Handle
-          type="target"
-          position={Position.Right}
-          style={{
-            top: "50%",
-            left: "50%",
-            background: "transparent",
-            border: "none",
-            width: "0px",
-            height: "0px",
-            minWidth: "0px",
-            minHeight: "0px",
-            transform: "translate(-50%, -50%)",
-          }}
-        />
-        <div className="relative">
-          <motion.div
-            className="rf-circle-wrap w-12 h-12 rounded-full flex items-center justify-center text-black font-bold text-xs border-2 border-white/20 overflow-hidden"
-            style={{ backgroundColor: "#999999" }}
-            animate={{
-              borderColor: isHovered
-                ? `${getWhaleColor()}80`
-                : "rgba(255, 255, 255, 0.2)",
-            }}
-            transition={{ duration: 0.2 }}
-          >
-            <img
-              src={displayImage}
-              alt="KOL"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                ;(e.target as HTMLImageElement).src = whaleImage
-              }}
-            />
-          </motion.div>
-          <motion.div
-            className="absolute inset-0 rounded-full blur-md -z-10"
-            style={{ backgroundColor: getWhaleColor() }}
-            animate={{
-              opacity: isHovered ? 0.6 : 0,
-              scale: isHovered ? 1.4 : 1,
-            }}
-            transition={{ duration: 0.3 }}
-          />
-          <motion.div
-            className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-[#1A1A1E] border border-[#2A2A2D] px-2 py-1 text-xs font-medium text-white whitespace-nowrap font-sans"
-            animate={{
-              opacity: isHovered ? 1 : 0,
-              y: isHovered ? 0 : 10,
-            }}
-            transition={{ duration: 0.2 }}
-          >
-            {data.influencerName ? (
-              (data.influencerName as string)
-            ) : (
-              <>
-                {((data.address as string) || "0x0000").slice(0, 6)}...
-                {((data.address as string) || "0000").slice(-4)}
-              </>
-            )}
-          </motion.div>
+      <div className="relative flex flex-col items-center cursor-pointer w-[70px] min-h-[90px]">
+        <Handle type="target" position={Position.Right} style={{ top: "50%", left: "50%", background: "transparent", border: "none", width: 0, height: 0, minWidth: 0, minHeight: 0, transform: "translate(-50%, -50%)" }} />
+        <div className="relative w-[72px] h-[72px] flex items-center justify-center shrink-0">
+          <div className="relative w-16 h-16 rounded-full bg-black flex items-center justify-center p-[3px] shrink-0" style={{ boxShadow: `inset 0 1px 0 rgba(255,255,255,0.08), 0 0 6px ${borderColor}dd, 0 0 12px ${borderColor}99` }}>
+            <div className="w-full h-full rounded-full flex items-center justify-center p-[3px] shrink-0 bg-[#484848]" style={{ borderColor: "#484848", borderWidth: 2, borderStyle: "solid" }}>
+              <div className="w-full h-full rounded-full bg-black flex items-center justify-center p-[2px] shrink-0 overflow-hidden">
+                {imageUrl && !imageError ? (
+                  <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 flex items-center justify-center bg-[#484848]">
+                    <img src={imageUrl} alt={shortLabel} className="w-full h-full object-cover object-center" onError={() => setImageError(true)} />
+                  </div>
+                ) : (
+                  <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center bg-[#484848]">
+                    <span className="text-white font-bold text-base leading-none flex items-center justify-center w-full h-full select-none" style={{ fontSize: "1.25rem" }}>
+                      {initial}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </motion.div>
+        <div
+          className="mt-0.5 rounded-none border px-0.5 py-px max-w-[60px] overflow-hidden antialiased"
+          style={{ fontFamily: "Inter, \"SF Pro Text\", \"Segoe UI\", system-ui, sans-serif", borderWidth: 1, borderColor: "#1f1f1f", backgroundColor: "#161414", WebkitFontSmoothing: "antialiased" as any }}
+        >
+          <span className="block text-[8px] font-medium tracking-tight uppercase whitespace-nowrap text-ellipsis overflow-hidden text-[#8f8f8f]" title={displayName}>
+            {shortLabel}
+          </span>
+        </div>
+      </div>
     </>
   )
 }
 
 // -----------------------------
-// Custom Edge for Multiple Trades
+// Custom Edge – same as Whale visualize (straight line, buy/sell colors)
 // -----------------------------
-const CustomEdge: React.FC<EdgeProps> = ({
-  id,
-  sourceX,
-  sourceY,
-  targetX,
-  targetY,
-  data,
-}) => {
+// Custom Edge – one per (token, whale), draws buy and/or sell line(s)
+// -----------------------------
+const CustomEdge = React.memo<EdgeProps>(function CustomEdge({ id, sourceX, sourceY, targetX, targetY, data }) {
   const [isHovered, setIsHovered] = useState(false)
-
-  // 1. Get the offset (e.g. -5, 0, 5) from the data
-  const edgeOffset = (data?.edgeOffset as number) ?? 0
-
-  // 2. Calculate Geometry
   const dx = targetX - sourceX
   const dy = targetY - sourceY
   const len = Math.sqrt(dx * dx + dy * dy) || 1
-
-  // 3. Normal Vector (Perpendicular direction)
   const nx = -dy / len
   const ny = dx / len
+  const spreadMult = 1.2
+  const step = 1.5
 
-  // 4. Spread Multiplier
-  // Reduced from 4 to 1 to create a much tighter, cable-like bundle
-  const spread = edgeOffset * 1
+  const isMixed = (data?.type as string) === "mixed"
+  const hasBuy = isMixed ? !!(data?.hasBuy) : (data?.type as string)?.toLowerCase() === "buy"
+  const hasSell = isMixed ? !!(data?.hasSell) : (data?.type as string)?.toLowerCase() === "sell"
 
-  // 5. CRISS-CROSS LOGIC
-  // Start Point: Shift Positive
-  const startX = sourceX + nx * spread
-  const startY = sourceY + ny * spread
-
-  // End Point: Shift NEGATIVE (Inverted)
-  // This causes the line to aim for the "opposite" side, forcing a cross in the center.
-  const endX = targetX - nx * spread
-  const endY = targetY - ny * spread
-
-  // 6. Draw BEZIER CURVE (Q)
-  // Instead of straight lines, we use a quadratic bezier or cubic bezier to "pinch" them.
-  // We want them to start at source, curve towards the center pinch point, then curve to target.
-
-  // Control Point 1: Near Source but shifted
-  const cp1X = sourceX + dx * 0.4 + nx * spread * 0.5
-  const cp1Y = sourceY + dy * 0.4 + ny * spread * 0.5
-
-  // Control Point 2: Near Target but shifted (inverted)
-  const cp2X = targetX - dx * 0.4 - nx * spread * 0.5
-  const cp2Y = targetY - dy * 0.4 - ny * spread * 0.5
-
-  // A smooth "S" shape or "Hourglass" with curves
-  const edgePath = `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`
+  const paths: { d: string; stroke: string; strokeWidth: number }[] = []
+  if (isMixed) {
+    if (hasBuy) {
+      const spread = -step * spreadMult
+      paths.push({
+        d: `M ${sourceX + nx * spread} ${sourceY + ny * spread} L ${targetX - nx * spread} ${targetY - ny * spread}`,
+        stroke: "#06DF73",
+        strokeWidth: isHovered ? 1.25 : 1,
+      })
+    }
+    if (hasSell) {
+      const spread = step * spreadMult
+      paths.push({
+        d: `M ${sourceX + nx * spread} ${sourceY + ny * spread} L ${targetX - nx * spread} ${targetY - ny * spread}`,
+        stroke: "#df2a4e",
+        strokeWidth: isHovered ? 2 : 1.5,
+      })
+    }
+  } else {
+    const edgeOffset = (data?.edgeOffset as number) ?? 0
+    const spread = edgeOffset * spreadMult
+    const startX = sourceX + nx * spread
+    const startY = sourceY + ny * spread
+    const endX = targetX - nx * spread
+    const endY = targetY - ny * spread
+    const stroke = hasBuy ? "#06DF73" : "#df2a4e"
+    const strokeWidth = hasSell ? (isHovered ? 2 : 1.5) : (isHovered ? 1.25 : 1)
+    paths.push({ d: `M ${startX} ${startY} L ${endX} ${endY}`, stroke, strokeWidth })
+  }
 
   return (
-    <motion.g
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <motion.path
-        id={id}
-        d={edgePath}
-        stroke={data?.type === "buy" ? "#06DF73" : "#FF6467"}
-        strokeWidth={isHovered ? 2 : 0.75} // Thinner, crisper lines
-        strokeOpacity={1} // Keep fully visible as requested
-        fill="none"
-        style={{
-          strokeDasharray: "none",
-          strokeLinecap: "round",
-          strokeLinejoin: "round",
-        }}
-        initial={{ pathLength: 0, opacity: 0 }}
-        animate={{
-          pathLength: 1,
-          opacity: 1, // Fully opaque
-        }}
-        transition={{ duration: 0.5 }}
-      />
-    </motion.g>
+    <g onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+      {paths.map((p, i) => (
+        <path key={i} id={i === 0 ? id : undefined} d={p.d} stroke={p.stroke} strokeWidth={p.strokeWidth} strokeOpacity={1} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      ))}
+    </g>
   )
-}
+})
 
-// Tooltip Component Logic Moved to top
 
 // Download Button Logic
 const isIOS = () => {
@@ -570,15 +378,60 @@ const toPngWithRetry = async (el: HTMLElement, opts: any, attempts = 3) => {
   return last
 }
 
-const DownloadButton: React.FC = () => {
-  const { getNodes } = useReactFlow()
-  const [showErrorPopup, setShowErrorPopup] = useState(false)
+const CONTROL_BTN =
+  "inline-flex items-center gap-2 !p-[6px_10px] !text-[10px] !text-[#8f8f8f] !bg-[#0a0a0a] border border-[#1f1f1f] !rounded-none uppercase tracking-wider font-bold whitespace-nowrap hover:!text-[#06DF73] hover:!border-[#06DF73] transition-colors disabled:!opacity-50 disabled:cursor-not-allowed"
 
-  const downloadImage = (dataUrl: string) => {
-    const a = document.createElement("a")
-    a.setAttribute("download", "kol-network-graph.png")
-    a.setAttribute("href", dataUrl)
-    a.click()
+const DownloadButton: React.FC<{
+  onDownloadReady?: (trigger: () => Promise<void>) => void
+  onScreenshotError?: () => void
+  filename?: string
+}> = ({ onDownloadReady, onScreenshotError, filename = "kol-network-graph" }) => {
+  const { getNodes } = useReactFlow()
+
+  const downloadImage = (dataUrl: string, asJpg = true): Promise<void> => {
+    return new Promise((resolve) => {
+      if (asJpg) {
+        const img = new Image()
+        img.crossOrigin = "anonymous"
+        img.onload = () => {
+          const c = document.createElement("canvas")
+          c.width = img.width
+          c.height = img.height
+          const ctx = c.getContext("2d")
+          if (!ctx) {
+            const a = document.createElement("a")
+            a.setAttribute("download", `${filename}.png`)
+            a.setAttribute("href", dataUrl)
+            a.click()
+            resolve()
+            return
+          }
+          ctx.fillStyle = "#000000"
+          ctx.fillRect(0, 0, c.width, c.height)
+          ctx.drawImage(img, 0, 0)
+          const jpgUrl = c.toDataURL("image/jpeg", 0.92)
+          const a = document.createElement("a")
+          a.setAttribute("download", `${filename}.jpg`)
+          a.setAttribute("href", jpgUrl)
+          a.click()
+          resolve()
+        }
+        img.onerror = () => {
+          const a = document.createElement("a")
+          a.setAttribute("download", `${filename}.png`)
+          a.setAttribute("href", dataUrl)
+          a.click()
+          resolve()
+        }
+        img.src = dataUrl
+      } else {
+        const a = document.createElement("a")
+        a.setAttribute("download", `${filename}.png`)
+        a.setAttribute("href", dataUrl)
+        a.click()
+        resolve()
+      }
+    })
   }
 
   const imageWidth = 1920
@@ -634,9 +487,11 @@ const DownloadButton: React.FC = () => {
     })
   }
 
-  const handleRetry = () => {
-    onClick()
-  }
+  const onClickRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  useEffect(() => {
+    onDownloadReady?.(() => onClickRef.current())
+    return () => onDownloadReady?.(() => Promise.resolve())
+  }, [onDownloadReady])
 
   const onClick = async () => {
     let originalSources: Array<{
@@ -701,7 +556,7 @@ const DownloadButton: React.FC = () => {
         )
       }
 
-      downloadImage(dataUrl)
+      await downloadImage(dataUrl, true)
     } catch (error) {
       console.error("Error downloading image:", error)
       try {
@@ -718,10 +573,10 @@ const DownloadButton: React.FC = () => {
           skipFonts: true,
           skipAutoScale: true,
         })
-        downloadImage(dataUrl)
+        await downloadImage(dataUrl, true)
       } catch (fallbackError) {
         console.error("Fallback download also failed:", fallbackError)
-        setShowErrorPopup(true)
+        onScreenshotError?.()
       }
     } finally {
       root.classList.remove("snapshot-mode")
@@ -732,6 +587,7 @@ const DownloadButton: React.FC = () => {
       }
     }
   }
+  onClickRef.current = onClick
 
   return (
     <>
@@ -751,13 +607,6 @@ const DownloadButton: React.FC = () => {
           </span>
         </div>
       </Panel>
-      <ErrorPopup
-        isOpen={showErrorPopup}
-        onClose={() => setShowErrorPopup(false)}
-        title="Screenshot Download Failed"
-        message="We encountered an issue while generating your screenshot. This might be due to network issues. Please try again or refresh the page."
-        onRetry={handleRetry}
-      />
     </>
   )
 }
@@ -771,6 +620,9 @@ const KolNetworkGraph: React.FC<{
   const [apiData, setApiData] = useState<CoinWithWhales[]>([])
   const [loading, setLoading] = useState(false)
   const { showToast } = useToast()
+  const { user } = useAuth()
+  const { validateAccess } = usePremiumAccess()
+  const navigate = useNavigate()
   // NOTE: useViewport might throw if not wrapped in ReactFlowProvider, but keeping existing code safe
   // const { x: vpX, y: vpY, zoom } = useViewport()
 
@@ -778,7 +630,7 @@ const KolNetworkGraph: React.FC<{
 
   const [filters, setFilters] = useState({
     timeframe: "15m",
-    whales: "1", // Used as KOL count limit
+    whales: "20", // Used as KOL count limit
     volume: "0",
   })
 
@@ -812,6 +664,14 @@ const KolNetworkGraph: React.FC<{
   )
 
   const [isSaved, setIsSaved] = useState(false)
+  const [triggerDownload, setTriggerDownload] = useState<(() => Promise<void>) | null>(null)
+  const [minMarketCap, setMinMarketCap] = useState(1000)
+  const [maxMarketCap, setMaxMarketCap] = useState(50000000)
+  const [triggerOpen, setTriggerOpen] = useState(false)
+  const [whalesOpen, setWhalesOpen] = useState(false)
+  const [volumeOpen, setVolumeOpen] = useState(false)
+  const [mcapOpen, setMcapOpen] = useState(false)
+  const [customVolumeInput, setCustomVolumeInput] = useState("")
 
   const updateDataDirectly = useCallback((newData: CoinWithWhales[]) => {
     setMergedData(newData)
@@ -878,7 +738,8 @@ const KolNetworkGraph: React.FC<{
           whaleId: whale.id,
           whaleAddress: whale.address,
           influencerName: whale.influencerName,
-          influencerProfileImageUrl: whale.influencerProfileImageUrl, // Preserve profile image
+          influencerProfileImageUrl: whale.influencerProfileImageUrl,
+          whaleLabel: whale.whaleLabel,
           amount:
             typeof trade.amount === "string"
               ? parseFloat(trade.amount)
@@ -932,9 +793,25 @@ const KolNetworkGraph: React.FC<{
         {} as Record<string, { coin: any; trades: any[] }>
       )
 
+    // Global KOL lookup from API (any coin) for image/profile
+    const apiWhaleByAddress = new Map<string, any>()
+    dataToProcess.forEach((d: any) => {
+      (d.whales ?? []).forEach((w: any) => {
+        const addr = w.address ?? w.id
+        if (addr && !apiWhaleByAddress.has(addr)) apiWhaleByAddress.set(addr, w)
+      })
+    })
+
+    // Original: one coin node per token, one whale node per (token, whale) pair
     Object.values(tradesByCoin).forEach((coinData, coinIndex) => {
       const coinId = `coin_${coinData.coin.id}`
       const totalTrades = coinData.trades.length
+      const totalBuyAmount = coinData.trades
+        .filter((t: any) => (t.type as string)?.toLowerCase() === "buy")
+        .reduce((sum: number, t: any) => sum + t.amount, 0)
+      const totalSellAmount = coinData.trades
+        .filter((t: any) => (t.type as string)?.toLowerCase() === "sell")
+        .reduce((sum: number, t: any) => sum + t.amount, 0)
 
       flowNodes.push({
         id: coinId,
@@ -944,7 +821,9 @@ const KolNetworkGraph: React.FC<{
           ...coinData.coin,
           imageUrl: coinData.coin.imageUrl,
           nodeType: "coin",
-          totalTrades: totalTrades,
+          totalTrades,
+          totalBuyAmount,
+          totalSellAmount,
         },
       })
 
@@ -957,6 +836,7 @@ const KolNetworkGraph: React.FC<{
               trades: any[]
               influencerName?: string
               influencerProfileImageUrl?: string
+              whaleLabel?: string[]
             }
           >,
           trade: any
@@ -967,6 +847,7 @@ const KolNetworkGraph: React.FC<{
               trades: [],
               influencerName: trade.influencerName,
               influencerProfileImageUrl: trade.influencerProfileImageUrl,
+              whaleLabel: trade.whaleLabel,
             }
           }
           acc[trade.whaleId].trades.push(trade)
@@ -975,67 +856,75 @@ const KolNetworkGraph: React.FC<{
         {}
       )
 
-      Object.entries(tradesByWhale).forEach(
-        ([whaleId, whaleData], whaleIndex) => {
-          const whaleNodeId = `whale_${coinData.coin.id}_${whaleId}`
-          const totalBuyAmount = whaleData.trades
-            .filter((t: any) => t.type === "buy")
-            .reduce((sum: number, t: any) => sum + t.amount, 0)
-          const totalSellAmount = whaleData.trades
-            .filter((t: any) => t.type === "sell")
-            .reduce((sum: number, t: any) => sum + t.amount, 0)
+      Object.entries(tradesByWhale).forEach(([whaleId, whaleData], whaleIndex) => {
+        const whaleNodeId = `whale_${coinData.coin.id}_${whaleId}`
+        const allTradesForWhale = filteredTrades.filter(
+          (t: any) => t.whaleAddress === whaleData.whaleAddress
+        )
+        const totalBuyAmount = allTradesForWhale
+          .filter((t: any) => (t.type as string)?.toLowerCase() === "buy")
+          .reduce((sum: number, t: any) => sum + t.amount, 0)
+        const totalSellAmount = allTradesForWhale
+          .filter((t: any) => (t.type as string)?.toLowerCase() === "sell")
+          .reduce((sum: number, t: any) => sum + t.amount, 0)
+        const firstTrade = allTradesForWhale[0]
+        const apiWhale = apiWhaleByAddress.get(whaleData.whaleAddress)
+        const whaleImageUrl =
+          apiWhale?.imageUrl ??
+          (firstTrade as any)?.influencerProfileImageUrl ??
+          (apiWhale as any)?.influencerProfileImageUrl
 
-          flowNodes.push({
-            id: whaleNodeId,
-            type: "whale",
-            position: {
-              x: 100 + coinIndex * 200 + (whaleIndex - 1) * 80,
-              y: 250 + whaleIndex * 60,
-            },
-            data: {
-              address: whaleData.whaleAddress,
-              trades: whaleData.trades,
-              totalBuyAmount,
-              totalSellAmount,
-              nodeType: "whale",
-              influencerName: whaleData.influencerName,
-              influencerProfileImageUrl: whaleData.influencerProfileImageUrl,
-            },
-          })
+        flowNodes.push({
+          id: whaleNodeId,
+          type: "whale",
+          position: {
+            x: 100 + coinIndex * 200 + (whaleIndex - 1) * 80,
+            y: 250 + whaleIndex * 60,
+          },
+          data: {
+            address: whaleData.whaleAddress,
+            trades: allTradesForWhale,
+            totalBuyAmount,
+            totalSellAmount,
+            nodeType: "whale",
+            influencerName: firstTrade?.influencerName,
+            influencerProfileImageUrl: (firstTrade as any)?.influencerProfileImageUrl ?? (apiWhale as any)?.influencerProfileImageUrl,
+            imageUrl: whaleImageUrl,
+            whaleLabel: firstTrade?.whaleLabel ?? whaleData.whaleLabel ?? (apiWhale as any)?.whaleLabel,
+          },
+        })
 
-          const maxBundleWidth = 15 // increased max width for better visibility
-          const step = Math.min(
-            2,
-            maxBundleWidth / Math.max(1, whaleData.trades.length)
+        const step = 1.5
+        const buyTrades = whaleData.trades.filter((t: any) => (t.type as string)?.toLowerCase() === "buy")
+        const sellTrades = whaleData.trades.filter((t: any) => (t.type as string)?.toLowerCase() === "sell")
+        const orderedTrades = [...buyTrades, ...sellTrades]
+
+        orderedTrades.forEach((trade: any, tradeIndex: number) => {
+          const edgeId = makeEdgeId(
+            coinId,
+            whaleNodeId,
+            trade.type,
+            trade.timestamp,
+            trade.amount
           )
-
-          whaleData.trades.forEach((trade: any, tradeIndex: number) => {
-            const edgeId = makeEdgeId(
-              coinId,
-              whaleNodeId,
-              trade.type,
-              trade.timestamp,
-              trade.amount
-            )
-            const edgeOffset =
-              tradeIndex * step - ((whaleData.trades.length - 1) * step) / 2
-            flowEdges.push({
-              id: edgeId,
-              source: coinId,
-              target: whaleNodeId,
-              type: "custom",
-              data: {
-                type: trade.type,
-                amount: trade.amount,
-                timestamp: trade.timestamp,
-                tradeIndex: tradeIndex,
-                edgeOffset: edgeOffset,
-              },
-              animated: trade.type === "sell",
-            })
+          const edgeOffset =
+            tradeIndex * step - ((orderedTrades.length - 1) * step) / 2
+          flowEdges.push({
+            id: edgeId,
+            source: coinId,
+            target: whaleNodeId,
+            type: "custom",
+            data: {
+              type: trade.type,
+              amount: trade.amount,
+              timestamp: trade.timestamp,
+              tradeIndex: tradeIndex,
+              edgeOffset: edgeOffset,
+            },
+            animated: false,
           })
-        }
-      )
+        })
+      })
     })
 
     if (!layoutAppliedRef.current) {
@@ -1054,11 +943,15 @@ const KolNetworkGraph: React.FC<{
   const [nodesState, setNodes, onNodesChange] = useNodesState([] as Node[])
   const [edgesState, setEdges, onEdgesChange] = useEdgesState([] as Edge[])
 
+  const prevOpenRef = React.useRef(false)
   useEffect(() => {
-    if (rfInstance && nodesState.length > 0) {
+    const justOpened = isOpen && !prevOpenRef.current
+    prevOpenRef.current = isOpen
+    if (rfInstance && nodesState.length > 0 && isOpen) {
+      const delay = justOpened ? 900 : 500
       const timer = setTimeout(() => {
-        rfInstance.fitView({ padding: 0.2, duration: 800 })
-      }, 600)
+        rfInstance.fitView({ padding: 0.25, duration: 600 })
+      }, delay)
       return () => clearTimeout(timer)
     }
   }, [rfInstance, nodesState.length, isOpen])
@@ -1124,6 +1017,35 @@ const KolNetworkGraph: React.FC<{
   const whaleOptions = ["1", "2", "3", "4", "5", "7", "10"]
   const volumeOptions = ["0", "1K", "3K", "5K", "10K", "15K", "25K"]
 
+  const formatMarketCap = (value: number): string => {
+    if (value >= 50000000) return "50M+"
+    if (value >= 1000000) {
+      const millions = value / 1000000
+      return millions >= 10 ? `${millions.toFixed(0)}M` : `${millions.toFixed(1)}M`
+    }
+    if (value >= 1000) {
+      const thousands = value / 1000
+      return thousands >= 100 ? `${thousands.toFixed(0)}K` : `${thousands.toFixed(1)}K`
+    }
+    return `${value}`
+  }
+  const sliderToMarketCap = (sliderValue: number): number => {
+    if (sliderValue === 100) return 50000000
+    if (sliderValue === 0) return 1000
+    const minLog = Math.log10(1000)
+    const maxLog = Math.log10(50000000)
+    const logValue = minLog + (sliderValue / 100) * (maxLog - minLog)
+    return Math.pow(10, logValue)
+  }
+  const marketCapToSlider = (mcap: number): number => {
+    if (mcap >= 50000000) return 100
+    if (mcap <= 1000) return 0
+    const minLog = Math.log10(1000)
+    const maxLog = Math.log10(50000000)
+    const logValue = Math.log10(mcap)
+    return ((logValue - minLog) / (maxLog - minLog)) * 100
+  }
+
   const formatTimeSinceUpdate = (seconds: number) => {
     if (seconds < 60) return `${seconds}s`
     const minutes = Math.floor(seconds / 60)
@@ -1152,7 +1074,7 @@ const KolNetworkGraph: React.FC<{
 
   return createPortal(
     <motion.div
-      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[2147483647] px-3 nw-visual-modal isolate"
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999999] px-3 nw-visual-modal isolate"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -1190,40 +1112,13 @@ const KolNetworkGraph: React.FC<{
 
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <div className="w-full max-w-4xl space-y-8 px-8">
-                {/* Skeleton for graph nodes and edges */}
-                <div className="flex justify-center gap-12">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-none bg-[#1a1a1a] animate-pulse" />
-                    <div className="h-3 w-12 bg-[#1a1a1a] animate-pulse" />
-                  </div>
-                  <div className="flex flex-col gap-6">
-                    {Array.from({ length: 3 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-none bg-[#1a1a1a] animate-pulse" />
-                        <div className="h-3 w-20 bg-[#1a1a1a] animate-pulse" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex justify-center gap-12">
-                  <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-none bg-[#1a1a1a] animate-pulse" />
-                    <div className="h-3 w-12 bg-[#1a1a1a] animate-pulse" />
-                  </div>
-                  <div className="flex flex-col gap-6">
-                    {Array.from({ length: 2 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-none bg-[#1a1a1a] animate-pulse" />
-                        <div className="h-3 w-20 bg-[#1a1a1a] animate-pulse" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <div className="animate-spin rounded-none h-12 w-12 border-2 border-[#000000] border-t-transparent" />
             </div>
           ) : nodesState.length === 0 ? (
-            <div className="flex items-center justify-center h-full text-white text-xl">
+            <div
+              className="flex items-center justify-center h-full text-white text-xl antialiased"
+              style={{ fontFamily: "Inter, \"SF Pro Text\", \"Segoe UI\", system-ui, sans-serif" }}
+            >
               Not enough KOL transactions for the selected filters.
             </div>
           ) : (
@@ -1239,17 +1134,15 @@ const KolNetworkGraph: React.FC<{
               fitView
               onInit={setRfInstance}
               className="bg-black"
-              style={{ width: "100%", height: "100%" }} // clipPath handled by parent overflow-hidden
-              defaultViewport={{ x: 0, y: 0, zoom: 1.5 }}
+              style={{ width: "100%", height: "100%" }}
+              defaultViewport={{ x: 0, y: 0, zoom: 1 }}
               onConnect={onConnect}
+              proOptions={{ hideAttribution: true }}
             >
-              <Background
-                color="#333"
-                gap={10}
-                variant={BackgroundVariant.Dots}
-                size={1}
-              />
+              <Background color="#333" gap={10} size={1.5} variant={BackgroundVariant.Dots} />
               <MiniMap
+                pannable
+                zoomable
                 style={{
                   background: "#111",
                   border: "1px solid #333",
@@ -1261,7 +1154,11 @@ const KolNetworkGraph: React.FC<{
                 maskColor="rgba(0,0,0,0.5)"
                 className="!overflow-hidden"
               />
-              <DownloadButton />
+              <DownloadButton
+                onDownloadReady={(trigger) => setTriggerDownload(() => trigger)}
+                onScreenshotError={() => showToast("Screenshot failed. Try again or refresh.", "error")}
+                filename="kol-network-graph"
+              />
             </ReactFlow>
           )}
         </div>
@@ -1269,17 +1166,30 @@ const KolNetworkGraph: React.FC<{
         {/* 2. UI Controls Overlay (Foreground Layer) */}
         <div className="relative z-10 pointer-events-none w-full h-full flex flex-col justify-start p-3 md:p-6 lg:p-8 gap-4">
 
-          {/* Header - Row 1: Controls (Save, Last Refreshed, Refresh, Close) - Grouped Right */}
-          <div className="w-full flex justify-end items-center gap-4 pointer-events-auto">
-            <div className="flex items-center gap-3 overflow-x-auto no-scrollbar">
-              <button className="flex items-center space-x-1 text-[10px] text-gray-500 hover:text-white transition-colors uppercase tracking-wider font-bold whitespace-nowrap">
-                <Save className="w-3 h-3 text-gray-500" />
-                <span>SAVE</span>
+          {/* Header - Row 1: Controls (Save, Last Refreshed, Refresh, Close) */}
+          <div className="w-full flex justify-end items-center gap-2 md:gap-4 pointer-events-auto">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+              <button
+                onClick={async () => {
+                  if (!triggerDownload) {
+                    showToast("Please wait for the graph to load.", "error")
+                    return
+                  }
+                  try {
+                    await triggerDownload()
+                    showToast("Visualize network image saved", "success")
+                  } catch (_) { /* toast shows on error */ }
+                }}
+                className={CONTROL_BTN}
+                title="Save graph as JPG"
+              >
+                <Save className="w-3 h-3 shrink-0" />
+                <span>Save</span>
               </button>
 
               {lastUpdatedTime && (
-                <div className="flex items-center space-x-2 text-[10px] text-gray-500 uppercase tracking-wider font-bold whitespace-nowrap">
-                  <span>LAST REFRESHED:</span>
+                <div className="flex items-center space-x-2 text-[10px] text-[#8f8f8f] uppercase tracking-wider font-bold whitespace-nowrap">
+                  <span>Last updated:</span>
                   <LastUpdatedTicker
                     lastUpdated={lastUpdatedTime}
                     format={formatTimeSinceUpdate}
@@ -1289,21 +1199,31 @@ const KolNetworkGraph: React.FC<{
               <button
                 onClick={() => fetchData(true)}
                 disabled={isRefreshing}
-                className="flex items-center space-x-2 text-[10px] text-gray-500 hover:text-white transition-colors disabled:opacity-50 cursor-pointer uppercase tracking-wider font-bold whitespace-nowrap"
+                className={CONTROL_BTN}
+                title="Refresh data"
               >
                 <RefreshCw
-                  className={`w-3 h-3 text-gray-500 ${isRefreshing ? "animate-spin" : ""}`}
+                  className={`w-3 h-3 shrink-0 ${isRefreshing ? "animate-spin" : ""}`}
                 />
-                <span>REFRESH</span>
+                <span>Refresh</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => rfInstance?.fitView({ padding: 0.25, duration: 400 })}
+                className={CONTROL_BTN}
+                title="Center / fit graph in view"
+              >
+                <Maximize2 className="w-3 h-3 shrink-0" />
+                <span>Center</span>
               </button>
             </div>
 
             <button
-              className="text-white p-1.5 cursor-pointer hover:bg-white/10 transition-colors bg-[#1A1A1E] rounded-none"
-              style={{ border: "1px solid #333" }}
+              className={`${CONTROL_BTN} !p-1.5`}
               onClick={onClose}
+              title="Close"
             >
-              <X className="w-3 h-3 text-white" />
+              <X className="w-3 h-3" />
             </button>
           </div>
 
@@ -1333,7 +1253,8 @@ const KolNetworkGraph: React.FC<{
               {dropdown === "telegram" && (
                 <div
                   className="filter-dropdown-menu w-sm filter-mobile-subscription"
-                  onClick={closeAll}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ maxWidth: 320 }}
                 >
                   {!isSaved && (
                     <div className="parent-dropdown-content">
@@ -1343,28 +1264,303 @@ const KolNetworkGraph: React.FC<{
                           <h4>KOL Feed Alerts</h4>
                         </div>
                         <button
-                          className="paper-plan-connect-btn"
+                          className="popup-close-btn"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setIsSaved(true)
+                            setDropdown(null)
                           }}
                         >
-                          Activate Alert
+                          <FontAwesomeIcon icon={faClose} />
                         </button>
+                        <div>
+                          <button
+                            className="paper-plan-connect-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (!user?.telegramChatId) {
+                                validateAccess(() => navigate("/telegram-subscription"))
+                                setDropdown(null)
+                              } else {
+                                setIsSaved(true)
+                              }
+                            }}
+                          >
+                            <FontAwesomeIcon icon={faPaperPlane} />{" "}
+                            {user?.telegramChatId ? "Connected" : "Connect"}
+                          </button>
+                        </div>
                       </div>
+
+                      <div className="custom-frm-bx position-relative">
+                        <label className="nw-label">Timeframe</label>
+                        <div
+                          className="form-select cursor-pointer text-start"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!triggerOpen) {
+                              setWhalesOpen(false)
+                              setVolumeOpen(false)
+                              setMcapOpen(false)
+                            }
+                            setTriggerOpen(!triggerOpen)
+                          }}
+                        >
+                          {filters.timeframe}
+                        </div>
+                        {triggerOpen && (
+                          <div
+                            className="subscription-dropdown-menu show w-100"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ padding: "8px 12px" }}
+                          >
+                            {timeframeOptions.map((opt) => (
+                              <div
+                                key={opt}
+                                className={`subs-items ${filters.timeframe === opt ? "active" : ""}`}
+                                onClick={() => {
+                                  setFilters((prev) => ({ ...prev, timeframe: opt }))
+                                  setTriggerOpen(false)
+                                }}
+                              >
+                                {opt}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="custom-frm-bx position-relative">
+                        <label className="nw-label">Min KOL wallets</label>
+                        <div
+                          className="form-select cursor-pointer text-start"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!whalesOpen) {
+                              setTriggerOpen(false)
+                              setVolumeOpen(false)
+                              setMcapOpen(false)
+                            }
+                            setWhalesOpen(!whalesOpen)
+                          }}
+                        >
+                          {filters.whales}
+                        </div>
+                        {whalesOpen && (
+                          <div
+                            className="subscription-dropdown-menu show w-100 p-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {whaleOptions.map((opt) => (
+                              <div
+                                key={opt}
+                                className={`subs-items ${filters.whales === opt ? "active" : ""}`}
+                                onClick={() => {
+                                  setFilters((prev) => ({ ...prev, whales: opt }))
+                                  setCustomWhales("")
+                                  setWhalesOpen(false)
+                                }}
+                              >
+                                {opt}
+                              </div>
+                            ))}
+                            <div className="position-relative mt-2">
+                              <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Custom"
+                                value={customWhales}
+                                onChange={(e) => {
+                                  setCustomWhales(e.target.value)
+                                  const v = e.target.value
+                                  if (v) setFilters((prev) => ({ ...prev, whales: v }))
+                                }}
+                                style={{ paddingRight: "30px" }}
+                              />
+                              {customWhales && (
+                                <FontAwesomeIcon
+                                  icon={faCheck}
+                                  className="position-absolute"
+                                  style={{
+                                    right: "10px",
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    color: "#28a745",
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="custom-frm-bx position-relative">
+                        <label className="nw-label">Min total buying volume</label>
+                        <div
+                          className="form-select cursor-pointer text-start"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!volumeOpen) {
+                              setTriggerOpen(false)
+                              setWhalesOpen(false)
+                              setMcapOpen(false)
+                            }
+                            setVolumeOpen(!volumeOpen)
+                          }}
+                        >
+                          {filters.volume === "0" ? "Any" : filters.volume}
+                        </div>
+                        {volumeOpen && (
+                          <div
+                            className="subscription-dropdown-menu show w-100 p-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {volumeOptions.map((opt) => (
+                              <div
+                                key={opt}
+                                className={`subs-items ${filters.volume === opt ? "active" : ""}`}
+                                onClick={() => {
+                                  setFilters((prev) => ({ ...prev, volume: opt }))
+                                  setCustomVolume("")
+                                  setCustomVolumeInput("")
+                                  setVolumeOpen(false)
+                                }}
+                              >
+                                {opt === "0" ? "Any" : opt}
+                              </div>
+                            ))}
+                            <div className="position-relative mt-2">
+                              <input
+                                type="text"
+                                className="form-control"
+                                placeholder="Custom (e.g. 20K)"
+                                value={customVolumeInput}
+                                onChange={(e) => {
+                                  setCustomVolumeInput(e.target.value)
+                                  setCustomVolume(e.target.value)
+                                  if (e.target.value) {
+                                    setFilters((prev) => ({
+                                      ...prev,
+                                      volume: e.target.value.includes("K") ? e.target.value : `${e.target.value}K`,
+                                    }))
+                                  }
+                                }}
+                                style={{ paddingRight: "30px" }}
+                              />
+                              {customVolumeInput && (
+                                <FontAwesomeIcon
+                                  icon={faCheck}
+                                  className="position-absolute"
+                                  style={{
+                                    right: "10px",
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    color: "#28a745",
+                                  }}
+                                />
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="custom-frm-bx position-relative">
+                        <label className="nw-label">Market Cap</label>
+                        <div
+                          className="form-select cursor-pointer text-start"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (!mcapOpen) {
+                              setTriggerOpen(false)
+                              setWhalesOpen(false)
+                              setVolumeOpen(false)
+                            }
+                            setMcapOpen(!mcapOpen)
+                          }}
+                        >
+                          {formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}
+                        </div>
+                        {mcapOpen && (
+                          <div
+                            className="subscription-dropdown-menu show w-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MarketCapRangeSlider
+                              minValue={minMarketCap}
+                              maxValue={maxMarketCap}
+                              onChange={(min, max) => {
+                                setMinMarketCap(min)
+                                setMaxMarketCap(max)
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        className="connect-wallet-btn"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (!user?.telegramChatId) {
+                            validateAccess(() => navigate("/telegram-subscription"))
+                            setDropdown(null)
+                          } else {
+                            setIsSaved(true)
+                          }
+                        }}
+                        style={{ marginTop: "12px", backgroundColor: "#162ECD", padding: "8px 12px", fontSize: "12px" }}
+                      >
+                        {user?.telegramChatId ? (
+                          <>
+                            <FontAwesomeIcon icon={faPaperPlane} /> Activate Alert
+                          </>
+                        ) : (
+                          "Connect"
+                        )}
+                        <span className="corner top-right"></span>
+                        <span className="corner bottom-left"></span>
+                      </button>
                     </div>
                   )}
                 </div>
               )}
               {isSaved && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80">
-                  <div className="bg-black border border-[#2A2A2A] p-6 text-center max-w-sm mx-4">
-                    <h3 className="text-white font-bold mb-4">
-                      CONFIGURATION SAVED
-                    </h3>
+                <div className="config-overlay">
+                  <div className="config-modal">
+                    <h3 className="config-title">CONFIGURATION SAVED</h3>
+                    <div className="config-box">
+                      <div className="config-row">
+                        <span>Feed Type</span>
+                        <span>KOL Feed</span>
+                      </div>
+                      <div className="config-row">
+                        <span>Timeframe</span>
+                        <span className="green">{filters.timeframe}</span>
+                      </div>
+                      <div className="config-row">
+                        <span>Min Wallets</span>
+                        <span>{filters.whales}</span>
+                      </div>
+                      <div className="config-row">
+                        <span>Min Volume</span>
+                        <span>{filters.volume === "0" ? "Any" : filters.volume}</span>
+                      </div>
+                      <div className="config-row">
+                        <span>Market Cap</span>
+                        <span>{formatMarketCap(minMarketCap)} - {formatMarketCap(maxMarketCap)}</span>
+                      </div>
+                      <div className="config-row">
+                        <span>Status</span>
+                        <span className="green-dot">
+                          Active <i></i>
+                        </span>
+                      </div>
+                    </div>
                     <button
-                      className="px-4 py-2 bg-white text-black text-xs font-bold uppercase"
-                      onClick={() => setIsSaved(false)}
+                      className="close-btn"
+                      onClick={() => {
+                        setIsSaved(false)
+                        setDropdown(null)
+                      }}
                     >
                       CLOSE
                     </button>

@@ -1,0 +1,1 @@
+signature,wallet_address,timestamp,v2_success,v2_direction,v2_sol,v2_token_amount,v2_token_mint,v2_erase_reason,v2_protocol,v3_success,v3_direction,v3_sol,v3_token_amount,v3_token_mint,v3_erase_reason,v3_protocol,direction_match,sol_diff_pct,verdict

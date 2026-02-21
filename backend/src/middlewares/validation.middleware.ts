@@ -89,6 +89,38 @@ export const validateAlertUpsert = (
           })
           return
         }
+        if (config.timeWindowMinutes !== undefined && typeof config.timeWindowMinutes !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'timeWindowMinutes must be a number',
+            field: 'config.timeWindowMinutes',
+          })
+          return
+        }
+        if (config.minInflowUSD !== undefined && typeof config.minInflowUSD !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'minInflowUSD must be a number',
+            field: 'config.minInflowUSD',
+          })
+          return
+        }
+        if (config.minMarketCapUSD !== undefined && typeof config.minMarketCapUSD !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'minMarketCapUSD must be a number',
+            field: 'config.minMarketCapUSD',
+          })
+          return
+        }
+        if (config.maxMarketCapUSD !== undefined && typeof config.maxMarketCapUSD !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'maxMarketCapUSD must be a number',
+            field: 'config.maxMarketCapUSD',
+          })
+          return
+        }
         if (config.tokens !== undefined && !Array.isArray(config.tokens)) {
           res.status(400).json({
             success: false,
