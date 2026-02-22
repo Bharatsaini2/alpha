@@ -1719,7 +1719,8 @@ const RightSidebarNew = ({
                   <div
                     className="coin-circle bg-[#1a1a1a] animate-pulse"
                     style={{
-                      border: "none",
+                      border: "1px solid #3d3d3d",
+                      borderRadius: 0,
                       flexShrink: 0,
                       background: "#1a1a1a",
                       width: "40px",
@@ -1727,8 +1728,8 @@ const RightSidebarNew = ({
                     }}
                   />
                   <div className="coin-info" style={{ gap: "6px", flex: 1 }}>
-                    <div className="h-4 w-24 bg-[#1a1a1a] animate-pulse rounded" />
-                    <div className="h-3 w-16 bg-[#1a1a1a] animate-pulse rounded" />
+                    <div className="h-4 w-24 bg-[#1a1a1a] animate-pulse rounded-none" />
+                    <div className="h-3 w-16 bg-[#1a1a1a] animate-pulse rounded-none" />
                   </div>
                 </div>
                 <button
