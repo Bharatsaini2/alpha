@@ -7,6 +7,7 @@ import {
   visualizeKols,
   visualizeKolsV2,
 } from '../controllers/influencer.controller'
+import { getKolTransactionPreviewImage } from '../controllers/kolPreviewImage.controller'
 import { registerInterval, processManager } from '../config/processManager'
 
 const PROCESSING_INTERVAL_MS = 10000
@@ -17,6 +18,12 @@ const influencerWhaleRouter = express.Router()
 influencerWhaleRouter.get(
   '/influencer-latest-transactions',
   getInfluencerWhaleLatestTransactions,
+)
+
+// KOL move alert preview image (swap card only) – for Twitter card and OG
+influencerWhaleRouter.get(
+  '/transaction/:signature/preview-image',
+  getKolTransactionPreviewImage,
 )
 
 // Parse signatures and tweet

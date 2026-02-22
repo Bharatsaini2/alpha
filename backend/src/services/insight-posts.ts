@@ -6,6 +6,7 @@ import { whaleExitAlertModel } from '../models/whaleExitAlert.modal'
 import { WeeklyPrediction } from '../models/weeklyPredictionSchema.model'
 import { Types } from 'mongoose'
 import influencerWhaleTransactionsModelV2 from '../models/influencerWhaleTransactionsV2.model'
+import { getKolPreviewImageBuffer } from '../controllers/kolPreviewImage.controller'
 
 dotenv.config()
 
@@ -215,7 +216,7 @@ export const postWhaleExitAlert = async ({
   }
 }
 
-// ********************  KOL move Alert     ***************
+// ********************  KOL move Alert (with preview image)  ***************
 export const postKOLAlertToTwitter = async (
   message: any,
   signature: string,
@@ -225,21 +226,28 @@ export const postKOLAlertToTwitter = async (
       console.warn('⚠️ Message is empty. Skipping tweet.')
       return false
     }
-    if (message) {
-      try {
-        const tweet = await InsightXClient.v2.tweet(message)
-        console.log('Tweet posted successfully:', tweet.data.text)
-
-        console.log('Updating tweetPosted for signature:', signature)
-        // Update DB: Mark tweet as successfully posted
-        const updateResult = await influencerWhaleTransactionsModelV2.updateOne(
-          { signature },
-          { $set: { tweetPosted: true } },
-        )
-        console.log('Tweet post status update-------', updateResult)
-      } catch (err: any) {
-        console.error('Error storing whale transaction:', err)
+    try {
+      let mediaId: string | undefined
+      const imageBuffer = await getKolPreviewImageBuffer(signature)
+      if (imageBuffer && imageBuffer.length > 0) {
+        mediaId = await InsightXClient.v1.uploadMedia(imageBuffer, { type: 'png' })
       }
+
+      const tweet = mediaId
+        ? await InsightXClient.v2.tweet({
+            text: message,
+            media: { media_ids: [mediaId] },
+          })
+        : await InsightXClient.v2.tweet(message)
+      console.log('Tweet posted successfully:', tweet.data?.text ?? tweet.data?.id)
+
+      const updateResult = await influencerWhaleTransactionsModelV2.updateOne(
+        { signature },
+        { $set: { tweetPosted: true } },
+      )
+      console.log('Tweet post status update-------', updateResult)
+    } catch (err: any) {
+      console.error('Error posting KOL tweet or updating DB:', err)
     }
     return true
   } catch (err: any) {

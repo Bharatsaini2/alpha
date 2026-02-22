@@ -486,7 +486,6 @@ export const addTokensWithMostWhaleActivityByMarketCap = catchAsyncErrors(
     const { timeframe } = req.body
 
     const timeframeToHoursMap: Record<string, number> = {
-      '4h': 4,
       '12h': 12,
       '24h': 24,
       '1w': 24 * 7,
@@ -495,7 +494,7 @@ export const addTokensWithMostWhaleActivityByMarketCap = catchAsyncErrors(
 
     if (!timeframe || !timeframeToHoursMap[timeframe]) {
       return res.status(400).json({
-        message: 'Invalid or missing timeframe. Allowed: 4h, 12h, 24h, 1w, 1m.',
+        message: 'Invalid or missing timeframe. Allowed: 12h, 24h, 1w, 1m.',
       })
     }
 

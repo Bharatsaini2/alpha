@@ -8,10 +8,10 @@ const Base_URL = process.env.SERVER_URL || 'https://api.alpha-block.ai/api/v1'
 
 const API_URL = `${Base_URL}/insight/add-token-whales-byMarketCap`
 
-const timeframes = ['4h','12h', '24h', '1w', '1m']
+// 4h removed from X alerts; only 12h, 24h, 1w, 1m
+const timeframes = ['12h', '24h', '1w', '1m']
 
 const scheduleMap: Record<string, string> = {
-  '4h': '0 */4 * * *', // Every 4 hours
   '12h': '0 */12 * * *', // Every 12 hours
   '24h': '0 0 * * *', // Every day at midnight
   '1w': '0 0 * * 0', // Every Sunday

@@ -1167,8 +1167,9 @@ const checkAndPostKOLAlert = async (
 
     const clampedHotnessScore = Math.max(0, Math.min(hotnessScoreWithBonus, 10))
 
-    if (details.tokenOutUsdAmount > 3000) {
-      alertMessage = `ðŸš¨ KOL Move Alert ðŸ‘€\n\nðŸ”¥ Hotness Score: ${clampedHotnessScore.toFixed(1)}/10\n\nWallet tied to ${details.influencerUsername} just bought $${formattedValue} of $${details.tokenOutSymbol} at $${formattedMarketCap} MC ðŸ‹\n\n`
+    const txLink = `https://app.alpha-block.ai/transaction/${signature}?type=kol&transaction=buy`
+    if (details.tokenOutUsdAmount >= 1000) {
+      alertMessage = ` KOL Move Alert \n\n Hotness Score: ${clampedHotnessScore.toFixed(1)}/10\n\nWallet tied to ${details.influencerUsername} just bought $${formattedValue} of $${details.tokenOutSymbol} at $${formattedMarketCap} MC 🐋\n\n${txLink}\n\nAutomated by @AlphaBlockAI`
     }
 
     logger.info(`alertMessage==============', ${alertMessage}`)
