@@ -19,6 +19,7 @@ import "../../components/swap/swap.css"
 import { IoMdTrendingUp } from "react-icons/io"
 import { IoWalletOutline } from "react-icons/io5"
 import { SwapModal } from "../../components/swap/SwapModal"
+import { formatAge } from "../../utils/formatAge"
 
 // import { MdOutlineCheckBox } from "react-icons/md";
 
@@ -150,6 +151,7 @@ const RightSidebarNew = ({
           name: coin.name,
           image: coin.imageUrl,
           marketCap: coin.marketCap,
+          age: coin.lastUpdated ? formatAge(coin.lastUpdated) : "NA",
           // Map rank to hotnessScore for badge display, or just 0
           hotnessScore: coin.rank || 0,
         }))
@@ -828,6 +830,34 @@ const RightSidebarNew = ({
   ])
 
   // Handle Quick Buy - opens SwapModal popup like HomePageNew
+  const handleCopyTokenAddress = useCallback(
+    async (tokenAddress: string) => {
+      try {
+        if (!tokenAddress) return
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(tokenAddress)
+        } else {
+          const textArea = document.createElement("textarea")
+          textArea.value = tokenAddress
+          textArea.style.position = "fixed"
+          textArea.style.left = "-999999px"
+          textArea.style.top = "-999999px"
+          document.body.appendChild(textArea)
+          textArea.focus()
+          textArea.select()
+          document.execCommand("copy")
+          document.body.removeChild(textArea)
+        }
+        showToast("Address copied to clipboard!", "success")
+      } catch (error) {
+        console.error("Failed to copy token address:", error)
+        showToast("Failed to copy address", "error")
+      }
+    },
+    [showToast]
+  )
+
   const handleQuickBuy = useCallback(
     async (token: any) => {
       console.log("Quick Buy clicked:", token)
@@ -1641,9 +1671,8 @@ const RightSidebarNew = ({
 
         .local-marquee-track {
           display: flex;
-          gap: 16px; /* spacing between duplicates */
           width: max-content;
-          animation: scroll-local-marquee 5s linear infinite;
+          animation: scroll-local-marquee 7s linear infinite;
         }
 
         .local-marquee-track:hover {
@@ -1676,11 +1705,13 @@ const RightSidebarNew = ({
                       border: "none",
                       flexShrink: 0,
                       background: "#1a1a1a",
+                      width: "40px",
+                      height: "40px",
                     }}
                   />
-                  <div className="coin-info" style={{ gap: "6px" }}>
-                    <div className="h-4 w-20 bg-[#1a1a1a] animate-pulse" />
-                    <div className="h-3 w-12 bg-[#1a1a1a] animate-pulse" />
+                  <div className="coin-info" style={{ gap: "6px", flex: 1 }}>
+                    <div className="h-4 w-24 bg-[#1a1a1a] animate-pulse rounded" />
+                    <div className="h-3 w-16 bg-[#1a1a1a] animate-pulse rounded" />
                   </div>
                 </div>
                 <button
@@ -1710,7 +1741,12 @@ const RightSidebarNew = ({
                       src={coin.image}
                       className="coin-img"
                       alt={coin.symbol}
-                      style={{ flexShrink: 0 }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleCopyTokenAddress(coin.address)
+                      }}
+                      style={{ flexShrink: 0, cursor: "pointer" }}
+                      title="Click to copy contract address"
                       onError={(
                         e: React.SyntheticEvent<HTMLImageElement, Event>
                       ) => {
@@ -1718,7 +1754,15 @@ const RightSidebarNew = ({
                       }}
                     />
                   ) : (
-                    <div className="coin-circle" style={{ flexShrink: 0 }}>
+                    <div
+                      className="coin-circle"
+                      style={{ flexShrink: 0, cursor: "pointer" }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleCopyTokenAddress(coin.address)
+                      }}
+                      title="Click to copy contract address"
+                    >
                       <span>{coin.symbol?.charAt(0) || "?"}</span>
                     </div>
                   )}
@@ -1737,56 +1781,49 @@ const RightSidebarNew = ({
                       {/* Only show symbol for cleaner alignment in sidebar */}
                       {/* Name rendering removed to fix alignment gap */}
 
-                      <span className="nw-coin-badge" style={{ flexShrink: 0 }}>
-                        <IoMdTrendingUp /> {coin.hotnessScore || 0}
-                      </span>
-
                       {/* Scrolling Full Name */}
                       <div
                         className="local-marquee-container"
                         style={{
-                          marginLeft: "8px",
-                          width: "100px",
+                          marginLeft: "12px",
+                          width: "80px",
                           flex: "none",
                         }}
                       >
                         <div
                           className="local-marquee-track"
-                          style={{ animationDelay: `-${Math.random() * 5}s` }}
+                          style={{ animationDelay: `${(index * -1.5) % 7}s` }}
                         >
                           <span
                             className="coin-sub"
-                            style={{ whiteSpace: "nowrap" }}
+                            style={{ whiteSpace: "nowrap", paddingRight: "40px" }}
                           >
                             {coin.name || "Unknown"}
                           </span>
                           <span
                             className="coin-sub"
-                            style={{ whiteSpace: "nowrap" }}
-                          >
-                            {coin.name || "Unknown"}
-                          </span>
-                          <span
-                            className="coin-sub"
-                            style={{ whiteSpace: "nowrap" }}
-                          >
-                            {coin.name || "Unknown"}
-                          </span>
-                          <span
-                            className="coin-sub"
-                            style={{ whiteSpace: "nowrap" }}
+                            style={{ whiteSpace: "nowrap", paddingRight: "40px" }}
                           >
                             {coin.name || "Unknown"}
                           </span>
                         </div>
                       </div>
+
+                      <span
+                        className="nw-coin-badge"
+                        style={{ flexShrink: 0, marginLeft: "12px" }}
+                      >
+                        <IoMdTrendingUp /> {coin.hotnessScore || 0}
+                      </span>
                     </div>
                     <div className="coin-meta">
                       MC: $
                       {coin.marketCap
-                        ? (parseFloat(coin.marketCap) / 1000000).toFixed(2)
-                        : "0"}
-                      M
+                        ? parseFloat(coin.marketCap) >= 1000000
+                          ? `${(parseFloat(coin.marketCap) / 1000000).toFixed(2)}M`
+                          : `${(parseFloat(coin.marketCap) / 1000).toFixed(0)}K`
+                        : "0"}{" "}
+                      / AGE: {coin.age || "NA"}
                     </div>
                   </div>
                 </div>

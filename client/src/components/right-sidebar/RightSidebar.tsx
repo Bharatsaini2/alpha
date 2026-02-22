@@ -142,7 +142,7 @@ const HotKOLCoins = () => {
                         </div>
                         <div className="flex items-center gap-3">
                             {/* MC / Age Stats */}
-                            <div className="text-right hidden group-hover:block">
+                            <div className="text-right hidden group-hover:block whitespace-nowrap">
                                 <span className="text-[9px] text-gray-500 uppercase">MC: {coin.mc} / AGE: {coin.age}</span>
                             </div>
                             <button className="px-3 py-1 bg-transparent border border-[#2A2A2D] hover:border-[#00D9AC] text-[10px] text-gray-400 hover:text-[#00D9AC] rounded font-semibold transition-colors uppercase tracking-wide">

@@ -1233,7 +1233,7 @@ input[type="number"] {
   text-transform: uppercase;
   color: #525252;
   margin-bottom: 0;
-  margin-top: 0;
+  white-space: nowrap;
 }
 
 .right-info {
