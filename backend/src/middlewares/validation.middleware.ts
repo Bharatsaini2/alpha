@@ -131,6 +131,49 @@ export const validateAlertUpsert = (
         }
         break
 
+      case AlertType.KOL_CLUSTER:
+        if (config.minClusterSize !== undefined && typeof config.minClusterSize !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'minClusterSize must be a number',
+            field: 'config.minClusterSize',
+          })
+          return
+        }
+        if (config.timeWindowMinutes !== undefined && typeof config.timeWindowMinutes !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'timeWindowMinutes must be a number',
+            field: 'config.timeWindowMinutes',
+          })
+          return
+        }
+        if (config.minInflowUSD !== undefined && typeof config.minInflowUSD !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'minInflowUSD must be a number',
+            field: 'config.minInflowUSD',
+          })
+          return
+        }
+        if (config.minMarketCapUSD !== undefined && typeof config.minMarketCapUSD !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'minMarketCapUSD must be a number',
+            field: 'config.minMarketCapUSD',
+          })
+          return
+        }
+        if (config.maxMarketCapUSD !== undefined && typeof config.maxMarketCapUSD !== 'number') {
+          res.status(400).json({
+            success: false,
+            message: 'maxMarketCapUSD must be a number',
+            field: 'config.maxMarketCapUSD',
+          })
+          return
+        }
+        break
+
       case AlertType.KOL_ACTIVITY:
         if (config.kolIds !== undefined && !Array.isArray(config.kolIds)) {
           res.status(400).json({

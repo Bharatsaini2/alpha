@@ -4,8 +4,9 @@
 export enum AlertType {
   ALPHA_STREAM = 'ALPHA_STREAM',
   WHALE_CLUSTER = 'WHALE_CLUSTER',
+  KOL_CLUSTER = 'KOL_CLUSTER',   // Multiple KOLs buying same token in timeframe (KOL Feed Visualise)
   KOL_ACTIVITY = 'KOL_ACTIVITY',
-  KOL_PROFILE = 'KOL_PROFILE',  // NEW: Alerts for specific KOL
+  KOL_PROFILE = 'KOL_PROFILE',   // Alerts for specific KOL
 }
 
 /**

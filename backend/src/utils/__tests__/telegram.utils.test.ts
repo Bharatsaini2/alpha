@@ -311,7 +311,7 @@ describe('Telegram Utilities', () => {
             
             // Must contain whale count
             expect(message).toContain(whaleCount.toString())
-            expect(message).toMatch(/Whales/)
+            expect(message).toMatch(/Whale/)
             
             // Must contain token symbol (may be escaped, so check for presence)
             // The symbol will be escaped if it contains special chars
@@ -321,11 +321,11 @@ describe('Telegram Utilities', () => {
             // Must contain total USD volume
             expect(message).toMatch(/\$/)
             
-            // Must contain time window
+            // Must contain time window (e.g. "Last 1 Minute" or "Last 15 Minutes")
             expect(message).toContain(timeWindowMinutes.toString())
-            expect(message).toMatch(/minutes/)
+            expect(message).toMatch(/Minute/i)
             
-            // Must contain token address (shortened)
+            // Must contain token line
             expect(message).toMatch(/Token:/)
             
             // Must contain DexScreener token link
@@ -347,11 +347,14 @@ describe('Telegram Utilities', () => {
         15
       )
       
-      expect(message).toContain('🚨')
-      expect(message).toContain('CLUSTER ALERT')
-      expect(message).toContain('5 Whales')
+      expect(message).toContain('Whale Cluster Alert')
+      expect(message).toContain('Cluster Details')
+      expect(message).toContain('Whale Wallets: 5')
       expect(message).toContain('SOL')
-      expect(message).toContain('15 minutes')
+      expect(message).toContain('Last 15 Minutes')
+      expect(message).toContain('Triggered Time')
+      expect(message).toContain('View Token')
+      expect(message).toContain('AlphaBlockAI')
     })
   })
 
@@ -383,22 +386,15 @@ describe('Telegram Utilities', () => {
             const tx = txData as unknown as IInfluencerWhaleTransactionsV2
             const message = formatKOLAlert(kol, tx)
             
-            // Must contain influencer name
-            expect(message).toMatch(/Influencer:/)
+            // Must contain KOL name (label is "KOL:")
+            expect(message).toMatch(/KOL:/)
             expect(message).toContain(kol)
             
-            // Must contain token symbol
+            // Must contain token
             expect(message).toMatch(/Token:/)
             
-            // Must contain transaction type
-            expect(message).toMatch(/Type:/)
-            expect(message).toMatch(/BUY|SELL|BOTH/)
-            
-            // Must contain amount
-            expect(message).toMatch(/Amount:/)
-            
-            // Must contain USD value
-            expect(message).toMatch(/USD Value:/)
+            // Must contain buy amount and hotness
+            expect(message).toMatch(/Buy Amount:|Hotness Score:/)
             
             // Must contain transaction link (AlphaBlock format)
             expect(message).toContain('https://app.alpha-block.ai/transaction/')
@@ -435,11 +431,11 @@ describe('Telegram Utilities', () => {
 
       const message = formatKOLAlert('CryptoInfluencer', tx)
       
-      expect(message).toContain('⭐')
-      expect(message).toContain('KOL Activity Alert')
+      expect(message).toContain('KOL Buy Alert')
+      expect(message).toContain('👤')
       expect(message).toContain('CryptoInfluencer')
       expect(message).toContain('BONK')
-      expect(message).toContain('BUY')
+      expect(message).toContain('Buy Amount')
     })
   })
 

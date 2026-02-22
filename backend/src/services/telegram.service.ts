@@ -582,6 +582,38 @@ export class TelegramService {
           message += `📊 Market cap: ${minStr} - ${maxStr}\n`
         }
         message += `\nYou'll receive alerts when multiple whales enter the same token in the chosen timeframe\\!`
+      } else if (alertType === AlertType.KOL_CLUSTER) {
+        const action = isUpdate ? 'updated' : 'created'
+        message = `✅ KOL Cluster Alert ${action.charAt(0).toUpperCase() + action.slice(1)}\n\n`
+        message += `Your KOL Cluster alert has been ${action} successfully\\!\n\n`
+        message += `Configuration:\n`
+        if (config.timeWindowMinutes !== undefined) {
+          message += `⏱ Timeframe: ${config.timeWindowMinutes} min\n`
+        }
+        if (config.minClusterSize !== undefined) {
+          message += `👤 Min KOL wallets: ${config.minClusterSize}\n`
+        }
+        if (config.minInflowUSD !== undefined && config.minInflowUSD > 0) {
+          const formatted = config.minInflowUSD.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+          })
+          message += `💰 Min total volume: ${formatted}\n`
+        }
+        if (config.minMarketCapUSD !== undefined || config.maxMarketCapUSD !== undefined) {
+          const minStr = config.minMarketCapUSD != null
+            ? config.minMarketCapUSD >= 1e6
+              ? `${(config.minMarketCapUSD / 1e6).toFixed(1)}M`
+              : `${(config.minMarketCapUSD / 1e3).toFixed(1)}K`
+            : '1K'
+          const maxStr = config.maxMarketCapUSD != null
+            ? config.maxMarketCapUSD >= 5e7 ? '50M+' : (config.maxMarketCapUSD >= 1e6 ? `${(config.maxMarketCapUSD / 1e6).toFixed(0)}M` : `${(config.maxMarketCapUSD / 1e3).toFixed(0)}K`)
+            : '50M+'
+          message += `📊 Market cap: ${minStr} - ${maxStr}\n`
+        }
+        message += `\nYou'll receive alerts when multiple KOLs enter the same token in the chosen timeframe\\!`
       } else {
         // Generic confirmation for other alert types
         const action = isUpdate ? 'updated' : 'created'
@@ -631,7 +663,8 @@ export class TelegramService {
         return false
       }
 
-      const message = `🗑️ *Alert Deleted*\n\nYour ${alertType === AlertType.ALPHA_STREAM ? 'Whale Alert' : alertType === AlertType.KOL_ACTIVITY ? 'KOL Alert' : alertType} subscription has been deleted\\.\n\nYou will no longer receive these alerts\\.`
+      const label = alertType === AlertType.ALPHA_STREAM ? 'Whale Alert' : alertType === AlertType.KOL_ACTIVITY ? 'KOL Alert' : alertType === AlertType.WHALE_CLUSTER ? 'Whale Cluster Alert' : alertType === AlertType.KOL_CLUSTER ? 'KOL Cluster Alert' : alertType
+      const message = `🗑️ *Alert Deleted*\n\nYour ${label} subscription has been deleted\\.\n\nYou will no longer receive these alerts\\.`
 
       // Send the message directly
       await this.sendMessage(user.telegramChatId, message)

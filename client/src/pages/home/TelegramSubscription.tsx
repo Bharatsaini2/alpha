@@ -19,6 +19,10 @@ interface AlertConfig {
     minBuyAmountUSD?: number;
     minMarketCapUSD?: number;
     maxMarketCapUSD?: number;
+    // Cluster alerts (Whale Cluster + KOL Cluster)
+    timeWindowMinutes?: number;
+    minClusterSize?: number;
+    minInflowUSD?: number;
     // KOL Profile fields
     targetKolUsername?: string;
     targetKolAddress?: string;
@@ -321,8 +325,26 @@ function TelegramSubscription() {
         return `https://t.me/AlphaBlockAIbot?start=${linkToken}`;
     };
 
-    const formatConfig = (config: AlertConfig): string => {
+    const formatMcap = (value: number) => {
+        if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+        if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+        return `$${value}`;
+    };
+
+    const formatConfig = (config: AlertConfig, type?: string): string => {
         const parts: string[] = [];
+
+        // Cluster alerts (WHALE_CLUSTER, KOL_CLUSTER): timeframe, min wallets, min volume, market cap
+        if (config.timeWindowMinutes !== undefined) {
+            parts.push(`Timeframe: ${config.timeWindowMinutes} min`);
+        }
+        if (config.minClusterSize !== undefined) {
+            const label = type === 'KOL_CLUSTER' ? 'KOL wallets' : 'Whale wallets';
+            parts.push(`Min ${label}: ${config.minClusterSize}`);
+        }
+        if (config.minInflowUSD !== undefined && config.minInflowUSD > 0) {
+            parts.push(`Min volume: $${config.minInflowUSD.toLocaleString()}`);
+        }
 
         if (config.hotnessScoreThreshold !== undefined) {
             parts.push(`Hotness: ${config.hotnessScoreThreshold}/10`);
@@ -334,17 +356,10 @@ function TelegramSubscription() {
 
         // Market Cap Range
         if (config.minMarketCapUSD !== undefined || config.maxMarketCapUSD !== undefined) {
-            const formatMcap = (value: number) => {
-                if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-                if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
-                return `$${value}`;
-            };
-
             const minMcap = config.minMarketCapUSD !== undefined ? formatMcap(config.minMarketCapUSD) : '$0';
             const maxMcap = config.maxMarketCapUSD !== undefined && config.maxMarketCapUSD >= 50000000 
                 ? '$50M+' 
                 : config.maxMarketCapUSD !== undefined ? formatMcap(config.maxMarketCapUSD) : '∞';
-            
             parts.push(`MCap: ${minMcap}-${maxMcap}`);
         }
 
@@ -368,7 +383,7 @@ function TelegramSubscription() {
             parts.push(`Labels: ${config.walletLabels.join(', ')}`);
         }
 
-        return parts.join(' | ');
+        return parts.length ? parts.join(' | ') : 'Default';
     };
 
     const formatDate = (dateString: string): string => {
@@ -586,7 +601,7 @@ function TelegramSubscription() {
                                                     <div className="share-profile">
                                                         <div>
                                                             <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                                {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type === 'KOL_ACTIVITY' ? 'KOL Alert' : subscription.type === 'KOL_PROFILE' ? 'KOL Profile' : subscription.type}
+                                                                {subscription.type === 'ALPHA_STREAM' ? 'Whale Alert' : subscription.type === 'WHALE_CLUSTER' ? 'Whale Cluster Alert' : subscription.type === 'KOL_CLUSTER' ? 'KOL Cluster Alert' : subscription.type === 'KOL_ACTIVITY' ? 'KOL Alert' : subscription.type === 'KOL_PROFILE' ? 'KOL Profile' : subscription.type}
                                                                 {subscription.enabled && <RiVerifiedBadgeFill style={{ color: '#14904d', fontSize: '12px' }} />}
                                                             </h4>
                                                             <p style={{
@@ -596,7 +611,7 @@ function TelegramSubscription() {
                                                                 marginBottom: '2px',
                                                                 fontWeight: 500
                                                             }}>
-                                                                {formatConfig(subscription.config)}
+                                                                {formatConfig(subscription.config, subscription.type)}
                                                             </p>
                                                             <p style={{
                                                                 color: '#8f8f8f',
@@ -624,7 +639,7 @@ function TelegramSubscription() {
                                                     }}>
                                                         <div style={{ flex: '1' }}>
                                                             <h6 style={{ fontSize: '9px', marginBottom: '3px', color: '#8f8f8f', textTransform: 'uppercase', fontWeight: 400 }}>Configuration</h6>
-                                                            <p style={{ fontSize: '10px', margin: '0', color: '#ebebeb', textTransform: 'uppercase' }}>{formatConfig(subscription.config)}</p>
+                                                            <p style={{ fontSize: '10px', margin: '0', color: '#ebebeb', textTransform: 'uppercase' }}>{formatConfig(subscription.config, subscription.type)}</p>
                                                         </div>
 
                                                         <div style={{ minWidth: '70px' }}>

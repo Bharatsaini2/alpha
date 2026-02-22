@@ -37,6 +37,7 @@ import { useNavigate } from "react-router-dom"
 import { useToast } from "../contexts/ToastContext"
 import { useAuth } from "../contexts/AuthContext"
 import { usePremiumAccess } from "../contexts/PremiumAccessContext"
+import api from "../lib/api"
 import { LastUpdatedTicker } from "./TicketComponent"
 import { useRandomBubbleAnimation } from "../hooks/useBubbleAnimation"
 import { SiTelegram } from "react-icons/si"
@@ -664,6 +665,7 @@ const KolNetworkGraph: React.FC<{
   )
 
   const [isSaved, setIsSaved] = useState(false)
+  const [isActivatingAlert, setIsActivatingAlert] = useState(false)
   const [triggerDownload, setTriggerDownload] = useState<(() => Promise<void>) | null>(null)
   const [minMarketCap, setMinMarketCap] = useState(1000)
   const [maxMarketCap, setMaxMarketCap] = useState(50000000)
@@ -718,6 +720,71 @@ const KolNetworkGraph: React.FC<{
     },
     [filters, customWhales, customVolume, updateDataDirectly]
   )
+
+  // KOL Feed Visualise: activates KOL Cluster alert (multiple KOLs, same token, timeframe + min volume)
+  const handleActivateKolClusterAlert = useCallback(() => {
+    const token = localStorage.getItem("accessToken")
+    if (!token) {
+      showToast("Please log in to activate KOL Cluster alerts", "error")
+      return
+    }
+    if (!user?.telegramChatId) {
+      showToast(
+        "Please connect your Telegram account first from the Telegram Subscription page",
+        "error"
+      )
+      return
+    }
+    validateAccess(async () => {
+      setIsActivatingAlert(true)
+      try {
+        const timeWindowMinutes =
+          parseInt((filters.timeframe || "15m").replace("m", ""), 10) || 15
+        const minClusterSize = parseInt(filters.whales, 10) || 1
+        const volStr = customVolume || filters.volume || "0"
+        const minInflowUSD =
+          volStr === "0" || !volStr
+            ? 0
+            : parseFloat(volStr.replace(/[Kk]/g, "")) *
+              (volStr.toLowerCase().includes("k") ? 1000 : 1)
+        const response = await api.post("/alerts/kol-cluster", {
+          timeWindowMinutes,
+          minClusterSize,
+          minInflowUSD: Math.round(minInflowUSD),
+          minMarketCapUSD: minMarketCap,
+          maxMarketCapUSD: maxMarketCap >= 50000000 ? 50000000 : maxMarketCap,
+        })
+        if (response.data?.success) {
+          setIsSaved(true)
+          setDropdown(null)
+          showToast("KOL Cluster alert activated", "success")
+        } else {
+          showToast(
+            response.data?.message || "Failed to activate alert",
+            "error"
+          )
+        }
+      } catch (err: any) {
+        const msg =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to activate KOL Cluster alert"
+        showToast(msg, "error")
+      } finally {
+        setIsActivatingAlert(false)
+      }
+    })
+  }, [
+    filters.timeframe,
+    filters.whales,
+    filters.volume,
+    customVolume,
+    minMarketCap,
+    maxMarketCap,
+    user?.telegramChatId,
+    showToast,
+    validateAccess,
+  ])
 
   // Process data for React Flow
   const { nodes, edges } = useMemo(() => {
@@ -1261,7 +1328,7 @@ const KolNetworkGraph: React.FC<{
                       <div className="sub-drop-header">
                         <div className="sub-drop-content">
                           <h6>System Config</h6>
-                          <h4>KOL Feed Alerts</h4>
+                          <h4>KOL Cluster Alert</h4>
                         </div>
                         <button
                           className="popup-close-btn"
@@ -1281,9 +1348,10 @@ const KolNetworkGraph: React.FC<{
                                 validateAccess(() => navigate("/telegram-subscription"))
                                 setDropdown(null)
                               } else {
-                                setIsSaved(true)
+                                handleActivateKolClusterAlert()
                               }
                             }}
+                            disabled={isActivatingAlert}
                           >
                             <FontAwesomeIcon icon={faPaperPlane} />{" "}
                             {user?.telegramChatId ? "Connected" : "Connect"}
@@ -1504,14 +1572,15 @@ const KolNetworkGraph: React.FC<{
                             validateAccess(() => navigate("/telegram-subscription"))
                             setDropdown(null)
                           } else {
-                            setIsSaved(true)
+                            handleActivateKolClusterAlert()
                           }
                         }}
+                        disabled={isActivatingAlert}
                         style={{ marginTop: "12px", backgroundColor: "#162ECD", padding: "8px 12px", fontSize: "12px" }}
                       >
                         {user?.telegramChatId ? (
                           <>
-                            <FontAwesomeIcon icon={faPaperPlane} /> Activate Alert
+                            <FontAwesomeIcon icon={faPaperPlane} /> {isActivatingAlert ? "Activating…" : "Activate"}
                           </>
                         ) : (
                           "Connect"

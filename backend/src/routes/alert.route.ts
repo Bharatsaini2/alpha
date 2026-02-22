@@ -5,6 +5,7 @@ import {
   createWhaleClusterAlert,
   getWhaleAlerts,
   deleteWhaleAlert,
+  createKolClusterAlert,
   createKolAlert,
   getKolAlerts,
   deleteKolAlert,
@@ -41,6 +42,9 @@ alertRouter.post('/whale-alert', createWhaleAlert)
 
 // POST /api/v1/alerts/whale-cluster - Create or update Whale Cluster alert (Telegram + premium required)
 alertRouter.post('/whale-cluster', createWhaleClusterAlert)
+
+// POST /api/v1/alerts/kol-cluster - Create or update KOL Cluster alert (KOL Feed Visualise)
+alertRouter.post('/kol-cluster', createKolClusterAlert)
 
 // GET /api/v1/alerts/whale-alerts - Get user's whale alert subscriptions
 alertRouter.get('/whale-alerts', getWhaleAlerts)

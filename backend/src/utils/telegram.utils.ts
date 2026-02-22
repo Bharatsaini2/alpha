@@ -170,6 +170,7 @@ _Powered by @AlphaBlockAI_ `
  * @param whaleCount - Number of whales in the cluster
  * @param totalVolumeUSD - Total USD volume
  * @param timeWindowMinutes - Time window in minutes
+ * @param options - Optional tokenName, marketCap (number), triggeredAt (Date)
  * @returns Formatted MarkdownV2 message
  */
 export function formatClusterAlert(
@@ -178,20 +179,96 @@ export function formatClusterAlert(
   whaleCount: number,
   totalVolumeUSD: number,
   timeWindowMinutes: number,
+  options?: { tokenName?: string; marketCap?: number; triggeredAt?: Date },
 ): string {
+  const tokenName = options?.tokenName || tokenSymbol
+  const tokenNameEscaped = escapeMarkdownV2(tokenName)
   const tokenSymbolEscaped = escapeMarkdownV2(tokenSymbol)
-  const tokenShort = shortenAddress(token, 4, 4)
-  const tokenShortEscaped = escapeMarkdownV2(tokenShort)
-  const formattedVolume = `$${formatLargeNumber(totalVolumeUSD)}`
+  const tokenEscaped = escapeMarkdownV2(token)
+  const formattedVolume = formatCurrency(totalVolumeUSD)
+  const mcapStr =
+    options?.marketCap != null && options.marketCap > 0
+      ? `$${formatLargeNumber(options.marketCap)}`
+      : 'N/A'
+  const mcapEscaped = escapeMarkdownV2(mcapStr)
+  const timeframeStr =
+    timeWindowMinutes <= 1
+      ? 'Last 1 Minute'
+      : `Last ${timeWindowMinutes} Minutes`
+  const timeframeEscaped = escapeMarkdownV2(timeframeStr)
+  const triggeredAt = options?.triggeredAt || new Date()
+  const timeStr = `${triggeredAt.getUTCHours().toString().padStart(2, '0')}:${triggeredAt.getUTCMinutes().toString().padStart(2, '0')} UTC`
+  const timeStrEscaped = escapeMarkdownV2(timeStr)
   const tokenLink = generateTokenLink(token)
 
-  return `🚨 *CLUSTER ALERT*
+  return `*Whale Cluster Alert* 🕸️
 
-*${whaleCount} Whales* just entered *${tokenSymbolEscaped}* with a total volume of *${escapeMarkdownV2(formattedVolume)}* in the last *${timeWindowMinutes} minutes*\\!
+*Token:* ${tokenNameEscaped} \\(${tokenSymbolEscaped}\\)
+*Chain:* Solana
+*CA:* \`${tokenEscaped}\`
+*MCAP:* ${mcapEscaped}
 
-*Token:* \`${tokenShortEscaped}\`
+📊 *Cluster Details*
+├ Whale Wallets: ${escapeMarkdownV2(String(whaleCount))}
+├ Total Buy Volume: ${escapeMarkdownV2(`$${formattedVolume}`)}
+└ Timeframe: ${timeframeEscaped}
 
-[View on DexScreener](${tokenLink})`
+*Triggered Time:* ${timeStrEscaped}
+
+🔗 [View Token](${tokenLink})
+
+_Powered by @AlphaBlockAI_`
+}
+
+/**
+ * Formats a KOL Cluster alert message for Telegram (same logic as Whale Cluster, for KOL txns)
+ * Triggers when multiple KOL wallets buy the same token within a timeframe and min volume.
+ */
+export function formatKOLClusterAlert(
+  token: string,
+  tokenSymbol: string,
+  kolCount: number,
+  totalVolumeUSD: number,
+  timeWindowMinutes: number,
+  options?: { tokenName?: string; marketCap?: number; triggeredAt?: Date },
+): string {
+  const tokenName = options?.tokenName || tokenSymbol
+  const tokenNameEscaped = escapeMarkdownV2(tokenName)
+  const tokenSymbolEscaped = escapeMarkdownV2(tokenSymbol)
+  const tokenEscaped = escapeMarkdownV2(token)
+  const formattedVolume = formatCurrency(totalVolumeUSD)
+  const mcapStr =
+    options?.marketCap != null && options.marketCap > 0
+      ? `$${formatLargeNumber(options.marketCap)}`
+      : 'N/A'
+  const mcapEscaped = escapeMarkdownV2(mcapStr)
+  const timeframeStr =
+    timeWindowMinutes <= 1
+      ? 'Last 1 Minute'
+      : `Last ${timeWindowMinutes} Minutes`
+  const timeframeEscaped = escapeMarkdownV2(timeframeStr)
+  const triggeredAt = options?.triggeredAt || new Date()
+  const timeStr = `${triggeredAt.getUTCHours().toString().padStart(2, '0')}:${triggeredAt.getUTCMinutes().toString().padStart(2, '0')} UTC`
+  const timeStrEscaped = escapeMarkdownV2(timeStr)
+  const tokenLink = generateTokenLink(token)
+
+  return `*KOL Cluster Alert* 👤
+
+*Token:* ${tokenNameEscaped} \\(${tokenSymbolEscaped}\\)
+*Chain:* Solana
+*CA:* \`${tokenEscaped}\`
+*MCAP:* ${mcapEscaped}
+
+📊 *Cluster Details*
+├ KOL Wallets: ${escapeMarkdownV2(String(kolCount))}
+├ Total Buy Volume: ${escapeMarkdownV2(`$${formattedVolume}`)}
+└ Timeframe: ${timeframeEscaped}
+
+*Triggered Time:* ${timeStrEscaped}
+
+🔗 [View Token](${tokenLink})
+
+_Powered by @AlphaBlockAI_`
 }
 
 /**
@@ -329,17 +406,17 @@ export function formatKOLProfileAlert(
 
 👤 *KOL:* ${kolDisplay}
 
-🪙 *Token:* ${escapeMarkdownV2(tokenName)} \\(${escapeMarkdownV2(tokenSymbol)}\\)
-⛓️ *Chain:* Solana
-📝 *CA:* \`${escapeMarkdownV2(tokenAddress)}\`
-💰 *MCAP:* $${escapeMarkdownV2(formattedMCap)}
+*Token:* ${escapeMarkdownV2(tokenName)} \\(${escapeMarkdownV2(tokenSymbol)}\\)
+*Chain:* Solana
+*CA:* \`${escapeMarkdownV2(tokenAddress)}\`
+*MCAP:* $${escapeMarkdownV2(formattedMCap)}
 
-💵 *Buy Amount:* $${escapeMarkdownV2(formattedUSD)}
+💰 *Buy Amount:* $${escapeMarkdownV2(formattedUSD)}
 🔥 *Hotness Score:* ${escapeMarkdownV2(hotnessScore)}/10
 
-⏰ *Transaction Time:* ${escapeMarkdownV2(timeStr)}
+*Transaction Time:* ${escapeMarkdownV2(timeStr)}
 
-🔗 [View Transaction](${appTxLink}) \\| 🪙 [View Token](${tokenLink})
+🔗 [View Transaction](${appTxLink}) \\|  [View Token](${tokenLink})
 
 _Powered by @AlphaBlockAI_ `
 }

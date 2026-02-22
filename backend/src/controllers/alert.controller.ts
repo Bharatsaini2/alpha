@@ -554,6 +554,184 @@ export const createWhaleClusterAlert = catchAsyncErrors(
 )
 
 /**
+ * POST /api/v1/alerts/kol-cluster
+ * Create or update KOL Cluster alert (KOL Feed Visualise: multiple KOLs, same token, timeframe, min volume)
+ */
+export const createKolClusterAlert = catchAsyncErrors(
+  async (req: Request, res: Response) => {
+    const userId = (req as any).userId
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'User authentication required',
+      })
+    }
+
+    const {
+      timeWindowMinutes,
+      minClusterSize,
+      minInflowUSD,
+      minMarketCapUSD,
+      maxMarketCapUSD,
+    } = req.body
+
+    const windowMins = timeWindowMinutes != null ? Number(timeWindowMinutes) : 15
+    if (windowMins < 1 || windowMins > 120) {
+      return res.status(400).json({
+        success: false,
+        message: 'Time window must be between 1 and 120 minutes',
+      })
+    }
+
+    const clusterSize = minClusterSize != null ? Number(minClusterSize) : 2
+    if (clusterSize < 1 || clusterSize > 50) {
+      return res.status(400).json({
+        success: false,
+        message: 'Min KOL wallets must be between 1 and 50',
+      })
+    }
+
+    const minInflow = minInflowUSD != null ? Number(minInflowUSD) : 0
+    if (minInflow < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Min total buying volume cannot be negative',
+      })
+    }
+
+    if (minMarketCapUSD !== undefined && minMarketCapUSD !== null && Number(minMarketCapUSD) < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap must be at least 1K (1000 USD)',
+      })
+    }
+
+    if (maxMarketCapUSD !== undefined && maxMarketCapUSD !== null && Number(maxMarketCapUSD) < 1000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Maximum market cap must be at least 1K (1000 USD)',
+      })
+    }
+
+    const minMcap = minMarketCapUSD != null ? Number(minMarketCapUSD) : undefined
+    const maxMcap = maxMarketCapUSD != null ? Number(maxMarketCapUSD) : undefined
+    if (minMcap !== undefined && maxMcap !== undefined && minMcap > maxMcap) {
+      return res.status(400).json({
+        success: false,
+        message: 'Minimum market cap cannot be greater than maximum market cap',
+      })
+    }
+
+    try {
+      const user = await User.findById(userId)
+
+      if (!user || !user.walletAddress) {
+        return res.status(400).json({
+          success: false,
+          message: 'Wallet address not found. Please connect your wallet.',
+        })
+      }
+
+      if (!user.telegramChatId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Telegram account not connected. Please connect your Telegram account first.',
+        })
+      }
+
+      const walletForCheck = user.walletAddressOriginal || user.walletAddress
+      const premiumResult = await validateSOLBalance(walletForCheck)
+
+      if (!premiumResult.hasAccess) {
+        return res.status(403).json({
+          success: false,
+          message: `Premium access required. Minimum balance: ${premiumResult.requiredBalance} SOL`,
+          data: {
+            currentBalance: premiumResult.currentBalance,
+            requiredBalance: premiumResult.requiredBalance,
+            difference: premiumResult.difference,
+          },
+        })
+      }
+
+      const config: Partial<AlertConfig> = {
+        timeWindowMinutes: windowMins,
+        minClusterSize: clusterSize,
+        minInflowUSD: Math.round(minInflow),
+      }
+      if (minMcap !== undefined) config.minMarketCapUSD = minMcap
+      if (maxMcap !== undefined) config.maxMarketCapUSD = maxMcap >= 50000000 ? 50000000 : maxMcap
+
+      const existing = await UserAlert.findOne({ userId, type: AlertType.KOL_CLUSTER })
+      const isUpdate = !!existing
+
+      const alert = await UserAlert.findOneAndUpdate(
+        { userId, type: AlertType.KOL_CLUSTER },
+        {
+          priority: Priority.HIGH,
+          enabled: true,
+          config,
+          updatedAt: new Date(),
+        },
+        { upsert: true, new: true, runValidators: true },
+      )
+
+      alertMatcherService.invalidateUserSubscriptions(userId)
+
+      telegramService.sendAlertConfirmation(
+        userId,
+        AlertType.KOL_CLUSTER,
+        config,
+        isUpdate,
+      ).catch((error) => {
+        logger.warn({
+          component: 'AlertController',
+          operation: 'createKolClusterAlert',
+          userId,
+          error: { message: error instanceof Error ? error.message : 'Unknown' },
+          message: 'Failed to send Telegram confirmation, but alert was created',
+        })
+      })
+
+      logger.info({
+        component: 'AlertController',
+        operation: 'createKolClusterAlert',
+        userId,
+        alertId: alert._id,
+        config,
+        message: 'KOL Cluster alert subscription created/updated successfully',
+      })
+
+      res.status(200).json({
+        success: true,
+        data: {
+          alertId: alert._id,
+          type: alert.type,
+          config: alert.config,
+          createdAt: alert.createdAt,
+          updatedAt: alert.updatedAt,
+        },
+      })
+    } catch (error) {
+      logger.error({
+        component: 'AlertController',
+        operation: 'createKolClusterAlert',
+        userId,
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+      })
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create KOL Cluster alert subscription',
+      })
+    }
+  },
+)
+
+/**
  * GET /api/v1/alerts/whale-alerts
  * Get user's whale alert subscriptions
  */

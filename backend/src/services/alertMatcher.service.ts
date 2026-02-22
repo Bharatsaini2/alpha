@@ -4,12 +4,14 @@ import { User } from '../models/user.model'
 import { IWhaleAllTransactionsV2 } from '../models/whaleAllTransactionsV2.model'
 import { IInfluencerWhaleTransactionsV2 } from '../models/influencerWhaleTransactionsV2.model'
 import whaleAllTransactionModelV2 from '../models/whaleAllTransactionsV2.model'
+import influencerWhaleTransactionsModelV2 from '../models/influencerWhaleTransactionsV2.model'
 import InfluencerWhalesAddressModelV2 from '../models/Influencer-wallet-whalesV2'
 import { telegramService } from './telegram.service'
 import logger from '../utils/logger'
 import {
   formatWhaleAlert,
   formatClusterAlert,
+  formatKOLClusterAlert,
   formatKOLAlert,
   formatKOLProfileAlert,
 } from '../utils/telegram.utils'
@@ -58,6 +60,7 @@ interface MatchingMetrics {
 export class AlertMatcherService {
   private subscriptionMap: Map<AlertType, UserSubscription[]> = new Map()
   private clusterCache: Map<string, ClusterResult> = new Map()
+  private kolClusterCache: Map<string, ClusterResult> = new Map()
   private tokenSymbolCache: Map<string, TokenSymbolCacheEntry> = new Map()
   private syncInterval: NodeJS.Timeout | null = null
   private clusterCleanupInterval: NodeJS.Timeout | null = null
@@ -197,6 +200,7 @@ export class AlertMatcherService {
         operation: 'syncSubscriptions',
         alphaStreamCount: this.subscriptionMap.get(AlertType.ALPHA_STREAM)?.length || 0,
         whaleClusterCount: this.subscriptionMap.get(AlertType.WHALE_CLUSTER)?.length || 0,
+        kolClusterCount: this.subscriptionMap.get(AlertType.KOL_CLUSTER)?.length || 0,
         kolActivityCount: this.subscriptionMap.get(AlertType.KOL_ACTIVITY)?.length || 0,
         message: 'Subscription sync complete',
       })
@@ -262,6 +266,8 @@ export class AlertMatcherService {
         !isKOLTransaction ? this.matchAlphaStream(tx, correlationId) : Promise.resolve(0),
         // Only match WHALE_CLUSTER for non-KOL whale transactions
         !isKOLTransaction ? this.matchWhaleCluster(tx, correlationId) : Promise.resolve(0),
+        // Only match KOL_CLUSTER for KOL/influencer transactions (multiple KOLs, same token, timeframe)
+        isKOLTransaction ? this.matchKOLCluster(tx, correlationId) : Promise.resolve(0),
         // Match KOL_ACTIVITY for all transactions (checks if wallet is KOL inside)
         this.matchKOLActivity(tx, correlationId),
         // Match KOL Profile alerts (only for influencer transactions)
@@ -288,7 +294,8 @@ export class AlertMatcherService {
         matchResult: {
           alphaStreamMatches: matchResults[0],
           whaleClusterMatches: matchResults[1],
-          kolActivityMatches: matchResults[2],
+          kolClusterMatches: matchResults[2],
+          kolActivityMatches: matchResults[3],
           totalMatches,
         },
         latency: `${latency}ms`,
@@ -502,6 +509,10 @@ export class AlertMatcherService {
 
         // Resolve token symbol
         const tokenSymbol = this.resolveTokenSymbol(tx)
+        const tokenName = tx.transaction?.tokenOut?.name || tokenSymbol
+        const marketCap = parseFloat(
+          tx.marketCap?.buyMarketCap || tx.transaction?.tokenOut?.marketCap || '0',
+        )
 
         // Format message
         const message = formatClusterAlert(
@@ -510,6 +521,11 @@ export class AlertMatcherService {
           clusterData.count,
           clusterData.totalVolumeUSD,
           clusterData.timeWindowMinutes,
+          {
+            tokenName,
+            marketCap: marketCap > 0 ? marketCap : undefined,
+            triggeredAt: tx.timestamp ? new Date(tx.timestamp) : new Date(),
+          },
         )
 
         // Queue alert
@@ -543,6 +559,132 @@ export class AlertMatcherService {
         logger.error({
           component: 'AlertMatcherService',
           operation: 'matchWhaleCluster',
+          correlationId,
+          userId: sub.userId,
+          txHash: tx.signature,
+          error: {
+            message: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        })
+      }
+    }
+
+    return matchCount
+  }
+
+  /**
+   * Match transaction against KOL_CLUSTER subscriptions (KOL Feed Visualise)
+   * Same logic as Whale Cluster but for KOL/influencer txns: multiple KOLs, same token, timeframe, min volume.
+   * @returns Number of matches
+   */
+  private async matchKOLCluster(tx: IWhaleAllTransactionsV2, correlationId: string): Promise<number> {
+    const subscriptions = this.subscriptionMap.get(AlertType.KOL_CLUSTER) || []
+    let matchCount = 0
+
+    for (const sub of subscriptions) {
+      try {
+        if (!this.matchesKOLClusterFilters(tx, sub.config)) {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLCluster',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_CLUSTER,
+            txHash: tx.signature,
+            matchResult: false,
+            message: 'Filters did not match',
+          })
+          continue
+        }
+
+        const tokenAddress = tx.transaction?.tokenOut?.address || (tx as any).tokenOutAddress
+        if (!tokenAddress) continue
+
+        const timeWindowMinutes = sub.config.timeWindowMinutes ?? this.CLUSTER_TIME_WINDOW_MINUTES
+        const clusterData = await this.getKOLClusterData(tokenAddress, timeWindowMinutes)
+
+        if (sub.config.minClusterSize && clusterData.count < sub.config.minClusterSize) {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLCluster',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_CLUSTER,
+            txHash: tx.signature,
+            matchResult: false,
+            clusterSize: clusterData.count,
+            minRequired: sub.config.minClusterSize,
+            message: 'KOL cluster size below minimum',
+          })
+          continue
+        }
+
+        const minInflow = sub.config.minInflowUSD ?? 0
+        if (clusterData.totalVolumeUSD < minInflow) {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLCluster',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_CLUSTER,
+            txHash: tx.signature,
+            matchResult: false,
+            totalVolumeUSD: clusterData.totalVolumeUSD,
+            minInflowUSD: minInflow,
+            message: 'KOL cluster total volume below minimum',
+          })
+          continue
+        }
+
+        const tokenSymbol = this.resolveTokenSymbol(tx)
+        const tokenName = tx.transaction?.tokenOut?.name || tokenSymbol
+        const marketCap = parseFloat(
+          (tx as any).marketCap?.buyMarketCap || tx.transaction?.tokenOut?.marketCap || '0',
+        )
+
+        const message = formatKOLClusterAlert(
+          tokenAddress,
+          tokenSymbol,
+          clusterData.count,
+          clusterData.totalVolumeUSD,
+          clusterData.timeWindowMinutes,
+          {
+            tokenName,
+            marketCap: marketCap > 0 ? marketCap : undefined,
+            triggeredAt: tx.timestamp ? new Date(tx.timestamp) : new Date(),
+          },
+        )
+
+        const queued = await telegramService.queueAlert(
+          sub.userId,
+          AlertType.KOL_CLUSTER,
+          tx.signature,
+          message,
+          sub.priority,
+        )
+
+        if (queued) {
+          matchCount++
+          this.metrics.totalMatches++
+          const typeCount = this.metrics.matchesByType.get(AlertType.KOL_CLUSTER) || 0
+          this.metrics.matchesByType.set(AlertType.KOL_CLUSTER, typeCount + 1)
+          logger.info({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLCluster',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_CLUSTER,
+            txHash: tx.signature,
+            matchResult: true,
+            kolCount: clusterData.count,
+            message: 'KOL_CLUSTER alert matched and queued',
+          })
+        }
+      } catch (error) {
+        logger.error({
+          component: 'AlertMatcherService',
+          operation: 'matchKOLCluster',
           correlationId,
           userId: sub.userId,
           txHash: tx.signature,
@@ -957,6 +1099,24 @@ export class AlertMatcherService {
   }
 
   /**
+   * Check if transaction matches KOL_CLUSTER filters (same as whale cluster: token + market cap)
+   */
+  private matchesKOLClusterFilters(tx: IWhaleAllTransactionsV2, config: AlertConfig): boolean {
+    const tokenAddress = tx.transaction?.tokenOut?.address || (tx as any).tokenOutAddress
+    if (config.tokens && config.tokens.length > 0 && tokenAddress && !config.tokens.includes(tokenAddress)) {
+      return false
+    }
+    const tokenOutMarketCap = parseFloat(tx.transaction?.tokenOut?.marketCap || (tx as any).marketCap?.buyMarketCap || '0')
+    if (config.minMarketCapUSD !== undefined && tokenOutMarketCap < config.minMarketCapUSD) {
+      return false
+    }
+    if (config.maxMarketCapUSD !== undefined && config.maxMarketCapUSD < 50000000 && tokenOutMarketCap > config.maxMarketCapUSD) {
+      return false
+    }
+    return true
+  }
+
+  /**
    * Check if transaction matches KOL_ACTIVITY filters
    */
   private matchesKOLActivityFilters(
@@ -1090,6 +1250,67 @@ export class AlertMatcherService {
   }
 
   /**
+   * Get KOL cluster data for a token (count distinct KOL wallets + total buy volume in window)
+   * Queries influencer transactions only.
+   */
+  private async getKOLClusterData(
+    tokenAddress: string,
+    timeWindowMinutes?: number,
+  ): Promise<ClusterResult> {
+    const windowMins = timeWindowMinutes ?? this.CLUSTER_TIME_WINDOW_MINUTES
+    const cacheKey = `kol_${tokenAddress}_${windowMins}`
+
+    const cached = this.kolClusterCache.get(cacheKey)
+    if (cached && Date.now() - cached.timestamp < this.CLUSTER_CACHE_TTL_MS) {
+      return cached
+    }
+
+    const timeWindowStart = new Date(Date.now() - windowMins * 60 * 1000)
+
+    const transactions = await influencerWhaleTransactionsModelV2
+      .find({
+        $or: [
+          { 'transaction.tokenOut.address': tokenAddress },
+          { tokenOutAddress: tokenAddress },
+        ],
+        timestamp: { $gte: timeWindowStart },
+        type: { $in: ['buy', 'both'] },
+      })
+      .lean()
+
+    const uniqueKolWallets = new Set<string>()
+    let totalVolumeUSD = 0
+
+    for (const tx of transactions) {
+      const wallet = (tx as any).whaleAddress
+      if (wallet) uniqueKolWallets.add(wallet)
+      const usdStr = (tx as any).amount?.buyAmount ?? (tx as any).transaction?.tokenOut?.usdAmount ?? '0'
+      totalVolumeUSD += parseFloat(usdStr)
+    }
+
+    const result: ClusterResult = {
+      count: uniqueKolWallets.size,
+      totalVolumeUSD,
+      timeWindowMinutes: windowMins,
+      timestamp: Date.now(),
+    }
+
+    this.kolClusterCache.set(cacheKey, result)
+
+    logger.debug({
+      component: 'AlertMatcherService',
+      operation: 'getKOLClusterData',
+      tokenAddress,
+      kolCount: result.count,
+      totalVolumeUSD: result.totalVolumeUSD,
+      timeWindowMinutes: windowMins,
+      message: 'Calculated KOL cluster data',
+    })
+
+    return result
+  }
+
+  /**
    * Get KOL info for a wallet address
    */
   private async getKOLInfo(
@@ -1190,17 +1411,27 @@ export class AlertMatcherService {
         }
       })
 
-      // Remove expired entries
       for (const key of expiredKeys) {
         this.clusterCache.delete(key)
       }
 
-      if (expiredKeys.length > 0) {
+      const kolExpiredKeys: string[] = []
+      Array.from(this.kolClusterCache.entries()).forEach(([key, value]) => {
+        if (now - value.timestamp > this.CLUSTER_CACHE_TTL_MS) {
+          kolExpiredKeys.push(key)
+        }
+      })
+      for (const key of kolExpiredKeys) {
+        this.kolClusterCache.delete(key)
+      }
+
+      if (expiredKeys.length > 0 || kolExpiredKeys.length > 0) {
         logger.debug({
           component: 'AlertMatcherService',
           operation: 'clusterCacheCleanup',
-          removedCount: expiredKeys.length,
+          removedCount: expiredKeys.length + kolExpiredKeys.length,
           cacheSize: this.clusterCache.size,
+          kolClusterCacheSize: this.kolClusterCache.size,
           message: 'Cleaned up expired cluster cache entries',
         })
       }
@@ -1258,6 +1489,7 @@ export class AlertMatcherService {
         subscription: {
           alphaStreamCount: this.subscriptionMap.get(AlertType.ALPHA_STREAM)?.length || 0,
           whaleClusterCount: this.subscriptionMap.get(AlertType.WHALE_CLUSTER)?.length || 0,
+          kolClusterCount: this.subscriptionMap.get(AlertType.KOL_CLUSTER)?.length || 0,
           kolActivityCount: this.subscriptionMap.get(AlertType.KOL_ACTIVITY)?.length || 0,
           totalSubscriptions: Array.from(this.subscriptionMap.values()).reduce(
             (sum, subs) => sum + subs.length,
@@ -1314,6 +1546,7 @@ export class AlertMatcherService {
 
     this.subscriptionMap.clear()
     this.clusterCache.clear()
+    this.kolClusterCache.clear()
     this.tokenSymbolCache.clear()
     this.isInitialized = false
 

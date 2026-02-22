@@ -70,7 +70,10 @@ UserAlertSchema.pre('save', function (next) {
       // Config can have minAmount, tokens, wallets
       break
     case AlertType.WHALE_CLUSTER:
-      // Config can have minClusterSize, tokens
+      // Config can have minClusterSize, tokens, timeWindowMinutes, minInflowUSD
+      break
+    case AlertType.KOL_CLUSTER:
+      // Config can have minClusterSize, timeWindowMinutes, minInflowUSD, marketCap
       break
     case AlertType.KOL_ACTIVITY:
       // Config can have kolIds, tokens
