@@ -1774,6 +1774,9 @@ font-size: 16px;
 .coin-img {
   width: 40px;
   height: 40px;
+  border: 1px solid #3d3d3d;
+  border-radius: 0px;
+  object-fit: cover;
 }
 
 .coin-circle {
@@ -1786,6 +1789,7 @@ font-size: 16px;
   justify-content: center;
   color: #fff;
   font-size: 18px;
+  border: 1px solid #3d3d3d;
 }
 
 .coin-info {

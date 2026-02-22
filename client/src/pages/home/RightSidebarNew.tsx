@@ -152,8 +152,6 @@ const RightSidebarNew = ({
           image: coin.imageUrl,
           marketCap: coin.marketCap,
           age: coin.lastUpdated ? formatAge(coin.lastUpdated) : "NA",
-          // Map rank to hotnessScore for badge display, or just 0
-          hotnessScore: coin.rank || 0,
         }))
 
         setHotCoins(mappedCoins)
@@ -1665,8 +1663,8 @@ const RightSidebarNew = ({
           /* width: 100%; removed to allow flex to control width */
           flex: 1;
           min-width: 0;
-          mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10px, black calc(100% - 10px), transparent);
+          mask-image: linear-gradient(to right, black 0%, black calc(100% - 15px), transparent 100%);
+          -webkit-mask-image: linear-gradient(to right, black 0%, black calc(100% - 15px), transparent 100%);
         }
 
         .local-marquee-track {
@@ -1679,9 +1677,28 @@ const RightSidebarNew = ({
           animation-play-state: paused;
         }
 
+        .local-marquee-text {
+          font-weight: 400;
+          font-size: 12px;
+          line-height: 140%;
+          text-transform: uppercase;
+          color: #8f8f8f;
+          margin-bottom: 0;
+        }
+
         @keyframes scroll-local-marquee {
           0% { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+
+        @media (max-width: 480px) {
+          .coin-name { font-size: 12px !important; }
+          .local-marquee-text { font-size: 9px !important; }
+          .coin-meta { font-size: 9px !important; }
+          .nw-coin-badge { font-size: 8px !important; padding: 1px 3px !important; }
+          .quick-buy-btn { font-size: 9px !important; padding: 2px 4px !important; }
+          .coin-img { width: 32px !important; height: 32px !important; }
+          .coin-circle { width: 32px !important; height: 32px !important; font-size: 14px !important; }
         }
       `}</style>
       <div className="market-bx ultra-pro-bx nw-market-bx">
@@ -1731,9 +1748,9 @@ const RightSidebarNew = ({
               <div className="coin-row" key={coin.address || index}>
                 <div
                   className="coin-left"
-                  style={{ flex: 1, minWidth: 0, gap: "12px" }}
+                  style={{ flex: 1, minWidth: 0, gap: "8px" }}
                 >
-                  <span className="rank" style={{ minWidth: "20px" }}>
+                  <span className="rank" style={{ minWidth: "16px" }}>
                     #{index + 1}
                   </span>
                   {coin.image ? (
@@ -1769,25 +1786,29 @@ const RightSidebarNew = ({
                   <div className="coin-info" style={{ flex: 1, minWidth: 0 }}>
                     <div
                       className="coin-title"
-                      style={{ flexWrap: "nowrap", overflow: "hidden" }}
+                      style={{ display: "flex", alignItems: "center", flexWrap: "nowrap", overflow: "hidden" }}
                     >
                       <span
                         className="coin-name"
-                        style={{ whiteSpace: "nowrap" }}
+                        style={{
+                          whiteSpace: "nowrap",
+                          flex: "0 0 80px", // Fixed bounded width for symbol
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          color: "#ffffff",
+                          fontSize: "14px",
+                          fontWeight: "600"
+                        }}
                       >
                         {coin.symbol || "Unknown"}
                       </span>
-
-                      {/* Only show symbol for cleaner alignment in sidebar */}
-                      {/* Name rendering removed to fix alignment gap */}
 
                       {/* Scrolling Full Name */}
                       <div
                         className="local-marquee-container"
                         style={{
-                          marginLeft: "12px",
-                          width: "80px",
-                          flex: "none",
+                          flex: "0 0 85px", // STRICTLY LOCKS THE WIDTH to match screenshot #2 identically!
+                          overflow: "hidden"
                         }}
                       >
                         <div
@@ -1795,13 +1816,25 @@ const RightSidebarNew = ({
                           style={{ animationDelay: `${(index * -1.5) % 7}s` }}
                         >
                           <span
-                            className="coin-sub"
+                            className="local-marquee-text"
                             style={{ whiteSpace: "nowrap", paddingRight: "40px" }}
                           >
                             {coin.name || "Unknown"}
                           </span>
                           <span
-                            className="coin-sub"
+                            className="local-marquee-text"
+                            style={{ whiteSpace: "nowrap", paddingRight: "40px" }}
+                          >
+                            {coin.name || "Unknown"}
+                          </span>
+                          <span
+                            className="local-marquee-text"
+                            style={{ whiteSpace: "nowrap", paddingRight: "40px" }}
+                          >
+                            {coin.name || "Unknown"}
+                          </span>
+                          <span
+                            className="local-marquee-text"
                             style={{ whiteSpace: "nowrap", paddingRight: "40px" }}
                           >
                             {coin.name || "Unknown"}
@@ -1811,10 +1844,25 @@ const RightSidebarNew = ({
 
                       <span
                         className="nw-coin-badge"
-                        style={{ flexShrink: 0, marginLeft: "12px" }}
+                        style={{
+                          flexShrink: 0,
+                          backgroundColor: "rgba(34, 197, 94, 0.1)",
+                          color: "#22c55e",
+                          padding: "1px 5px",
+                          borderRadius: "3px",
+                          fontSize: "10px",
+                          fontWeight: "600",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                          minWidth: "26px", // Ensure consistent badge width
+                          justifyContent: "center"
+                        }}
                       >
-                        <IoMdTrendingUp /> {coin.hotnessScore || 0}
+                        <IoMdTrendingUp style={{ fontSize: "11px" }} />
+                        {index + 1}
                       </span>
+
                     </div>
                     <div className="coin-meta">
                       MC: $
