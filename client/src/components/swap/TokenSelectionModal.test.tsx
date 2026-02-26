@@ -12,7 +12,6 @@ export const TokenSelectionModalTest: React.FC = () => {
 
   const handleTokenSelect = (token: TokenInfo) => {
     setSelectedToken(token)
-    console.log("Selected token:", token)
   }
 
   const handleOpenModal = () => {

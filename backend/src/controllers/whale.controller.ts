@@ -1342,6 +1342,20 @@ async function processSplitSwapAsSingleRecord(
     gasFee: gasFeeUSD,
   }
 
+  // Compute hotness for the buy leg so swap (token-to-token) records show hotness like single-swap buys
+  try {
+    const hotnessScore = await getHotnessScore(
+      signature,
+      whaleAddress,
+      tokenDetails.tokenOutUsdAmount,
+      tokenDetails.outMarketCap,
+      tokenDetails.tokenOutAddress,
+    )
+    tokenDetails.hotnessScore = Number(hotnessScore ?? 0)
+  } catch (err) {
+    logger.warn({ err, signature: signature.slice(0, 12) }, 'Split swap: getHotnessScore failed, using 0')
+  }
+
   logger.info(
     pc.green(`✅ Split swap (single record): ${tokenDetails.tokenInSymbol} ↔ ${tokenDetails.tokenOutSymbol} for ${signature.slice(0, 12)}…`)
   )

@@ -342,7 +342,6 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
           <button
             onClick={() => {
               // In a real implementation, you'd implement pagination
-              console.log('Load more transactions')
             }}
             className="px-4 py-2 bg-[#2B6AD1] text-white rounded text-sm font-medium hover:bg-[#2B6AD1]/80 transition-colors"
           >

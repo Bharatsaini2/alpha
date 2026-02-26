@@ -83,28 +83,21 @@ function TelegramSubscription() {
 
 
     const toggleAccordion = (id: string) => {
-        console.log('🔵 ACCORDION TOGGLE - ID:', id, 'Current openId:', openId);
         setOpenId(openId === id ? null : id);
     };
 
     // Check for Telegram connection status updates
     const checkTelegramConnection = async () => {
-        console.log('🔵 Checking Telegram connection...');
         try {
             const response = await api.get('/auth/me');
-            console.log('📡 Auth response:', response.data);
 
             if (response.data.success && response.data.data?.user) {
                 const updatedUser = response.data.data.user;
-                console.log('👤 Current user telegramChatId:', user?.telegramChatId);
-                console.log('👤 Updated user telegramChatId:', updatedUser.telegramChatId);
 
                 // If user now has telegramChatId but didn't before, update the auth context
                 if (updatedUser.telegramChatId && !user?.telegramChatId) {
-                    console.log('✅ Telegram connected! Refreshing user data...');
                     // Use refreshUser from AuthContext instead of page reload for seamless update
                     await refreshUser();
-                    console.log('🎉 User data refreshed successfully!');
                     showToast('Telegram connected successfully!', 'success');
                     // Clear the link token and stop polling
                     setLinkToken(null);
@@ -114,22 +107,20 @@ function TelegramSubscription() {
                     }
                 }
             }
-        } catch (error) {
-            console.error('❌ Error checking Telegram connection:', error);
+        } catch {
+            // Connection check failed; avoid logging sensitive details
         }
     };
 
     // Start polling for connection status when link token is generated
     useEffect(() => {
         if (linkToken && !user?.telegramChatId) {
-            console.log('🚀 Starting Telegram connection polling...');
             // Start checking every 3 seconds for connection
             const interval = setInterval(checkTelegramConnection, 3000);
             setConnectionCheckInterval(interval);
 
             // Stop checking after 10 minutes (when token expires)
             setTimeout(() => {
-                console.log('⏱️ Polling timeout reached (10 minutes)');
                 if (interval) {
                     clearInterval(interval);
                     setConnectionCheckInterval(null);
@@ -138,12 +129,9 @@ function TelegramSubscription() {
 
             return () => {
                 if (interval) {
-                    console.log('🛑 Cleaning up polling interval');
                     clearInterval(interval);
                 }
             };
-        } else {
-            console.log('⚠️ Polling not started:', { linkToken, telegramChatId: user?.telegramChatId });
         }
     }, [linkToken, user?.telegramChatId]);
 
@@ -165,17 +153,13 @@ function TelegramSubscription() {
             // Use my-alerts endpoint to get ALL alert types (whale + KOL)
             const response = await api.get('/alerts/my-alerts');
 
-            console.log('Fetched subscriptions:', response.data);
-
             if (response.data.success) {
                 const alerts = response.data.data.alerts || [];
-                console.log('Setting subscriptions:', alerts);
                 setSubscriptions(alerts);
             } else {
                 setError('Failed to load subscriptions');
             }
         } catch (err: any) {
-            console.error('Error fetching subscriptions:', err);
             setError(err.response?.data?.message || 'Failed to load subscriptions');
         } finally {
             setLoading(false);
@@ -189,7 +173,6 @@ function TelegramSubscription() {
             // Use native event for more aggressive stopping
             e.nativeEvent.stopImmediatePropagation();
         }
-        console.log('🔴 DELETE CLICK - Setting deleteConfirmId to:', alertId);
         setDeleteConfirmId(alertId);
     };
 
@@ -200,8 +183,6 @@ function TelegramSubscription() {
             e.nativeEvent.stopImmediatePropagation();
         }
         if (!deleteConfirmId) return;
-
-        console.log('Deleting subscription with ID:', deleteConfirmId);
 
         // Find the subscription to determine its type
         const subscription = subscriptions.find(sub => sub.id === deleteConfirmId);
@@ -226,8 +207,6 @@ function TelegramSubscription() {
 
             const response = await api.delete(deleteEndpoint);
 
-            console.log('Delete response:', response.data);
-
             if (response.data.success) {
                 // Show success toast
                 showToast('Subscription deleted successfully', 'success');
@@ -236,15 +215,12 @@ function TelegramSubscription() {
                 setDeleteConfirmId(null);
 
                 // Refetch subscriptions to get updated list from server
-                console.log('Refetching subscriptions...');
                 await fetchSubscriptions();
-                console.log('Subscriptions refetched');
             } else {
                 setError('Failed to delete subscription');
                 showToast('Failed to delete subscription', 'error');
             }
         } catch (err: any) {
-            console.error('Error deleting subscription:', err);
             const errorMessage = err.response?.data?.message || 'Failed to delete subscription';
             setError(errorMessage);
             showToast(errorMessage, 'error');
@@ -259,7 +235,6 @@ function TelegramSubscription() {
             e.preventDefault();
             e.nativeEvent.stopImmediatePropagation();
         }
-        console.log('🔴 CANCEL CLICK - Resetting deleteConfirmId');
         setDeleteConfirmId(null);
     };
 
@@ -280,7 +255,6 @@ function TelegramSubscription() {
                     showToast('Failed to generate link token', 'error');
                 }
             } catch (err: any) {
-                console.error('Error generating link token:', err);
                 showToast(err.response?.data?.message || 'Failed to generate link token', 'error');
             } finally {
                 setGeneratingLink(false);
@@ -307,7 +281,6 @@ function TelegramSubscription() {
                 showToast('Failed to disconnect Telegram account', 'error');
             }
         } catch (err: any) {
-            console.error('Error disconnecting Telegram:', err);
             showToast(err.response?.data?.message || 'Failed to disconnect Telegram account', 'error');
         } finally {
             setDisconnecting(false);

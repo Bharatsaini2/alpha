@@ -41,10 +41,9 @@ export const WalletTest: React.FC = () => {
     
     try {
       const balance = await getTokenBalance(testTokenMint.trim())
-      console.log("Token balance:", balance)
       alert(`Token balance: ${balance?.uiAmount || 0}`)
-    } catch (err) {
-      console.error("Failed to get token balance:", err)
+    } catch {
+      // Failed to get token balance
     }
   }
 
@@ -53,9 +52,8 @@ export const WalletTest: React.FC = () => {
     try {
       const balances = await getAllTokenBalances()
       setTokenBalances(balances)
-      console.log("All token balances:", balances)
-    } catch (err) {
-      console.error("Failed to get all token balances:", err)
+    } catch {
+      // Failed to get all token balances
     }
   }
 

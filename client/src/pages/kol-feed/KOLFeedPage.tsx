@@ -1483,7 +1483,7 @@ const KOLFeedPage = () => {
                         </div>
                         <div>
                           <ul className="quick-list">
-                            {tx.hotnessScore > 0 && (
+                            {tx.hotnessScore > 0 && tx.type === 'buy' && (
                               <li>
                                 <span className="hotness-title">
                                   Hotness score: {tx.hotnessScore}/10

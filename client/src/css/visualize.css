@@ -103,3 +103,19 @@
     border: none;
     cursor: pointer;
 }
+
+/* Visualize panel: portrait-friendly on mobile, desktop unchanged */
+.nw-visualize-panel {
+    /* Mobile: 85vh set in component; ensure full width and safe area */
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Control button labels: hide text on mobile, show only icon */
+.nw-control-btn-label {
+    display: inline;
+}
+
+.nw-last-updated {
+    display: flex;
+}

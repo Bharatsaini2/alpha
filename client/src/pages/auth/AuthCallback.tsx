@@ -44,16 +44,16 @@ const AuthCallback = () => {
             } else {
               throw new Error("Failed to fetch user data")
             }
-          } catch (error) {
-            console.error("Error fetching user data:", error)
+          } catch {
             throw new Error("Failed to fetch user data")
           }
         } else {
           throw new Error("Invalid callback parameters")
         }
-      } catch (error: any) {
-        console.error("Auth callback error:", error)
-        setError(error.message || "Authentication failed")
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : "Auth callback error"
+        console.error("Auth callback error:", msg)
+        setError(msg || "Authentication failed")
         setStatus("error")
         setTimeout(() => {
           navigate("/login")

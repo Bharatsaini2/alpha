@@ -275,12 +275,9 @@ const RightSidebarNew = ({
   // Listen for 'open-quick-buy' event
   useEffect(() => {
     const handleOpenQuickBuy = (event: any) => {
-      // Type as any to avoid CustomEvent compilation issues if strict
-      console.log("Received open-quick-buy event", event.detail)
       const token = event.detail
 
       if (token) {
-        console.log("Setting swap token info:", token)
         setSwapTokenInfo(token)
         setIsSwapModalOpen(true)
       }
@@ -380,7 +377,7 @@ const RightSidebarNew = ({
       try {
         const prices: Record<string, number> = {}
 
-        // 1. Try Jupiter Price API v2
+        // 1. Try Jupiter Price API v2 (may 401 from browser; fallback to CoinGecko)
         try {
           const ids = addresses.join(",")
           const response = await fetch(`https://api.jup.ag/price/v2?ids=${ids}`)
@@ -395,8 +392,9 @@ const RightSidebarNew = ({
               })
             }
           }
-        } catch (jupError) {
-          console.error("Jupiter Price API failed:", jupError)
+          // If 401/403 or other error, skip logging and use CoinGecko fallback below
+        } catch {
+          // Jupiter failed (network or CORS); rely on CoinGecko
         }
 
         // 2. Fallback to CoinGecko if missing prices
@@ -415,8 +413,8 @@ const RightSidebarNew = ({
                 }
               })
             }
-          } catch (cgError) {
-            console.warn("CoinGecko fallback failed:", cgError)
+          } catch {
+            // CoinGecko fallback failed
           }
         }
 
@@ -858,8 +856,6 @@ const RightSidebarNew = ({
 
   const handleQuickBuy = useCallback(
     async (token: any) => {
-      console.log("Quick Buy clicked:", token)
-
       if (!wallet.connected) {
         showToast("Please connect your wallet first", "error")
         return
@@ -873,8 +869,6 @@ const RightSidebarNew = ({
         image: token.image || token.logoURI,
         decimals: token.decimals || 9,
       }
-
-      console.log("Opening SwapModal with token:", tokenInfo)
 
       // Open SwapModal in 'quickBuy' mode with SOL as input token
       const savedAmount = loadQuickBuyAmount()
@@ -976,11 +970,9 @@ const RightSidebarNew = ({
         return token.usdPrice
       }
 
-      // Log suspicious prices for debugging
+      // Ignore suspiciously high prices
       if (token.usdPrice && token.usdPrice >= 100000) {
-        console.warn(
-          `⚠️ Suspicious price for ${token.symbol}: $${token.usdPrice.toLocaleString()} - ignoring`
-        )
+        return 0
       }
 
       // Fallback for stablecoins
@@ -1007,29 +999,16 @@ const RightSidebarNew = ({
       // If input has price but output doesn't, derive output value from input
       if (inVal > 0 && outVal === 0) {
         outVal = inVal * 0.9925 // Account for ~0.75% fee
-        console.log(`💡 Derived output value from input: $${outVal.toFixed(2)}`)
       }
       // If output has price but input doesn't, derive input value from output
       else if (outVal > 0 && inVal === 0) {
         inVal = outVal / 0.9925 // Account for ~0.75% fee
-        console.log(`💡 Derived input value from output: $${inVal.toFixed(2)}`)
       }
-      // If both have prices but values are way off (>10% difference), something is wrong
+      // If both have prices but values are way off (>10% difference), use input as source of truth
       else if (inVal > 0 && outVal > 0) {
         const ratio = Math.abs(inVal - outVal) / Math.max(inVal, outVal)
         if (ratio > 0.1) {
-          console.warn(
-            `⚠️ USD values differ by ${(ratio * 100).toFixed(1)}%:`,
-            {
-              input: `${inputToken.symbol} = $${inVal.toFixed(2)}`,
-              output: `${outputToken.symbol} = $${outVal.toFixed(2)}`,
-            }
-          )
-          // Use the input value as source of truth and derive output
           outVal = inVal * 0.9925
-          console.log(
-            `✅ Fixed: Using input value, output now = $${outVal.toFixed(2)}`
-          )
         }
       }
     }
@@ -1073,7 +1052,7 @@ const RightSidebarNew = ({
         <div className="ultra-pro-bx relative">
           <div className="d-flex align-items-center justify-content-between mb-2">
             <div>
-              <a href="javascript:void(0)" className="plan-btn">
+              <a href="#" className="plan-btn" onClick={(e) => e.preventDefault()}>
                 <IoSparklesOutline
                   style={{ color: "#2B6AD1", marginRight: "5px" }}
                 />
@@ -1082,7 +1061,7 @@ const RightSidebarNew = ({
             </div>
             <div className="d-flex align-items-center gap-2">
               {isLoading && (
-                <a href="javascript:void(0)" style={{ color: "#EBEBEB" }}>
+                <a href="#" style={{ color: "#EBEBEB" }} onClick={(e) => e.preventDefault()}>
                   <span>
                     <RiLoader2Fill
                       className={isLoadingQuote ? "animate-spin" : ""}
@@ -1611,8 +1590,11 @@ const RightSidebarNew = ({
 
             {exchangeRate && (
               <a
-                href="javascript:void(0)"
-                onClick={() => setShowRateDetails(!showRateDetails)}
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setShowRateDetails(!showRateDetails)
+                }}
               >
                 <div className="rate-box mt-3 ">
                   <div className="d-flex align-items gap-2 justify-content-between">

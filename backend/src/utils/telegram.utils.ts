@@ -55,6 +55,28 @@ export function formatLargeNumber(num: number): string {
 }
 
 /**
+ * Formats formation time in ms as human string for cluster alerts (e.g. "45s" or "2m 40s").
+ */
+export function formatFormationTime(formationTimeMs: number): string {
+  const totalSeconds = Math.floor(formationTimeMs / 1000)
+  if (totalSeconds < 60) return `${totalSeconds}s`
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`
+}
+
+/**
+ * Formats a timestamp (ms or Date) as "HH:MM:SS UTC" for cluster alert display.
+ */
+function formatTimestampUtc(ts: number | Date): string {
+  const d = typeof ts === 'number' ? new Date(ts) : ts
+  const h = d.getUTCHours().toString().padStart(2, '0')
+  const m = d.getUTCMinutes().toString().padStart(2, '0')
+  const s = d.getUTCSeconds().toString().padStart(2, '0')
+  return `${h}:${m}:${s} UTC`
+}
+
+/**
  * Generates a Solscan transaction link
  * @param txHash - The transaction hash/signature
  * @returns Solscan URL
@@ -164,13 +186,34 @@ _Powered by @AlphaBlockAI_ `
 }
 
 /**
+ * Options for cluster alert formatters (Whale and KOL), including formation time and latency.
+ */
+export interface ClusterAlertOptions {
+  tokenName?: string
+  marketCap?: number
+  triggeredAt?: Date
+  /** Formation time in ms (first tx to last tx in window) */
+  formationTimeMs?: number
+  /** On-chain timestamp of the tx that completed the cluster (ms or Date) */
+  lastTxTimestamp?: number | Date
+  /** When the alert was queued/sent (ms) */
+  alertSentAt?: number
+  /** If true, show "Whale Cluster UPDATE" with previous vs now stats (re-alert on growth) */
+  isUpdate?: boolean
+  /** Previous wallet count at last alert (for UPDATE message) */
+  previousWalletCount?: number
+  /** Previous total volume at last alert (for UPDATE message) */
+  previousTotalVolume?: number
+}
+
+/**
  * Formats a cluster alert message for Telegram
  * @param token - Token contract address
  * @param tokenSymbol - Token symbol
  * @param whaleCount - Number of whales in the cluster
  * @param totalVolumeUSD - Total USD volume
  * @param timeWindowMinutes - Time window in minutes
- * @param options - Optional tokenName, marketCap (number), triggeredAt (Date)
+ * @param options - Optional tokenName, marketCap, triggeredAt, formationTimeMs, lastTxTimestamp, alertSentAt
  * @returns Formatted MarkdownV2 message
  */
 export function formatClusterAlert(
@@ -179,7 +222,7 @@ export function formatClusterAlert(
   whaleCount: number,
   totalVolumeUSD: number,
   timeWindowMinutes: number,
-  options?: { tokenName?: string; marketCap?: number; triggeredAt?: Date },
+  options?: ClusterAlertOptions,
 ): string {
   const tokenName = options?.tokenName || tokenSymbol
   const tokenNameEscaped = escapeMarkdownV2(tokenName)
@@ -191,27 +234,76 @@ export function formatClusterAlert(
       ? `$${formatLargeNumber(options.marketCap)}`
       : 'N/A'
   const mcapEscaped = escapeMarkdownV2(mcapStr)
-  const timeframeStr =
-    timeWindowMinutes <= 1
-      ? 'Last 1 Minute'
-      : `Last ${timeWindowMinutes} Minutes`
-  const timeframeEscaped = escapeMarkdownV2(timeframeStr)
   const triggeredAt = options?.triggeredAt || new Date()
   const timeStr = `${triggeredAt.getUTCHours().toString().padStart(2, '0')}:${triggeredAt.getUTCMinutes().toString().padStart(2, '0')} UTC`
   const timeStrEscaped = escapeMarkdownV2(timeStr)
   const tokenLink = generateTokenLink(token)
 
-  return `*Whale Cluster Alert* 🕸️
+  const hasFormation =
+    options?.formationTimeMs != null &&
+    options?.lastTxTimestamp != null &&
+    options?.alertSentAt != null
+  let formationLines = ''
+  if (hasFormation) {
+    const formationStr = formatFormationTime(options.formationTimeMs!)
+    const formationLine = `Cluster formed in ${formationStr} (window: ${timeWindowMinutes} min)`
+    const networkTimeStr = formatTimestampUtc(options.lastTxTimestamp!)
+    const alertedAtStr = formatTimestampUtc(options.alertSentAt!)
+    const lastTsMs = typeof options.lastTxTimestamp === 'number' ? options.lastTxTimestamp : (options.lastTxTimestamp as Date).getTime()
+    const latencyMs = options.alertSentAt! - lastTsMs
+    const latencySec = Math.round(latencyMs / 1000)
+    const latencyStr = latencySec < 1 ? '<1s' : `${latencySec}s`
+    formationLines = `
+├ ${escapeMarkdownV2(formationLine)}
+├ Network time: ${escapeMarkdownV2(networkTimeStr)}
+├ Alerted at: ${escapeMarkdownV2(alertedAtStr)}
+└ Detection latency: ${escapeMarkdownV2(latencyStr)}`
+  }
+
+  const clusterDetailsSuffix = hasFormation ? formationLines : ''
+
+  const clusterDetailsCore = `├ Whale Wallets: ${escapeMarkdownV2(String(whaleCount))}
+├ Total Buy Volume: ${escapeMarkdownV2(`$${formattedVolume}`)}`
+  const clusterDetails = hasFormation
+    ? `${clusterDetailsCore}${formationLines}`
+    : `${clusterDetailsCore}${clusterDetailsSuffix}`
+
+  const isUpdate =
+    options?.isUpdate === true &&
+    options?.previousWalletCount != null &&
+    options?.previousTotalVolume != null
+  const title = isUpdate ? '*Whale Cluster UPDATE* 🕸️' : '*Whale Cluster Alert* 🕸️'
+  const previousFormatted = isUpdate
+    ? formatCurrency(options!.previousTotalVolume!)
+  : null
+  const growingLine = isUpdate
+    ? `\n${escapeMarkdownV2(`${tokenSymbol} — cluster is growing`)}\n\n`
+    : ''
+  const previouslyLine =
+    isUpdate && previousFormatted != null
+      ? `📊 *Previously:* ${escapeMarkdownV2(String(options!.previousWalletCount!))} whales \\/ ${escapeMarkdownV2(`$${previousFormatted}`)}\n`
+      : ''
+  const formationSuffix = hasFormation && options?.formationTimeMs != null
+    ? ` ${escapeMarkdownV2('(formed in ' + formatFormationTime(options.formationTimeMs) + ')\n')}`
+    : '\n'
+  const nowLine =
+    isUpdate
+      ? `📊 *Now:* ${escapeMarkdownV2(String(whaleCount))} whales \\/ ${escapeMarkdownV2(`$${formattedVolume}`)}${formationSuffix}`
+      : ''
+
+  const updateBlock =
+    isUpdate
+      ? `${growingLine}${previouslyLine}${nowLine}\n`
+      : ''
+
+  return `${title}
 
 *Token:* ${tokenNameEscaped} \\(${tokenSymbolEscaped}\\)
 *Chain:* Solana
 *CA:* \`${tokenEscaped}\`
 *MCAP:* ${mcapEscaped}
-
-📊 *Cluster Details*
-├ Whale Wallets: ${escapeMarkdownV2(String(whaleCount))}
-├ Total Buy Volume: ${escapeMarkdownV2(`$${formattedVolume}`)}
-└ Timeframe: ${timeframeEscaped}
+${updateBlock}📊 *Cluster Details*
+${clusterDetails}
 
 *Triggered Time:* ${timeStrEscaped}
 
@@ -230,7 +322,7 @@ export function formatKOLClusterAlert(
   kolCount: number,
   totalVolumeUSD: number,
   timeWindowMinutes: number,
-  options?: { tokenName?: string; marketCap?: number; triggeredAt?: Date },
+  options?: ClusterAlertOptions,
 ): string {
   const tokenName = options?.tokenName || tokenSymbol
   const tokenNameEscaped = escapeMarkdownV2(tokenName)
@@ -242,27 +334,76 @@ export function formatKOLClusterAlert(
       ? `$${formatLargeNumber(options.marketCap)}`
       : 'N/A'
   const mcapEscaped = escapeMarkdownV2(mcapStr)
-  const timeframeStr =
-    timeWindowMinutes <= 1
-      ? 'Last 1 Minute'
-      : `Last ${timeWindowMinutes} Minutes`
-  const timeframeEscaped = escapeMarkdownV2(timeframeStr)
   const triggeredAt = options?.triggeredAt || new Date()
   const timeStr = `${triggeredAt.getUTCHours().toString().padStart(2, '0')}:${triggeredAt.getUTCMinutes().toString().padStart(2, '0')} UTC`
   const timeStrEscaped = escapeMarkdownV2(timeStr)
   const tokenLink = generateTokenLink(token)
 
-  return `*KOL Cluster Alert* 👤
+  const hasFormation =
+    options?.formationTimeMs != null &&
+    options?.lastTxTimestamp != null &&
+    options?.alertSentAt != null
+  let formationLines = ''
+  if (hasFormation) {
+    const formationStr = formatFormationTime(options.formationTimeMs!)
+    const formationLine = `Cluster formed in ${formationStr} (window: ${timeWindowMinutes} min)`
+    const networkTimeStr = formatTimestampUtc(options.lastTxTimestamp!)
+    const alertedAtStr = formatTimestampUtc(options.alertSentAt!)
+    const lastTsMs = typeof options.lastTxTimestamp === 'number' ? options.lastTxTimestamp : (options.lastTxTimestamp as Date).getTime()
+    const latencyMs = options.alertSentAt! - lastTsMs
+    const latencySec = Math.round(latencyMs / 1000)
+    const latencyStr = latencySec < 1 ? '<1s' : `${latencySec}s`
+    formationLines = `
+├ ${escapeMarkdownV2(formationLine)}
+├ Network time: ${escapeMarkdownV2(networkTimeStr)}
+├ Alerted at: ${escapeMarkdownV2(alertedAtStr)}
+└ Detection latency: ${escapeMarkdownV2(latencyStr)}`
+  }
+
+  const clusterDetailsSuffix = hasFormation ? formationLines : ''
+
+  const clusterDetailsCore = `├ KOL Wallets: ${escapeMarkdownV2(String(kolCount))}
+├ Total Buy Volume: ${escapeMarkdownV2(`$${formattedVolume}`)}`
+  const clusterDetails = hasFormation
+    ? `${clusterDetailsCore}${formationLines}`
+    : `${clusterDetailsCore}${clusterDetailsSuffix}`
+
+  const isUpdate =
+    options?.isUpdate === true &&
+    options?.previousWalletCount != null &&
+    options?.previousTotalVolume != null
+  const title = isUpdate ? '*KOL Cluster UPDATE* 👤' : '*KOL Cluster Alert* 👤'
+  const previousFormatted = isUpdate
+    ? formatCurrency(options!.previousTotalVolume!)
+    : null
+  const growingLine = isUpdate
+    ? `\n${escapeMarkdownV2(`${tokenSymbol} — cluster is growing`)}\n\n`
+    : ''
+  const previouslyLine =
+    isUpdate && previousFormatted != null
+      ? `📊 *Previously:* ${escapeMarkdownV2(String(options!.previousWalletCount!))} KOLs \\/ ${escapeMarkdownV2(`$${previousFormatted}`)}\n`
+      : ''
+  const formationSuffixKOL = hasFormation && options?.formationTimeMs != null
+    ? ` ${escapeMarkdownV2('(formed in ' + formatFormationTime(options.formationTimeMs) + ')\n')}`
+    : '\n'
+  const nowLine =
+    isUpdate
+      ? `📊 *Now:* ${escapeMarkdownV2(String(kolCount))} KOLs \\/ ${escapeMarkdownV2(`$${formattedVolume}`)}${formationSuffixKOL}`
+      : ''
+
+  const updateBlock =
+    isUpdate
+      ? `${growingLine}${previouslyLine}${nowLine}\n`
+      : ''
+
+  return `${title}
 
 *Token:* ${tokenNameEscaped} \\(${tokenSymbolEscaped}\\)
 *Chain:* Solana
 *CA:* \`${tokenEscaped}\`
 *MCAP:* ${mcapEscaped}
-
-📊 *Cluster Details*
-├ KOL Wallets: ${escapeMarkdownV2(String(kolCount))}
-├ Total Buy Volume: ${escapeMarkdownV2(`$${formattedVolume}`)}
-└ Timeframe: ${timeframeEscaped}
+${updateBlock}📊 *Cluster Details*
+${clusterDetails}
 
 *Triggered Time:* ${timeStrEscaped}
 

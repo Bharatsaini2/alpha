@@ -20,10 +20,20 @@ import {
  * User subscription structure for in-memory cache
  */
 interface UserSubscription {
+  subscriptionId: string
   userId: string
   chatId: string
   priority: Priority
   config: AlertConfig
+}
+
+/**
+ * Snapshot stored when a whale cluster alert is sent (for cooldown / re-alert on growth)
+ */
+interface WhaleClusterSnapshot {
+  timestamp: number
+  walletCount: number
+  totalVolume: number
 }
 
 /**
@@ -62,9 +72,14 @@ export class AlertMatcherService {
   private clusterCache: Map<string, ClusterResult> = new Map()
   private kolClusterCache: Map<string, ClusterResult> = new Map()
   private tokenSymbolCache: Map<string, TokenSymbolCacheEntry> = new Map()
+  /** Per subscriptionId:tokenAddress — cooldown snapshot after sending whale cluster alert */
+  private whaleClusterLastAlerted: Map<string, WhaleClusterSnapshot> = new Map()
+  /** Per subscriptionId:tokenAddress — cooldown snapshot after sending KOL cluster alert */
+  private kolClusterLastAlerted: Map<string, WhaleClusterSnapshot> = new Map()
   private syncInterval: NodeJS.Timeout | null = null
   private clusterCleanupInterval: NodeJS.Timeout | null = null
   private symbolCacheCleanupInterval: NodeJS.Timeout | null = null
+  private snapshotCleanupInterval: NodeJS.Timeout | null = null
   private isInitialized: boolean = false
 
   // Metrics
@@ -88,6 +103,11 @@ export class AlertMatcherService {
   private readonly CLUSTER_TIME_WINDOW_MINUTES = 15 // Time window for cluster checks
   private readonly TOKEN_SYMBOL_CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
   private readonly SYMBOL_CACHE_CLEANUP_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
+  // Whale cluster cooldown: re-alert only if cluster grew meaningfully within same window
+  private readonly WALLET_GROWTH_THRESHOLD = 2
+  private readonly VOLUME_GROWTH_RATIO = 0.5 // 50% increase over snapshot volume
+  private readonly SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000 // 1 hour
+  private readonly SNAPSHOT_CLEANUP_INTERVAL_MS = 30 * 60 * 1000 // 30 minutes
 
   /**
    * Initialize the service and start sync interval
@@ -122,6 +142,9 @@ export class AlertMatcherService {
 
       // Start token symbol cache cleanup
       this.startSymbolCacheCleanup()
+
+      // Start whale cluster cooldown snapshot cleanup (expire after 1 hour)
+      this.startWhaleClusterSnapshotCleanup()
 
       this.isInitialized = true
 
@@ -183,6 +206,7 @@ export class AlertMatcherService {
         }
 
         const subscription: UserSubscription = {
+          subscriptionId: (alert as any)._id.toString(),
           userId: user._id.toString(),
           chatId: user.telegramChatId,
           priority: alert.priority,
@@ -507,6 +531,57 @@ export class AlertMatcherService {
           continue
         }
 
+        // Cooldown: per subscription + token — send only first alert in window, or re-alert on significant growth
+        const cooldownKey = `${sub.subscriptionId}:${tokenAddress}`
+        const snapshot = this.whaleClusterLastAlerted.get(cooldownKey)
+        const userTimeframeInMs = timeWindowMinutes * 60 * 1000
+        const now = Date.now()
+
+        let shouldSend = true
+        let isUpdate = false
+        let previousWalletCount: number | undefined
+        let previousTotalVolume: number | undefined
+
+        if (snapshot) {
+          const timeSinceLast = now - snapshot.timestamp
+          if (timeSinceLast >= userTimeframeInMs) {
+            // Window reset — treat as new cluster
+            shouldSend = true
+            isUpdate = false
+          } else {
+            const walletGrowth = clusterData.count - snapshot.walletCount
+            const volumeGrowth = clusterData.totalVolumeUSD - snapshot.totalVolume
+            const volumeGrowthSignificant =
+              snapshot.totalVolume === 0
+                ? volumeGrowth > 0
+                : volumeGrowth >= snapshot.totalVolume * this.VOLUME_GROWTH_RATIO
+            if (walletGrowth >= this.WALLET_GROWTH_THRESHOLD || volumeGrowthSignificant) {
+              shouldSend = true
+              isUpdate = true
+              previousWalletCount = snapshot.walletCount
+              previousTotalVolume = snapshot.totalVolume
+            } else {
+              shouldSend = false
+            }
+          }
+        }
+
+        if (!shouldSend) {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchWhaleCluster',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.WHALE_CLUSTER,
+            txHash: tx.signature,
+            message: 'Alert suppressed (cooldown, cluster growth below threshold)',
+            tokenAddress,
+            snapshotWalletCount: snapshot!.walletCount,
+            currentWalletCount: clusterData.count,
+          })
+          continue
+        }
+
         // Resolve token symbol
         const tokenSymbol = this.resolveTokenSymbol(tx)
         const tokenName = tx.transaction?.tokenOut?.name || tokenSymbol
@@ -514,7 +589,7 @@ export class AlertMatcherService {
           tx.marketCap?.buyMarketCap || tx.transaction?.tokenOut?.marketCap || '0',
         )
 
-        // Format message
+        const alertSentAt = now
         const message = formatClusterAlert(
           tokenAddress,
           tokenSymbol,
@@ -525,10 +600,15 @@ export class AlertMatcherService {
             tokenName,
             marketCap: marketCap > 0 ? marketCap : undefined,
             triggeredAt: tx.timestamp ? new Date(tx.timestamp) : new Date(),
+            formationTimeMs: clusterData.formationTimeMs,
+            lastTxTimestamp: clusterData.lastTxTimestamp,
+            alertSentAt,
+            isUpdate: isUpdate || undefined,
+            previousWalletCount,
+            previousTotalVolume,
           },
         )
 
-        // Queue alert
         const queued = await telegramService.queueAlert(
           sub.userId,
           AlertType.WHALE_CLUSTER,
@@ -538,6 +618,11 @@ export class AlertMatcherService {
         )
 
         if (queued) {
+          this.whaleClusterLastAlerted.set(cooldownKey, {
+            timestamp: now,
+            walletCount: clusterData.count,
+            totalVolume: clusterData.totalVolumeUSD,
+          })
           matchCount++
           this.metrics.totalMatches++
           const typeCount = this.metrics.matchesByType.get(AlertType.WHALE_CLUSTER) || 0
@@ -552,7 +637,8 @@ export class AlertMatcherService {
             txHash: tx.signature,
             matchResult: true,
             whaleCount: clusterData.count,
-            message: 'WHALE_CLUSTER alert matched and queued',
+            isUpdate: isUpdate || undefined,
+            message: isUpdate ? 'WHALE_CLUSTER update alert queued' : 'WHALE_CLUSTER alert matched and queued',
           })
         }
       } catch (error) {
@@ -637,12 +723,63 @@ export class AlertMatcherService {
           continue
         }
 
+        // Cooldown: per subscription + token — same logic as whale cluster
+        const cooldownKey = `${sub.subscriptionId}:${tokenAddress}`
+        const snapshot = this.kolClusterLastAlerted.get(cooldownKey)
+        const userTimeframeInMs = timeWindowMinutes * 60 * 1000
+        const now = Date.now()
+
+        let shouldSend = true
+        let isUpdate = false
+        let previousWalletCount: number | undefined
+        let previousTotalVolume: number | undefined
+
+        if (snapshot) {
+          const timeSinceLast = now - snapshot.timestamp
+          if (timeSinceLast >= userTimeframeInMs) {
+            shouldSend = true
+            isUpdate = false
+          } else {
+            const walletGrowth = clusterData.count - snapshot.walletCount
+            const volumeGrowth = clusterData.totalVolumeUSD - snapshot.totalVolume
+            const volumeGrowthSignificant =
+              snapshot.totalVolume === 0
+                ? volumeGrowth > 0
+                : volumeGrowth >= snapshot.totalVolume * this.VOLUME_GROWTH_RATIO
+            if (walletGrowth >= this.WALLET_GROWTH_THRESHOLD || volumeGrowthSignificant) {
+              shouldSend = true
+              isUpdate = true
+              previousWalletCount = snapshot.walletCount
+              previousTotalVolume = snapshot.totalVolume
+            } else {
+              shouldSend = false
+            }
+          }
+        }
+
+        if (!shouldSend) {
+          logger.debug({
+            component: 'AlertMatcherService',
+            operation: 'matchKOLCluster',
+            correlationId,
+            userId: sub.userId,
+            alertType: AlertType.KOL_CLUSTER,
+            txHash: tx.signature,
+            message: 'Alert suppressed (cooldown, cluster growth below threshold)',
+            tokenAddress,
+            snapshotWalletCount: snapshot!.walletCount,
+            currentWalletCount: clusterData.count,
+          })
+          continue
+        }
+
         const tokenSymbol = this.resolveTokenSymbol(tx)
         const tokenName = tx.transaction?.tokenOut?.name || tokenSymbol
         const marketCap = parseFloat(
           (tx as any).marketCap?.buyMarketCap || tx.transaction?.tokenOut?.marketCap || '0',
         )
 
+        const alertSentAt = now
         const message = formatKOLClusterAlert(
           tokenAddress,
           tokenSymbol,
@@ -653,6 +790,12 @@ export class AlertMatcherService {
             tokenName,
             marketCap: marketCap > 0 ? marketCap : undefined,
             triggeredAt: tx.timestamp ? new Date(tx.timestamp) : new Date(),
+            formationTimeMs: clusterData.formationTimeMs,
+            lastTxTimestamp: clusterData.lastTxTimestamp,
+            alertSentAt,
+            isUpdate: isUpdate || undefined,
+            previousWalletCount,
+            previousTotalVolume,
           },
         )
 
@@ -665,6 +808,11 @@ export class AlertMatcherService {
         )
 
         if (queued) {
+          this.kolClusterLastAlerted.set(cooldownKey, {
+            timestamp: now,
+            walletCount: clusterData.count,
+            totalVolume: clusterData.totalVolumeUSD,
+          })
           matchCount++
           this.metrics.totalMatches++
           const typeCount = this.metrics.matchesByType.get(AlertType.KOL_CLUSTER) || 0
@@ -678,7 +826,8 @@ export class AlertMatcherService {
             txHash: tx.signature,
             matchResult: true,
             kolCount: clusterData.count,
-            message: 'KOL_CLUSTER alert matched and queued',
+            isUpdate: isUpdate || undefined,
+            message: isUpdate ? 'KOL_CLUSTER update alert queued' : 'KOL_CLUSTER alert matched and queued',
           })
         }
       } catch (error) {
@@ -1220,9 +1369,21 @@ export class AlertMatcherService {
     let totalVolumeUSD = 0
 
     for (const tx of transactions) {
-      uniqueWhales.add(tx.whale.address)
-      const usdAmount = parseFloat(tx.transaction.tokenOut.usdAmount || '0')
+      if (tx.whale?.address) uniqueWhales.add(tx.whale.address)
+      const usdAmount = parseFloat(tx.transaction?.tokenOut?.usdAmount || '0')
       totalVolumeUSD += usdAmount
+    }
+
+    let firstTxTimestamp: number | undefined
+    let lastTxTimestamp: number | undefined
+    let formationTimeMs: number | undefined
+    if (transactions.length > 0) {
+      const times = transactions.map((t) =>
+        t.timestamp instanceof Date ? t.timestamp.getTime() : Number(t.timestamp),
+      )
+      firstTxTimestamp = Math.min(...times)
+      lastTxTimestamp = Math.max(...times)
+      formationTimeMs = lastTxTimestamp - firstTxTimestamp
     }
 
     const result: ClusterResult = {
@@ -1230,6 +1391,9 @@ export class AlertMatcherService {
       totalVolumeUSD,
       timeWindowMinutes: windowMins,
       timestamp: Date.now(),
+      ...(firstTxTimestamp != null && { firstTxTimestamp }),
+      ...(lastTxTimestamp != null && { lastTxTimestamp }),
+      ...(formationTimeMs != null && { formationTimeMs }),
     }
 
     // Cache the result
@@ -1288,11 +1452,27 @@ export class AlertMatcherService {
       totalVolumeUSD += parseFloat(usdStr)
     }
 
+    let firstTxTimestamp: number | undefined
+    let lastTxTimestamp: number | undefined
+    let formationTimeMs: number | undefined
+    if (transactions.length > 0) {
+      const times = transactions.map((t) => {
+        const ts = (t as any).timestamp
+        return ts instanceof Date ? ts.getTime() : Number(ts)
+      })
+      firstTxTimestamp = Math.min(...times)
+      lastTxTimestamp = Math.max(...times)
+      formationTimeMs = lastTxTimestamp - firstTxTimestamp
+    }
+
     const result: ClusterResult = {
       count: uniqueKolWallets.size,
       totalVolumeUSD,
       timeWindowMinutes: windowMins,
       timestamp: Date.now(),
+      ...(firstTxTimestamp != null && { firstTxTimestamp }),
+      ...(lastTxTimestamp != null && { lastTxTimestamp }),
+      ...(formationTimeMs != null && { formationTimeMs }),
     }
 
     this.kolClusterCache.set(cacheKey, result)
@@ -1471,6 +1651,36 @@ export class AlertMatcherService {
   }
 
   /**
+   * Start cluster cooldown snapshot cleanup (whale + KOL; remove entries older than SNAPSHOT_MAX_AGE_MS)
+   */
+  private startWhaleClusterSnapshotCleanup(): void {
+    this.snapshotCleanupInterval = setInterval(() => {
+      const now = Date.now()
+      const whaleExpired: string[] = []
+      const kolExpired: string[] = []
+      Array.from(this.whaleClusterLastAlerted.entries()).forEach(([key, value]) => {
+        if (now - value.timestamp > this.SNAPSHOT_MAX_AGE_MS) whaleExpired.push(key)
+      })
+      Array.from(this.kolClusterLastAlerted.entries()).forEach(([key, value]) => {
+        if (now - value.timestamp > this.SNAPSHOT_MAX_AGE_MS) kolExpired.push(key)
+      })
+      for (const key of whaleExpired) this.whaleClusterLastAlerted.delete(key)
+      for (const key of kolExpired) this.kolClusterLastAlerted.delete(key)
+      if (whaleExpired.length > 0 || kolExpired.length > 0) {
+        logger.debug({
+          component: 'AlertMatcherService',
+          operation: 'clusterSnapshotCleanup',
+          whaleRemoved: whaleExpired.length,
+          kolRemoved: kolExpired.length,
+          whaleRemaining: this.whaleClusterLastAlerted.size,
+          kolRemaining: this.kolClusterLastAlerted.size,
+          message: 'Cleaned up expired cluster cooldown snapshots',
+        })
+      }
+    }, this.SNAPSHOT_CLEANUP_INTERVAL_MS)
+  }
+
+  /**
    * Get comprehensive metrics for monitoring
    */
   getMetrics() {
@@ -1544,10 +1754,17 @@ export class AlertMatcherService {
       this.symbolCacheCleanupInterval = null
     }
 
+    if (this.snapshotCleanupInterval) {
+      clearInterval(this.snapshotCleanupInterval)
+      this.snapshotCleanupInterval = null
+    }
+
     this.subscriptionMap.clear()
     this.clusterCache.clear()
     this.kolClusterCache.clear()
     this.tokenSymbolCache.clear()
+    this.whaleClusterLastAlerted.clear()
+    this.kolClusterLastAlerted.clear()
     this.isInitialized = false
 
     logger.info({

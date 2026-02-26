@@ -2696,7 +2696,7 @@ const HomePage = () => {
                           <span className="text-[11px] text-gray-500 uppercase tracking-wider font-medium">
                             <TimeAgo timestamp={tx.timestamp} />
                           </span>
-                          {tx.hotnessScore > 0 && (
+                          {tx.hotnessScore > 0 && tx.type === 'buy' && (
                             <span className="text-[11px] text-gray-400 uppercase tracking-wider">
                               HOTNESS SCORE: <span className="text-white font-semibold">{tx.hotnessScore}/10</span>
                             </span>

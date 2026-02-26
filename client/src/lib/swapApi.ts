@@ -81,7 +81,8 @@ export const handleSwapApiError = (
   error: any,
   operation: string
 ): SwapApiError => {
-  console.error(`Swap API ${operation} error:`, error)
+  const errMsg = error?.message ?? (typeof error === "string" ? error : "Unknown error")
+  console.error(`Swap API ${operation} error:`, errMsg)
 
   let errorMessage = `${operation} failed`
   let errorCode = `${operation.toUpperCase()}_FAILED`

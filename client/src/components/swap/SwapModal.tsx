@@ -221,15 +221,6 @@ export const SwapModal: React.FC<SwapModalProps> = ({
   }, [])
 
   const fetchQuote = useCallback(async () => {
-    // Log quote fetch for monitoring (Requirement 10.5)
-    console.log('[QuickBuy] Fetching quote:', {
-      mode,
-      inputAmount,
-      inputToken: inputToken.symbol,
-      outputToken: outputToken.symbol,
-      timestamp: new Date().toISOString()
-    })
-
     try {
       const amount = parseFloat(inputAmount)
       if (isNaN(amount) || amount <= 0) return

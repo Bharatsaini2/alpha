@@ -380,13 +380,8 @@ export const useSwapApi = (): UseSwapApi => {
 
       setState(prev => ({ ...prev, isLoadingTrack: false }))
       return response.data
-    } catch (error: any) {
-      // Log errors but don't display them to user (Requirement 21.4)
-      console.error('Trade tracking failed:', {
-        signature: params.signature,
-        error: error.message || error,
-        timestamp: new Date().toISOString()
-      })
+    } catch {
+      // Trade tracking failed; do not log signature or error details
       // Track trades even if tracking request fails (Requirement 21.5)
       // Make tracking non-blocking - don't affect user experience (Requirement 21.3)
       setState(prev => ({ ...prev, isLoadingTrack: false, trackError: null }))

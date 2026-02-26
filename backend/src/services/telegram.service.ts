@@ -44,6 +44,8 @@ export class TelegramService {
   private messagesProcessed: number = 0
   private messagesDropped: number = 0
   private isInBackpressure: boolean = false
+  /** When set, queue processor waits until this time (ms) before sending again (Telegram 429). */
+  private rateLimitPausedUntil: number = 0
 
   // Delivery metrics
   private deliveryMetrics: DeliveryMetrics = {
@@ -63,6 +65,8 @@ export class TelegramService {
   private readonly TELEGRAM_BOT_TOKEN: string
   private readonly MAX_RETRY_ATTEMPTS = 3
   private readonly RETRY_BASE_DELAY_MS = 1000 // 1 second base delay for exponential backoff
+  /** Max wait on 429 (Telegram rate limit) before retry; avoid blocking queue for hours */
+  private readonly RETRY_AFTER_CAP_MS = 5 * 60 * 1000 // 5 minutes
 
   constructor() {
     // Fail-fast token validation
@@ -843,11 +847,24 @@ export class TelegramService {
   }
 
   /**
-   * Process the next message in the queue
+   * Process the next message in the queue.
+   * Respects rateLimitPausedUntil (set on Telegram 429) so the whole queue backs off.
    */
   private async processNextMessage(): Promise<void> {
     if (this.messageQueue.length === 0) {
       return
+    }
+
+    const now = Date.now()
+    if (now < this.rateLimitPausedUntil) {
+      const waitMs = this.rateLimitPausedUntil - now
+      logger.warn({
+        component: 'TelegramService',
+        operation: 'processNextMessage',
+        message: `Telegram rate limit cooldown; waiting ${Math.round(waitMs / 1000)}s before next send`,
+        waitMs,
+      })
+      await this.sleep(waitMs)
     }
 
     const message = this.messageQueue.shift()
@@ -941,11 +958,8 @@ export class TelegramService {
   }
 
   /**
-   * Send a message with exponential backoff retry logic
-   * @param chatId - Telegram chat ID
-   * @param message - Message text
-   * @param parseMode - Parse mode (MarkdownV2 or undefined for plain text)
-   * @param attempt - Current attempt number (for recursion)
+   * Send a message with exponential backoff retry logic.
+   * On 429 (Too Many Requests), waits up to RETRY_AFTER_CAP_MS using Telegram's retry_after when present.
    */
   private async sendMessageWithRetry(
     chatId: string,
@@ -963,11 +977,19 @@ export class TelegramService {
         disable_web_page_preview: false,
       })
     } catch (error) {
+      const is429 = this.isTelegram429(error)
+      const retryAfterSeconds = is429 ? this.parseRetryAfterSeconds(error) : null
       const isRetryableError = this.isRetryableError(error)
-      
+
       if (isRetryableError && attempt < this.MAX_RETRY_ATTEMPTS) {
-        const delay = this.calculateExponentialBackoff(attempt)
-        
+        const delay = is429 && retryAfterSeconds != null
+          ? Math.min(retryAfterSeconds * 1000, this.RETRY_AFTER_CAP_MS)
+          : this.calculateExponentialBackoff(attempt)
+
+        if (is429) {
+          this.rateLimitPausedUntil = Date.now() + delay
+        }
+
         logger.warn({
           component: 'TelegramService',
           operation: 'sendMessageWithRetry',
@@ -975,36 +997,50 @@ export class TelegramService {
           attempt,
           maxAttempts: this.MAX_RETRY_ATTEMPTS,
           retryDelayMs: delay,
+          ...(is429 && { telegramRateLimit: true, retryAfterSeconds }),
           error: {
             message: error instanceof Error ? error.message : 'Unknown error',
           },
-          message: 'Retrying message delivery after error',
+          message: is429
+            ? `Telegram rate limited (429); waiting ${Math.round(delay / 1000)}s before retry`
+            : 'Retrying message delivery after error',
         })
-        
-        // Wait before retrying
+
         await this.sleep(delay)
-        
-        // Retry with incremented attempt counter
         return this.sendMessageWithRetry(chatId, message, parseMode, attempt + 1)
-      } else {
-        // Max retries reached or non-retryable error
-        logger.error({
-          component: 'TelegramService',
-          operation: 'sendMessageWithRetry',
-          chatId,
-          attempt,
-          maxAttempts: this.MAX_RETRY_ATTEMPTS,
-          error: {
-            message: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined,
-          },
-          message: isRetryableError 
-            ? 'Max retry attempts reached' 
-            : 'Non-retryable error encountered',
-        })
-        throw error
       }
+
+      logger.error({
+        component: 'TelegramService',
+        operation: 'sendMessageWithRetry',
+        chatId,
+        attempt,
+        maxAttempts: this.MAX_RETRY_ATTEMPTS,
+        ...(is429 && { telegramRateLimit: true }),
+        error: {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        message: isRetryableError
+          ? 'Max retry attempts reached'
+          : 'Non-retryable error encountered',
+      })
+      throw error
     }
+  }
+
+  /** Detect Telegram 429 Too Many Requests from node-telegram-bot-api (ETELEGRAM: 429 ...). */
+  private isTelegram429(error: unknown): boolean {
+    if (!(error instanceof Error)) return false
+    const msg = error.message
+    return msg.includes('429') && (msg.includes('Too Many Requests') || msg.includes('retry after'))
+  }
+
+  /** Parse "retry after N" (seconds) from Telegram 429 error message. Returns null if not found. */
+  private parseRetryAfterSeconds(error: unknown): number | null {
+    if (!(error instanceof Error)) return null
+    const match = error.message.match(/retry\s+after\s+(\d+)/i)
+    return match ? parseInt(match[1], 10) : null
   }
 
   /**

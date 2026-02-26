@@ -53,8 +53,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             } else {
                 logout()
             }
-        } catch (error) {
-            console.error("Token refresh error:", error)
+        } catch {
             logout()
         }
     }
@@ -106,8 +105,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     // Only refresh token available, try to refresh
                     await attemptTokenRefresh()
                 }
-            } catch (error) {
-                console.error("Auth initialization error:", error)
+            } catch {
                 logout()
             } finally {
                 setIsLoading(false)
@@ -157,8 +155,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     await refreshUser()
                 }
             }
-        } catch (error) {
-            console.error("Wallet login error in provider:", error)
+        } catch {
+            // Wallet login failed
         } finally {
             loginInProgressRef.current = false
         }
@@ -199,8 +197,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     }
                 )
             }
-        } catch (error) {
-            console.error("Logout error:", error)
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : "Logout error"
+            console.error("Logout error:", msg)
         } finally {
             // Clear local state regardless of server response
             setUser(null)
@@ -233,8 +232,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     localStorage.setItem("user", JSON.stringify(response.data.data.user))
                 }
             }
-        } catch (error) {
-            console.error("Refresh user error:", error)
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : "Refresh user error"
+            console.error("Refresh user error:", msg)
             // Try to refresh token if access token is invalid
             await attemptTokenRefresh()
         }

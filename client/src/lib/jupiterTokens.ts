@@ -109,15 +109,13 @@ function loadFromCache(): TokenInfo[] | null {
 
     // Check if cache is still valid
     if (now - data.timestamp < CACHE_DURATION) {
-      console.log(`✅ Loaded ${data.tokens.length} tokens from cache`)
       return data.tokens
     }
 
     // Cache expired
     localStorage.removeItem(CACHE_KEY)
     return null
-  } catch (error) {
-    console.error("Failed to load token cache:", error)
+  } catch {
     return null
   }
 }
@@ -139,15 +137,10 @@ function saveToCache(tokens: TokenInfo[]): void {
     }
 
     const jsonString = JSON.stringify(data)
-    const sizeInMB = (jsonString.length / 1024 / 1024).toFixed(2)
-
-    console.log(`💾 Attempting to cache ${tokensToCache.length} tokens (${sizeInMB}MB)`)
 
     localStorage.setItem(CACHE_KEY, jsonString)
-    console.log(`✅ Successfully cached ${tokensToCache.length} tokens`)
   } catch (error: any) {
     if (error.name === 'QuotaExceededError') {
-      console.warn('⚠️ localStorage quota exceeded, skipping cache')
       // Try to clear old cache and retry with fewer tokens
       try {
         localStorage.removeItem(CACHE_KEY)
@@ -159,12 +152,9 @@ function saveToCache(tokens: TokenInfo[]): void {
           timestamp: Date.now(),
         }
         localStorage.setItem(CACHE_KEY, JSON.stringify(data))
-        console.log(`✅ Cached ${limitedTokens.length} tokens (reduced set)`)
-      } catch (retryError) {
-        console.error("Failed to cache even reduced token set:", retryError)
+      } catch {
+        // Failed to cache even reduced token set
       }
-    } else {
-      console.error("Failed to save token cache:", error)
     }
   }
 }
@@ -184,13 +174,9 @@ export async function fetchJupiterTokens(
       return cached
     }
 
-    console.log("🔄 Fetching tokens from Jupiter API...")
-
     // Try each endpoint
     for (const url of JUPITER_API_ENDPOINTS) {
       try {
-        console.log(`Trying: ${url}`)
-
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 10000) // 10s timeout
 
@@ -205,7 +191,6 @@ export async function fetchJupiterTokens(
         clearTimeout(timeoutId)
 
         if (!response.ok) {
-          console.warn(`❌ ${url} returned ${response.status}`)
           continue
         }
 
@@ -218,16 +203,12 @@ export async function fetchJupiterTokens(
         } else if (data.tokens && Array.isArray(data.tokens)) {
           jupiterTokens = data.tokens
         } else {
-          console.warn(`❌ Unexpected format from ${url}`)
           continue
         }
 
         if (jupiterTokens.length === 0) {
-          console.warn(`❌ No tokens from ${url}`)
           continue
         }
-
-        console.log(`✅ Fetched ${jupiterTokens.length} tokens from Jupiter`)
 
         // Convert to our format
         const tokens = jupiterTokens.map(convertJupiterToken)
@@ -238,25 +219,15 @@ export async function fetchJupiterTokens(
         // Save to cache (will be limited automatically)
         saveToCache(tokens)
 
-        // Return ALL tokens (not just cached ones)
-        console.log(`📊 Returning ${tokens.length} tokens for use`)
         return tokens
-      } catch (error: any) {
-        if (error.name === 'AbortError') {
-          console.warn(`⏱️ Timeout fetching from ${url}`)
-        } else {
-          console.warn(`❌ Error from ${url}:`, error.message)
-        }
+      } catch {
         continue
       }
     }
 
-    // All endpoints failed, use fallback
-    console.warn("⚠️ All Jupiter endpoints failed, using local token list")
     throw new Error("All Jupiter API endpoints failed")
 
   } catch {
-    console.error("❌ Failed to fetch Jupiter tokens, using fallback")
 
     // Return extended token list as fallback
     const fallbackTokens = [...EXTENDED_TOKEN_LIST]
@@ -329,9 +300,8 @@ export function getPopularJupiterTokens(tokens: TokenInfo[]): TokenInfo[] {
 export function clearTokenCache(): void {
   try {
     localStorage.removeItem(CACHE_KEY)
-    console.log("🗑️ Token cache cleared")
-  } catch (error) {
-    console.error("Failed to clear token cache:", error)
+  } catch {
+    // Failed to clear token cache
   }
 }
 
@@ -345,8 +315,6 @@ export async function searchJupiterUltra(query: string): Promise<TokenInfo[]> {
   if (!query || query.length < 1) return []
 
   try {
-    console.log(`🔍 Searching Jupiter Ultra for: "${query}"`)
-
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 8000) // 8s timeout
 
@@ -363,18 +331,14 @@ export async function searchJupiterUltra(query: string): Promise<TokenInfo[]> {
     clearTimeout(timeoutId)
 
     if (!response.ok) {
-      console.warn(`❌ Jupiter Ultra Search returned ${response.status}`)
       throw new Error(`Jupiter Ultra Search failed: ${response.status}`)
     }
 
     const data: JupiterUltraToken[] = await response.json()
 
     if (!Array.isArray(data)) {
-      console.warn("❌ Unexpected response format from Jupiter Ultra Search")
       throw new Error("Invalid response format")
     }
-
-    console.log(`✅ Jupiter Ultra found ${data.length} tokens`)
 
     // Convert to our format
     const tokens = data.map(convertUltraToken)
@@ -383,13 +347,7 @@ export async function searchJupiterUltra(query: string): Promise<TokenInfo[]> {
     markPopularTokens(tokens)
 
     return tokens
-  } catch (error: any) {
-    if (error.name === 'AbortError') {
-      console.warn("⏱️ Jupiter Ultra Search timeout")
-    } else {
-      console.warn("❌ Jupiter Ultra Search error:", error.message)
-    }
-
+  } catch {
     // Return empty array - caller should fallback to local search
     return []
   }
@@ -435,8 +393,7 @@ export async function fetchTokenPrices(mints: string[]): Promise<Record<string, 
     }
 
     return prices
-  } catch (error) {
-    console.error("Failed to fetch token prices:", error)
+  } catch {
     return {}
   }
 }

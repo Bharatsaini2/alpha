@@ -52,6 +52,12 @@ export interface ClusterResult {
   totalVolumeUSD: number
   timeWindowMinutes: number
   timestamp: number
+  /** Ms since epoch of earliest tx in the window */
+  firstTxTimestamp?: number
+  /** Ms since epoch of latest tx (triggering tx) */
+  lastTxTimestamp?: number
+  /** lastTxTimestamp - firstTxTimestamp */
+  formationTimeMs?: number
 }
 
 /**

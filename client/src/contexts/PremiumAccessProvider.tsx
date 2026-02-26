@@ -37,7 +37,6 @@ export const PremiumAccessProvider: React.FC<PremiumAccessProviderProps> = ({
             try {
                 // Check ALPHA balance
                 const balance = await getBalance(ALPHA_TOKEN_MINT)
-                console.log(`[PremiumAccess] ALPHA Balance: ${balance}`)
 
                 if (balance >= PREMIUM_BALANCE_THRESHOLD) {
                     onSuccess()
@@ -48,8 +47,7 @@ export const PremiumAccessProvider: React.FC<PremiumAccessProviderProps> = ({
                         onAction: openQuickBuy
                     })
                 }
-            } catch (error) {
-                console.error("[PremiumAccess] Error checking access:", error)
+            } catch {
                 showToast("Failed to verify premium access", "error")
             }
         },

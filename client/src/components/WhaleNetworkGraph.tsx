@@ -747,6 +747,10 @@ const WhaleNetworkGraph: React.FC<{
   const [triggerDownload, setTriggerDownload] = useState<(() => Promise<void>) | null>(null)
   const [isActivatingAlert, setIsActivatingAlert] = useState(false)
 
+  const handleDownloadReady = useCallback((trigger: () => Promise<void>) => {
+    setTriggerDownload(() => trigger)
+  }, [])
+
   const updateDataDirectly = useCallback((newData: CoinWithWhales[]) => {
     setMergedData(newData)
   }, [])
@@ -1208,7 +1212,7 @@ const WhaleNetworkGraph: React.FC<{
       onClick={onClose}
     >
       <motion.div
-        className="relative w-full max-w-7xl mx-auto bg-[#000000] shadow-xl rounded-none h-[50vh] min-h-[400px] md:h-[700px] overflow-hidden"
+        className="relative w-full max-w-7xl mx-auto bg-[#000000] shadow-xl rounded-none h-[85vh] min-h-[320px] max-h-[100dvh] md:h-[700px] overflow-hidden nw-visualize-panel"
         initial={{ opacity: 0, scale: 0.9, y: 100 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 100 }}
@@ -1288,7 +1292,7 @@ const WhaleNetworkGraph: React.FC<{
                 className="!overflow-hidden"
               />
               <DownloadButton
-                onDownloadReady={(trigger) => setTriggerDownload(() => trigger)}
+                onDownloadReady={handleDownloadReady}
                 onScreenshotError={() => showToast("Screenshot failed. Try again or refresh.", "error")}
                 filename="whale-network-graph"
               />
@@ -1316,11 +1320,11 @@ const WhaleNetworkGraph: React.FC<{
                 title="Save graph as JPG"
               >
                 <Save className="w-3 h-3 shrink-0" />
-                <span>Save</span>
+                <span className="nw-control-btn-label">Save</span>
               </button>
 
               {lastUpdatedTime && (
-                <div className="flex items-center space-x-2 text-[10px] text-[#8f8f8f] uppercase tracking-wider font-bold whitespace-nowrap">
+                <div className="flex items-center space-x-2 text-[10px] text-[#8f8f8f] uppercase tracking-wider font-bold whitespace-nowrap nw-last-updated">
                   <span>Last updated:</span>
                   <LastUpdatedTicker
                     lastUpdated={lastUpdatedTime}
@@ -1337,7 +1341,7 @@ const WhaleNetworkGraph: React.FC<{
                 <RefreshCw
                   className={`w-3 h-3 shrink-0 ${isRefreshing ? "animate-spin" : ""}`}
                 />
-                <span>Refresh</span>
+                <span className="nw-control-btn-label">Refresh</span>
               </button>
               <button
                 type="button"
@@ -1346,7 +1350,7 @@ const WhaleNetworkGraph: React.FC<{
                 title="Center / fit graph in view"
               >
                 <Maximize2 className="w-3 h-3 shrink-0" />
-                <span>Center</span>
+                <span className="nw-control-btn-label">Center</span>
               </button>
             </div>
 
@@ -1368,11 +1372,12 @@ const WhaleNetworkGraph: React.FC<{
               onClick={(e) => e.stopPropagation()}
             >
               <a
-                href="javascript:void(0)"
+                href="#"
                 className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "telegram" ? "active" : ""}`}
-                onClick={() =>
+                onClick={(e) => {
+                  e.preventDefault()
                   setDropdown(dropdown === "telegram" ? null : "telegram")
-                }
+                }}
               >
                 <span className="flex items-center gap-1">
                   <SiTelegram className="me-1" />
@@ -1656,8 +1661,6 @@ const WhaleNetworkGraph: React.FC<{
                       </button>
                     </div>
                   )}
-                </div>
-              )}
               {isSaved && (
                 <div className="config-overlay">
                   <div className="config-modal">
@@ -1702,6 +1705,8 @@ const WhaleNetworkGraph: React.FC<{
                   </div>
                 </div>
               )}
+                </div>
+              )}
             </li>
 
             {/* 2. Timeframe */}
@@ -1710,11 +1715,12 @@ const WhaleNetworkGraph: React.FC<{
               onClick={(e) => e.stopPropagation()}
             >
               <a
-                href="javascript:void(0)"
+                href="#"
                 className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "timeframe" ? "active" : ""}`}
-                onClick={() =>
+                onClick={(e) => {
+                  e.preventDefault()
                   setDropdown(dropdown === "timeframe" ? null : "timeframe")
-                }
+                }}
               >
                 <span>Time: {filters.timeframe}</span>
                 <ChevronDown
@@ -1746,11 +1752,12 @@ const WhaleNetworkGraph: React.FC<{
               onClick={(e) => e.stopPropagation()}
             >
               <a
-                href="javascript:void(0)"
+                href="#"
                 className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "whales" ? "active" : ""}`}
-                onClick={() =>
+                onClick={(e) => {
+                  e.preventDefault()
                   setDropdown(dropdown === "whales" ? null : "whales")
-                }
+                }}
               >
                 <span>Whales: {filters.whales}</span>
                 <ChevronDown
@@ -1807,11 +1814,12 @@ const WhaleNetworkGraph: React.FC<{
               onClick={(e) => e.stopPropagation()}
             >
               <a
-                href="javascript:void(0)"
+                href="#"
                 className={`plan-btn inline-flex items-center gap-2 !p-[6px_8px] !text-[12px] !text-[#8f8f8f] !bg-[#0a0a0a] !border-[#3d3d3d] !rounded-none ${dropdown === "volume" ? "active" : ""}`}
-                onClick={() =>
+                onClick={(e) => {
+                  e.preventDefault()
                   setDropdown(dropdown === "volume" ? null : "volume")
-                }
+                }}
               >
                 <span>Vol: {filters.volume}</span>
                 <ChevronDown

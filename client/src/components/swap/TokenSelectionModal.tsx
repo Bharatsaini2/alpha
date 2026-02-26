@@ -318,12 +318,8 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
   const searchTokens = useCallback(async (query: string): Promise<TokenInfo[]> => {
     if (!query || query.length < 2) return []
 
-    console.log(`🔍 Searching Jupiter Ultra for: "${query}"`)
-
     // Call Jupiter Ultra search API - no fallback, throw errors
     const jupiterResults = await searchJupiterUltra(query)
-
-    console.log(`✅ Found ${jupiterResults.length} tokens from Jupiter Ultra`)
 
     // Convert Jupiter results to TokenInfo format
     const tokens: TokenInfo[] = jupiterResults.map((token: JupiterTokenResult) => {
@@ -332,7 +328,6 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
 
       // If usdPrice is greater than $100k, it's probably market cap or wrong data
       if (validatedPrice && validatedPrice > 100000) {
-        console.warn(`⚠️ Suspicious usdPrice for ${token.symbol}: $${validatedPrice.toLocaleString()} - clearing to fetch correct price`)
         validatedPrice = undefined // Clear it so it gets fetched properly later
       }
 
@@ -369,8 +364,7 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
       try {
         const results = await searchTokens(query)
         setSearchResults(results)
-      } catch (error) {
-        console.error("Search error:", error)
+      } catch {
         setSearchResults([])
       } finally {
         setIsSearching(false)
@@ -394,8 +388,8 @@ export const TokenSelectionModal: React.FC<TokenSelectionModalProps> = ({
       const updated = [token, ...existing].slice(0, MAX_RECENT_TOKENS)
       setRecentTokens(updated)
       localStorage.setItem(RECENT_TOKENS_KEY, JSON.stringify(updated))
-    } catch (error) {
-      console.error("Failed to save recent token:", error)
+    } catch {
+      // Failed to save recent token
     }
   }, [recentTokens])
 

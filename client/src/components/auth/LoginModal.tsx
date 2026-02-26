@@ -54,7 +54,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
   const handleWalletLogin = async (walletAddress: string) => {
     // Prevent duplicate login attempts
     if (loginInProgressRef.current || processedAddressRef.current === walletAddress) {
-      console.log("Login already in progress or address already processed, skipping...")
       return
     }
 
@@ -93,8 +92,9 @@ const LoginModal: React.FC<LoginModalProps> = ({
           // Refresh user data to get latest Telegram connection status
           try {
             await refreshUser()
-          } catch (refreshError) {
-            console.error("Failed to refresh user data after login:", refreshError)
+          } catch (refreshError: unknown) {
+            const msg = refreshError instanceof Error ? refreshError.message : "Failed to refresh user data"
+            console.error("Failed to refresh user data after login:", msg)
             // Don't block login flow, user can manually refresh page
             setMessage("Login successful! Please refresh page to see latest connection status.")
           }
@@ -105,7 +105,6 @@ const LoginModal: React.FC<LoginModalProps> = ({
         }
       }
     } catch (error: any) {
-      console.error("Wallet login error:", error)
       setErrors({
         phantom:
           error.response?.data?.message ||

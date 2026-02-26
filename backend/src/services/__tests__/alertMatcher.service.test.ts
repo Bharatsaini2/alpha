@@ -5,16 +5,16 @@ import { User } from '../../models/user.model'
 import whaleAllTransactionModelV2 from '../../models/whaleAllTransactionsV2.model'
 import mongoose from 'mongoose'
 
-// Mock logger before importing service
-const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn(),
-}
-
-// Mock dependencies BEFORE importing AlertMatcherService
-jest.mock('../../utils/logger', () => mockLogger)
+// Mock dependencies BEFORE importing AlertMatcherService (factory avoids hoisting issues)
+jest.mock('../../utils/logger', () => {
+  const mock = {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+  }
+  return { __esModule: true, default: mock }
+})
 jest.mock('../../models/userAlert.model')
 jest.mock('../../models/user.model')
 jest.mock('../../models/whaleAllTransactionsV2.model')
@@ -395,9 +395,10 @@ describe('AlertMatcherService Property-Based Tests', () => {
             { minLength: 1, maxLength: 50 },
           ),
           async (alerts) => {
-            // Mock UserAlert.find to return our generated alerts
+            // Mock UserAlert.find to return our generated alerts (include _id for subscriptionId in cooldown key)
             const mockAlerts = alerts.map((alert) => ({
               ...alert,
+              _id: new mongoose.Types.ObjectId(),
               userId: {
                 _id: new mongoose.Types.ObjectId(alert.userId),
                 telegramChatId: alert.chatId,
@@ -1079,6 +1080,184 @@ describe('AlertMatcherService Unit Tests', () => {
       // Verify alert was queued again (deduplication is handled by telegram service)
       // The alert matcher will call queueAlert, but telegram service will deduplicate
       expect(telegramService.queueAlert).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('Whale cluster cooldown (per token per subscription)', () => {
+    const tokenAddress = 'So11111111111111111111111111111111111111112'
+    const subscriptionId = new mongoose.Types.ObjectId().toString()
+    const userId = new mongoose.Types.ObjectId().toString()
+
+    function makeWhaleTx(sig: string) {
+      return {
+        signature: sig,
+        whale: { address: 'whale-' + sig.slice(0, 8) },
+        transaction: {
+          tokenOut: {
+            address: tokenAddress,
+            symbol: 'TEST',
+            marketCap: '1000000',
+            amount: '1000',
+            usdAmount: '5000',
+          },
+          tokenIn: { address: 'other', symbol: 'SOL', amount: '1', usdAmount: '5000' },
+        },
+        tokenOutAddress: tokenAddress,
+        type: 'buy' as const,
+      }
+    }
+
+    function mockClusterData(whaleCount: number, totalVolumeUSD: number) {
+      const txs = []
+      for (let i = 0; i < whaleCount; i++) {
+        txs.push({
+          whale: { address: `w${i}` },
+          transaction: { tokenOut: { address: tokenAddress, usdAmount: (totalVolumeUSD / whaleCount).toString() } },
+          tokenOutAddress: tokenAddress,
+          timestamp: new Date(),
+        })
+      }
+      ;(whaleAllTransactionModelV2.find as jest.Mock).mockReturnValue({
+        lean: jest.fn().mockResolvedValue(txs),
+      })
+    }
+
+    beforeEach(() => {
+      ;(service as any).whaleClusterLastAlerted.clear()
+      ;(service as any).clusterCache.clear()
+    })
+
+    it('should send first alert and save snapshot when no snapshot exists', async () => {
+      ;(service as any).subscriptionMap.set(AlertType.WHALE_CLUSTER, [
+        {
+          subscriptionId,
+          userId,
+          chatId: 'chat1',
+          priority: Priority.HIGH,
+          config: { minClusterSize: 3, minInflowUSD: 10000, timeWindowMinutes: 15 },
+        },
+      ])
+      ;(service as any).isInitialized = true
+
+      mockClusterData(4, 15000)
+      ;(telegramService.queueAlert as jest.Mock).mockClear()
+
+      await (service as any).matchWhaleCluster(makeWhaleTx('sig-first') as any, 'test-corr-1')
+
+      expect(telegramService.queueAlert).toHaveBeenCalledTimes(1)
+      const snapshot = (service as any).whaleClusterLastAlerted.get(`${subscriptionId}:${tokenAddress}`)
+      expect(snapshot).toBeDefined()
+      expect(snapshot.walletCount).toBe(4)
+      expect(snapshot.totalVolume).toBe(15000)
+    })
+
+    it('should suppress when within same window and growth below threshold', async () => {
+      ;(service as any).subscriptionMap.set(AlertType.WHALE_CLUSTER, [
+        {
+          subscriptionId,
+          userId,
+          chatId: 'chat1',
+          priority: Priority.HIGH,
+          config: { minClusterSize: 3, minInflowUSD: 10000, timeWindowMinutes: 15 },
+        },
+      ])
+      ;(service as any).isInitialized = true
+      ;(service as any).whaleClusterLastAlerted.set(`${subscriptionId}:${tokenAddress}`, {
+        timestamp: Date.now() - 2 * 60 * 1000,
+        walletCount: 3,
+        totalVolume: 12000,
+      })
+
+      mockClusterData(4, 13000)
+      ;(telegramService.queueAlert as jest.Mock).mockClear()
+
+      await (service as any).matchWhaleCluster(makeWhaleTx('sig-suppress') as any, 'test-corr-2')
+
+      expect(telegramService.queueAlert).not.toHaveBeenCalled()
+    })
+
+    it('should send UPDATE when within window and wallet growth >= 2', async () => {
+      ;(service as any).subscriptionMap.set(AlertType.WHALE_CLUSTER, [
+        {
+          subscriptionId,
+          userId,
+          chatId: 'chat1',
+          priority: Priority.HIGH,
+          config: { minClusterSize: 3, minInflowUSD: 10000, timeWindowMinutes: 15 },
+        },
+      ])
+      ;(service as any).isInitialized = true
+      ;(service as any).whaleClusterLastAlerted.set(`${subscriptionId}:${tokenAddress}`, {
+        timestamp: Date.now() - 2 * 60 * 1000,
+        walletCount: 3,
+        totalVolume: 12000,
+      })
+
+      mockClusterData(5, 14000)
+      ;(telegramService.queueAlert as jest.Mock).mockClear()
+
+      await (service as any).matchWhaleCluster(makeWhaleTx('sig-update-wallets') as any, 'test-corr-3')
+
+      expect(telegramService.queueAlert).toHaveBeenCalledTimes(1)
+      const message = (telegramService.queueAlert as jest.Mock).mock.calls[0][3]
+      expect(message).toContain('Whale Cluster UPDATE')
+      expect(message).toContain('Previously')
+      expect(message).toContain('Now')
+    })
+
+    it('should send UPDATE when within window and volume growth >= 50%', async () => {
+      ;(service as any).subscriptionMap.set(AlertType.WHALE_CLUSTER, [
+        {
+          subscriptionId,
+          userId,
+          chatId: 'chat1',
+          priority: Priority.HIGH,
+          config: { minClusterSize: 3, minInflowUSD: 10000, timeWindowMinutes: 15 },
+        },
+      ])
+      ;(service as any).isInitialized = true
+      ;(service as any).whaleClusterLastAlerted.set(`${subscriptionId}:${tokenAddress}`, {
+        timestamp: Date.now() - 2 * 60 * 1000,
+        walletCount: 4,
+        totalVolume: 10000,
+      })
+
+      mockClusterData(4, 16000)
+      ;(telegramService.queueAlert as jest.Mock).mockClear()
+
+      await (service as any).matchWhaleCluster(makeWhaleTx('sig-update-volume') as any, 'test-corr-4')
+
+      expect(telegramService.queueAlert).toHaveBeenCalledTimes(1)
+      const message = (telegramService.queueAlert as jest.Mock).mock.calls[0][3]
+      expect(message).toContain('Whale Cluster UPDATE')
+    })
+
+    it('should send new alert when snapshot is older than user timeframe (window reset)', async () => {
+      ;(service as any).subscriptionMap.set(AlertType.WHALE_CLUSTER, [
+        {
+          subscriptionId,
+          userId,
+          chatId: 'chat1',
+          priority: Priority.HIGH,
+          config: { minClusterSize: 3, minInflowUSD: 10000, timeWindowMinutes: 15 },
+        },
+      ])
+      ;(service as any).isInitialized = true
+      ;(service as any).whaleClusterLastAlerted.set(`${subscriptionId}:${tokenAddress}`, {
+        timestamp: Date.now() - 20 * 60 * 1000,
+        walletCount: 3,
+        totalVolume: 12000,
+      })
+
+      mockClusterData(4, 15000)
+      ;(telegramService.queueAlert as jest.Mock).mockClear()
+
+      await (service as any).matchWhaleCluster(makeWhaleTx('sig-window-reset') as any, 'test-corr-5')
+
+      expect(telegramService.queueAlert).toHaveBeenCalledTimes(1)
+      const message = (telegramService.queueAlert as jest.Mock).mock.calls[0][3]
+      expect(message).toContain('Whale Cluster Alert')
+      expect(message).not.toContain('UPDATE')
     })
   })
 })

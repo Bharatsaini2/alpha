@@ -529,6 +529,61 @@ body {
     margin-top: 5px !important;
   }
 
+  /* Cluster alert popup (Whale/KOL): centered over network graph (same center), sharp edges */
+  .filter-dropdown-menu.filter-mobile-subscription {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: calc(100vw - 32px) !important;
+    max-width: 340px !important;
+    max-height: 85vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    border: 1px solid #2b2a2a !important;
+  }
+
+  .filter-dropdown-menu.filter-mobile-subscription .parent-dropdown-content {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    padding-bottom: 24px !important;
+    padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+    flex: 1 1 auto !important;
+  }
+
+  .filter-dropdown-menu.filter-mobile-subscription .connect-wallet-btn {
+    flex-shrink: 0 !important;
+    margin-top: 16px !important;
+  }
+
+  /* Visualize panel: portrait height on mobile (handled in component); ensure controls fit */
+  .nw-visualize-panel {
+    min-height: 50vh;
+  }
+
+  /* Save / Refresh / Center: icon only on mobile */
+  .nw-control-btn-label {
+    display: none !important;
+  }
+
+  .nw-last-updated {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .nw-last-updated span:first-child {
+    display: none;
+  }
+
   /* Handle alignment to prevent off-screen overflow */
   .plan-btn-list li:nth-child(1) .filter-dropdown-menu,
   .plan-btn-list li:nth-child(2) .filter-dropdown-menu {
@@ -540,6 +595,19 @@ body {
   .plan-btn-list li:nth-child(4) .filter-dropdown-menu {
     right: 0 !important;
     left: auto !important;
+  }
+
+  /* Whale/KOL cluster subscription popup: always center on screen (override nth-child alignment) */
+  .plan-btn-list li:nth-child(1) .filter-dropdown-menu.filter-mobile-subscription,
+  .plan-btn-list li:nth-child(2) .filter-dropdown-menu.filter-mobile-subscription,
+  .plan-btn-list li:nth-child(3) .filter-dropdown-menu.filter-mobile-subscription,
+  .plan-btn-list li:nth-child(4) .filter-dropdown-menu.filter-mobile-subscription {
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 10000 !important;
   }
 
   .filter-dropdown-menu.w-sm {

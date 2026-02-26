@@ -16,6 +16,17 @@ const MarketCapRangeSlider: React.FC<MarketCapRangeSliderProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [activeSlider, setActiveSlider] = useState<'min' | 'max' | null>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const touchOverlayRef = React.useRef<HTMLDivElement>(null);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const touchActiveRef = React.useRef<'min' | 'max' | null>(null);
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(hover: none)');
+    setIsTouchDevice(mq.matches);
+    const listener = () => setIsTouchDevice(mq.matches);
+    mq.addEventListener('change', listener);
+    return () => mq.removeEventListener('change', listener);
+  }, []);
 
   // Constants
   const MIN_RANGE = 1000; // 1K
@@ -124,6 +135,42 @@ const MarketCapRangeSlider: React.FC<MarketCapRangeSliderProps> = ({
     setActiveSlider(null);
   };
 
+  const handleTouchStartOverlay = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const positionPercent = (x / rect.width) * 100;
+    const distToMin = Math.abs(positionPercent - minPercent);
+    const distToMax = Math.abs(positionPercent - maxPercent);
+    const which: 'min' | 'max' = distToMin < distToMax ? 'min' : 'max';
+    touchActiveRef.current = which;
+    setActiveSlider(which);
+  };
+
+  const handleTouchMoveOverlay = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch || touchActiveRef.current === null) return;
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, touch.clientX - rect.left));
+    const positionPercent = (x / rect.width) * 100;
+    const value = sliderToValue(positionPercent);
+    if (touchActiveRef.current === 'min') {
+      if (value <= maxValue) onChange(value, maxValue);
+    } else {
+      if (value >= minValue) onChange(minValue, value);
+    }
+  };
+
+  const handleTouchEndOverlay = () => {
+    touchActiveRef.current = null;
+    setActiveSlider(null);
+  };
+
   // Add global mouse up listener
   React.useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -190,7 +237,12 @@ const MarketCapRangeSlider: React.FC<MarketCapRangeSliderProps> = ({
         ref={containerRef}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        style={{ position: 'relative', height: '20px', marginBottom: '12px' }}
+        style={{
+          position: 'relative',
+          height: isTouchDevice ? '44px' : '20px',
+          marginBottom: '12px',
+          marginTop: isTouchDevice ? '-12px' : 0,
+        }}
       >
         {/* Track Background */}
         <div
@@ -274,6 +326,28 @@ const MarketCapRangeSlider: React.FC<MarketCapRangeSliderProps> = ({
           }}
           className="dual-thumb-slider"
         />
+
+        {/* Touch overlay: on mobile, handles touch so user can drag either thumb (no hover to choose on touch) */}
+        {isTouchDevice && (
+          <div
+            ref={touchOverlayRef}
+            role="presentation"
+            onTouchStart={handleTouchStartOverlay}
+            onTouchMove={handleTouchMoveOverlay}
+            onTouchEnd={handleTouchEndOverlay}
+            onTouchCancel={handleTouchEndOverlay}
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: '100%',
+              height: '44px',
+              zIndex: 15,
+              pointerEvents: 'auto',
+              touchAction: 'none',
+            }}
+          />
+        )}
       </div>
 
       {/* Input Fields */}

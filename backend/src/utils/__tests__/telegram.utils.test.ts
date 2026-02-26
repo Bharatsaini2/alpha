@@ -8,6 +8,7 @@ import {
   shortenAddress,
   formatWhaleAlert,
   formatClusterAlert,
+  formatKOLClusterAlert,
   formatKOLAlert,
   generateQuickBuyLink,
   formatWhaleAlertMessage,
@@ -355,6 +356,85 @@ describe('Telegram Utilities', () => {
       expect(message).toContain('Triggered Time')
       expect(message).toContain('View Token')
       expect(message).toContain('AlphaBlockAI')
+    })
+
+    it('should include formation time, network time, alerted at, and detection latency when options provided', () => {
+      const lastTxTimestamp = new Date('2025-02-19T14:32:40.000Z').getTime()
+      const alertSentAt = lastTxTimestamp + 2000
+      const formationTimeMs = 160000 // 2m 40s
+      const message = formatClusterAlert(
+        'So11111111111111111111111111111111111111112',
+        'SOL',
+        3,
+        13100,
+        15,
+        {
+          formationTimeMs,
+          lastTxTimestamp,
+          alertSentAt,
+        }
+      )
+      expect(message).toContain('Whale Cluster Alert')
+      expect(message).toContain('Cluster formed in')
+      expect(message).toContain('2m 40s')
+      expect(message).toContain('window: 15 min')
+      expect(message).toContain('Network time:')
+      expect(message).toContain('14:32:40')
+      expect(message).toContain('Alerted at:')
+      expect(message).toContain('Detection latency:')
+      expect(message).toContain('2s')
+    })
+
+    it('should show Whale Cluster UPDATE with Previously and Now when isUpdate and previous stats provided', () => {
+      const message = formatClusterAlert(
+        'So11111111111111111111111111111111111111112',
+        'BONK',
+        6,
+        28000,
+        15,
+        {
+          isUpdate: true,
+          previousWalletCount: 3,
+          previousTotalVolume: 12000,
+          formationTimeMs: 480000, // 8 min
+        }
+      )
+      expect(message).toContain('Whale Cluster UPDATE')
+      expect(message).toContain('cluster is growing')
+      expect(message).toContain('Previously:')
+      expect(message).toContain('3')
+      expect(message).toContain('whales')
+      expect(message).toContain('Now:')
+      expect(message).toContain('6')
+      expect(message).toContain('Cluster Details')
+      expect(message).toContain('View Token')
+    })
+  })
+
+  describe('formatKOLClusterAlert', () => {
+    it('should include formation time and detection latency when options provided', () => {
+      const lastTxTimestamp = new Date('2025-02-19T14:32:40.000Z').getTime()
+      const alertSentAt = lastTxTimestamp + 500
+      const formationTimeMs = 45000 // 45s
+      const message = formatKOLClusterAlert(
+        'TokenAddr1111111111111111111111111111111111',
+        'SPEED',
+        3,
+        10000,
+        15,
+        {
+          formationTimeMs,
+          lastTxTimestamp,
+          alertSentAt,
+        }
+      )
+      expect(message).toContain('KOL Cluster Alert')
+      expect(message).toContain('Cluster formed in')
+      expect(message).toContain('45s')
+      expect(message).toContain('Network time:')
+      expect(message).toContain('Alerted at:')
+      expect(message).toContain('Detection latency:')
+      expect(message).toContain('<1s')
     })
   })
 
